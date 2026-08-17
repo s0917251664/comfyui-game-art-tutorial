@@ -10,7 +10,7 @@
 - `local_config.json` —— **這台機器的實際安裝路徑**(ComfyUI 裝在哪、python.exe 在哪),不進版控,每台機器內容都不一樣。不存在的話代表這台機器還沒裝好,照 `skills/comfyui-install/SKILL.md` 的流程走
 - `tools_src/generate.py` —— 實際執行產圖的穩定核心腳本(原始碼,版本控管在這裡)。部署到 ComfyUI 機器上的執行副本在 `<ComfyUI 安裝路徑>/tools/generate.py`,由安裝流程複製過去,不要繞過它自己組 ComfyUI API 呼叫
 - `tools_src/detect_device.py` —— 設備能力偵測(GPU/VRAM/OS),輸出 `device_config.json` 給 `generate.py` 讀取,決定用哪個 checkpoint/解析度
-- `workflows/` —— ComfyUI workflow JSON 檔案,是 `generate.py` 背後鎖死的產圖流程定義,給人在 ComfyUI 網頁介面手動開的版本(跟 `tools_src/generate.py` 裡的邏輯是兩份平行定義,改其中一個要記得檢查另一個是否也要同步改)
+- `workflows/` —— **不進版控**(見 `.gitignore`)。ComfyUI workflow JSON 檔案,是 `generate.py` 背後鎖死的產圖流程定義,給維護這條產線的人(不是美術)在 ComfyUI 網頁介面手動開、除錯、開發新能力時視覺化參考用,屬於本機個人產物,跟 `教學.md` 第 9 章「自己存一份到 `~/ComfyUI/user/default/workflows/`」是同一件事。不強制每個 `generate.py` 新能力都要補對應檔案——有空、真的會用到再補,不用當成義務性的同步負擔
 
 ## 給任何 agent 的原則
 
