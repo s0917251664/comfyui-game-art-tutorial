@@ -268,18 +268,26 @@ def build_inpaint(prompt, image_filename, mask_filename, negative=None, denoise=
     }, "8"
 
 
-# ---------- task: guided_inpaint(局部重繪 + ControlNet 結構鎖定)----------
+# ---------- task: guided_inpaint(局部重繪 + ControlNet 結構鎖定 + IPAdapter 外觀參考)----------
 # 解決 inpaint 大範圍全自由重繪的失敗模式:遮罩範圍內同時要求「結構(手指關節/物體輪廓)
 # 不能崩」跟「外觀(武器造型/材質紋路)要換」時,純 inpaint 沒有任何錨點,兩者一起賭,
 # 失敗率會疊乘(2026-08-18 女角色武器置換連續失敗多次才確認這個問題,不是遮罩位置或
-# prompt 措辭能解決的)。guided_inpaint 額外疊一層 ControlNet:遮罩範圍內結構被控制圖
-# 釘住,只有外觀由 denoise 自由生成——control_type 依需求選:pose 用於手部/肢體姿勢類
-# 需求(換武器同時保持握姿),canny/depth 用於物體輪廓/立體起伏類需求(換材質紋路同時
-# 保持造型,例如龍鱗紋路、道具圖示材質變體)。control_ref 預設沿用 --image 本身(從同一
-# 張圖抽取結構),需要用不同圖的結構當引導時才另外指定。
-def build_guided_inpaint(prompt, image_filename, mask_filename, control_ref_filename, negative=None,
-                          control_type="canny", control_strength=1.0, denoise=1.0,
-                          seed=None, steps=25, cfg=7.0, grow_mask_by=6):
+# prompt 措辭能解決的)。guided_inpaint 額外疊兩層可選的錨點:
+#   - ControlNet(control_type 給了才接):遮罩範圍內結構被控制圖釘住——pose 用於手部/
+#     肢體姿勢類需求(換武器同時保持握姿),canny/depth 用於物體輪廓/立體起伏類需求
+#     (換材質紋路同時保持造型,例如龍鱗紋路、道具圖示材質變體)。control_ref 預設沿用
+#     --image 本身(從同一張圖抽取結構)。
+#   - IPAdapter(appearance_ref_filename 給了才接):外觀不再只靠文字描述,改用一張參考圖
+#     的外觀特徵(2026-08-18 補上,因應「美術自己畫一張材質/紋理圖,要套到角色身上某個
+#     部位」這類需求——純文字描述紋理細節通常描述不清楚,需要圖片級別的參考)。跟
+#     style_lock/character_action 用同一顆 IPAdapter 模型,參考圖建議是乾淨的材質特寫
+#     (不要整張場景圖),不然背景/光影會一起被帶進來污染結果,原則同 IPAdapter 角色參考
+#     圖裁緊一點的教訓(見 skills/comfyui-art-gen/reference/ 內對應說明)。
+# 兩層都可選、可以同時用、也可以都不用(退化成一般 inpaint 只是多繞一層)。
+def build_guided_inpaint(prompt, image_filename, mask_filename, negative=None,
+                          control_ref_filename=None, control_type=None, control_strength=1.0,
+                          appearance_ref_filename=None, appearance_weight=0.8,
+                          denoise=1.0, seed=None, steps=25, cfg=7.0, grow_mask_by=6):
     negative = negative or DEFAULT_NEGATIVE
     graph = {
         "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": CKPT}},
@@ -291,30 +299,48 @@ def build_guided_inpaint(prompt, image_filename, mask_filename, control_ref_file
             "class_type": "VAEEncodeForInpaint",
             "inputs": {"pixels": ["4", 0], "vae": ["1", 2], "mask": ["5", 1], "grow_mask_by": grow_mask_by},
         },
-        "7": {"class_type": "LoadImage", "inputs": {"image": control_ref_filename}},
     }
-    graph["8"] = build_control_preprocessor(control_type, "7")
-    graph.update({
-        "9": {"class_type": "ControlNetLoader", "inputs": {"control_net_name": CONTROLNET_MODELS[control_type]}},
-        "10": {
+
+    model_ref = ["1", 0]
+    if appearance_ref_filename:
+        graph["7a"] = {"class_type": "LoadImage", "inputs": {"image": appearance_ref_filename}}
+        graph["7b"] = {"class_type": "CLIPVisionLoader", "inputs": {"clip_name": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors"}}
+        graph["7c"] = {"class_type": "IPAdapterModelLoader", "inputs": {"ipadapter_file": "ip-adapter-plus_sdxl_vit-h.safetensors"}}
+        graph["7d"] = {
+            "class_type": "IPAdapterAdvanced",
+            "inputs": {
+                "model": model_ref, "ipadapter": ["7c", 0], "image": ["7a", 0], "clip_vision": ["7b", 0],
+                "weight": appearance_weight, "weight_type": "linear", "combine_embeds": "concat",
+                "start_at": 0.0, "end_at": 1.0, "embeds_scaling": "V only",
+            },
+        }
+        model_ref = ["7d", 0]
+
+    positive_ref, negative_ref = ["2", 0], ["3", 0]
+    if control_type:
+        graph["8"] = {"class_type": "LoadImage", "inputs": {"image": control_ref_filename or image_filename}}
+        graph["9"] = build_control_preprocessor(control_type, "8")
+        graph["10"] = {"class_type": "ControlNetLoader", "inputs": {"control_net_name": CONTROLNET_MODELS[control_type]}}
+        graph["11"] = {
             "class_type": "ControlNetApplyAdvanced",
             "inputs": {
-                "positive": ["2", 0], "negative": ["3", 0], "control_net": ["9", 0], "image": ["8", 0],
+                "positive": positive_ref, "negative": negative_ref, "control_net": ["10", 0], "image": ["9", 0],
                 "strength": control_strength, "start_percent": 0.0, "end_percent": 1.0,
             },
+        }
+        positive_ref, negative_ref = ["11", 0], ["11", 1]
+
+    graph["12"] = {
+        "class_type": "KSampler",
+        "inputs": {
+            "model": model_ref, "positive": positive_ref, "negative": negative_ref, "latent_image": ["6", 0],
+            "seed": seed_or_random(seed), "steps": steps, "cfg": cfg,
+            "sampler_name": "euler", "scheduler": "normal", "denoise": denoise,
         },
-        "11": {
-            "class_type": "KSampler",
-            "inputs": {
-                "model": ["1", 0], "positive": ["10", 0], "negative": ["10", 1], "latent_image": ["6", 0],
-                "seed": seed_or_random(seed), "steps": steps, "cfg": cfg,
-                "sampler_name": "euler", "scheduler": "normal", "denoise": denoise,
-            },
-        },
-        "12": {"class_type": "VAEDecode", "inputs": {"samples": ["11", 0], "vae": ["1", 2]}},
-        "13": {"class_type": "SaveImage", "inputs": {"images": ["12", 0], "filename_prefix": "guided_inpaint"}},
-    })
-    return graph, "12"
+    }
+    graph["13"] = {"class_type": "VAEDecode", "inputs": {"samples": ["12", 0], "vae": ["1", 2]}}
+    graph["14"] = {"class_type": "SaveImage", "inputs": {"images": ["13", 0], "filename_prefix": "guided_inpaint"}}
+    return graph, "13"
 
 
 # ---------- task: pose_only(Ch7:單獨 ControlNet,不鎖角色)----------
@@ -506,16 +532,18 @@ def main():
 
     p_guided = sub.add_parser(
         "guided_inpaint",
-        help="局部重繪 + ControlNet 結構鎖定(遮罩範圍內結構被釘住,只有外觀自由生成;用於換武器/道具但要保持握姿、換材質紋路但要保持造型這類需求)",
+        help="局部重繪 + 結構鎖定/外觀參考圖(遮罩範圍內可選擇鎖住結構、可選擇用一張圖決定外觀,而不是只能靠文字描述;用於換武器/道具但要保持握姿、套用美術自畫材質紋理這類需求)",
         parents=[common],
     )
     p_guided.add_argument("--prompt", required=True)
     p_guided.add_argument("--image", required=True, help="來源圖路徑")
     p_guided.add_argument("--mask", required=True, help="遮罩圖路徑(同 inpaint,需帶 alpha 通道,要重畫的區域 alpha=0)")
-    p_guided.add_argument("--control-ref", help="結構引導來源圖路徑,不給就用 --image 本身(從同一張圖抽取結構)")
-    p_guided.add_argument("--control-type", choices=["canny", "pose", "depth"], required=True,
-                           help="要鎖定的結構類型:pose=骨架關節(手部/肢體動作類需求),canny=輪廓邊緣、depth=立體起伏(材質/紋路類需求)")
+    p_guided.add_argument("--control-ref", help="結構引導來源圖路徑,不給就用 --image 本身(從同一張圖抽取結構);沒給 --control-type 的話這個參數沒作用")
+    p_guided.add_argument("--control-type", choices=["canny", "pose", "depth"],
+                           help="要鎖定的結構類型(選用,不給就不鎖結構):pose=骨架關節(手部/肢體動作類需求),canny=輪廓邊緣、depth=立體起伏(材質/紋路類需求)")
     p_guided.add_argument("--control-strength", type=float, default=1.0)
+    p_guided.add_argument("--appearance-ref", help="外觀參考圖路徑(選用,例如美術自己畫的材質/紋理圖)——不給就純靠文字描述外觀。建議用乾淨的材質特寫,不要整張場景圖,不然背景/光影會一起被帶進來")
+    p_guided.add_argument("--appearance-weight", type=float, default=0.8, help="外觀參考圖的貼合強度,原則同 --ip-weight")
     p_guided.add_argument("--negative")
     p_guided.add_argument("--denoise", type=float, default=1.0)
     p_guided.add_argument("--seed", type=int)
@@ -587,10 +615,14 @@ def main():
     elif args.task == "guided_inpaint":
         img_fn = upload_image(args.image)
         mask_fn = upload_image(args.mask)
-        control_fn = upload_image(args.control_ref) if args.control_ref else img_fn
+        control_fn = None
+        if args.control_type:
+            control_fn = upload_image(args.control_ref) if args.control_ref else img_fn
+        appearance_fn = upload_image(args.appearance_ref) if args.appearance_ref else None
         prompt, out_id = build_guided_inpaint(
-            args.prompt, img_fn, mask_fn, control_fn, args.negative,
-            control_type=args.control_type, control_strength=args.control_strength,
+            args.prompt, img_fn, mask_fn, args.negative,
+            control_ref_filename=control_fn, control_type=args.control_type, control_strength=args.control_strength,
+            appearance_ref_filename=appearance_fn, appearance_weight=args.appearance_weight,
             denoise=args.denoise, seed=args.seed,
         )
     elif args.task == "pose_only":

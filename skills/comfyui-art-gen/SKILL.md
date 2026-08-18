@@ -102,16 +102,21 @@
 
 > **遮罩檔案格式是個真實陷阱,已實測踩過一次**(alpha 通道語意、沒生效卻不報錯的坑)**,遇到「遮罩好像沒生效」「局部修圖結果變差」時讀 `reference/masking.md`。** 不規則遮罩(多邊形等)的預覽驗證流程、以及貼合度/羽化範圍/`--denoise` 三者的搭配原則也在同一份文件裡。
 
-### guided_inpaint(局部重繪 + 結構鎖定)
+### guided_inpaint(局部重繪 + 結構鎖定 / 外觀參考圖)
 1. 來源圖路徑
 2. **一定要請使用者提供遮罩圖**,原則同 `inpaint`(alpha 語意一樣,遮罩最好只蓋要換外觀的區域,不要順手蓋到不想動的部分,例如肩章/徽章這種容易被模型腦補補回來的細節——經驗上遮罩範圍越貪心,不想要的東西越容易一起被重新生成)
-3. 想要新內容的描述
-4. **一定要判斷 `--control-type` 該用哪一種**(這題不能省略、也不能用預設值打發):
+3. **判斷外觀要靠文字描述、還是使用者有現成的一張參考圖(例如自己畫的材質/紋理圖)**——有圖的話優先用 `--appearance-ref`,純文字描述紋理細節通常講不清楚
+   - 有參考圖:跟使用者要圖的檔案路徑,提醒最好是**乾淨的材質特寫**(就一塊紋理,不要整張場景照),不然背景/光影會一起被帶進來污染結果(原則同 IPAdapter 角色參考圖要裁緊的教訓)
+   - 沒有參考圖:正常問想要的新內容文字描述
+4. **判斷這次需求要不要鎖結構、要鎖哪種**(`--control-type`,選用,不給就不鎖結構——只有外觀參考圖/文字描述在跑):
    - 需求是「手部/肢體姿勢不能變,換手上拿的東西」→ `pose`
    - 需求是「物體輪廓/立體起伏不能變,換材質紋路顏色」→ `canny`(輪廓線)或 `depth`(立體感,例如鱗片、盔甲浮雕這類有明顯凹凸的表面)
-5. 結構鎖定強度(--control-strength,預設 1.0)通常不用問
+   - 兩種需求都有(換材質紋路,同時要保持物體外形)可以兩個都用:`--control-type` 鎖形狀 + `--appearance-ref` 決定外觀
+5. 結構鎖定強度(--control-strength,預設 1.0)、外觀貼合強度(--appearance-weight,預設 0.8)通常不用問
 6. 保留原圖程度(--denoise,預設 1.0)通常不用問,原則同 `inpaint`
 7. 結構引導來源圖(--control-ref)預設用來源圖本身抽取結構,通常不用問;只有使用者想套用「別張圖的姿勢/輪廓」而不是這張圖原本的姿勢時才需要另外指定
+
+> **`--appearance-ref` 抓的是參考圖的風格/色彩印象,不是逐像素複製圖案。** 已實測:丟一張像素化數位迷彩紋理當參考,結果變成同色系的條紋質感,不是精確複製那個像素圖案——IPAdapter 本來就不是這樣設計的,不要跟使用者保證「會做出一模一樣的紋理」,只能說「風格/色調會參考那張圖」。另外遮罩邊界外側(例如緊鄰的衣領)偶爾會被外觀參考圖的顏色牽動一起變化,遮罩要盡量貼合實際要換的區域,不要留太寬的羽化margin。
 
 ### upscale(放大精修,不是重新構圖)
 1. 來源圖路徑(已經確定要用的成品圖)
@@ -143,7 +148,7 @@ inpaint:
   <python_exe> <generate_script> inpaint --prompt "..." --image <path> --mask <path> [--denoise 0.9] --output-dir <output_dir>
 
 guided_inpaint:
-  <python_exe> <generate_script> guided_inpaint --prompt "..." --image <path> --mask <path> --control-type pose|canny|depth [--control-ref <path>] [--control-strength 1.0] [--denoise 1.0] --output-dir <output_dir>
+  <python_exe> <generate_script> guided_inpaint --prompt "..." --image <path> --mask <path> [--control-type pose|canny|depth] [--control-ref <path>] [--control-strength 1.0] [--appearance-ref <path>] [--appearance-weight 0.8] [--denoise 1.0] --output-dir <output_dir>
 
 upscale:
   <python_exe> <generate_script> upscale --prompt "..." --image <path> [--scale 2.0] [--denoise 0.4] --output-dir <output_dir>
