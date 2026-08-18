@@ -22,21 +22,14 @@
 
 列出目前鎖定的每一項技術跟它的「最後確認日期」:
 
-- `skills/comfyui-install/SKILL.md` 的模型表格(底模、ControlNet canny/pose/depth、IPAdapter、CLIP Vision、去背模型)—— 每一列都有「最後確認日期」欄位
+- `skills/comfyui-install/reference/models.md` 的模型表格(底模、ControlNet canny/pose/depth、IPAdapter、CLIP Vision、去背模型)—— 每一列都有「最後確認日期」欄位
 - `tools_src/generate.py` 裡的 `CONTROLNET_MODELS` 常數、`build_character_action`/`build_style_lock` 裡硬編碼的 `ipadapter_file`/`clip_name`
 - `tools_src/detect_device.py` 的 `TIERS` 表(每個 tier 對應的底模選擇跟 torch 版本)
 - `教學.md` 第 0.5 章 B 段(設備/底模選型建議)、第 0.5 章 C 段(付費雲端 API 選項)
 
 ### 2. 針對每一類技術做現況掃描
 
-用 WebSearch/WebFetch 查目前(以今天日期為準)每個類別公認的最佳選項,至少涵蓋:
-
-- **SDXL 底模**:現在用的是官方 stock `sd_xl_base_1.0`,有沒有社群微調版本(如 Juggernaut XL、RealVisXL,`教學.md` 裡本來就提過這個方向)畫質/穩定性更好、生態(LoRA/ControlNet 相容性)沒犧牲
-- **ControlNet**:有沒有出「Union」類型模型(一個模型檔案同時支援 canny/pose/depth 多種控制,取代現在分開下載三個檔案的作法)
-- **IPAdapter**:有沒有新版本或效果更好的替代方案(角色一致性這塊發展很快,值得每次都認真查)
-- **去背模型**:BiRefNet 是不是還是目前最好的選擇
-- **FLUX 系列**:輕量版(如 FLUX.1 schnell)現在的 ControlNet/LoRA 生態是不是已經追上 SDXL,值得考慮換路線——`教學.md` 第 0.5 章 B 段先前結論是「畫質可能更好但生態還在追,先不換」,這個結論本身就值得每次重新檢視
-- 使用者有提到具體技術名稱時,優先查那個,不要自己另外發散去查一堆使用者沒問的東西
+用 WebSearch/WebFetch 查目前(以今天日期為準)每個類別公認的最佳選項。要涵蓋的類別清單(SDXL 底模、ControlNet、IPAdapter、去背模型、FLUX 系列等)見 `reference/scan-categories.md`。使用者有提到具體技術名稱時,優先查那個,不要自己另外發散去查一堆使用者沒問的東西。
 
 ### 3. 產出比較報告,不要自己決定
 
@@ -44,7 +37,7 @@
 
 ### 4. 使用者針對某一項核准升級後才動手
 
-- 更新 `skills/comfyui-install/SKILL.md` 對應那一列(檔名、下載來源、**最後確認日期改成今天**)
+- 更新 `skills/comfyui-install/reference/models.md` 對應那一列(檔名、下載來源、**最後確認日期改成今天**)
 - 如果 `tools_src/generate.py` 有寫死對應的模型檔名常數,一併更新,改完部署到 `<ComfyUI 安裝路徑>/tools/generate.py`(照 `AGENTS.md` 說的,不要繞過 `tools_src/` 這份原始碼直接改部署副本)
 - 在 `教學.md` 留一筆簡短的異動紀錄(日期 + 換了什麼 + 為什麼換),讓之後回頭看的人知道從什麼時候開始美術基準換了
 - **只改使用者核准的那一項**,不要因為「順便都查了」就連帶調整其他沒被要求的東西

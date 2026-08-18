@@ -37,9 +37,10 @@
 
 ### 4. 文件面
 
-- [ ] `skills/comfyui-art-gen/SKILL.md`:新 task 要補「任務判斷」表格 + 「各 task 該問的固定問題」小節 + CLI usage 範例 + 參數規格表對應列;既有 task 加新參數的話,至少補參數規格表那一列
+- [ ] `skills/comfyui-art-gen/SKILL.md`:新 task 要補「任務判斷」表格 + 「各 task 該問的固定問題」小節 + CLI usage 範例;既有 task 加新參數的話,補 `reference/full-params.md` 對應列
 - [ ] `教學.md`:功能地圖(第 0.5 章 A 段)裡對應這個新能力的那一列,更新掉「還沒收錄」之類的舊字樣;視情況補一個新章節/段落講解這個技術是什麼、怎麼用、**已實測驗證的證據**(不要用「應該可以」帶過)
 - [ ] 新增了新的技能檔案(`skills/<name>/SKILL.md`)的話,`AGENTS.md` 的核心文件清單要加一行連過去,講清楚「什麼時候該讀這份文件」
+- [ ] **SKILL.md 只放「每次都要走的判斷流程/固定問題/執行指令」,遇到問題才需要查的深度說明(踩過的坑、完整參數表、邊界情況)放進 `skills/<name>/reference/*.md`,並在 SKILL.md 對應位置留一句指向那份文件的話**——這個專案已經在 `comfyui-art-gen`、`comfyui-install`、`comfyui-pipeline-review` 這幾個 skill 採用這個拆法,新增內容時判斷屬於哪一類、放進對的地方,不要把新的踩坑細節或大段表格直接塞回 SKILL.md 主體讓它越長越肥
 
 ### 5. workflows/(選配,不是義務性同步)
 
