@@ -50,7 +50,8 @@
 | 「這個角色/風格套到新場景」「姿勢隨意,但要是這個角色」 | `style_lock` | 只有角色/風格參考圖,不需要指定姿勢 |
 | 「這個角色換個姿勢/動作」「照這個線稿套進這個角色」 | `character_action` | 需要角色參考圖 **+** 姿勢/線稿參考圖(兩者都要) |
 | 「幫我把這張草稿上色/精緻化」「同一個造型換材質/換顏色」 | `refine` | 有來源圖,想保留大致構圖但改細節/材質/顏色 |
-| 「這裡崩壞了幫我修」「只改這個區域」「局部調整」 | `inpaint` | 有來源圖 + 需要指定修改區域 |
+| 「這裡崩壞了幫我修」「只改這個區域」「局部調整」 | `inpaint` | 有來源圖 + 需要指定修改區域,而且改動不涉及「結構要保持、外觀要換」這種衝突需求 |
+| 「換武器/道具但要保持握姿」「換材質紋路但造型不能變」「這個部位要換,但骨架/輪廓不能崩」 | `guided_inpaint` | 有來源圖 + 修改區域,而且該區域有「結構(關節/輪廓)要鎖住、外觀要自由換」的衝突需求——純 `inpaint` 對這類需求容易讓模型同時賭結構跟外觀,失敗率高 |
 | 「這張圖放大」「解析度不夠」「細節加銳利一點」「要交件/要印出來所以要更高解析度」 | `upscale` | 已經有確定要用的成品圖,想要更高解析度 + 補細節,不是想重新構圖 |
 | 「去背」「透明背景」 | 加 `--remove-bg` 旗標,可疊加在 `concept`/`pose_only`/`style_lock`/`character_action`/`refine` 之後 | — |
 | 「多出幾個版本比較」「一次看幾種可能性」 | 加 `--batch N` 旗標,只有 `concept`/`pose_only`/`style_lock`/`character_action` 支援(探索型任務才需要);問使用者要幾張,沒概念就用 3 | — |
@@ -101,6 +102,17 @@
 
 > **遮罩檔案格式是個真實陷阱,已實測踩過一次**(alpha 通道語意、沒生效卻不報錯的坑)**,遇到「遮罩好像沒生效」「局部修圖結果變差」時讀 `reference/masking.md`。** 不規則遮罩(多邊形等)的預覽驗證流程、以及貼合度/羽化範圍/`--denoise` 三者的搭配原則也在同一份文件裡。
 
+### guided_inpaint(局部重繪 + 結構鎖定)
+1. 來源圖路徑
+2. **一定要請使用者提供遮罩圖**,原則同 `inpaint`(alpha 語意一樣,遮罩最好只蓋要換外觀的區域,不要順手蓋到不想動的部分,例如肩章/徽章這種容易被模型腦補補回來的細節——經驗上遮罩範圍越貪心,不想要的東西越容易一起被重新生成)
+3. 想要新內容的描述
+4. **一定要判斷 `--control-type` 該用哪一種**(這題不能省略、也不能用預設值打發):
+   - 需求是「手部/肢體姿勢不能變,換手上拿的東西」→ `pose`
+   - 需求是「物體輪廓/立體起伏不能變,換材質紋路顏色」→ `canny`(輪廓線)或 `depth`(立體感,例如鱗片、盔甲浮雕這類有明顯凹凸的表面)
+5. 結構鎖定強度(--control-strength,預設 1.0)通常不用問
+6. 保留原圖程度(--denoise,預設 1.0)通常不用問,原則同 `inpaint`
+7. 結構引導來源圖(--control-ref)預設用來源圖本身抽取結構,通常不用問;只有使用者想套用「別張圖的姿勢/輪廓」而不是這張圖原本的姿勢時才需要另外指定
+
 ### upscale(放大精修,不是重新構圖)
 1. 來源圖路徑(已經確定要用的成品圖)
 2. **盡量沿用當初生成這張圖時用的 prompt**——二次取樣需要 prompt 才能補細節,風格才會跟原圖一致,問使用者「記得原本的描述嗎」,真的想不起來就用畫面內容重新描述一次
@@ -129,6 +141,9 @@ refine:
 
 inpaint:
   <python_exe> <generate_script> inpaint --prompt "..." --image <path> --mask <path> [--denoise 0.9] --output-dir <output_dir>
+
+guided_inpaint:
+  <python_exe> <generate_script> guided_inpaint --prompt "..." --image <path> --mask <path> --control-type pose|canny|depth [--control-ref <path>] [--control-strength 1.0] [--denoise 1.0] --output-dir <output_dir>
 
 upscale:
   <python_exe> <generate_script> upscale --prompt "..." --image <path> [--scale 2.0] [--denoise 0.4] --output-dir <output_dir>

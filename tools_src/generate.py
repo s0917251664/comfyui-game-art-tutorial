@@ -268,6 +268,55 @@ def build_inpaint(prompt, image_filename, mask_filename, negative=None, denoise=
     }, "8"
 
 
+# ---------- task: guided_inpaint(局部重繪 + ControlNet 結構鎖定)----------
+# 解決 inpaint 大範圍全自由重繪的失敗模式:遮罩範圍內同時要求「結構(手指關節/物體輪廓)
+# 不能崩」跟「外觀(武器造型/材質紋路)要換」時,純 inpaint 沒有任何錨點,兩者一起賭,
+# 失敗率會疊乘(2026-08-18 女角色武器置換連續失敗多次才確認這個問題,不是遮罩位置或
+# prompt 措辭能解決的)。guided_inpaint 額外疊一層 ControlNet:遮罩範圍內結構被控制圖
+# 釘住,只有外觀由 denoise 自由生成——control_type 依需求選:pose 用於手部/肢體姿勢類
+# 需求(換武器同時保持握姿),canny/depth 用於物體輪廓/立體起伏類需求(換材質紋路同時
+# 保持造型,例如龍鱗紋路、道具圖示材質變體)。control_ref 預設沿用 --image 本身(從同一
+# 張圖抽取結構),需要用不同圖的結構當引導時才另外指定。
+def build_guided_inpaint(prompt, image_filename, mask_filename, control_ref_filename, negative=None,
+                          control_type="canny", control_strength=1.0, denoise=1.0,
+                          seed=None, steps=25, cfg=7.0, grow_mask_by=6):
+    negative = negative or DEFAULT_NEGATIVE
+    graph = {
+        "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": CKPT}},
+        "2": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": ["1", 1]}},
+        "3": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": ["1", 1]}},
+        "4": {"class_type": "LoadImage", "inputs": {"image": image_filename}},
+        "5": {"class_type": "LoadImage", "inputs": {"image": mask_filename}},
+        "6": {
+            "class_type": "VAEEncodeForInpaint",
+            "inputs": {"pixels": ["4", 0], "vae": ["1", 2], "mask": ["5", 1], "grow_mask_by": grow_mask_by},
+        },
+        "7": {"class_type": "LoadImage", "inputs": {"image": control_ref_filename}},
+    }
+    graph["8"] = build_control_preprocessor(control_type, "7")
+    graph.update({
+        "9": {"class_type": "ControlNetLoader", "inputs": {"control_net_name": CONTROLNET_MODELS[control_type]}},
+        "10": {
+            "class_type": "ControlNetApplyAdvanced",
+            "inputs": {
+                "positive": ["2", 0], "negative": ["3", 0], "control_net": ["9", 0], "image": ["8", 0],
+                "strength": control_strength, "start_percent": 0.0, "end_percent": 1.0,
+            },
+        },
+        "11": {
+            "class_type": "KSampler",
+            "inputs": {
+                "model": ["1", 0], "positive": ["10", 0], "negative": ["10", 1], "latent_image": ["6", 0],
+                "seed": seed_or_random(seed), "steps": steps, "cfg": cfg,
+                "sampler_name": "euler", "scheduler": "normal", "denoise": denoise,
+            },
+        },
+        "12": {"class_type": "VAEDecode", "inputs": {"samples": ["11", 0], "vae": ["1", 2]}},
+        "13": {"class_type": "SaveImage", "inputs": {"images": ["12", 0], "filename_prefix": "guided_inpaint"}},
+    })
+    return graph, "12"
+
+
 # ---------- task: pose_only(Ch7:單獨 ControlNet,不鎖角色)----------
 def build_pose_only(prompt, pose_ref_filename, negative=None, width=None, height=None,
                      seed=None, steps=25, cfg=7.0, pose_strength=1.0, batch_size=1,
@@ -455,6 +504,22 @@ def main():
     p_inpaint.add_argument("--denoise", type=float, default=1.0)
     p_inpaint.add_argument("--seed", type=int)
 
+    p_guided = sub.add_parser(
+        "guided_inpaint",
+        help="局部重繪 + ControlNet 結構鎖定(遮罩範圍內結構被釘住,只有外觀自由生成;用於換武器/道具但要保持握姿、換材質紋路但要保持造型這類需求)",
+        parents=[common],
+    )
+    p_guided.add_argument("--prompt", required=True)
+    p_guided.add_argument("--image", required=True, help="來源圖路徑")
+    p_guided.add_argument("--mask", required=True, help="遮罩圖路徑(同 inpaint,需帶 alpha 通道,要重畫的區域 alpha=0)")
+    p_guided.add_argument("--control-ref", help="結構引導來源圖路徑,不給就用 --image 本身(從同一張圖抽取結構)")
+    p_guided.add_argument("--control-type", choices=["canny", "pose", "depth"], required=True,
+                           help="要鎖定的結構類型:pose=骨架關節(手部/肢體動作類需求),canny=輪廓邊緣、depth=立體起伏(材質/紋路類需求)")
+    p_guided.add_argument("--control-strength", type=float, default=1.0)
+    p_guided.add_argument("--negative")
+    p_guided.add_argument("--denoise", type=float, default=1.0)
+    p_guided.add_argument("--seed", type=int)
+
     p_pose = sub.add_parser("pose_only", help="單獨用姿勢/線稿控制構圖,不鎖角色一致性", parents=[common])
     p_pose.add_argument("--prompt", required=True)
     p_pose.add_argument("--pose-ref", required=True, help="姿勢/線稿參考圖路徑")
@@ -519,6 +584,15 @@ def main():
         mask_fn = upload_image(args.mask)
         prompt, out_id = build_inpaint(args.prompt, img_fn, mask_fn, args.negative,
                                         denoise=args.denoise, seed=args.seed)
+    elif args.task == "guided_inpaint":
+        img_fn = upload_image(args.image)
+        mask_fn = upload_image(args.mask)
+        control_fn = upload_image(args.control_ref) if args.control_ref else img_fn
+        prompt, out_id = build_guided_inpaint(
+            args.prompt, img_fn, mask_fn, control_fn, args.negative,
+            control_type=args.control_type, control_strength=args.control_strength,
+            denoise=args.denoise, seed=args.seed,
+        )
     elif args.task == "pose_only":
         pose_fn = upload_image(args.pose_ref)
         prompt, out_id = build_pose_only(args.prompt, pose_fn, args.negative,

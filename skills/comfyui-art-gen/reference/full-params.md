@@ -10,7 +10,10 @@
 | `--ip-weight N`(0~1,預設 0.8)| `style_lock`、`character_action` | 角色/風格參考圖的貼合強度,越高越像參考圖但可能犧牲文字描述的內容 | 使用者說「太像參考圖了」或「一致性不夠」時可以往下/往上調;**同樣要注意的訊號是「文字描述的具體特徵沒有出現在結果裡」**(不限於髮色,任何跟參考圖衝突的文字指定特徵都可能被蓋過)——實際比對產出後再判斷要不要調低重跑,不要假設某個數字對所有情境都通用 |
 | `--pose-strength N`(0~10,預設 1.0)| `pose_only`、`character_action` | 姿勢控制的嚴格程度 | 使用者說「姿勢跑掉了」(調高)或「動作太死板」(調低)時可以調 |
 | `--control-type canny\|pose\|depth`(預設 canny)| `pose_only`、`character_action` | 構圖控制來源,選擇判斷見 `reference/control-type-selection.md` | 見 SKILL.md「各 task 該問的固定問題」的判斷原則,通常不用主動問 |
-| `--denoise N`(0~1)| `refine`(預設 0.6)、`inpaint`(預設 1.0)、`upscale`(預設 0.4)| 保留原圖程度,見 SKILL.md 各 task 說明 | 已經在固定問題裡問過 |
+| `--control-type canny\|pose\|depth`(**必填,無預設值**)| `guided_inpaint` | 遮罩範圍內要鎖住的結構類型:`pose`=關節骨架,`canny`/`depth`=輪廓/立體起伏 | 每次都要主動判斷,見 SKILL.md `guided_inpaint` 固定問題第 4 點 |
+| `--control-ref <path>`(預設用 `--image` 本身)| `guided_inpaint` | 結構引導來源圖,不給就從來源圖自己抽取結構 | 只有要套用「別張圖的姿勢/輪廓」時才問 |
+| `--control-strength N`(0~10,預設 1.0)| `guided_inpaint` | 結構鎖定的嚴格程度 | 通常不用問,原則同 `--pose-strength` |
+| `--denoise N`(0~1)| `refine`(預設 0.6)、`inpaint`(預設 1.0)、`guided_inpaint`(預設 1.0)、`upscale`(預設 0.4)| 保留原圖程度,見 SKILL.md 各 task 說明 | 已經在固定問題裡問過 |
 | `--scale N`(預設 2.0,最高建議 4)| `upscale` | 相對原圖的放大倍率 | 已經在固定問題裡問過 |
 | `--batch N`(預設 1)| `concept`、`pose_only`、`style_lock`、`character_action` | 一次生成幾個版本比較 | 使用者要「多看幾個版本」時用,沒概念的話建議 3 |
 | `--lora <檔名>`(models/loras/ 底下)+ `--lora-strength N`(0~1,預設 0.8)| `concept`、`pose_only`、`style_lock`、`character_action` | 套用已經訓練好的角色/風格 LoRA,比 IPAdapter 穩但需要事前訓練過(見 `教學.md` 第 8 章)| **使用者要指名用某個已經練好的 LoRA 才問**,平常不用主動提;沒有現成 LoRA 檔案就不要假裝有,如實說要嘛用 IPAdapter(`style_lock`/`character_action` 的 `--ip-weight`)要嘛先去訓練 |
