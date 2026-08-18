@@ -142,40 +142,62 @@ def seed_or_random(seed):
     return seed if seed is not None else int.from_bytes(os.urandom(6), "big")
 
 
+def model_clip_refs(graph, lora_name=None, lora_strength=0.8, ckpt_node_id="1", lora_node_id="1b"):
+    """回傳這個 graph 後面該接的 MODEL/CLIP 節點參照。
+    有指定 --lora 的話,插入一個 LoraLoader 節點(套在 checkpoint 後面),回傳它的輸出;
+    後面所有節點的 model/clip 輸入都要用這裡回傳的參照,不要直接寫死 [ckpt_node_id, 0]/[ckpt_node_id, 1],
+    不然 LoRA 會被跳過沒套用到。沒指定 --lora 就直接回傳 checkpoint 節點本身的輸出,行為跟原本一樣。"""
+    if not lora_name:
+        return [ckpt_node_id, 0], [ckpt_node_id, 1]
+    graph[lora_node_id] = {
+        "class_type": "LoraLoader",
+        "inputs": {
+            "model": [ckpt_node_id, 0], "clip": [ckpt_node_id, 1],
+            "lora_name": lora_name, "strength_model": lora_strength, "strength_clip": lora_strength,
+        },
+    }
+    return [lora_node_id, 0], [lora_node_id, 1]
+
+
 # ---------- task: concept (Ch3 系列:純文字概念圖) ----------
-def build_concept(prompt, negative=None, width=None, height=None, seed=None, steps=25, cfg=7.0, batch_size=1):
+def build_concept(prompt, negative=None, width=None, height=None, seed=None, steps=25, cfg=7.0, batch_size=1,
+                   lora_name=None, lora_strength=0.8):
     width = width or DEVICE["default_width"]
     height = height or DEVICE["default_height"]
     negative = negative or DEFAULT_NEGATIVE
-    return {
-        "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": CKPT}},
-        "2": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": ["1", 1]}},
-        "3": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": ["1", 1]}},
+    graph = {"1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": CKPT}}}
+    model_ref, clip_ref = model_clip_refs(graph, lora_name, lora_strength)
+    graph.update({
+        "2": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": clip_ref}},
+        "3": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": clip_ref}},
         "4": {"class_type": "EmptyLatentImage", "inputs": {"width": width, "height": height, "batch_size": batch_size}},
         "5": {
             "class_type": "KSampler",
             "inputs": {
-                "model": ["1", 0], "positive": ["2", 0], "negative": ["3", 0], "latent_image": ["4", 0],
+                "model": model_ref, "positive": ["2", 0], "negative": ["3", 0], "latent_image": ["4", 0],
                 "seed": seed_or_random(seed), "steps": steps, "cfg": cfg,
                 "sampler_name": "euler", "scheduler": "normal", "denoise": 1.0,
             },
         },
         "6": {"class_type": "VAEDecode", "inputs": {"samples": ["5", 0], "vae": ["1", 2]}},
         "7": {"class_type": "SaveImage", "inputs": {"images": ["6", 0], "filename_prefix": "concept"}},
-    }, "6"  # 回傳 (prompt, 最終圖片節點id) 方便後續接去背
+    })
+    return graph, "6"  # 回傳 (prompt, 最終圖片節點id) 方便後續接去背
 
 
 # ---------- task: character_action(Ch7 ControlNet + Ch8 IPAdapter 合併)----------
 def build_character_action(prompt, character_ref_filename, pose_ref_filename, negative=None,
                             width=None, height=None, seed=None, steps=25, cfg=7.0,
-                            ip_weight=0.8, pose_strength=1.0, batch_size=1, control_type="canny"):
+                            ip_weight=0.8, pose_strength=1.0, batch_size=1, control_type="canny",
+                            lora_name=None, lora_strength=0.8):
     negative = negative or DEFAULT_NEGATIVE
     width = width or DEVICE["default_width"]
     height = height or DEVICE["default_height"]
-    return {
-        "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": CKPT}},
-        "2": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": ["1", 1]}},
-        "3": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": ["1", 1]}},
+    graph = {"1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": CKPT}}}
+    model_ref, clip_ref = model_clip_refs(graph, lora_name, lora_strength)
+    graph.update({
+        "2": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": clip_ref}},
+        "3": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": clip_ref}},
         "4": {"class_type": "LoadImage", "inputs": {"image": character_ref_filename}},
         "5": {"class_type": "LoadImage", "inputs": {"image": pose_ref_filename}},
         # 明確指定 IPAdapter 模型 + CLIP Vision 檔名,不用 IPAdapterUnifiedLoader 的自動猜測
@@ -185,7 +207,7 @@ def build_character_action(prompt, character_ref_filename, pose_ref_filename, ne
         "7": {
             "class_type": "IPAdapterAdvanced",
             "inputs": {
-                "model": ["1", 0], "ipadapter": ["6b", 0], "image": ["4", 0], "clip_vision": ["6a", 0],
+                "model": model_ref, "ipadapter": ["6b", 0], "image": ["4", 0], "clip_vision": ["6a", 0],
                 "weight": ip_weight, "weight_type": "linear", "combine_embeds": "concat",
                 "start_at": 0.0, "end_at": 1.0, "embeds_scaling": "V only",
             },
@@ -210,10 +232,16 @@ def build_character_action(prompt, character_ref_filename, pose_ref_filename, ne
         },
         "13": {"class_type": "VAEDecode", "inputs": {"samples": ["12", 0], "vae": ["1", 2]}},
         "14": {"class_type": "SaveImage", "inputs": {"images": ["13", 0], "filename_prefix": "character_action"}},
-    }, "13"
+    })
+    return graph, "13"
 
 
 # ---------- task: inpaint(Ch6:局部調整)----------
+# 遮罩檔案格式陷阱(已實測踩過):ComfyUI 的 LoadImage 節點,MASK 輸出 = 1.0 - 圖片的 alpha 通道,
+# 完全沒有 alpha 通道時會靜默回傳空白遮罩(不報錯,但整個遮罩失效,產出看起來幾乎跟原圖一樣)。
+# 不是「白色區域=要重畫」的灰階慣例——要重畫的區域必須是 alpha=0(透明),要保留的區域 alpha=255。
+# 如果不是透過 ComfyUI 的 MaskEditor 存檔(那個格式一定對),而是agent自己用程式產生遮罩,
+# 務必存成帶 alpha 通道的 RGBA 圖,不要用 .convert('RGB') 之類的操作把 alpha 弄丟。
 def build_inpaint(prompt, image_filename, mask_filename, negative=None, denoise=1.0,
                    seed=None, steps=25, cfg=7.0, grow_mask_by=6):
     negative = negative or DEFAULT_NEGATIVE
@@ -243,14 +271,15 @@ def build_inpaint(prompt, image_filename, mask_filename, negative=None, denoise=
 # ---------- task: pose_only(Ch7:單獨 ControlNet,不鎖角色)----------
 def build_pose_only(prompt, pose_ref_filename, negative=None, width=None, height=None,
                      seed=None, steps=25, cfg=7.0, pose_strength=1.0, batch_size=1,
-                     control_type="canny"):
+                     control_type="canny", lora_name=None, lora_strength=0.8):
     negative = negative or DEFAULT_NEGATIVE
     width = width or DEVICE["default_width"]
     height = height or DEVICE["default_height"]
-    return {
-        "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": CKPT}},
-        "2": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": ["1", 1]}},
-        "3": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": ["1", 1]}},
+    graph = {"1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": CKPT}}}
+    model_ref, clip_ref = model_clip_refs(graph, lora_name, lora_strength)
+    graph.update({
+        "2": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": clip_ref}},
+        "3": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": clip_ref}},
         "4": {"class_type": "LoadImage", "inputs": {"image": pose_ref_filename}},
         "5": build_control_preprocessor(control_type, "4"),
         "6": {"class_type": "ControlNetLoader", "inputs": {"control_net_name": CONTROLNET_MODELS[control_type]}},
@@ -265,33 +294,36 @@ def build_pose_only(prompt, pose_ref_filename, negative=None, width=None, height
         "9": {
             "class_type": "KSampler",
             "inputs": {
-                "model": ["1", 0], "positive": ["7", 0], "negative": ["7", 1], "latent_image": ["8", 0],
+                "model": model_ref, "positive": ["7", 0], "negative": ["7", 1], "latent_image": ["8", 0],
                 "seed": seed_or_random(seed), "steps": steps, "cfg": cfg,
                 "sampler_name": "euler", "scheduler": "normal", "denoise": 1.0,
             },
         },
         "10": {"class_type": "VAEDecode", "inputs": {"samples": ["9", 0], "vae": ["1", 2]}},
         "11": {"class_type": "SaveImage", "inputs": {"images": ["10", 0], "filename_prefix": "pose_only"}},
-    }, "10"
+    })
+    return graph, "10"
 
 
 # ---------- task: style_lock(Ch8:單獨 IPAdapter,不鎖姿勢)----------
 def build_style_lock(prompt, character_ref_filename, negative=None, width=None, height=None,
-                      seed=None, steps=25, cfg=7.0, ip_weight=0.8, batch_size=1):
+                      seed=None, steps=25, cfg=7.0, ip_weight=0.8, batch_size=1,
+                      lora_name=None, lora_strength=0.8):
     negative = negative or DEFAULT_NEGATIVE
     width = width or DEVICE["default_width"]
     height = height or DEVICE["default_height"]
-    return {
-        "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": CKPT}},
-        "2": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": ["1", 1]}},
-        "3": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": ["1", 1]}},
+    graph = {"1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": CKPT}}}
+    model_ref, clip_ref = model_clip_refs(graph, lora_name, lora_strength)
+    graph.update({
+        "2": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": clip_ref}},
+        "3": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": clip_ref}},
         "4": {"class_type": "LoadImage", "inputs": {"image": character_ref_filename}},
         "5": {"class_type": "CLIPVisionLoader", "inputs": {"clip_name": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors"}},
         "6": {"class_type": "IPAdapterModelLoader", "inputs": {"ipadapter_file": "ip-adapter-plus_sdxl_vit-h.safetensors"}},
         "7": {
             "class_type": "IPAdapterAdvanced",
             "inputs": {
-                "model": ["1", 0], "ipadapter": ["6", 0], "image": ["4", 0], "clip_vision": ["5", 0],
+                "model": model_ref, "ipadapter": ["6", 0], "image": ["4", 0], "clip_vision": ["5", 0],
                 "weight": ip_weight, "weight_type": "linear", "combine_embeds": "concat",
                 "start_at": 0.0, "end_at": 1.0, "embeds_scaling": "V only",
             },
@@ -307,7 +339,8 @@ def build_style_lock(prompt, character_ref_filename, negative=None, width=None, 
         },
         "10": {"class_type": "VAEDecode", "inputs": {"samples": ["9", 0], "vae": ["1", 2]}},
         "11": {"class_type": "SaveImage", "inputs": {"images": ["10", 0], "filename_prefix": "style_lock"}},
-    }, "10"
+    })
+    return graph, "10"
 
 
 # ---------- task: refine(Ch5:圖生圖,草稿精緻化/材質變體)----------
@@ -393,6 +426,8 @@ def main():
     p_concept.add_argument("--height", type=int, default=DEVICE["default_height"])
     p_concept.add_argument("--seed", type=int)
     p_concept.add_argument("--batch", type=int, default=1, help="一次生成幾個版本比較")
+    p_concept.add_argument("--lora", help="LoRA 檔名(models/loras/ 底下),不給就不套用")
+    p_concept.add_argument("--lora-strength", type=float, default=0.8)
     p_concept.add_argument("--remove-bg", action="store_true")
 
     p_char = sub.add_parser("character_action", help="角色動作圖(角色參考圖 + 姿勢線稿)", parents=[common])
@@ -408,12 +443,14 @@ def main():
     p_char.add_argument("--height", type=int, default=DEVICE["default_height"])
     p_char.add_argument("--seed", type=int)
     p_char.add_argument("--batch", type=int, default=1, help="一次生成幾個版本比較")
+    p_char.add_argument("--lora", help="LoRA 檔名(models/loras/ 底下),不給就不套用")
+    p_char.add_argument("--lora-strength", type=float, default=0.8)
     p_char.add_argument("--remove-bg", action="store_true")
 
     p_inpaint = sub.add_parser("inpaint", help="局部調整(需要來源圖 + 遮罩圖)", parents=[common])
     p_inpaint.add_argument("--prompt", required=True)
     p_inpaint.add_argument("--image", required=True, help="來源圖路徑")
-    p_inpaint.add_argument("--mask", required=True, help="遮罩圖路徑(白色=要重畫的區域)")
+    p_inpaint.add_argument("--mask", required=True, help="遮罩圖路徑(需帶 alpha 通道,要重畫的區域 alpha=0/透明,其餘 alpha=255/不透明——用 ComfyUI MaskEditor 存的檔案格式一定對)")
     p_inpaint.add_argument("--negative")
     p_inpaint.add_argument("--denoise", type=float, default=1.0)
     p_inpaint.add_argument("--seed", type=int)
@@ -429,6 +466,8 @@ def main():
     p_pose.add_argument("--height", type=int, default=DEVICE["default_height"])
     p_pose.add_argument("--seed", type=int)
     p_pose.add_argument("--batch", type=int, default=1, help="一次生成幾個版本比較")
+    p_pose.add_argument("--lora", help="LoRA 檔名(models/loras/ 底下),不給就不套用")
+    p_pose.add_argument("--lora-strength", type=float, default=0.8)
     p_pose.add_argument("--remove-bg", action="store_true")
 
     p_style = sub.add_parser("style_lock", help="單獨鎖角色/風格一致性,姿勢隨意(不需要姿勢參考圖)", parents=[common])
@@ -440,6 +479,8 @@ def main():
     p_style.add_argument("--height", type=int, default=DEVICE["default_height"])
     p_style.add_argument("--seed", type=int)
     p_style.add_argument("--batch", type=int, default=1, help="一次生成幾個版本比較")
+    p_style.add_argument("--lora", help="LoRA 檔名(models/loras/ 底下),不給就不套用")
+    p_style.add_argument("--lora-strength", type=float, default=0.8)
     p_style.add_argument("--remove-bg", action="store_true")
 
     p_refine = sub.add_parser("refine", help="圖生圖:草稿精緻化 / 材質顏色變體(保留原圖構圖)", parents=[common])
@@ -462,7 +503,7 @@ def main():
 
     if args.task == "concept":
         prompt, out_id = build_concept(args.prompt, args.negative, args.width, args.height, args.seed,
-                                        batch_size=args.batch)
+                                        batch_size=args.batch, lora_name=args.lora, lora_strength=args.lora_strength)
     elif args.task == "character_action":
         char_fn = upload_image(args.character_ref)
         pose_fn = upload_image(args.pose_ref)
@@ -471,6 +512,7 @@ def main():
             width=args.width, height=args.height,
             seed=args.seed, ip_weight=args.ip_weight, pose_strength=args.pose_strength,
             batch_size=args.batch, control_type=args.control_type,
+            lora_name=args.lora, lora_strength=args.lora_strength,
         )
     elif args.task == "inpaint":
         img_fn = upload_image(args.image)
@@ -482,13 +524,15 @@ def main():
         prompt, out_id = build_pose_only(args.prompt, pose_fn, args.negative,
                                           width=args.width, height=args.height,
                                           seed=args.seed, pose_strength=args.pose_strength,
-                                          batch_size=args.batch, control_type=args.control_type)
+                                          batch_size=args.batch, control_type=args.control_type,
+                                          lora_name=args.lora, lora_strength=args.lora_strength)
     elif args.task == "style_lock":
         char_fn = upload_image(args.character_ref)
         prompt, out_id = build_style_lock(args.prompt, char_fn, args.negative,
                                            width=args.width, height=args.height,
                                            seed=args.seed, ip_weight=args.ip_weight,
-                                           batch_size=args.batch)
+                                           batch_size=args.batch,
+                                           lora_name=args.lora, lora_strength=args.lora_strength)
     elif args.task == "refine":
         img_fn = upload_image(args.image)
         prompt, out_id = build_refine(args.prompt, img_fn, args.negative,
