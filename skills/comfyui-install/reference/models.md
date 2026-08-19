@@ -23,6 +23,24 @@
 
 VRAM 較緊張時(`sdxl_light` tier),Depth/OpenPose 這兩個 ControlNet 檔案較大(共約 7GB),可以先跳過,等使用者真的需要姿勢/深度控制再補裝。
 
+## 選用風格底模(`generate.py` 的 `--style`,選配)
+
+**不是基本配備,只有使用者主動要用 `--style` 切換風格才裝。** 只適用 SDXL 家族 tier(`sdxl_high`/`sdxl`/`sdxl_light`),`sd15` 機器不要提。裝法跟裝表格一的 SDXL 底模一樣,下載到 `<ComfyUI 安裝路徑>/models/checkpoints/`,不用額外裝 ControlNet/IPAdapter/CLIP Vision(這幾個都是綁 SDXL 架構,不是綁特定微調版,現有那份繼續共用)。
+
+| `--style` 值 | 風格方向 | Checkpoint | 概估大小 | 授權注意事項 | 最後確認日期 |
+|---|---|---|---|---|---|
+| `realistic` | 寫實 | Juggernaut XL Ragnarok(`juggernautXL_ragnarok.safetensors`,實際檔名以下載頁為準) | ~6.4~6.9GB | CreativeML Open RAIL-M,個人/創作免費;**商用(尤其做成付費 API/SaaS)需另外聯繫 RunDiffusion 洽談授權**,單純內部用來產遊戲美術素材通常不算這個限制範圍,但使用者自己要再覆核一次 | 2026-08-19 |
+| `illustration` | 插畫/概念藝術 | Illustrious XL v1.1(官方 `OnomaAIResearch/Illustrious-XL-v1.1`,檔名 `Illustrious-XL-v1.1.safetensors`) | ~6.9GB | **2026-08-19 更正**:之前記成 MIT 是查到非官方鏡像倉庫自己標的授權,不是真實條款。官方倉庫標示 `sdxl-license`(沿用 Stability AI 的 SDXL 授權條款),同系列其他版本授權不同(v0 是 Fair AI Public License 1.0-SD,限制跟 Pony 類似;v2.0 是 CreativeML OpenRAIL-M)——**下載前務必自己去官方頁面看一次完整條款,不要沿用這裡的摘要當定論** | 2026-08-19 |
+| `anime` | 二次元/動漫 | Pony Diffusion V6 XL(`ponyDiffusionV6XL_v6StartWithThisOne.safetensors`,實際檔名以下載頁為準,另有 VAE `sdxl_vae.safetensors` ~335MB) | ~6.9GB | Fair AI Public License 1.0-SD,**限制「monetized web service/app 的商用推論」**,對外服務化需聯繫 purplesmart.ai;單純內部用來產遊戲美術素材通常不算這個限制範圍,但使用者自己要再覆核一次 | 2026-08-19 |
+
+### 使用眉角(實測發現才記,不是預先猜測;沒列出的部分代表還沒實測過)
+
+- **`anime`(Pony Diffusion V6 XL)**:2026-08-19 實測,prompt 沒帶 Pony 官方建議的品質標籤時輸出不穩定(實測出現灰階、跟描述無關的圓形徽章構圖)。官方建議 prompt 開頭加 `score_9, score_8_up, score_7_up`(至少 3 個 score 標籤,只掛 `score_9` 效果不佳)。另外官方建議搭配獨立的 `sdxl_vae.safetensors`(已下載到 `models/vae/`),**但 `generate.py` 目前所有 task 都是用 `CheckpointLoaderSimple` 內建的 VAE,還沒接這顆外部 VAE**——這是已知技術債,灰階/褪色的症狀可能跟這個有關,還沒驗證加了外部 VAE 是否能解決,不要跟使用者保證這個組合現在出圖穩定
+- **`realistic`(Juggernaut XL Ragnarok)**:2026-08-19 實測,不需要特殊 prompt 慣例,預設參數直接出圖正常。官方建議解析度是 832x1216 直式(跟這台機器 `sdxl` tier 預設的 1024x1024 不同),想更貼近官方建議可以另外帶 `--width 832 --height 1216`
+- **`illustration`(Illustrious XL v1.1)**:2026-08-19 實測,`--rating safe` 正常出圖,沒有出現 `anime` 那種畫質問題。官方文件說分級標籤幾乎是必填,沒加可能結果不穩定,細節見上面表格 `--rating` 相關說明
+
+下載來源查 Civitai/Hugging Face 官方頁面確認實際檔名跟連結,不要用上面括號裡的檔名當成確定的下載網址去憑空組合。使用者可以只選其中幾個風格,不用三個全裝——**動手下載任何一顆之前,先告知該顆的概估大小,加總這台機器目前已用空間 + 想裝的這幾顆,確認硬碟還有沒有足夠可用空間**,原則同下面「硬碟空間概估」那段。
+
 ### 硬碟空間概估(裝機前先跟使用者說清楚)
 
 | 項目 | 概估大小 | 是否必要 |
@@ -31,8 +49,9 @@ VRAM 較緊張時(`sdxl_light` tier),Depth/OpenPose 這兩個 ControlNet 檔案�
 | Python 虛擬環境(torch + CUDA + 其他依賴套件) | ~6~8GB | 必要 |
 | 上面這張表全部裝齊(SDXL tier) | ~20GB | 必要(VRAM 吃緊的 `sdxl_light` 可先跳過 Depth/OpenPose,省 ~7GB) |
 | LoRA 訓練工具(`kohya_ss` + 它自己的 `uv sync` 依賴,選配) | ~5~8GB | 選配,只有使用者明確要練 LoRA 才裝 |
-| **合計(不含 LoRA 訓練工具)** | **約 26~28GB** | — |
-| **合計(含 LoRA 訓練工具)** | **約 31~36GB** | — |
+| 選用風格底模(`--style`,見上面「選用風格底模」表格,3 顆全裝) | ~20GB(每顆 ~6.5~7GB) | 選配,只有使用者明確要用 `--style` 切換風格才裝,可以只選其中幾個 |
+| **合計(不含 LoRA 訓練工具、不含風格底模)** | **約 26~28GB** | — |
+| **合計(含 LoRA 訓練工具、含風格底模 3 顆全裝)** | **約 51~64GB** | — |
 
 **這是概估值,不是精確保證**——實際檔案大小以下載當下來源網站顯示的為準,Python 依賴套件版本更新也會讓虛擬環境大小浮動。裝機前把這個範圍念給使用者聽,提醒**硬碟至少要留 30GB 以上可用空間**比較保險,不要裝到一半才發現空間不夠中斷——那樣通常需要手動清理已下載一半的檔案才能重來,比事前確認空間麻煩很多。
 

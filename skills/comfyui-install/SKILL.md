@@ -48,6 +48,17 @@
 
 **只有使用者明確要準備訓練角色/風格 LoRA 時才裝,不是每台機器的基本配備。** 跟 ComfyUI 完全獨立的另一套工具(`kohya_ss`),裝法跟已知的編碼/踩坑細節見 `reference/lora-training.md`。
 
+## 進階(選配):風格底模(`--style`)
+
+**只有使用者明確要用 `generate.py` 的 `--style` 切換風格才裝,不是每台機器的基本配備。** 只在 SDXL 家族 tier(`sdxl_high`/`sdxl`/`sdxl_light`)才問,`sd15` 機器不提。
+
+三個候選(寫實/插畫/二次元)清單、檔名、授權注意事項見 `reference/models.md`「選用風格底模」那段。流程:
+
+1. 先問使用者要哪幾個風格方向,不用三個全裝
+2. **動手下載任何一顆之前,先告知該顆的檔名跟概估大小(每顆 ~6.5~7GB),加總這台機器目前已用空間 + 想裝的這幾顆,確認硬碟還有沒有足夠可用空間**——原則同前面「開始裝之前先告知硬碟空間需求」,不是另一套邏輯
+3. 下載到 `<ComfyUI 安裝路徑>/models/checkpoints/`,不用額外裝 ControlNet/IPAdapter/CLIP Vision(這些綁的是 SDXL 架構,不是特定微調版,現有那份就夠用)
+4. 裝完不用改 `tools_src/generate.py`(`STYLE_CHECKPOINTS` 白名單已經寫死對應檔名),使用者之後用 `--style realistic`/`illustration`/`anime` 就能直接切換
+
 ## 執行原則
 
 - **冪等**:每一步先檢查是否已經成立,成立就跳過,不要盲目重跑或覆蓋使用者已經調整過的東西(`generate.py` 除外——它永遠要跟 repo 同步)

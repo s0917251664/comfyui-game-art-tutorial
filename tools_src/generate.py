@@ -45,6 +45,27 @@ CONTROLNET_MODELS = {
     "depth": "controlnet-depth-sdxl-1.0.safetensors",
 }
 
+# --style 選填參數的白名單(選配,不裝也完全不影響預設行為)。都是 SDXL 架構的社群微調底模,
+# 換掉 CKPT 不用連帶換 ControlNet/IPAdapter/CLIP Vision。只在 SDXL 家族 tier 生效,見 main() 裡的
+# tier 檢查——sd15 機器上這幾顆會跟 ControlNet/IPAdapter shape mismatch。
+# 各風格的授權/檔案來源見 skills/comfyui-install/reference/models.md,商用前務必自行覆核授權條款
+# ——這三顆各自授權都不一樣(Juggernaut/Pony 都有針對「做成付費服務」的限制;Illustrious 依版本
+# 不同差很多,2026-08-19 曾經記錯成 MIT,見 models.md 更正說明),不要憑這裡的常數名稱就假設能商用。
+STYLE_CHECKPOINTS = {
+    "realistic": "juggernautXL_ragnarok.safetensors",
+    "illustration": "Illustrious-XL-v1.1.safetensors",
+    "anime": "ponyDiffusionV6XL_v6StartWithThisOne.safetensors",
+}
+
+# --rating 選填參數(選配,不給就完全不影響 prompt)。只對 anime/illustration 這兩個 --style
+# 有意義——這兩顆底模的訓練資料本身就用分級標籤控制內容尺度(Pony 用 rating_xxx,Illustrious
+# 沿用 Danbooru 的 rating:xxx),不是這個腳本自己發明的機制。realistic/預設底模沒有對應標籤慣例,
+# 給了 --rating 也沒意義,main() 裡會直接擋掉,不要讓它靜默沒效果。
+RATING_TAGS = {
+    "anime": {"safe": "rating_safe", "questionable": "rating_questionable", "explicit": "rating_explicit"},
+    "illustration": {"safe": "rating:general", "questionable": "rating:questionable", "explicit": "rating:explicit"},
+}
+
 
 def build_control_preprocessor(control_type, image_node_id):
     """依 control_type 回傳對應的前處理節點(從 image_node_id 的圖片輸出接進去)。"""
@@ -164,11 +185,11 @@ def model_clip_refs(graph, lora_name=None, lora_strength=0.8, ckpt_node_id="1", 
 
 # ---------- task: concept (Ch3 系列:純文字概念圖) ----------
 def build_concept(prompt, negative=None, width=None, height=None, seed=None, steps=25, cfg=7.0, batch_size=1,
-                   lora_name=None, lora_strength=0.8):
+                   lora_name=None, lora_strength=0.8, checkpoint=None):
     width = width or DEVICE["default_width"]
     height = height or DEVICE["default_height"]
     negative = negative or DEFAULT_NEGATIVE
-    graph = {"1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": CKPT}}}
+    graph = {"1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or CKPT}}}
     model_ref, clip_ref = model_clip_refs(graph, lora_name, lora_strength)
     graph.update({
         "2": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": clip_ref}},
@@ -246,9 +267,9 @@ def build_wheel_segment_template(n_segments, width=1024, height=1024,
 def build_icon_asset(prompt, negative=None, width=1024, height=1024, seed=None, steps=25, cfg=7.0,
                       batch_size=1, lora_name=None, lora_strength=0.8,
                       structure_ref_filename=None, control_strength=STRUCTURE_REF_CONTROL_STRENGTH,
-                      structure_ref_denoise=STRUCTURE_REF_DENOISE):
+                      structure_ref_denoise=STRUCTURE_REF_DENOISE, checkpoint=None):
     negative = (negative or DEFAULT_NEGATIVE) + ICON_ASSET_NEGATIVE_SUFFIX
-    graph = {"1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": CKPT}}}
+    graph = {"1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or CKPT}}}
     model_ref, clip_ref = model_clip_refs(graph, lora_name, lora_strength)
     graph.update({
         "2": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt + ICON_ASSET_PROMPT_SUFFIX, "clip": clip_ref}},
@@ -297,11 +318,11 @@ def build_icon_asset(prompt, negative=None, width=1024, height=1024, seed=None, 
 def build_character_action(prompt, character_ref_filename, pose_ref_filename, negative=None,
                             width=None, height=None, seed=None, steps=25, cfg=7.0,
                             ip_weight=0.8, pose_strength=1.0, batch_size=1, control_type="canny",
-                            lora_name=None, lora_strength=0.8):
+                            lora_name=None, lora_strength=0.8, checkpoint=None):
     negative = negative or DEFAULT_NEGATIVE
     width = width or DEVICE["default_width"]
     height = height or DEVICE["default_height"]
-    graph = {"1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": CKPT}}}
+    graph = {"1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or CKPT}}}
     model_ref, clip_ref = model_clip_refs(graph, lora_name, lora_strength)
     graph.update({
         "2": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": clip_ref}},
@@ -351,10 +372,10 @@ def build_character_action(prompt, character_ref_filename, pose_ref_filename, ne
 # 如果不是透過 ComfyUI 的 MaskEditor 存檔(那個格式一定對),而是agent自己用程式產生遮罩,
 # 務必存成帶 alpha 通道的 RGBA 圖,不要用 .convert('RGB') 之類的操作把 alpha 弄丟。
 def build_inpaint(prompt, image_filename, mask_filename, negative=None, denoise=1.0,
-                   seed=None, steps=25, cfg=7.0, grow_mask_by=6):
+                   seed=None, steps=25, cfg=7.0, grow_mask_by=6, checkpoint=None):
     negative = negative or DEFAULT_NEGATIVE
     return {
-        "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": CKPT}},
+        "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or CKPT}},
         "2": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": ["1", 1]}},
         "3": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": ["1", 1]}},
         "4": {"class_type": "LoadImage", "inputs": {"image": image_filename}},
@@ -395,10 +416,10 @@ def build_inpaint(prompt, image_filename, mask_filename, negative=None, denoise=
 def build_guided_inpaint(prompt, image_filename, mask_filename, negative=None,
                           control_ref_filename=None, control_type=None, control_strength=1.0,
                           appearance_ref_filename=None, appearance_weight=0.8,
-                          denoise=1.0, seed=None, steps=25, cfg=7.0, grow_mask_by=6):
+                          denoise=1.0, seed=None, steps=25, cfg=7.0, grow_mask_by=6, checkpoint=None):
     negative = negative or DEFAULT_NEGATIVE
     graph = {
-        "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": CKPT}},
+        "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or CKPT}},
         "2": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": ["1", 1]}},
         "3": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": ["1", 1]}},
         "4": {"class_type": "LoadImage", "inputs": {"image": image_filename}},
@@ -454,11 +475,11 @@ def build_guided_inpaint(prompt, image_filename, mask_filename, negative=None,
 # ---------- task: pose_only(Ch7:單獨 ControlNet,不鎖角色)----------
 def build_pose_only(prompt, pose_ref_filename, negative=None, width=None, height=None,
                      seed=None, steps=25, cfg=7.0, pose_strength=1.0, batch_size=1,
-                     control_type="canny", lora_name=None, lora_strength=0.8):
+                     control_type="canny", lora_name=None, lora_strength=0.8, checkpoint=None):
     negative = negative or DEFAULT_NEGATIVE
     width = width or DEVICE["default_width"]
     height = height or DEVICE["default_height"]
-    graph = {"1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": CKPT}}}
+    graph = {"1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or CKPT}}}
     model_ref, clip_ref = model_clip_refs(graph, lora_name, lora_strength)
     graph.update({
         "2": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": clip_ref}},
@@ -491,11 +512,11 @@ def build_pose_only(prompt, pose_ref_filename, negative=None, width=None, height
 # ---------- task: style_lock(Ch8:單獨 IPAdapter,不鎖姿勢)----------
 def build_style_lock(prompt, character_ref_filename, negative=None, width=None, height=None,
                       seed=None, steps=25, cfg=7.0, ip_weight=0.8, batch_size=1,
-                      lora_name=None, lora_strength=0.8):
+                      lora_name=None, lora_strength=0.8, checkpoint=None):
     negative = negative or DEFAULT_NEGATIVE
     width = width or DEVICE["default_width"]
     height = height or DEVICE["default_height"]
-    graph = {"1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": CKPT}}}
+    graph = {"1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or CKPT}}}
     model_ref, clip_ref = model_clip_refs(graph, lora_name, lora_strength)
     graph.update({
         "2": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": clip_ref}},
@@ -528,10 +549,10 @@ def build_style_lock(prompt, character_ref_filename, negative=None, width=None, 
 
 # ---------- task: refine(Ch5:圖生圖,草稿精緻化/材質變體)----------
 def build_refine(prompt, image_filename, negative=None, denoise=0.6,
-                  seed=None, steps=25, cfg=7.0):
+                  seed=None, steps=25, cfg=7.0, checkpoint=None):
     negative = negative or DEFAULT_NEGATIVE
     return {
-        "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": CKPT}},
+        "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or CKPT}},
         "2": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": ["1", 1]}},
         "3": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": ["1", 1]}},
         "4": {"class_type": "LoadImage", "inputs": {"image": image_filename}},
@@ -554,10 +575,10 @@ UPSCALE_MODEL = "4x-UltraSharp.pth"  # 4 倍放大模型,scale 參數透過 Imag
 
 
 def build_upscale(prompt, image_filename, negative=None, scale=2.0, denoise=0.4,
-                   seed=None, steps=25, cfg=7.0):
+                   seed=None, steps=25, cfg=7.0, checkpoint=None):
     negative = negative or DEFAULT_NEGATIVE
     return {
-        "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": CKPT}},
+        "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or CKPT}},
         "2": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": ["1", 1]}},
         "3": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": ["1", 1]}},
         "4": {"class_type": "LoadImage", "inputs": {"image": image_filename}},
@@ -635,57 +656,69 @@ def main():
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--output-dir", help=f"成品存放資料夾,預設 {OUTPUT_DIR}")
 
-    p_concept = sub.add_parser("concept", help="概念圖(純文字)", parents=[common])
+    # 會用到底模 checkpoint 的 task 額外共用 --style(layer_split 純裁切、不吃底模,不套用這組)
+    model_common = argparse.ArgumentParser(add_help=False, parents=[common])
+    model_common.add_argument(
+        "--style", choices=list(STYLE_CHECKPOINTS),
+        help="換一顆風格底模(選配,不給就用這台機器裝機時鎖定的預設 checkpoint)。"
+             "realistic=寫實(Juggernaut XL)、illustration=插畫/概念藝術(Illustrious XL)、"
+             "anime=二次元/動漫(Pony Diffusion V6 XL)。需要先在這台機器裝好對應 checkpoint,"
+             "見 skills/comfyui-install/reference/models.md;只支援 SDXL 家族 tier。",
+    )
+    model_common.add_argument(
+        "--rating", choices=["safe", "questionable", "explicit"],
+        help="內容分級標籤(選配,不給就不加任何分級標籤,prompt 完全不變)。"
+             "只在 --style anime/illustration 時有意義——這兩顆底模訓練時就用分級標籤控制內容尺度,"
+             "不是這裡另外加的過濾機制;--style realistic 或不給 --style 時使用這個選項會直接報錯。",
+    )
+
+    # 有 --prompt 的 task(全部除了 layer_split)都共用 --negative/--seed
+    prompt_common = argparse.ArgumentParser(add_help=False, parents=[model_common])
+    prompt_common.add_argument("--negative")
+    prompt_common.add_argument("--seed", type=int)
+
+    # 從零/從參考圖生成的探索型 task(concept/icon_asset/character_action/pose_only/style_lock)
+    # 才支援「多生幾版比較」跟套 LoRA——inpaint/guided_inpaint/refine/upscale 是修改既有圖片,
+    # 這兩個概念對它們沒有意義,不要因為想共用參數就硬塞給不適用的 task
+    batch_lora_common = argparse.ArgumentParser(add_help=False, parents=[prompt_common])
+    batch_lora_common.add_argument("--batch", type=int, default=1, help="一次生成幾個版本比較")
+    batch_lora_common.add_argument("--lora", help="LoRA 檔名(models/loras/ 底下),不給就不套用")
+    batch_lora_common.add_argument("--lora-strength", type=float, default=0.8)
+
+    p_concept = sub.add_parser("concept", help="概念圖(純文字)", parents=[batch_lora_common])
     p_concept.add_argument("--prompt", required=True)
-    p_concept.add_argument("--negative")
     p_concept.add_argument("--width", type=int, default=DEVICE["default_width"])
     p_concept.add_argument("--height", type=int, default=DEVICE["default_height"])
-    p_concept.add_argument("--seed", type=int)
-    p_concept.add_argument("--batch", type=int, default=1, help="一次生成幾個版本比較")
-    p_concept.add_argument("--lora", help="LoRA 檔名(models/loras/ 底下),不給就不套用")
-    p_concept.add_argument("--lora-strength", type=float, default=0.8)
     p_concept.add_argument("--remove-bg", action="store_true")
 
-    p_icon = sub.add_parser("icon_asset", help="單一小型 UI 圖示/物件素材(不是整個 UI 畫面),永遠去背輸出透明背景", parents=[common])
+    p_icon = sub.add_parser("icon_asset", help="單一小型 UI 圖示/物件素材(不是整個 UI 畫面),永遠去背輸出透明背景", parents=[batch_lora_common])
     p_icon.add_argument("--prompt", required=True)
-    p_icon.add_argument("--negative")
     p_icon.add_argument("--width", type=int, default=1024)
     p_icon.add_argument("--height", type=int, default=1024)
-    p_icon.add_argument("--seed", type=int)
-    p_icon.add_argument("--batch", type=int, default=1, help="一次生成幾個版本比較")
-    p_icon.add_argument("--lora", help="LoRA 檔名(models/loras/ 底下),不給就不套用")
-    p_icon.add_argument("--lora-strength", type=float, default=0.8)
     p_icon.add_argument("--structure-ref", help="這個圖示的結構/色塊配置已經有明確答案、不該讓 AI 自己瞎猜時用(例如放射狀精準等分):給一張範本圖路徑,用 img2img + Canny ControlNet 把結構跟顏色配置都鎖住,SDXL 只負責疊材質/光澤;不給就跟以前一樣純靠文字描述。範本圖從哪來見 skills/comfyui-art-gen/reference/structure-ref.md")
 
-    p_char = sub.add_parser("character_action", help="角色動作圖(角色參考圖 + 姿勢線稿)", parents=[common])
+    p_char = sub.add_parser("character_action", help="角色動作圖(角色參考圖 + 姿勢線稿)", parents=[batch_lora_common])
     p_char.add_argument("--prompt", required=True)
     p_char.add_argument("--character-ref", required=True, help="角色參考圖路徑")
     p_char.add_argument("--pose-ref", required=True, help="姿勢/線稿參考圖路徑")
-    p_char.add_argument("--negative")
     p_char.add_argument("--ip-weight", type=float, default=0.8)
     p_char.add_argument("--pose-strength", type=float, default=1.0)
     p_char.add_argument("--control-type", choices=["canny", "pose", "depth"], default="canny",
                          help="姿勢/構圖控制來源:canny=線稿邊緣(預設),pose=骨架姿勢,depth=深度圖")
     p_char.add_argument("--width", type=int, default=DEVICE["default_width"])
     p_char.add_argument("--height", type=int, default=DEVICE["default_height"])
-    p_char.add_argument("--seed", type=int)
-    p_char.add_argument("--batch", type=int, default=1, help="一次生成幾個版本比較")
-    p_char.add_argument("--lora", help="LoRA 檔名(models/loras/ 底下),不給就不套用")
-    p_char.add_argument("--lora-strength", type=float, default=0.8)
     p_char.add_argument("--remove-bg", action="store_true")
 
-    p_inpaint = sub.add_parser("inpaint", help="局部調整(需要來源圖 + 遮罩圖)", parents=[common])
+    p_inpaint = sub.add_parser("inpaint", help="局部調整(需要來源圖 + 遮罩圖)", parents=[prompt_common])
     p_inpaint.add_argument("--prompt", required=True)
     p_inpaint.add_argument("--image", required=True, help="來源圖路徑")
     p_inpaint.add_argument("--mask", required=True, help="遮罩圖路徑(需帶 alpha 通道,要重畫的區域 alpha=0/透明,其餘 alpha=255/不透明——用 ComfyUI MaskEditor 存的檔案格式一定對)")
-    p_inpaint.add_argument("--negative")
     p_inpaint.add_argument("--denoise", type=float, default=1.0)
-    p_inpaint.add_argument("--seed", type=int)
 
     p_guided = sub.add_parser(
         "guided_inpaint",
         help="局部重繪 + 結構鎖定/外觀參考圖(遮罩範圍內可選擇鎖住結構、可選擇用一張圖決定外觀,而不是只能靠文字描述;用於換武器/道具但要保持握姿、套用美術自畫材質紋理這類需求)",
-        parents=[common],
+        parents=[prompt_common],
     )
     p_guided.add_argument("--prompt", required=True)
     p_guided.add_argument("--image", required=True, help="來源圖路徑")
@@ -696,53 +729,37 @@ def main():
     p_guided.add_argument("--control-strength", type=float, default=1.0)
     p_guided.add_argument("--appearance-ref", help="外觀參考圖路徑(選用,例如美術自己畫的材質/紋理圖)——不給就純靠文字描述外觀。建議用乾淨的材質特寫,不要整張場景圖,不然背景/光影會一起被帶進來")
     p_guided.add_argument("--appearance-weight", type=float, default=0.8, help="外觀參考圖的貼合強度,原則同 --ip-weight")
-    p_guided.add_argument("--negative")
     p_guided.add_argument("--denoise", type=float, default=1.0)
-    p_guided.add_argument("--seed", type=int)
 
-    p_pose = sub.add_parser("pose_only", help="單獨用姿勢/線稿控制構圖,不鎖角色一致性", parents=[common])
+    p_pose = sub.add_parser("pose_only", help="單獨用姿勢/線稿控制構圖,不鎖角色一致性", parents=[batch_lora_common])
     p_pose.add_argument("--prompt", required=True)
     p_pose.add_argument("--pose-ref", required=True, help="姿勢/線稿參考圖路徑")
-    p_pose.add_argument("--negative")
     p_pose.add_argument("--pose-strength", type=float, default=1.0)
     p_pose.add_argument("--control-type", choices=["canny", "pose", "depth"], default="canny",
                          help="構圖控制來源:canny=線稿邊緣(預設),pose=骨架姿勢,depth=深度圖")
     p_pose.add_argument("--width", type=int, default=DEVICE["default_width"])
     p_pose.add_argument("--height", type=int, default=DEVICE["default_height"])
-    p_pose.add_argument("--seed", type=int)
-    p_pose.add_argument("--batch", type=int, default=1, help="一次生成幾個版本比較")
-    p_pose.add_argument("--lora", help="LoRA 檔名(models/loras/ 底下),不給就不套用")
-    p_pose.add_argument("--lora-strength", type=float, default=0.8)
     p_pose.add_argument("--remove-bg", action="store_true")
 
-    p_style = sub.add_parser("style_lock", help="單獨鎖角色/風格一致性,姿勢隨意(不需要姿勢參考圖)", parents=[common])
+    p_style = sub.add_parser("style_lock", help="單獨鎖角色/風格一致性,姿勢隨意(不需要姿勢參考圖)", parents=[batch_lora_common])
     p_style.add_argument("--prompt", required=True)
     p_style.add_argument("--character-ref", required=True, help="角色/風格參考圖路徑")
-    p_style.add_argument("--negative")
     p_style.add_argument("--ip-weight", type=float, default=0.8)
     p_style.add_argument("--width", type=int, default=DEVICE["default_width"])
     p_style.add_argument("--height", type=int, default=DEVICE["default_height"])
-    p_style.add_argument("--seed", type=int)
-    p_style.add_argument("--batch", type=int, default=1, help="一次生成幾個版本比較")
-    p_style.add_argument("--lora", help="LoRA 檔名(models/loras/ 底下),不給就不套用")
-    p_style.add_argument("--lora-strength", type=float, default=0.8)
     p_style.add_argument("--remove-bg", action="store_true")
 
-    p_refine = sub.add_parser("refine", help="圖生圖:草稿精緻化 / 材質顏色變體(保留原圖構圖)", parents=[common])
+    p_refine = sub.add_parser("refine", help="圖生圖:草稿精緻化 / 材質顏色變體(保留原圖構圖)", parents=[prompt_common])
     p_refine.add_argument("--prompt", required=True)
     p_refine.add_argument("--image", required=True, help="來源圖路徑(草稿或要換材質的圖)")
-    p_refine.add_argument("--negative")
     p_refine.add_argument("--denoise", type=float, default=0.6, help="0.3~0.4 大致保留構圖只上色;0.6~0.7 細節大幅改變;0.9+ 幾乎重畫")
-    p_refine.add_argument("--seed", type=int)
     p_refine.add_argument("--remove-bg", action="store_true")
 
-    p_upscale = sub.add_parser("upscale", help="放大精修(放大模型 + 二次取樣補細節,不是單純拉大)", parents=[common])
+    p_upscale = sub.add_parser("upscale", help="放大精修(放大模型 + 二次取樣補細節,不是單純拉大)", parents=[prompt_common])
     p_upscale.add_argument("--prompt", required=True, help="用來引導二次取樣補細節,通常沿用原本生成這張圖時的 prompt")
     p_upscale.add_argument("--image", required=True, help="來源圖路徑(要放大的圖)")
-    p_upscale.add_argument("--negative")
     p_upscale.add_argument("--scale", type=float, default=2.0, help="相對原圖的放大倍率(預設 2 倍),最高 4 倍")
     p_upscale.add_argument("--denoise", type=float, default=0.4, help="二次取樣補細節的強度:太低細節補不夠,太高會偏離原圖構圖")
-    p_upscale.add_argument("--seed", type=int)
 
     p_layer = sub.add_parser(
         "layer_split",
@@ -755,14 +772,34 @@ def main():
 
     args = ap.parse_args()
 
+    style_checkpoint = None
+    if getattr(args, "style", None):
+        if DEVICE.get("tier") not in ("sdxl_high", "sdxl", "sdxl_light"):
+            raise SystemExit(
+                f"--style 目前只支援 SDXL 家族機器(sdxl_high/sdxl/sdxl_light),"
+                f"這台機器偵測到的 tier 是 {DEVICE.get('tier')!r}。"
+                f"這幾個風格 checkpoint 都是 SDXL 架構,跟 sd15 tier 的 ControlNet/IPAdapter 對不上,"
+                f"直接送出去 ComfyUI 執行期會 shape mismatch。"
+            )
+        style_checkpoint = STYLE_CHECKPOINTS[args.style]
+
+    if getattr(args, "rating", None):
+        if args.style not in RATING_TAGS:
+            raise SystemExit(
+                f"--rating 只在 --style anime/illustration 時有意義(這兩顆底模訓練資料本身用分級標籤"
+                f"控制內容尺度),目前 --style={args.style!r} 沒有這個標籤慣例,加了也沒效果,直接擋下來。"
+            )
+        args.prompt = f"{RATING_TAGS[args.style][args.rating]}, {args.prompt}"
+
     if args.task == "concept":
         prompt, out_id = build_concept(args.prompt, args.negative, args.width, args.height, args.seed,
-                                        batch_size=args.batch, lora_name=args.lora, lora_strength=args.lora_strength)
+                                        batch_size=args.batch, lora_name=args.lora, lora_strength=args.lora_strength,
+                                        checkpoint=style_checkpoint)
     elif args.task == "icon_asset":
         structure_fn = upload_image(args.structure_ref) if args.structure_ref else None
         prompt, out_id = build_icon_asset(args.prompt, args.negative, args.width, args.height, args.seed,
                                            batch_size=args.batch, lora_name=args.lora, lora_strength=args.lora_strength,
-                                           structure_ref_filename=structure_fn)
+                                           structure_ref_filename=structure_fn, checkpoint=style_checkpoint)
     elif args.task == "character_action":
         char_fn = upload_image(args.character_ref)
         pose_fn = upload_image(args.pose_ref)
@@ -771,13 +808,13 @@ def main():
             width=args.width, height=args.height,
             seed=args.seed, ip_weight=args.ip_weight, pose_strength=args.pose_strength,
             batch_size=args.batch, control_type=args.control_type,
-            lora_name=args.lora, lora_strength=args.lora_strength,
+            lora_name=args.lora, lora_strength=args.lora_strength, checkpoint=style_checkpoint,
         )
     elif args.task == "inpaint":
         img_fn = upload_image(args.image)
         mask_fn = upload_image(args.mask)
         prompt, out_id = build_inpaint(args.prompt, img_fn, mask_fn, args.negative,
-                                        denoise=args.denoise, seed=args.seed)
+                                        denoise=args.denoise, seed=args.seed, checkpoint=style_checkpoint)
     elif args.task == "guided_inpaint":
         img_fn = upload_image(args.image)
         mask_fn = upload_image(args.mask)
@@ -789,7 +826,7 @@ def main():
             args.prompt, img_fn, mask_fn, args.negative,
             control_ref_filename=control_fn, control_type=args.control_type, control_strength=args.control_strength,
             appearance_ref_filename=appearance_fn, appearance_weight=args.appearance_weight,
-            denoise=args.denoise, seed=args.seed,
+            denoise=args.denoise, seed=args.seed, checkpoint=style_checkpoint,
         )
     elif args.task == "pose_only":
         pose_fn = upload_image(args.pose_ref)
@@ -797,22 +834,25 @@ def main():
                                           width=args.width, height=args.height,
                                           seed=args.seed, pose_strength=args.pose_strength,
                                           batch_size=args.batch, control_type=args.control_type,
-                                          lora_name=args.lora, lora_strength=args.lora_strength)
+                                          lora_name=args.lora, lora_strength=args.lora_strength,
+                                          checkpoint=style_checkpoint)
     elif args.task == "style_lock":
         char_fn = upload_image(args.character_ref)
         prompt, out_id = build_style_lock(args.prompt, char_fn, args.negative,
                                            width=args.width, height=args.height,
                                            seed=args.seed, ip_weight=args.ip_weight,
                                            batch_size=args.batch,
-                                           lora_name=args.lora, lora_strength=args.lora_strength)
+                                           lora_name=args.lora, lora_strength=args.lora_strength,
+                                           checkpoint=style_checkpoint)
     elif args.task == "refine":
         img_fn = upload_image(args.image)
         prompt, out_id = build_refine(args.prompt, img_fn, args.negative,
-                                       denoise=args.denoise, seed=args.seed)
+                                       denoise=args.denoise, seed=args.seed, checkpoint=style_checkpoint)
     elif args.task == "upscale":
         img_fn = upload_image(args.image)
         prompt, out_id = build_upscale(args.prompt, img_fn, args.negative,
-                                        scale=args.scale, denoise=args.denoise, seed=args.seed)
+                                        scale=args.scale, denoise=args.denoise, seed=args.seed,
+                                        checkpoint=style_checkpoint)
     elif args.task == "layer_split":
         img_fn = upload_image(args.image)
         mask_fn = upload_image(args.mask)

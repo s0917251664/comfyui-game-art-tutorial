@@ -64,6 +64,8 @@
 
 > **這四個 task(concept / pose_only / style_lock / character_action)都要多問一題:圖片尺寸/比例有沒有要求?** 例如直式角色圖、橫式場景圖、正方形圖示、遊戲引擎規定的固定尺寸。使用者沒概念或沒特別要求就用預設值(不用主動報數字出來),有要求就用 `--width`/`--height` 帶入(數值必須是 8 的倍數,常見值:1024x1024 方形、832x1216 直式、1216x832 橫式)。這題容易被忽略但常常很重要——遊戲素材有固定尺寸規格是常態,產出來尺寸不對通常等於要重做。
 
+> **`--style`(除 `layer_split` 外全部 task 都支援)不用主動問,使用者對這次美術方向有明確偏好時才用。** 例如「這次想要偏插畫感/概念設計稿的感覺」→ `--style illustration`,「二次元/動漫風」→ `--style anime`,「寫實一點」→ `--style realistic`。不給就完全沿用這台機器裝機時鎖定的預設 checkpoint,不要為了「風格更好」自作主張加這個旗標。只支援 SDXL 家族 tier,對應 checkpoint 沒下載過會直接報錯,細節見 `reference/full-params.md` 跟 `reference/known-limitations.md`。
+
 ### concept(概念圖)
 1. 想畫什麼(轉成英文 prompt,SDXL 對英文 prompt 理解較準)
 2. 有沒有想避開的東西(負向詞,沒有就用預設 `blurry, low quality, extra fingers, deformed, watermark`)
@@ -156,31 +158,31 @@
 
 ```
 concept:
-  <python_exe> <generate_script> concept --prompt "..." [--negative "..."] [--width W --height H] [--batch 3] [--lora <檔名> --lora-strength 0.8] [--remove-bg] --output-dir <output_dir>
+  <python_exe> <generate_script> concept --prompt "..." [--negative "..."] [--width W --height H] [--batch 3] [--lora <檔名> --lora-strength 0.8] [--style realistic|illustration|anime] [--remove-bg] --output-dir <output_dir>
 
 icon_asset:
-  <python_exe> <generate_script> icon_asset --prompt "..." [--negative "..."] [--width W --height H] [--batch 3] [--lora <檔名> --lora-strength 0.8] [--structure-ref <範本圖路徑>] --output-dir <output_dir>
+  <python_exe> <generate_script> icon_asset --prompt "..." [--negative "..."] [--width W --height H] [--batch 3] [--lora <檔名> --lora-strength 0.8] [--structure-ref <範本圖路徑>] [--style realistic|illustration|anime] --output-dir <output_dir>
 
 pose_only:
-  <python_exe> <generate_script> pose_only --prompt "..." --pose-ref <path> [--pose-strength 1.0] [--control-type canny|pose|depth] [--width W --height H] [--batch 3] [--lora <檔名> --lora-strength 0.8] [--remove-bg] --output-dir <output_dir>
+  <python_exe> <generate_script> pose_only --prompt "..." --pose-ref <path> [--pose-strength 1.0] [--control-type canny|pose|depth] [--width W --height H] [--batch 3] [--lora <檔名> --lora-strength 0.8] [--style realistic|illustration|anime] [--remove-bg] --output-dir <output_dir>
 
 style_lock:
-  <python_exe> <generate_script> style_lock --prompt "..." --character-ref <path> [--ip-weight 0.8] [--width W --height H] [--batch 3] [--lora <檔名> --lora-strength 0.8] [--remove-bg] --output-dir <output_dir>
+  <python_exe> <generate_script> style_lock --prompt "..." --character-ref <path> [--ip-weight 0.8] [--width W --height H] [--batch 3] [--lora <檔名> --lora-strength 0.8] [--style realistic|illustration|anime] [--remove-bg] --output-dir <output_dir>
 
 character_action:
-  <python_exe> <generate_script> character_action --prompt "..." --character-ref <path> --pose-ref <path> [--control-type canny|pose|depth] [--width W --height H] [--batch 3] [--lora <檔名> --lora-strength 0.8] [--remove-bg] --output-dir <output_dir>
+  <python_exe> <generate_script> character_action --prompt "..." --character-ref <path> --pose-ref <path> [--control-type canny|pose|depth] [--width W --height H] [--batch 3] [--lora <檔名> --lora-strength 0.8] [--style realistic|illustration|anime] [--remove-bg] --output-dir <output_dir>
 
 refine:
-  <python_exe> <generate_script> refine --prompt "..." --image <path> [--denoise 0.6] [--remove-bg] --output-dir <output_dir>
+  <python_exe> <generate_script> refine --prompt "..." --image <path> [--denoise 0.6] [--style realistic|illustration|anime] [--remove-bg] --output-dir <output_dir>
 
 inpaint:
-  <python_exe> <generate_script> inpaint --prompt "..." --image <path> --mask <path> [--denoise 0.9] --output-dir <output_dir>
+  <python_exe> <generate_script> inpaint --prompt "..." --image <path> --mask <path> [--denoise 0.9] [--style realistic|illustration|anime] --output-dir <output_dir>
 
 guided_inpaint:
-  <python_exe> <generate_script> guided_inpaint --prompt "..." --image <path> --mask <path> [--control-type pose|canny|depth] [--control-ref <path>] [--control-strength 1.0] [--appearance-ref <path>] [--appearance-weight 0.8] [--denoise 1.0] --output-dir <output_dir>
+  <python_exe> <generate_script> guided_inpaint --prompt "..." --image <path> --mask <path> [--control-type pose|canny|depth] [--control-ref <path>] [--control-strength 1.0] [--appearance-ref <path>] [--appearance-weight 0.8] [--denoise 1.0] [--style realistic|illustration|anime] --output-dir <output_dir>
 
 upscale:
-  <python_exe> <generate_script> upscale --prompt "..." --image <path> [--scale 2.0] [--denoise 0.4] --output-dir <output_dir>
+  <python_exe> <generate_script> upscale --prompt "..." --image <path> [--scale 2.0] [--denoise 0.4] [--style realistic|illustration|anime] --output-dir <output_dir>
 
 layer_split:
   <python_exe> <generate_script> layer_split --image <path> --mask <path> --layer-name <name> --output-dir <output_dir>
