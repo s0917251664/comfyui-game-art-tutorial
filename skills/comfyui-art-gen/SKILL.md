@@ -7,8 +7,10 @@
 當使用者用自然語言要求產生遊戲美術素材(概念圖、角色動作圖/姿勢圖、構圖控制、角色一致性、局部修改/局部重繪、圖生圖精緻化/材質變體、去背)時使用。
 
 **不要用於**:
-- UI/介面圖 → 已有 Claude Code + Figma MCP + design system 的流程,不屬於這裡
+- 整個 UI 畫面/版面配置(多元件同時排版、要考慮版面與 Design Token)→ 已有 Claude Code + Figma MCP + design system 的流程,不屬於這裡
 - Logo、中文字排版 → 本機模型的先天弱項,需要另外走雲端 API 路線(GPT-Image),目前尚未設定 Comfy 帳號,如實告知使用者這塊做不到,不要硬做
+
+**可以用於**(容易誤判成「UI 圖」而不敢做的邊界情況):單一 UI 小圖示/symbol/物件素材(按鈕圖示、道具圖示、轉盤這類複合元件裡的單一構件)本質上跟遊戲道具素材沒有差別,屬於 `icon_asset` task,不算「整個 UI 畫面」。
 
 ## 核心原則
 
@@ -46,6 +48,7 @@
 | 使用者說的像... | task | 判斷依據 |
 |---|---|---|
 | 「畫一個...」「幫我生一張概念圖/場景/道具」,沒有提到任何參考圖 | `concept` | 沒有輸入圖 |
+| 「幫我做一個XX的圖示/symbol/按鈕圖案」「單一遊戲小物件,要疊加到別的畫面上用」 | `icon_asset` | 訴求是單一、獨立、預期會疊到其他畫面上的小型元素,不是完整場景/整個 UI 畫面版面 |
 | 「照這個姿勢/線稿畫」,但沒有指定要哪個角色(全新角色、或角色不重要) | `pose_only` | 只有姿勢/線稿參考圖,不需要角色一致性 |
 | 「這個角色/風格套到新場景」「姿勢隨意,但要是這個角色」 | `style_lock` | 只有角色/風格參考圖,不需要指定姿勢 |
 | 「這個角色換個姿勢/動作」「照這個線稿套進這個角色」 | `character_action` | 需要角色參考圖 **+** 姿勢/線稿參考圖(兩者都要) |
@@ -53,7 +56,8 @@
 | 「這裡崩壞了幫我修」「只改這個區域」「局部調整」 | `inpaint` | 有來源圖 + 需要指定修改區域,而且改動不涉及「結構要保持、外觀要換」這種衝突需求 |
 | 「換武器/道具但要保持握姿」「換材質紋路但造型不能變」「這個部位要換,但骨架/輪廓不能崩」 | `guided_inpaint` | 有來源圖 + 修改區域,而且該區域有「結構(關節/輪廓)要鎖住、外觀要自由換」的衝突需求——純 `inpaint` 對這類需求容易讓模型同時賭結構跟外觀,失敗率高 |
 | 「這張圖放大」「解析度不夠」「細節加銳利一點」「要交件/要印出來所以要更高解析度」 | `upscale` | 已經有確定要用的成品圖,想要更高解析度 + 補細節,不是想重新構圖 |
-| 「去背」「透明背景」 | 加 `--remove-bg` 旗標,可疊加在 `concept`/`pose_only`/`style_lock`/`character_action`/`refine` 之後 | — |
+| 「這張已經定稿的合成圖,幫我拆出外框/中心鈕這幾塊各自的圖層」 | `layer_split` | 已經有一張定稿的完成圖,想事後切出幾個大塊區域各自疊放/調色,不是重新生成內容;拆幾層呼叫幾次,細節/使用限制見「複合元件的圖層」小節 |
+| 「去背」「透明背景」 | 加 `--remove-bg` 旗標,可疊加在 `concept`/`pose_only`/`style_lock`/`character_action`/`refine` 之後(`icon_asset` 永遠去背,不用加旗標) | — |
 | 「多出幾個版本比較」「一次看幾種可能性」 | 加 `--batch N` 旗標,只有 `concept`/`pose_only`/`style_lock`/`character_action` 支援(探索型任務才需要);問使用者要幾張,沒概念就用 3 | — |
 
 ## 各 task 該問的固定問題
@@ -65,6 +69,27 @@
 2. 有沒有想避開的東西(負向詞,沒有就用預設 `blurry, low quality, extra fingers, deformed, watermark`)
 3. 需不需要透明背景(去背)
 4. 尺寸/比例有沒有要求(見上面提示)
+
+### icon_asset(單一小型圖示/物件素材)
+1. 想畫的圖示/物件內容(轉成英文 prompt)——不用特別強調「單一置中、無背景」,`icon_asset` 已經固定在 prompt 尾端加這段引導詞,加了反而是重複
+2. 有沒有想避開的東西(負向詞,沒有就用預設)
+3. 尺寸/比例**預設 1024x1024 正方形,不用主動問**——這是跟 `concept`/`pose_only`/`style_lock`/`character_action` 四個 task 不同的地方,圖示類素材幾乎都是方形/近方形,只有使用者主動提出別的比例才用 `--width`/`--height` 覆蓋
+4. **不用問要不要去背**——`icon_asset` 永遠輸出透明背景,沒有 `--remove-bg` 旗標
+
+### layer_split(從定稿完成圖拆出單一圖層)
+1. 來源圖路徑(**必須是已經定稿的完成圖**,不是重新生成——這個 task 不吃 prompt,純粹裁切透明度)
+2. **一定要請使用者提供這一層的遮罩圖**,原則同 `inpaint`(alpha 語意一樣:要保留進這一層的區域 alpha=0,其餘 alpha=255),建議用 MaskEditor 畫
+3. 這一層要取什麼名字(`--layer-name`,用來組輸出檔名前綴,例如 `border`、`center_hub`)
+4. 一次呼叫只拆一層,要拆幾層就呼叫幾次——**適合大塊、邊界明確的區域**(例如外框/中心鈕),不適合切太細碎或太多張視覺相似的區域(例如轉盤裡 8 片幾乎一樣的分區隔板),這種高度重複的元素該怎麼處理,見下面「複合元件的圖層」小節,不要硬用 `layer_split` 切
+
+### 複合元件的圖層(例如轉盤的外框/分區隔板/中心鈕)
+使用者要「一個複合元件,但各個構件要能分開疊放/調色/動畫」時,依構件類型判斷用哪種做法,不要不分青紅皂白都套同一招:
+- **結構相異的大塊**(外框、中心鈕、指針這類長相彼此不同、只有一個的構件):各自用 `icon_asset` 呼叫一次獨立生成。想讓幾次呼叫的色調/材質風格盡量一致,prompt 裡重複寫同一組風格關鍵字(例如都寫 "gold ornate fantasy style, teal gemstone accents"),但**不保證完全一致**,仍需要美術後製微調——AI 獨立生成之間本來就沒有像素級一致性保證
+- **高度重複的元素**(例如轉盤的每個分區隔板,肉眼看起來該長一樣的那種):**不要**逐一各自生成,也**不要**事後用 `layer_split` 從一張合成圖裡切割相鄰的相似色塊——兩種做法都不可靠(前者色差/比例不一致,後者邊界抓不準)。正確做法是只生成「一片分區樣板」(`icon_asset` 生一次),交給使用者在自己的工具(Figma/遊戲引擎)裡旋轉複製組成整圈,這是遊戲美術處理放射狀重複元素的標準做法
+- **已經有一張定稿合成圖,想事後切出幾個大塊區域**:用 `layer_split`,見上面固定問題
+- **目前沒有「AI 自動判斷圖層邊界、不用手動畫遮罩」的能力**(沒有裝語意分割模型),如實告知使用者這塊做不到,不要假裝可以,細節見 `reference/known-limitations.md`
+
+> 判斷理由/背景說明見 `reference/layered-assets.md`,平常照上面判斷就好,不用每次都讀。
 
 ### pose_only(單獨姿勢/構圖控制)
 1. 想要的畫面文字描述
@@ -132,6 +157,9 @@
 concept:
   <python_exe> <generate_script> concept --prompt "..." [--negative "..."] [--width W --height H] [--batch 3] [--lora <檔名> --lora-strength 0.8] [--remove-bg] --output-dir <output_dir>
 
+icon_asset:
+  <python_exe> <generate_script> icon_asset --prompt "..." [--negative "..."] [--width W --height H] [--batch 3] [--lora <檔名> --lora-strength 0.8] --output-dir <output_dir>
+
 pose_only:
   <python_exe> <generate_script> pose_only --prompt "..." --pose-ref <path> [--pose-strength 1.0] [--control-type canny|pose|depth] [--width W --height H] [--batch 3] [--lora <檔名> --lora-strength 0.8] [--remove-bg] --output-dir <output_dir>
 
@@ -152,6 +180,9 @@ guided_inpaint:
 
 upscale:
   <python_exe> <generate_script> upscale --prompt "..." --image <path> [--scale 2.0] [--denoise 0.4] --output-dir <output_dir>
+
+layer_split:
+  <python_exe> <generate_script> layer_split --image <path> --mask <path> --layer-name <name> --output-dir <output_dir>
 ```
 
 (`<python_exe>`、`<generate_script>`、`<output_dir>` 都從 `local_config.json` 讀,不要寫死實際路徑)
@@ -168,3 +199,4 @@ upscale:
 | `pose_only`/`character_action` 要判斷 `--control-type` 該用 canny/pose/depth,或參考圖是稀疏線稿 | `reference/control-type-selection.md` |
 | `inpaint` 遮罩好像沒生效、局部修圖結果變差、要畫不規則遮罩 | `reference/masking.md` |
 | 使用者問「這個能不能做到」「有沒有什麼做不到的」,或遇到看起來像已知限制的失敗結果 | `reference/known-limitations.md` |
+| 複合式 UI 元件要拆圖層,想知道判斷理由/背景說明 | `reference/layered-assets.md` |

@@ -185,6 +185,42 @@ def build_concept(prompt, negative=None, width=None, height=None, seed=None, ste
     return graph, "6"  # 回傳 (prompt, 最終圖片節點id) 方便後續接去背
 
 
+# ---------- task: icon_asset(單一小型 UI 圖示/物件素材,不是整個 UI 畫面)----------
+# 跟 concept 的差異只有三點,其餘 graph 結構完全共用 concept 的模式:
+#   1. prompt/negative 固定 append 一段構圖引導詞,把生成結果導向「單一置中物件、無場景背景」
+#      ——這同時讓輸出更像可用的圖示素材,也讓後面接的去背(BiRefNet)邊緣更乾淨(背景乾淨的
+#      單一主體比「背景也有大量裝飾元素在跟主體搶前景」的構圖更容易被正確分離)
+#   2. 預設畫布是 1024x1024 正方形,不吃 DEVICE["default_width/height"](那組預設是給人像
+#      直式構圖調的,不適合圖示)
+#   3. main() 呼叫這個 task 時一定會接去背,沒有 --remove-bg 旗標讓使用者選——圖示素材預期
+#      本來就是要疊加到別的畫面上用,透明背景是這個 task 存在的前提,不是可選項
+ICON_ASSET_PROMPT_SUFFIX = ", single centered object, icon design, isolated on plain simple background, clean readable silhouette, no scene, no extra props"
+ICON_ASSET_NEGATIVE_SUFFIX = ", cluttered scene, multiple objects, full illustration background, cropped edges"
+
+
+def build_icon_asset(prompt, negative=None, width=1024, height=1024, seed=None, steps=25, cfg=7.0,
+                      batch_size=1, lora_name=None, lora_strength=0.8):
+    negative = (negative or DEFAULT_NEGATIVE) + ICON_ASSET_NEGATIVE_SUFFIX
+    graph = {"1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": CKPT}}}
+    model_ref, clip_ref = model_clip_refs(graph, lora_name, lora_strength)
+    graph.update({
+        "2": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt + ICON_ASSET_PROMPT_SUFFIX, "clip": clip_ref}},
+        "3": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": clip_ref}},
+        "4": {"class_type": "EmptyLatentImage", "inputs": {"width": width, "height": height, "batch_size": batch_size}},
+        "5": {
+            "class_type": "KSampler",
+            "inputs": {
+                "model": model_ref, "positive": ["2", 0], "negative": ["3", 0], "latent_image": ["4", 0],
+                "seed": seed_or_random(seed), "steps": steps, "cfg": cfg,
+                "sampler_name": "euler", "scheduler": "normal", "denoise": 1.0,
+            },
+        },
+        "6": {"class_type": "VAEDecode", "inputs": {"samples": ["5", 0], "vae": ["1", 2]}},
+        "7": {"class_type": "SaveImage", "inputs": {"images": ["6", 0], "filename_prefix": "icon_asset"}},
+    })
+    return graph, "6"
+
+
 # ---------- task: character_action(Ch7 ControlNet + Ch8 IPAdapter 合併)----------
 def build_character_action(prompt, character_ref_filename, pose_ref_filename, negative=None,
                             width=None, height=None, seed=None, steps=25, cfg=7.0,
@@ -474,15 +510,44 @@ def build_upscale(prompt, image_filename, negative=None, scale=2.0, denoise=0.4,
     }, "10"
 
 
+def build_layer_split(image_filename, mask_filename, layer_name):
+    """把一張已經畫好的完成圖,依遮罩切成一張跟原圖等尺寸/位置對齊的透明圖層。
+
+    不重新生成畫面內容,純粹是既有圖片的透明度裁切——用於複合式 UI 元件(例如轉盤的外框/
+    中心鈕)已經有一張定稿合成圖,想事後切出幾個大塊區域各自疊放/調色的情境。遮罩 alpha
+    慣例沿用既有 inpaint/guided_inpaint 那一套(見 skills/comfyui-art-gen/reference/masking.md):
+    alpha=0 的區域 = 要保留進這一層,alpha=255 = 不屬於這一層。
+
+    節點邏輯跟 attach_bg_removal() 是同一招:LoadImage 的 MASK 輸出是「1 − alpha」,也就是
+    alpha=0(要保留的區域)對應 mask=1;但 JoinImageWithAlpha 內部會把傳入的 alpha 再做一次
+    `1 − x` 換算,兩次換算方向相反,所以中間一樣要插 InvertMask,才能讓「mask=1(要保留)」
+    最終變成「輸出 alpha=1(不透明)」。
+    """
+    return {
+        "1": {"class_type": "LoadImage", "inputs": {"image": image_filename}},
+        "2": {"class_type": "LoadImage", "inputs": {"image": mask_filename}},
+        "3": {"class_type": "InvertMask", "inputs": {"mask": ["2", 1]}},
+        "4": {"class_type": "JoinImageWithAlpha", "inputs": {"image": ["1", 0], "alpha": ["3", 0]}},
+        "5": {"class_type": "SaveImage", "inputs": {"images": ["4", 0], "filename_prefix": f"layer_{layer_name}"}},
+    }, "4"
+
+
 def attach_bg_removal(prompt, image_node_id):
-    """在既有 graph 後面接上去背,回傳新增節點後的 SaveImage 節點 id(RGBA)。"""
+    """在既有 graph 後面接上去背,回傳新增節點後的 SaveImage 節點 id(RGBA)。
+
+    RemoveBackground 輸出的 MASK 是「1=前景主體」,但 JoinImageWithAlpha 內部會把傳入的
+    alpha 做 `1 - mask` 換算(慣例是 ComfyUI 的 MASK 語意「1=要挖掉的區域」),兩者語意相反,
+    直接接會讓主體被挖空、背景保留——踩過一次的坑,照 ComfyUI 官方 blueprint
+    「Remove Background (BiRefNet)」的做法,中間要插一個 InvertMask 反轉語意。
+    """
     next_id = str(max(int(k) for k in prompt.keys()) + 1)
-    n1, n2, n3 = next_id, str(int(next_id) + 1), str(int(next_id) + 2)
+    n1, n2, n3, n4 = next_id, str(int(next_id) + 1), str(int(next_id) + 2), str(int(next_id) + 3)
     prompt[n1] = {"class_type": "LoadBackgroundRemovalModel", "inputs": {"bg_removal_name": "birefnet.safetensors"}}
     prompt[n2] = {"class_type": "RemoveBackground", "inputs": {"bg_removal_model": [n1, 0], "image": [image_node_id, 0]}}
-    prompt[n3] = {"class_type": "JoinImageWithAlpha", "inputs": {"image": [image_node_id, 0], "alpha": [n2, 0]}}
-    save_id = str(int(n3) + 1)
-    prompt[save_id] = {"class_type": "SaveImage", "inputs": {"images": [n3, 0], "filename_prefix": "transparent"}}
+    prompt[n3] = {"class_type": "InvertMask", "inputs": {"mask": [n2, 0]}}
+    prompt[n4] = {"class_type": "JoinImageWithAlpha", "inputs": {"image": [image_node_id, 0], "alpha": [n3, 0]}}
+    save_id = str(int(n4) + 1)
+    prompt[save_id] = {"class_type": "SaveImage", "inputs": {"images": [n4, 0], "filename_prefix": "transparent"}}
     return save_id
 
 
@@ -504,6 +569,16 @@ def main():
     p_concept.add_argument("--lora", help="LoRA 檔名(models/loras/ 底下),不給就不套用")
     p_concept.add_argument("--lora-strength", type=float, default=0.8)
     p_concept.add_argument("--remove-bg", action="store_true")
+
+    p_icon = sub.add_parser("icon_asset", help="單一小型 UI 圖示/物件素材(不是整個 UI 畫面),永遠去背輸出透明背景", parents=[common])
+    p_icon.add_argument("--prompt", required=True)
+    p_icon.add_argument("--negative")
+    p_icon.add_argument("--width", type=int, default=1024)
+    p_icon.add_argument("--height", type=int, default=1024)
+    p_icon.add_argument("--seed", type=int)
+    p_icon.add_argument("--batch", type=int, default=1, help="一次生成幾個版本比較")
+    p_icon.add_argument("--lora", help="LoRA 檔名(models/loras/ 底下),不給就不套用")
+    p_icon.add_argument("--lora-strength", type=float, default=0.8)
 
     p_char = sub.add_parser("character_action", help="角色動作圖(角色參考圖 + 姿勢線稿)", parents=[common])
     p_char.add_argument("--prompt", required=True)
@@ -592,11 +667,23 @@ def main():
     p_upscale.add_argument("--denoise", type=float, default=0.4, help="二次取樣補細節的強度:太低細節補不夠,太高會偏離原圖構圖")
     p_upscale.add_argument("--seed", type=int)
 
+    p_layer = sub.add_parser(
+        "layer_split",
+        help="把一張已定稿的完成圖依遮罩切出單一圖層(不重新生成內容,純粹裁切透明度)——用於複合式 UI 元件想事後拆出幾個大塊可疊放區域,拆一層呼叫一次",
+        parents=[common],
+    )
+    p_layer.add_argument("--image", required=True, help="來源圖路徑(已定稿的完成圖)")
+    p_layer.add_argument("--mask", required=True, help="這一層的遮罩圖路徑(同 inpaint 慣例,需帶 alpha 通道,要保留進這一層的區域 alpha=0)")
+    p_layer.add_argument("--layer-name", required=True, help="這一層的名稱,用來組輸出檔名前綴(例如 border、center_hub)")
+
     args = ap.parse_args()
 
     if args.task == "concept":
         prompt, out_id = build_concept(args.prompt, args.negative, args.width, args.height, args.seed,
                                         batch_size=args.batch, lora_name=args.lora, lora_strength=args.lora_strength)
+    elif args.task == "icon_asset":
+        prompt, out_id = build_icon_asset(args.prompt, args.negative, args.width, args.height, args.seed,
+                                           batch_size=args.batch, lora_name=args.lora, lora_strength=args.lora_strength)
     elif args.task == "character_action":
         char_fn = upload_image(args.character_ref)
         pose_fn = upload_image(args.pose_ref)
@@ -647,10 +734,14 @@ def main():
         img_fn = upload_image(args.image)
         prompt, out_id = build_upscale(args.prompt, img_fn, args.negative,
                                         scale=args.scale, denoise=args.denoise, seed=args.seed)
+    elif args.task == "layer_split":
+        img_fn = upload_image(args.image)
+        mask_fn = upload_image(args.mask)
+        prompt, out_id = build_layer_split(img_fn, mask_fn, args.layer_name)
     else:
         raise SystemExit(f"未知 task: {args.task}")
 
-    if getattr(args, "remove_bg", False):
+    if args.task == "icon_asset" or getattr(args, "remove_bg", False):
         attach_bg_removal(prompt, out_id)
 
     print(f"[送出] task={args.task}")
