@@ -13,6 +13,7 @@ Usage:
 """
 import argparse
 import json
+import math
 import mimetypes
 import os
 import sys
@@ -21,6 +22,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
+
+from PIL import Image as PILImage, ImageDraw
 
 COMFY_URL = "http://127.0.0.1:8188"
 DEFAULT_NEGATIVE = "blurry, low quality, extra fingers, deformed, watermark"
@@ -196,28 +199,97 @@ def build_concept(prompt, negative=None, width=None, height=None, seed=None, ste
 #      本來就是要疊加到別的畫面上用,透明背景是這個 task 存在的前提,不是可選項
 ICON_ASSET_PROMPT_SUFFIX = ", single centered object, icon design, isolated on plain simple background, clean readable silhouette, no scene, no extra props"
 ICON_ASSET_NEGATIVE_SUFFIX = ", cluttered scene, multiple objects, full illustration background, cropped edges"
+# icon_asset 的 --structure-ref 用的鎖死參數(這條產線的設計哲學:先求穩定可重複)。
+# 2026-08-19 實測踩過三種失敗模式(當時的情境是「輪盤要精準等分成 N 塊」,但結論適用於任何
+# 「結構/色塊配置有明確答案、不該讓 AI 自己瞎猜」的圖示):純靠文字描述數量/配置,SDXL 對這種
+# 精確計數幾何任務不可靠;改成只用線稿 ControlNet 鎖邊緣位置後,邊緣位置雖然鎖住了,但色塊
+# 配置沒被鎖住,SDXL 還是會整張畫成單一漸層蓋過色塊邊界(ControlNet canny 只鎖邊緣結構,不會
+# 連帶鎖住「這幾塊顏色要交錯」這種區域級語意)。最後改成:範本圖本身直接畫好目標結構+顏色,
+# 同時當 img2img 的底圖(denoise < 1.0,結構/色塊配置跟著像素直接繼承,不用 SDXL 自己決定)
+# 加 Canny ControlNet(邊緣位置再鎖一層,img2img 的 denoise 沒到 1.0 時邊緣仍可能被畫糊,兩層
+# 一起上比較保險)。denoise 太低(0.55/0.65 實測過)結構顏色鎖得住,但 SDXL 幾乎沒空間疊材質/
+# 光澤,畫面會很平;denoise=0.85 是目前實測結構仍然穩、質感明顯提升的甜蜜點。
+STRUCTURE_REF_CONTROL_STRENGTH = 0.85
+STRUCTURE_REF_DENOISE = 0.85
+
+
+def build_wheel_segment_template(n_segments, width=1024, height=1024,
+                                  colors=((124, 40, 168), (20, 158, 148)), gold=(212, 175, 55)):
+    """畫一張『交錯色塊扇形 + 金色分隔線/外框/中心軸』的範本圖,是 icon_asset 的 --structure-ref
+    的其中一種產生方式(輪盤/放射狀等分圖示適用)——不是獨立的 CLI task,是給呼叫端(agent 或
+    人類)在需要「放射狀精準等分」這種結構時自己呼叫來產生範本檔案用,範例見
+    skills/comfyui-art-gen/reference/structure-ref.md。"""
+    img = PILImage.new("RGB", (width, height), (0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    cx, cy = width / 2, height / 2
+    radius = min(width, height) * 0.45
+    line_width = max(3, min(width, height) // 200)
+    for i in range(n_segments):
+        a0 = 2 * math.pi * i / n_segments - math.pi / 2
+        a1 = 2 * math.pi * (i + 1) / n_segments - math.pi / 2
+        points = [(cx, cy)]
+        for s in range(13):
+            a = a0 + (a1 - a0) * s / 12
+            points.append((cx + radius * math.cos(a), cy + radius * math.sin(a)))
+        draw.polygon(points, fill=colors[i % len(colors)])
+    draw.ellipse([cx - radius, cy - radius, cx + radius, cy + radius], outline=gold, width=line_width)
+    for i in range(n_segments):
+        angle = 2 * math.pi * i / n_segments
+        x = cx + radius * math.sin(angle)
+        y = cy - radius * math.cos(angle)
+        draw.line([cx, cy, x, y], fill=gold, width=line_width)
+    hub_radius = radius * 0.12
+    draw.ellipse([cx - hub_radius, cy - hub_radius, cx + hub_radius, cy + hub_radius], fill=gold)
+    return img
 
 
 def build_icon_asset(prompt, negative=None, width=1024, height=1024, seed=None, steps=25, cfg=7.0,
-                      batch_size=1, lora_name=None, lora_strength=0.8):
+                      batch_size=1, lora_name=None, lora_strength=0.8,
+                      structure_ref_filename=None, control_strength=STRUCTURE_REF_CONTROL_STRENGTH,
+                      structure_ref_denoise=STRUCTURE_REF_DENOISE):
     negative = (negative or DEFAULT_NEGATIVE) + ICON_ASSET_NEGATIVE_SUFFIX
     graph = {"1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": CKPT}}}
     model_ref, clip_ref = model_clip_refs(graph, lora_name, lora_strength)
     graph.update({
         "2": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt + ICON_ASSET_PROMPT_SUFFIX, "clip": clip_ref}},
         "3": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": clip_ref}},
-        "4": {"class_type": "EmptyLatentImage", "inputs": {"width": width, "height": height, "batch_size": batch_size}},
-        "5": {
-            "class_type": "KSampler",
-            "inputs": {
-                "model": model_ref, "positive": ["2", 0], "negative": ["3", 0], "latent_image": ["4", 0],
-                "seed": seed_or_random(seed), "steps": steps, "cfg": cfg,
-                "sampler_name": "euler", "scheduler": "normal", "denoise": 1.0,
-            },
-        },
-        "6": {"class_type": "VAEDecode", "inputs": {"samples": ["5", 0], "vae": ["1", 2]}},
-        "7": {"class_type": "SaveImage", "inputs": {"images": ["6", 0], "filename_prefix": "icon_asset"}},
     })
+
+    if structure_ref_filename:
+        # --structure-ref:img2img 吃範本圖當底(denoise < 1.0,結構/色塊配置繼承像素),
+        # batch_size 在這個分支沒有作用(單張圖片編碼出來的 latent 本來就是 batch=1)。
+        graph["4"] = {"class_type": "LoadImage", "inputs": {"image": structure_ref_filename}}
+        graph["4z"] = {"class_type": "VAEEncode", "inputs": {"pixels": ["4", 0], "vae": ["1", 2]}}
+        latent_ref = ["4z", 0]
+        denoise = structure_ref_denoise
+    else:
+        graph["4"] = {"class_type": "EmptyLatentImage", "inputs": {"width": width, "height": height, "batch_size": batch_size}}
+        latent_ref = ["4", 0]
+        denoise = 1.0
+
+    positive_ref, negative_ref = ["2", 0], ["3", 0]
+    if structure_ref_filename:
+        graph["4c"] = build_control_preprocessor("canny", "4")
+        graph["4d"] = {"class_type": "ControlNetLoader", "inputs": {"control_net_name": CONTROLNET_MODELS["canny"]}}
+        graph["4e"] = {
+            "class_type": "ControlNetApplyAdvanced",
+            "inputs": {
+                "positive": positive_ref, "negative": negative_ref, "control_net": ["4d", 0], "image": ["4c", 0],
+                "strength": control_strength, "start_percent": 0.0, "end_percent": 1.0,
+            },
+        }
+        positive_ref, negative_ref = ["4e", 0], ["4e", 1]
+
+    graph["5"] = {
+        "class_type": "KSampler",
+        "inputs": {
+            "model": model_ref, "positive": positive_ref, "negative": negative_ref, "latent_image": latent_ref,
+            "seed": seed_or_random(seed), "steps": steps, "cfg": cfg,
+            "sampler_name": "euler", "scheduler": "normal", "denoise": denoise,
+        },
+    }
+    graph["6"] = {"class_type": "VAEDecode", "inputs": {"samples": ["5", 0], "vae": ["1", 2]}}
+    graph["7"] = {"class_type": "SaveImage", "inputs": {"images": ["6", 0], "filename_prefix": "icon_asset"}}
     return graph, "6"
 
 
@@ -539,8 +611,12 @@ def attach_bg_removal(prompt, image_node_id):
     alpha 做 `1 - mask` 換算(慣例是 ComfyUI 的 MASK 語意「1=要挖掉的區域」),兩者語意相反,
     直接接會讓主體被挖空、背景保留——踩過一次的坑,照 ComfyUI 官方 blueprint
     「Remove Background (BiRefNet)」的做法,中間要插一個 InvertMask 反轉語意。
+
+    節點 id 只能挑純數字的 key 取最大值——這個 graph 裡的節點 id 不保證全是純數字字串(例如
+    LoraLoader 固定用 "1b"、icon_asset 的 ControlNet 分支用 "4a"/"4b"/"4c"),對這些 key 呼叫
+    int() 會直接噴例外,踩過一次(--wheel-segments 8 --remove-bg 疊加時發現)。
     """
-    next_id = str(max(int(k) for k in prompt.keys()) + 1)
+    next_id = str(max(int(k) for k in prompt.keys() if k.isdigit()) + 1)
     n1, n2, n3, n4 = next_id, str(int(next_id) + 1), str(int(next_id) + 2), str(int(next_id) + 3)
     prompt[n1] = {"class_type": "LoadBackgroundRemovalModel", "inputs": {"bg_removal_name": "birefnet.safetensors"}}
     prompt[n2] = {"class_type": "RemoveBackground", "inputs": {"bg_removal_model": [n1, 0], "image": [image_node_id, 0]}}
@@ -579,6 +655,7 @@ def main():
     p_icon.add_argument("--batch", type=int, default=1, help="一次生成幾個版本比較")
     p_icon.add_argument("--lora", help="LoRA 檔名(models/loras/ 底下),不給就不套用")
     p_icon.add_argument("--lora-strength", type=float, default=0.8)
+    p_icon.add_argument("--structure-ref", help="這個圖示的結構/色塊配置已經有明確答案、不該讓 AI 自己瞎猜時用(例如放射狀精準等分):給一張範本圖路徑,用 img2img + Canny ControlNet 把結構跟顏色配置都鎖住,SDXL 只負責疊材質/光澤;不給就跟以前一樣純靠文字描述。範本圖從哪來見 skills/comfyui-art-gen/reference/structure-ref.md")
 
     p_char = sub.add_parser("character_action", help="角色動作圖(角色參考圖 + 姿勢線稿)", parents=[common])
     p_char.add_argument("--prompt", required=True)
@@ -682,8 +759,10 @@ def main():
         prompt, out_id = build_concept(args.prompt, args.negative, args.width, args.height, args.seed,
                                         batch_size=args.batch, lora_name=args.lora, lora_strength=args.lora_strength)
     elif args.task == "icon_asset":
+        structure_fn = upload_image(args.structure_ref) if args.structure_ref else None
         prompt, out_id = build_icon_asset(args.prompt, args.negative, args.width, args.height, args.seed,
-                                           batch_size=args.batch, lora_name=args.lora, lora_strength=args.lora_strength)
+                                           batch_size=args.batch, lora_name=args.lora, lora_strength=args.lora_strength,
+                                           structure_ref_filename=structure_fn)
     elif args.task == "character_action":
         char_fn = upload_image(args.character_ref)
         pose_fn = upload_image(args.pose_ref)

@@ -75,6 +75,7 @@
 2. 有沒有想避開的東西(負向詞,沒有就用預設)
 3. 尺寸/比例**預設 1024x1024 正方形,不用主動問**——這是跟 `concept`/`pose_only`/`style_lock`/`character_action` 四個 task 不同的地方,圖示類素材幾乎都是方形/近方形,只有使用者主動提出別的比例才用 `--width`/`--height` 覆蓋
 4. **不用問要不要去背**——`icon_asset` 永遠輸出透明背景,沒有 `--remove-bg` 旗標
+5. **判斷這個圖示的結構/顏色配置有沒有明確答案、不該讓 AI 自己瞎猜**(例如「精確等分成 N 塊放射狀分區」這種計數幾何需求)——這種情況純靠文字描述給 SDXL 不可靠,改用 `--structure-ref <範本圖路徑>`,範本圖從哪來、怎麼判斷要不要用,見 `reference/structure-ref.md`,不是每次都要讀,只有遇到「結構描述用文字講不清楚/AI 一直畫不準」時才需要
 
 ### layer_split(從定稿完成圖拆出單一圖層)
 1. 來源圖路徑(**必須是已經定稿的完成圖**,不是重新生成——這個 task 不吃 prompt,純粹裁切透明度)
@@ -85,7 +86,7 @@
 ### 複合元件的圖層(例如轉盤的外框/分區隔板/中心鈕)
 使用者要「一個複合元件,但各個構件要能分開疊放/調色/動畫」時,依構件類型判斷用哪種做法,不要不分青紅皂白都套同一招:
 - **結構相異的大塊**(外框、中心鈕、指針這類長相彼此不同、只有一個的構件):各自用 `icon_asset` 呼叫一次獨立生成。想讓幾次呼叫的色調/材質風格盡量一致,prompt 裡重複寫同一組風格關鍵字(例如都寫 "gold ornate fantasy style, teal gemstone accents"),但**不保證完全一致**,仍需要美術後製微調——AI 獨立生成之間本來就沒有像素級一致性保證
-- **高度重複的元素**(例如轉盤的每個分區隔板,肉眼看起來該長一樣的那種):**不要**逐一各自生成,也**不要**事後用 `layer_split` 從一張合成圖裡切割相鄰的相似色塊——兩種做法都不可靠(前者色差/比例不一致,後者邊界抓不準)。正確做法是只生成「一片分區樣板」(`icon_asset` 生一次),交給使用者在自己的工具(Figma/遊戲引擎)裡旋轉複製組成整圈,這是遊戲美術處理放射狀重複元素的標準做法
+- **高度重複的元素**(例如轉盤的每個分區隔板,肉眼看起來該長一樣的那種):**不要**逐一各自生成,也**不要**事後用 `layer_split` 從一張合成圖裡切割相鄰的相似色塊——兩種做法都不可靠(前者色差/比例不一致,後者邊界抓不準)。看使用者要的是「一片樣板自己去複製組裝」還是「一張結構已經對的完整成品圖」:前者用 `icon_asset` 生一片分區樣板,交給使用者在自己的工具(Figma/遊戲引擎)裡旋轉複製組成整圈;後者用 `icon_asset` 的 `--structure-ref`(見 `reference/structure-ref.md`)在單次生成裡把整個放射狀結構跟顏色配置一次鎖住,不用使用者自己組裝,但代價是精細裝飾細節會被結構鎖一定程度壓掉
 - **已經有一張定稿合成圖,想事後切出幾個大塊區域**:用 `layer_split`,見上面固定問題
 - **目前沒有「AI 自動判斷圖層邊界、不用手動畫遮罩」的能力**(沒有裝語意分割模型),如實告知使用者這塊做不到,不要假裝可以,細節見 `reference/known-limitations.md`
 
@@ -158,7 +159,7 @@ concept:
   <python_exe> <generate_script> concept --prompt "..." [--negative "..."] [--width W --height H] [--batch 3] [--lora <檔名> --lora-strength 0.8] [--remove-bg] --output-dir <output_dir>
 
 icon_asset:
-  <python_exe> <generate_script> icon_asset --prompt "..." [--negative "..."] [--width W --height H] [--batch 3] [--lora <檔名> --lora-strength 0.8] --output-dir <output_dir>
+  <python_exe> <generate_script> icon_asset --prompt "..." [--negative "..."] [--width W --height H] [--batch 3] [--lora <檔名> --lora-strength 0.8] [--structure-ref <範本圖路徑>] --output-dir <output_dir>
 
 pose_only:
   <python_exe> <generate_script> pose_only --prompt "..." --pose-ref <path> [--pose-strength 1.0] [--control-type canny|pose|depth] [--width W --height H] [--batch 3] [--lora <檔名> --lora-strength 0.8] [--remove-bg] --output-dir <output_dir>
@@ -200,3 +201,4 @@ layer_split:
 | `inpaint` 遮罩好像沒生效、局部修圖結果變差、要畫不規則遮罩 | `reference/masking.md` |
 | 使用者問「這個能不能做到」「有沒有什麼做不到的」,或遇到看起來像已知限制的失敗結果 | `reference/known-limitations.md` |
 | 複合式 UI 元件要拆圖層,想知道判斷理由/背景說明 | `reference/layered-assets.md` |
+| `icon_asset` 的結構/顏色描述用文字講不清楚,或 AI 一直畫不準確定的數量/配置(例如放射狀等分) | `reference/structure-ref.md` |

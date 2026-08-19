@@ -8,6 +8,7 @@
 | `--width` / `--height` | `concept`、`pose_only`、`style_lock`、`character_action` | 覆蓋預設解析度(預設值來自 `device_config.json`),數值須為 8 的倍數 | **這四個 task 都要主動問**,不是邊界情況——見 SKILL.md「各 task 該問的固定問題」開頭的提示 |
 | `--width` / `--height` | `icon_asset` | 覆蓋預設解析度(**預設 1024x1024 正方形,固定值,不吃 `device_config.json`**) | 圖示類素材幾乎都是方形,**不用主動問**,只有使用者主動提出別的比例才用 |
 | `--layer-name` | `layer_split` | 這一層的名稱,組輸出檔名前綴 | 每次都要問,已在 SKILL.md 固定問題裡 |
+| `--structure-ref <路徑>` | `icon_asset` | 結構/顏色配置已有明確答案時用的範本圖(img2img + Canny ControlNet 雙重鎖,denoise/strength 都鎖死 0.85,不開放調整),細節見 `reference/structure-ref.md` | 圖示的結構描述用文字講不清楚、或 AI 一直畫不準確定的數量/配置時才用,平常不用主動問 |
 | `--negative "..."` | 全部 | 負向詞,不給用預設 `blurry, low quality, extra fingers, deformed, watermark` | 使用者主動提到不想要的東西時才問 |
 | `--ip-weight N`(0~1,預設 0.8)| `style_lock`、`character_action` | 角色/風格參考圖的貼合強度,越高越像參考圖但可能犧牲文字描述的內容 | 使用者說「太像參考圖了」或「一致性不夠」時可以往下/往上調;**同樣要注意的訊號是「文字描述的具體特徵沒有出現在結果裡」**(不限於髮色,任何跟參考圖衝突的文字指定特徵都可能被蓋過)——實際比對產出後再判斷要不要調低重跑,不要假設某個數字對所有情境都通用 |
 | `--pose-strength N`(0~10,預設 1.0)| `pose_only`、`character_action` | 姿勢控制的嚴格程度 | 使用者說「姿勢跑掉了」(調高)或「動作太死板」(調低)時可以調 |
