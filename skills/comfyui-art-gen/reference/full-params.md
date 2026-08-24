@@ -17,6 +17,7 @@
 | `--control-ref <path>`(預設用 `--image` 本身)| `guided_inpaint` | 結構引導來源圖,不給就從來源圖自己抽取結構 | 只有要套用「別張圖的姿勢/輪廓」時才問;沒給 `--control-type` 的話這個參數沒作用 |
 | `--control-strength N`(0~10,預設 1.0)| `guided_inpaint` | 結構鎖定的嚴格程度 | 通常不用問,原則同 `--pose-strength` |
 | `--appearance-ref <path>`(選用)| `guided_inpaint` | 外觀參考圖(例如美術自畫的材質/紋理圖),用 IPAdapter 決定遮罩範圍內的外觀,不給就純靠文字描述 | 使用者手上有現成參考圖時優先用這個,見 SKILL.md `guided_inpaint` 固定問題第 3 點 |
+| `--appearance-ref <path>` + `--appearance-weight N`(0~1,預設 0.8)(選用)| `icon_asset` | 外觀參考圖(例如使用者提供的一張成品圖),用 IPAdapter 讓畫面材質/質感偏向那張圖,不給就純靠文字描述 | 使用者手上有現成參考圖、想要「風格/質感像那張」時用;**參考圖如果帶文字,權重從低值(0.3~0.4)開始試,不要用預設 0.8**,細節見 `reference/known-limitations.md` |
 | `--appearance-weight N`(0~1,預設 0.8)| `guided_inpaint` | 外觀參考圖的貼合強度,原則同 `--ip-weight` | 通常不用問 |
 | `--denoise N`(0~1)| `refine`(預設 0.6)、`inpaint`(預設 1.0)、`guided_inpaint`(預設 1.0)、`upscale`(預設 0.4)| 保留原圖程度,見 SKILL.md 各 task 說明 | 已經在固定問題裡問過 |
 | `--scale N`(預設 2.0,最高建議 4)| `upscale` | 相對原圖的放大倍率 | 已經在固定問題裡問過 |
@@ -24,7 +25,7 @@
 | `--lora <檔名>`(models/loras/ 底下)+ `--lora-strength N`(0~1,預設 0.8)| `concept`、`pose_only`、`style_lock`、`character_action` | 套用已經訓練好的角色/風格 LoRA,比 IPAdapter 穩但需要事前訓練過(見 `教學.md` 第 8 章)| **使用者要指名用某個已經練好的 LoRA 才問**,平常不用主動提;沒有現成 LoRA 檔案就不要假裝有,如實說要嘛用 IPAdapter(`style_lock`/`character_action` 的 `--ip-weight`)要嘛先去訓練 |
 | `--remove-bg` | 除 `inpaint`、`upscale`、`icon_asset`、`layer_split` 外全部 | 去背,輸出透明背景 PNG | 使用者要「透明背景」「去背」時加。**`icon_asset` 永遠去背,沒有這個旗標**——圖示素材預期本來就要疊到別的畫面上用,透明背景不是可選項 |
 | `--output-dir <路徑>` | 全部 | 成品存放位置 | 固定帶 `local_config.json` 裡的 `output_dir`,除非使用者指定別的地方 |
-| `--style realistic\|illustration\|anime`(選配,不給用這台機器裝機時鎖定的預設 checkpoint)| 除 `layer_split` 外全部 | 換一顆風格底模:`realistic`=寫實(Juggernaut XL)、`illustration`=插畫/概念藝術(Illustrious XL)、`anime`=二次元/動漫(Pony Diffusion V6 XL),清單/授權見 `skills/comfyui-install/reference/models.md` | 使用者對這次產出的美術風格有明確方向時才問,平常不用主動提;只支援 SDXL 家族 tier(`sdxl_high`/`sdxl`/`sdxl_light`),機器是 `sd15` tier 或對應 checkpoint 還沒下載會直接報錯,如實轉告使用者去 `skills/comfyui-install/SKILL.md`「進階(選配):風格底模」補裝 |
+| `--style realistic\|illustration\|anime`(選配,不給用這台機器裝機時鎖定的預設 checkpoint)| 除 `layer_split` 外全部 | 換一顆風格底模:`realistic`=寫實(Juggernaut XL)、`illustration`=插畫/概念藝術(Illustrious XL)、`anime`=二次元/動漫(Pony Diffusion V6 XL),清單/授權見 `skills/comfyui-install/reference/models.md` | 使用者對這次產出的美術風格有明確方向時才問,平常不用主動提;只支援 SDXL 家族 tier(`sdxl_high`/`sdxl`/`sdxl_light`),機器是 `sd15` tier 或對應 checkpoint 還沒下載會直接報錯,如實轉告使用者去 `skills/comfyui-install/SKILL.md`「進階(選配):風格底模」補裝。**用 `anime` 時 prompt 開頭要手動加 `score_9, score_8_up, score_7_up`(Pony 固定用法),不加實測會出現灰階/構圖跑掉,`generate.py` 目前不會自動補這組標籤** |
 | `--rating safe\|questionable\|explicit`(選配,不給就不加任何分級標籤,prompt 完全不變)| 除 `layer_split` 外全部,但只在同時有 `--style anime` 或 `--style illustration` 時有效 | 內容分級標籤:Pony/Illustrious 這兩顆底模訓練時就用分級標籤(`rating_xxx`/`rating:xxx`)控制內容尺度,這個旗標只是把該用哪個標籤明確帶進 prompt,不是這個腳本自己加的過濾機制 | 使用者明確要求特定分級才加,平常不用主動問;`--style realistic` 或沒給 `--style` 時使用會直接報錯(那兩個底模沒有分級標籤慣例,加了沒效果) |
 
 ## 目前沒有開放的參數(刻意鎖死,不要嘗試加旗標繞過)

@@ -235,39 +235,94 @@ STRUCTURE_REF_DENOISE = 0.85
 
 
 def build_wheel_segment_template(n_segments, width=1024, height=1024,
-                                  colors=((124, 40, 168), (20, 158, 148)), gold=(212, 175, 55)):
+                                  colors=((124, 40, 168), (20, 158, 148)), gold=(212, 175, 55),
+                                  frame_ratio=None, bead_count=0, hub_ratio=0.12):
     """畫一張『交錯色塊扇形 + 金色分隔線/外框/中心軸』的範本圖,是 icon_asset 的 --structure-ref
     的其中一種產生方式(輪盤/放射狀等分圖示適用)——不是獨立的 CLI task,是給呼叫端(agent 或
     人類)在需要「放射狀精準等分」這種結構時自己呼叫來產生範本檔案用,範例見
-    skills/comfyui-art-gen/reference/structure-ref.md。"""
+    skills/comfyui-art-gen/reference/structure-ref.md。
+
+    frame_ratio(選用,0~1):給了就額外畫一圈獨立的外框環帶(獎區扇形只填到 frame_ratio 對應
+    的內側半徑,環帶本身填 gold 顏色),不給就跟原本一樣只在最外緣畫一條細外框線。
+    bead_count(選用,搭配 frame_ratio 用):在外框環帶中線畫幾顆等間距白色圓珠裝飾。
+    hub_ratio:中心鈕半徑佔整體半徑的比例,搭配 build_wheel_layer_masks() 拆圖層時務必用同一個值,
+    否則遮罩邊界會跟這張範本對不齊。
+    """
     img = PILImage.new("RGB", (width, height), (0, 0, 0))
     draw = ImageDraw.Draw(img)
     cx, cy = width / 2, height / 2
     radius = min(width, height) * 0.45
     line_width = max(3, min(width, height) // 200)
+    wedge_radius = radius * frame_ratio if frame_ratio else radius
+
+    if frame_ratio:
+        # 先畫滿版外框圓蓋住整個範圍,獎區扇形疊上去之後,外圍那圈環帶(wedge_radius~radius
+        # 之間)自然只留下框色沒被蓋到,不用另外算環狀多邊形。
+        draw.ellipse([cx - radius, cy - radius, cx + radius, cy + radius], fill=gold)
+
     for i in range(n_segments):
         a0 = 2 * math.pi * i / n_segments - math.pi / 2
         a1 = 2 * math.pi * (i + 1) / n_segments - math.pi / 2
         points = [(cx, cy)]
         for s in range(13):
             a = a0 + (a1 - a0) * s / 12
-            points.append((cx + radius * math.cos(a), cy + radius * math.sin(a)))
+            points.append((cx + wedge_radius * math.cos(a), cy + wedge_radius * math.sin(a)))
         draw.polygon(points, fill=colors[i % len(colors)])
+
+    if frame_ratio and bead_count:
+        bead_r = (radius + wedge_radius) / 2
+        bead_size = (radius - wedge_radius) * 0.35
+        for i in range(bead_count):
+            a = 2 * math.pi * i / bead_count
+            bx = cx + bead_r * math.sin(a)
+            by = cy - bead_r * math.cos(a)
+            draw.ellipse([bx - bead_size, by - bead_size, bx + bead_size, by + bead_size], fill=(255, 255, 255))
+
     draw.ellipse([cx - radius, cy - radius, cx + radius, cy + radius], outline=gold, width=line_width)
     for i in range(n_segments):
         angle = 2 * math.pi * i / n_segments
-        x = cx + radius * math.sin(angle)
-        y = cy - radius * math.cos(angle)
+        x = cx + wedge_radius * math.sin(angle)
+        y = cy - wedge_radius * math.cos(angle)
         draw.line([cx, cy, x, y], fill=gold, width=line_width)
-    hub_radius = radius * 0.12
+    hub_radius = radius * hub_ratio
     draw.ellipse([cx - hub_radius, cy - hub_radius, cx + hub_radius, cy + hub_radius], fill=gold)
     return img
+
+
+def build_wheel_layer_masks(width=1024, height=1024, frame_ratio=0.86, hub_ratio=0.22):
+    """搭配 build_wheel_segment_template(frame_ratio=...) 產生的合成圖,回傳三張跟 layer_split
+    格式相容的遮罩(RGBA,要保留進該圖層的區域 alpha=0,其餘 alpha=255):外框環帶、內部獎區、
+    中心指針。frame_ratio/hub_ratio 務必跟產生合成圖時用的值一致,否則裁出來的圖層邊界會對不齊。
+
+    中心指針的機關形狀(例如彈片)常常會伸出 hub 圓圈一小段延伸到獎區範圍,這裡刻意把
+    hub_ratio 訂得比範本圖畫的中心鈕大一些(範本圖固定畫 0.12,這裡預設 0.22),
+    讓指針延伸出去的部分還是被歸進指針圖層,不會被切給獎區圖層。
+    """
+    cx, cy = width / 2, height / 2
+    radius = min(width, height) * 0.45
+    wedge_radius = radius * frame_ratio
+    hub_radius = radius * hub_ratio
+
+    def _ring_mask(r_inner, r_outer):
+        m = PILImage.new("RGBA", (width, height), (0, 0, 0, 255))
+        d = ImageDraw.Draw(m)
+        if r_outer > 0:
+            d.ellipse([cx - r_outer, cy - r_outer, cx + r_outer, cy + r_outer], fill=(0, 0, 0, 0))
+        if r_inner > 0:
+            d.ellipse([cx - r_inner, cy - r_inner, cx + r_inner, cy + r_inner], fill=(0, 0, 0, 255))
+        return m
+
+    frame_mask = _ring_mask(wedge_radius, radius)
+    prize_mask = _ring_mask(hub_radius, wedge_radius)
+    pointer_mask = _ring_mask(0, hub_radius)
+    return frame_mask, prize_mask, pointer_mask
 
 
 def build_icon_asset(prompt, negative=None, width=1024, height=1024, seed=None, steps=25, cfg=7.0,
                       batch_size=1, lora_name=None, lora_strength=0.8,
                       structure_ref_filename=None, control_strength=STRUCTURE_REF_CONTROL_STRENGTH,
-                      structure_ref_denoise=STRUCTURE_REF_DENOISE, checkpoint=None):
+                      structure_ref_denoise=STRUCTURE_REF_DENOISE, checkpoint=None,
+                      appearance_ref_filename=None, appearance_weight=0.8):
     negative = (negative or DEFAULT_NEGATIVE) + ICON_ASSET_NEGATIVE_SUFFIX
     graph = {"1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or CKPT}}}
     model_ref, clip_ref = model_clip_refs(graph, lora_name, lora_strength)
@@ -275,6 +330,23 @@ def build_icon_asset(prompt, negative=None, width=1024, height=1024, seed=None, 
         "2": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt + ICON_ASSET_PROMPT_SUFFIX, "clip": clip_ref}},
         "3": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": clip_ref}},
     })
+
+    if appearance_ref_filename:
+        # --appearance-ref:跟 guided_inpaint/style_lock 用同一顆 IPAdapter 模型,把「畫面看起來
+        # 像哪張參考圖」的責任從純文字描述轉移到圖片級別的參考,對材質/質感這類文字講不清楚的
+        # 特徵比較有效。套在 model_ref 上,KSampler 用的 model 要接這裡回傳的新參照,不要漏接。
+        graph["1b2"] = {"class_type": "LoadImage", "inputs": {"image": appearance_ref_filename}}
+        graph["1b3"] = {"class_type": "CLIPVisionLoader", "inputs": {"clip_name": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors"}}
+        graph["1b4"] = {"class_type": "IPAdapterModelLoader", "inputs": {"ipadapter_file": "ip-adapter-plus_sdxl_vit-h.safetensors"}}
+        graph["1b5"] = {
+            "class_type": "IPAdapterAdvanced",
+            "inputs": {
+                "model": model_ref, "ipadapter": ["1b4", 0], "image": ["1b2", 0], "clip_vision": ["1b3", 0],
+                "weight": appearance_weight, "weight_type": "linear", "combine_embeds": "concat",
+                "start_at": 0.0, "end_at": 1.0, "embeds_scaling": "V only",
+            },
+        }
+        model_ref = ["1b5", 0]
 
     if structure_ref_filename:
         # --structure-ref:img2img 吃範本圖當底(denoise < 1.0,結構/色塊配置繼承像素),
@@ -696,6 +768,8 @@ def main():
     p_icon.add_argument("--width", type=int, default=1024)
     p_icon.add_argument("--height", type=int, default=1024)
     p_icon.add_argument("--structure-ref", help="這個圖示的結構/色塊配置已經有明確答案、不該讓 AI 自己瞎猜時用(例如放射狀精準等分):給一張範本圖路徑,用 img2img + Canny ControlNet 把結構跟顏色配置都鎖住,SDXL 只負責疊材質/光澤;不給就跟以前一樣純靠文字描述。範本圖從哪來見 skills/comfyui-art-gen/reference/structure-ref.md")
+    p_icon.add_argument("--appearance-ref", help="外觀參考圖路徑(選用,例如使用者提供的一張成品圖,想讓畫面材質/質感偏向那張圖)——用 IPAdapter,不給就純靠文字描述外觀,原則同 guided_inpaint 的 --appearance-ref")
+    p_icon.add_argument("--appearance-weight", type=float, default=0.8, help="外觀參考圖的貼合強度,原則同 --ip-weight")
 
     p_char = sub.add_parser("character_action", help="角色動作圖(角色參考圖 + 姿勢線稿)", parents=[batch_lora_common])
     p_char.add_argument("--prompt", required=True)
@@ -797,9 +871,11 @@ def main():
                                         checkpoint=style_checkpoint)
     elif args.task == "icon_asset":
         structure_fn = upload_image(args.structure_ref) if args.structure_ref else None
+        appearance_fn = upload_image(args.appearance_ref) if args.appearance_ref else None
         prompt, out_id = build_icon_asset(args.prompt, args.negative, args.width, args.height, args.seed,
                                            batch_size=args.batch, lora_name=args.lora, lora_strength=args.lora_strength,
-                                           structure_ref_filename=structure_fn, checkpoint=style_checkpoint)
+                                           structure_ref_filename=structure_fn, checkpoint=style_checkpoint,
+                                           appearance_ref_filename=appearance_fn, appearance_weight=args.appearance_weight)
     elif args.task == "character_action":
         char_fn = upload_image(args.character_ref)
         pose_fn = upload_image(args.pose_ref)

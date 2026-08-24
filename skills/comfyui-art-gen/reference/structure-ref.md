@@ -33,6 +33,23 @@ icon_asset --prompt "..." --structure-ref "<暫存路徑>/template.png" --output
 
 放射狀等分只是其中一種結構類型,遇到其他「結構/配置已經確定、AI 用文字講不清楚」的圖示,自己畫一張對應的範本圖(規則相同:目標結構的線條/色塊直接畫在圖上)一樣可以餵給 `--structure-ref`,不用侷限在轉盤這個案例上。
 
+## 完整圖 + 事後拆圖層:frame_ratio / bead_count + build_wheel_layer_masks()
+
+2026-08-24 實測(仿實體園遊會轉盤:外框環帶+內部獎區+中心指針三個部件):`build_wheel_segment_template()` 額外支援 `frame_ratio`(0~1,給了就切一圈獨立的外框環帶,獎區扇形只填到 `frame_ratio` 對應的內側半徑)跟 `bead_count`(在外框環帶中線畫幾顆等間距圓珠裝飾)。用這個範本先跑一次 `icon_asset --structure-ref` 生出「外框+獎區+中心指針」都在同一張裡的完整圖,確認滿意後,再用 `build_wheel_layer_masks(width, height, frame_ratio, hub_ratio)`(**`frame_ratio` 一定要跟產生範本圖時用的值一致**,不一致的話遮罩邊界會跟合成圖對不齊)產生三張跟 `layer_split` 格式相容的遮罩,對同一張完整圖跑三次 `layer_split`(`--layer-name` 分別取 frame/prize_zone/pointer),拆出來的三個圖層像素級對齊,疊回去完全吻合——這比「三個部件各自獨立生成」可靠,因為圖層邊界是從同一張圖、同一組半徑算出來的,不是三次獨立猜測。
+
+`hub_ratio` 預設在範本圖是 0.12(中心鈕本身的視覺大小),但 `build_wheel_layer_masks()` 的 `hub_ratio` 預設用 0.22——刻意留大一點,因為中心指針常常有機關造型(例如彈片/箭頭)會從中心鈕往外伸出一小段到獎區範圍,遮罩切太貼緊中心鈕圓圈,伸出去的那段會被切給獎區圖層而不是指針圖層。
+
+```python
+img = m.build_wheel_segment_template(12, 1024, 1024, colors=(c1, c2), gold=trim, frame_ratio=0.86, bead_count=24)
+img.save("<暫存路徑>/template.png")
+# ...icon_asset --structure-ref 生出完整圖之後...
+frame_mask, prize_mask, pointer_mask = m.build_wheel_layer_masks(1024, 1024, frame_ratio=0.86, hub_ratio=0.22)
+frame_mask.save("<暫存路徑>/mask_frame.png")
+prize_mask.save("<暫存路徑>/mask_prize.png")
+pointer_mask.save("<暫存路徑>/mask_pointer.png")
+# 再對完整圖跑三次 layer_split,--mask 分別帶這三張
+```
+
 ## 已知取捨:結構鎖住了,精細裝飾細節會被壓掉
 
 2026-08-19 實測(轉盤案例,8 等分放射狀圖示):`--structure-ref` 能穩定鎖住結構跟顏色配置(反覆測試分區數量/顏色都沒跑掉),denoise 從 0.55 一路測到 0.85 質感都持續提升(從死板平面到有玻璃寶石光澤球面感),但**鑲花雕紋這類需要額外邊緣線條的裝飾細節,不管怎麼調 denoise 都沒有明顯出現**。推測原因是 Canny ControlNet 鎖邊緣的同時,也會壓抑「多畫細碎額外線條」這件事——這是這個做法的結構性限制,不是 denoise 沒調好,繼續往上推 denoise 更可能先讓結構跑掉,不會先讓雕紋跑出來。跟使用者說明時要講清楚這個取捨,不要保證「結構鎖住又能有精細雕花」兩者都要。

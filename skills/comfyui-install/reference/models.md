@@ -35,7 +35,7 @@ VRAM 較緊張時(`sdxl_light` tier),Depth/OpenPose 這兩個 ControlNet 檔案�
 
 ### 使用眉角(實測發現才記,不是預先猜測;沒列出的部分代表還沒實測過)
 
-- **`anime`(Pony Diffusion V6 XL)**:2026-08-19 實測,prompt 沒帶 Pony 官方建議的品質標籤時輸出不穩定(實測出現灰階、跟描述無關的圓形徽章構圖)。官方建議 prompt 開頭加 `score_9, score_8_up, score_7_up`(至少 3 個 score 標籤,只掛 `score_9` 效果不佳)。另外官方建議搭配獨立的 `sdxl_vae.safetensors`(已下載到 `models/vae/`),**但 `generate.py` 目前所有 task 都是用 `CheckpointLoaderSimple` 內建的 VAE,還沒接這顆外部 VAE**——這是已知技術債,灰階/褪色的症狀可能跟這個有關,還沒驗證加了外部 VAE 是否能解決,不要跟使用者保證這個組合現在出圖穩定
+- **`anime`(Pony Diffusion V6 XL)**:2026-08-19 實測確認,**prompt 沒帶 `score_9, score_8_up, score_7_up`(至少 3 個 score 標籤)這組 Pony 官方建議的品質標籤時,輸出會不穩定(實測出現灰階、跟描述無關的圓形徽章構圖);補上這組標籤後同一個 prompt 出圖正常,色彩/構圖都符合預期。** 已排除 VAE 是原因——原本懷疑跟 checkpoint 內建 VAE vs 建議搭配的獨立 `sdxl_vae.safetensors`(已下載到 `models/vae/`,`generate.py` 目前沒接這顆,一律用 `CheckpointLoaderSimple` 內建 VAE)有關,但隔離變數測試(只加 score 標籤、不改 VAE)就解決了,不是 VAE 問題,外部 VAE 那顆先留著沒必要接進程式碼
 - **`realistic`(Juggernaut XL Ragnarok)**:2026-08-19 實測,不需要特殊 prompt 慣例,預設參數直接出圖正常。官方建議解析度是 832x1216 直式(跟這台機器 `sdxl` tier 預設的 1024x1024 不同),想更貼近官方建議可以另外帶 `--width 832 --height 1216`
 - **`illustration`(Illustrious XL v1.1)**:2026-08-19 實測,`--rating safe` 正常出圖,沒有出現 `anime` 那種畫質問題。官方文件說分級標籤幾乎是必填,沒加可能結果不穩定,細節見上面表格 `--rating` 相關說明
 

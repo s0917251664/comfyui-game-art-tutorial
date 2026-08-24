@@ -64,7 +64,7 @@
 
 > **這四個 task(concept / pose_only / style_lock / character_action)都要多問一題:圖片尺寸/比例有沒有要求?** 例如直式角色圖、橫式場景圖、正方形圖示、遊戲引擎規定的固定尺寸。使用者沒概念或沒特別要求就用預設值(不用主動報數字出來),有要求就用 `--width`/`--height` 帶入(數值必須是 8 的倍數,常見值:1024x1024 方形、832x1216 直式、1216x832 橫式)。這題容易被忽略但常常很重要——遊戲素材有固定尺寸規格是常態,產出來尺寸不對通常等於要重做。
 
-> **`--style`(除 `layer_split` 外全部 task 都支援)不用主動問,使用者對這次美術方向有明確偏好時才用。** 例如「這次想要偏插畫感/概念設計稿的感覺」→ `--style illustration`,「二次元/動漫風」→ `--style anime`,「寫實一點」→ `--style realistic`。不給就完全沿用這台機器裝機時鎖定的預設 checkpoint,不要為了「風格更好」自作主張加這個旗標。只支援 SDXL 家族 tier,對應 checkpoint 沒下載過會直接報錯,細節見 `reference/full-params.md` 跟 `reference/known-limitations.md`。
+> **`--style`(除 `layer_split` 外全部 task 都支援)不用主動問,使用者對這次美術方向有明確偏好時才用。** 例如「這次想要偏插畫感/概念設計稿的感覺」→ `--style illustration`,「二次元/動漫風」→ `--style anime`,「寫實一點」→ `--style realistic`。不給就完全沿用這台機器裝機時鎖定的預設 checkpoint,不要為了「風格更好」自作主張加這個旗標。只支援 SDXL 家族 tier,對應 checkpoint 沒下載過會直接報錯,細節見 `reference/full-params.md` 跟 `reference/known-limitations.md`。**用 `--style anime` 時,prompt 開頭一定要加 `score_9, score_8_up, score_7_up`(Pony Diffusion V6 XL 的固定用法,至少 3 個 score 標籤),不加實測會出現灰階/構圖跑掉的不穩定結果,細節見 `skills/comfyui-install/reference/models.md`「使用眉角」。**
 
 ### concept(概念圖)
 1. 想畫什麼(轉成英文 prompt,SDXL 對英文 prompt 理解較準)
@@ -78,6 +78,7 @@
 3. 尺寸/比例**預設 1024x1024 正方形,不用主動問**——這是跟 `concept`/`pose_only`/`style_lock`/`character_action` 四個 task 不同的地方,圖示類素材幾乎都是方形/近方形,只有使用者主動提出別的比例才用 `--width`/`--height` 覆蓋
 4. **不用問要不要去背**——`icon_asset` 永遠輸出透明背景,沒有 `--remove-bg` 旗標
 5. **判斷這個圖示的結構/顏色配置有沒有明確答案、不該讓 AI 自己瞎猜**(例如「精確等分成 N 塊放射狀分區」這種計數幾何需求)——這種情況純靠文字描述給 SDXL 不可靠,改用 `--structure-ref <範本圖路徑>`,範本圖從哪來、怎麼判斷要不要用,見 `reference/structure-ref.md`,不是每次都要讀,只有遇到「結構描述用文字講不清楚/AI 一直畫不準」時才需要
+6. **使用者手上有一張現成圖,想要「材質/質感偏向那張圖」才問要不要用 `--appearance-ref <路徑>`**(IPAdapter,原則同 `guided_inpaint` 的同名參數)——**參考圖如果帶文字(例如成品截圖上印的按鈕字),`--appearance-weight` 要從低值(0.3~0.4)開始試,不要用預設 0.8**,不然文字視覺印象會被一起帶進來變成畫面裡一坨假字,細節見 `reference/known-limitations.md`
 
 ### layer_split(從定稿完成圖拆出單一圖層)
 1. 來源圖路徑(**必須是已經定稿的完成圖**,不是重新生成——這個 task 不吃 prompt,純粹裁切透明度)
@@ -161,7 +162,7 @@ concept:
   <python_exe> <generate_script> concept --prompt "..." [--negative "..."] [--width W --height H] [--batch 3] [--lora <檔名> --lora-strength 0.8] [--style realistic|illustration|anime] [--remove-bg] --output-dir <output_dir>
 
 icon_asset:
-  <python_exe> <generate_script> icon_asset --prompt "..." [--negative "..."] [--width W --height H] [--batch 3] [--lora <檔名> --lora-strength 0.8] [--structure-ref <範本圖路徑>] [--style realistic|illustration|anime] --output-dir <output_dir>
+  <python_exe> <generate_script> icon_asset --prompt "..." [--negative "..."] [--width W --height H] [--batch 3] [--lora <檔名> --lora-strength 0.8] [--structure-ref <範本圖路徑>] [--appearance-ref <路徑> --appearance-weight 0.8] [--style realistic|illustration|anime] --output-dir <output_dir>
 
 pose_only:
   <python_exe> <generate_script> pose_only --prompt "..." --pose-ref <path> [--pose-strength 1.0] [--control-type canny|pose|depth] [--width W --height H] [--batch 3] [--lora <檔名> --lora-strength 0.8] [--style realistic|illustration|anime] [--remove-bg] --output-dir <output_dir>
