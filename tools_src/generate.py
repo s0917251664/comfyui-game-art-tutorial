@@ -214,24 +214,7 @@ RATING_TAGS = {
 
 # 影片 task 的對外契約是 task 名 + --backend,不是模型名。下面這組是各 backend 的實作檔名,
 # 不能接 SDXL ControlNet/IPAdapter/--style,也不跟圖片 CKPT/tier 走。
-# 預設 backend 是這台 4080 bake-off 的結果,換機器/換實作時改 DEFAULT_VIDEO_BACKEND,
-# 不要把 h3/wan 寫進 task 名稱或輸出檔名前綴。
-VIDEO_BACKENDS = ("h3", "wan")
-DEFAULT_VIDEO_BACKEND = "h3"
-# 每個 backend 現在接得上哪些能力。task 要的能力在 VIDEO_TASK_CAPS;對不上就報錯,不要靜默改 task。
-VIDEO_BACKEND_CAPS = {
-    "h3": frozenset({"i2v", "last_frame", "character_ref", "control_video", "audio"}),
-    "wan": frozenset({"i2v", "control_video"}),
-}
-VIDEO_TASK_CAPS = {
-    "img2video": "i2v",
-    "clip_extend": "i2v",
-    "camera_move": "i2v",
-    "fx_loop": "last_frame",
-    "transition": "last_frame",
-    "character_video": "character_ref",
-    "pose_drive": "control_video",
-}
+# 對外契約是 task 名 + --backend，不把模型名或某台機器的偏好寫進 task。
 CHARACTER_REF_MAX = 9
 VIDEO_WAN_UNET = "wan2.2_ti2v_5B_fp16.safetensors"
 VIDEO_WAN_FUN_UNET = "wan2.2_fun_control_5B_bf16.safetensors"
@@ -249,6 +232,9 @@ VIDEO_FPS_TOLERANCE = 0.5
 VIDEO_DURATION_MIN = 2
 VIDEO_DURATION_MAX = 6
 DEFAULT_VIDEO_TIMEOUT = 1800.0
+VIDEO_CAPABILITY_SCHEMA_VERSION = 1
+VIDEO_CAPABILITY_CONFIG_ENV_VARS = ("VIDEO_CONFIG", "COMFY_VIDEO_CONFIG")
+VIDEO_CAPABILITY_CONFIG_FILENAME = "video_capabilities.json"
 VIDEO_NEG_DEFAULT = (
     "blurry, low quality, morphing face, extra limbs, camera movement, "
     "zoom, pan, text, watermark, still image, frozen"
@@ -278,6 +264,106 @@ CAMERA_STILL_SUFFIX = (
 CAMERA_ZOOM = 1.35       # zoom_in 終點是來源中心 1/1.35 再拉回畫布
 CAMERA_PAN_CROP = 0.82   # pan_* 終點保留這個比例、往運鏡方向裁
 
+# 這是「程式知道怎麼組 graph」的 implementation catalog，不是「這台機器
+# 一定有這些模型」的能力宣告。真正執行影片 task 前，main() 必須載入由
+# detect_video_capabilities.py 產生的 machine-specific config，重新檢查檔案、
+# runtime 與 ComfyUI nodes；沒有 config 不會使用下面的檔名猜測可用 backend。
+# 保留這份 catalog 是為了讓離線 graph builder 與 detector 共用明確的 task/backend
+# 契約；模型檔名本身仍會由 active config 覆蓋。
+VIDEO_BACKEND_SPECS = {
+    "h3": {
+        "capabilities": frozenset({"i2v", "last_frame", "character_ref", "control_video", "audio"}),
+        "models": {
+            "i2v_unet": VIDEO_H3_UNET,
+            "ref_unet": VIDEO_H3_REF_UNET,
+            "clip": VIDEO_H3_CLIP,
+            "video_vae": VIDEO_H3_VAE,
+            "audio_vae": VIDEO_H3_AUDIO_VAE,
+        },
+        "required_models": {
+            "i2v": ("i2v_unet", "clip", "video_vae", "audio_vae"),
+            "last_frame": ("i2v_unet", "clip", "video_vae", "audio_vae"),
+            "character_ref": ("ref_unet", "clip", "video_vae", "audio_vae"),
+            "control_video": ("ref_unet", "clip", "video_vae", "audio_vae"),
+        },
+        "required_nodes": {
+            "i2v": (
+                "UNETLoader", "CLIPLoader", "VAELoader", "MiniMaxH3SigmaShift",
+                "MiniMaxH3ImageToVideo", "LoadImage", "RandomNoise", "KSamplerSelect",
+                "BasicScheduler", "BasicGuider", "SamplerCustomAdvanced", "VAEDecode",
+                "VAEDecodeAudio", "CreateVideo", "SaveVideo",
+            ),
+            "last_frame": ("MiniMaxH3ImageToVideo",),
+            "character_ref": (
+                "UNETLoader", "CLIPLoader", "VAELoader", "MiniMaxH3SigmaShift",
+                "MiniMaxH3ReferenceToVideo", "LoadImage", "RandomNoise",
+                "KSamplerSelect", "BasicScheduler", "BasicGuider",
+                "SamplerCustomAdvanced", "VAEDecode", "VAEDecodeAudio",
+                "CreateVideo", "SaveVideo",
+            ),
+            "control_video": (
+                "UNETLoader", "CLIPLoader", "VAELoader", "MiniMaxH3SigmaShift",
+                "MiniMaxH3ReferenceToVideo", "LoadImage", "LoadVideo",
+                "GetVideoComponents", "RandomNoise", "KSamplerSelect",
+                "BasicScheduler", "BasicGuider", "SamplerCustomAdvanced",
+                "VAEDecode", "VAEDecodeAudio", "CreateVideo", "SaveVideo",
+            ),
+        },
+    },
+    "wan": {
+        "capabilities": frozenset({"i2v", "control_video"}),
+        "models": {
+            "i2v_unet": VIDEO_WAN_UNET,
+            "control_unet": VIDEO_WAN_FUN_UNET,
+            "clip": VIDEO_WAN_CLIP,
+            "vae": VIDEO_WAN_VAE,
+        },
+        "required_models": {
+            "i2v": ("i2v_unet", "clip", "vae"),
+            "control_video": ("control_unet", "clip", "vae"),
+        },
+        "required_nodes": {
+            "i2v": (
+                "UNETLoader", "CLIPLoader", "VAELoader", "ModelSamplingSD3",
+                "CLIPTextEncode", "LoadImage", "Wan22ImageToVideoLatent", "KSampler",
+                "VAEDecode", "CreateVideo", "SaveVideo",
+            ),
+            "control_video": (
+                "Wan22FunControlToVideo", "LoadVideo", "GetVideoComponents",
+            ),
+        },
+    },
+}
+
+# This remains a static implementation lookup for backwards-compatible graph
+# builders. It is deliberately not a default selection. Runtime code uses the
+# machine config loaded by configure_video_capability().
+VIDEO_BACKENDS = tuple(VIDEO_BACKEND_SPECS)
+DEFAULT_VIDEO_BACKEND = None
+VIDEO_BACKEND_CAPS = {
+    backend: spec["capabilities"] for backend, spec in VIDEO_BACKEND_SPECS.items()
+}
+VIDEO_TASK_CAPS = {
+    "img2video": "i2v",
+    "clip_extend": "i2v",
+    "camera_move": "i2v",
+    "fx_loop": "last_frame",
+    "transition": "last_frame",
+    "character_video": "character_ref",
+    "pose_drive": "control_video",
+}
+VIDEO_TASK_EXTRA_CAPS = {
+    "fx_loop": ("i2v",),
+    "transition": ("i2v",),
+}
+VIDEO_CONTROL_NODES = {
+    "canny": "Canny",
+    "pose": "OpenposePreprocessor",
+    "depth": "DepthAnythingV2Preprocessor",
+}
+VIDEO_TASKS = frozenset(VIDEO_TASK_CAPS)
+ACTIVE_VIDEO_CONFIG = None
+
 
 
 def build_control_preprocessor(control_type, image_node_id):
@@ -303,6 +389,375 @@ def load_device_config():
 
 DEVICE = load_device_config()
 CKPT = DEVICE["checkpoint"]
+
+
+def _video_task_capabilities(task):
+    """Return every capability required by a task, without choosing a backend."""
+    if task not in VIDEO_TASKS:
+        return ()
+    required = [VIDEO_TASK_CAPS[task], *VIDEO_TASK_EXTRA_CAPS.get(task, ())]
+    return tuple(dict.fromkeys(required))
+
+
+def _runtime_config_path_from_env(explicit_path=None):
+    if explicit_path:
+        return os.fspath(explicit_path)
+    return next(
+        (os.environ.get(name) for name in COMFY_CONFIG_ENV_VARS if os.environ.get(name)),
+        None,
+    )
+
+
+def _relative_config_path(value, base_path):
+    value = os.fspath(value)
+    if os.path.isabs(value):
+        return value
+    return os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(base_path)), value))
+
+
+def _normalise_video_capabilities(raw, source):
+    if not isinstance(raw, dict):
+        raise RuntimeError(f"影片 capability config 必須是 JSON object: {source}")
+    version = raw.get("schema_version", raw.get("version"))
+    if version != VIDEO_CAPABILITY_SCHEMA_VERSION:
+        raise RuntimeError(
+            f"影片 capability config 版本不支援: {version!r}；"
+            f"需要 {VIDEO_CAPABILITY_SCHEMA_VERSION}: {source}"
+        )
+    backends = raw.get("backends")
+    if not isinstance(backends, dict) or not backends:
+        raise RuntimeError(f"影片 capability config 缺少 backends: {source}")
+    for backend, spec in backends.items():
+        if backend not in VIDEO_BACKEND_SPECS:
+            raise RuntimeError(f"影片 capability config 有未知 backend {backend!r}: {source}")
+        if not isinstance(spec, dict):
+            raise RuntimeError(f"backend {backend!r} 的設定必須是 JSON object: {source}")
+        capabilities = spec.get("capabilities")
+        if not isinstance(capabilities, (list, tuple, set)):
+            raise RuntimeError(f"backend {backend!r} 缺少 capabilities 清單: {source}")
+        if any(not isinstance(cap, str) for cap in capabilities):
+            raise RuntimeError(f"backend {backend!r} 的 capabilities 必須是字串: {source}")
+        unknown_capabilities = set(capabilities) - set(VIDEO_BACKEND_SPECS[backend]["capabilities"])
+        if unknown_capabilities:
+            raise RuntimeError(
+                f"backend {backend!r} 有未實作 capability: "
+                f"{', '.join(sorted(unknown_capabilities))}: {source}"
+            )
+        models = spec.get("models")
+        if not isinstance(models, dict):
+            raise RuntimeError(f"backend {backend!r} 缺少 models 設定: {source}")
+    default_backend = raw.get("default_backend")
+    if default_backend is not None and default_backend not in backends:
+        raise RuntimeError(
+            f"影片 capability config 的 default_backend={default_backend!r} 不在 backends: {source}"
+        )
+    config = dict(raw)
+    config["_source"] = source
+    config["backends"] = {
+        backend: dict(spec) for backend, spec in backends.items()
+    }
+    return config
+
+
+def load_video_capabilities(runtime_config_path=None, video_config_path=None):
+    """Load a machine-specific video capability config; never invent a backend.
+
+    ``--config`` remains the runtime config containing ``comfyui_url``. It may
+    point at a separate ``video_config``/``video_capabilities`` JSON path or an
+    inline object. For an installed ComfyUI, the conventional sibling file
+    ``<comfyui>/tools/video_capabilities.json`` is accepted when the runtime
+    config contains ``comfyui_path`` or ``generate_script``. There is no
+    implicit repository-local config lookup because the deployed script is
+    commonly executed from a different machine and working directory.
+    """
+    explicit = video_config_path or next(
+        (os.environ.get(name) for name in VIDEO_CAPABILITY_CONFIG_ENV_VARS if os.environ.get(name)),
+        None,
+    )
+    raw = None
+    source = None
+    if explicit:
+        source = os.path.abspath(os.fspath(explicit))
+        raw = _read_runtime_config(source)
+    else:
+        runtime_path = _runtime_config_path_from_env(runtime_config_path)
+        if runtime_path:
+            runtime_path = os.path.abspath(os.fspath(runtime_path))
+            runtime = _read_runtime_config(runtime_path)
+            for key in ("video_config", "video_capabilities"):
+                candidate = runtime.get(key)
+                if isinstance(candidate, dict):
+                    raw, source = candidate, f"{runtime_path}:{key}"
+                    break
+                if candidate:
+                    source = _relative_config_path(candidate, runtime_path)
+                    raw = _read_runtime_config(source)
+                    break
+            if raw is None:
+                roots = []
+                for key in ("comfyui_path", "generate_script"):
+                    value = runtime.get(key)
+                    if value:
+                        root = os.fspath(value)
+                        if key == "generate_script":
+                            root = os.path.dirname(root)
+                        roots.append(os.path.join(root, VIDEO_CAPABILITY_CONFIG_FILENAME))
+                existing = next((path for path in roots if os.path.isfile(path)), None)
+                if existing:
+                    source = os.path.abspath(existing)
+                    raw = _read_runtime_config(source)
+        if raw is None:
+            raise RuntimeError(
+                "未設定影片 capability config；請使用 --video-config/VIDEO_CONFIG，"
+                "或在 --config JSON 內指定 video_config。影片不會猜測 H3/Wan。"
+            )
+    return _normalise_video_capabilities(raw, source)
+
+
+def _configured_backend_spec(config, backend):
+    spec = config.get("backends", {}).get(backend)
+    if not isinstance(spec, dict):
+        raise RuntimeError(
+            f"影片 capability config 沒有 backend {backend!r}；"
+            f"可用設定: {', '.join(sorted(config.get('backends', {}))) or '無'}"
+        )
+    if spec.get("available") is False or spec.get("enabled") is False:
+        reason = spec.get("reason") or "設定標示為不可用"
+        raise RuntimeError(f"影片 backend {backend} 不可用: {reason}")
+    return spec
+
+
+def _configured_capabilities(config, backend):
+    spec = _configured_backend_spec(config, backend)
+    return set(spec.get("capabilities", ()))
+
+
+def _video_model_file_name(backend, model_key):
+    """Resolve the graph-visible model name from the active machine config."""
+    if ACTIVE_VIDEO_CONFIG is None:
+        try:
+            return VIDEO_BACKEND_SPECS[backend]["models"][model_key]
+        except KeyError as exc:
+            raise RuntimeError(f"內建影片 backend {backend!r} 缺少模型欄位 {model_key!r}") from exc
+    spec = _configured_backend_spec(ACTIVE_VIDEO_CONFIG, backend)
+    entry = spec.get("models", {}).get(model_key)
+    if isinstance(entry, str):
+        name = entry
+    elif isinstance(entry, dict):
+        name = entry.get("file") or entry.get("name")
+    else:
+        name = None
+    if not name:
+        raise RuntimeError(
+            f"影片 capability config 的 backend {backend!r} 缺少 graph 模型欄位 {model_key!r}"
+        )
+    return os.fspath(name)
+
+
+def _video_model_roots(config):
+    roots = config.get("model_roots")
+    if isinstance(roots, str):
+        roots = [roots]
+    if not isinstance(roots, (list, tuple)):
+        roots = []
+    roots = [os.fspath(root) for root in roots if root]
+    if not roots:
+        comfyui_path = config.get("comfyui_path")
+        if comfyui_path:
+            roots = [os.path.join(os.fspath(comfyui_path), "models")]
+    return roots
+
+
+def _video_model_path(config, entry):
+    if isinstance(entry, str):
+        filename = entry
+        directory = None
+        explicit_path = None
+    elif isinstance(entry, dict):
+        filename = entry.get("file") or entry.get("name")
+        directory = entry.get("directory")
+        explicit_path = entry.get("path")
+    else:
+        filename = directory = explicit_path = None
+    if explicit_path:
+        path = os.fspath(explicit_path)
+        if not os.path.isabs(path):
+            source = config.get("_source")
+            path = _relative_config_path(path, source) if source and os.path.isfile(source) else os.path.abspath(path)
+        return path
+    if not filename:
+        return None
+    roots = _video_model_roots(config)
+    candidates = []
+    for root in roots:
+        candidates.append(os.path.join(root, os.fspath(directory), os.fspath(filename)) if directory else os.path.join(root, os.fspath(filename)))
+    return next((path for path in candidates if os.path.isfile(path)), candidates[0] if candidates else None)
+
+
+def _required_video_model_keys(backend, capabilities):
+    spec = VIDEO_BACKEND_SPECS[backend]
+    keys = []
+    for capability in capabilities:
+        keys.extend(spec["required_models"].get(capability, ()))
+    return tuple(dict.fromkeys(keys))
+
+
+def _validate_video_models(config, backend, capabilities):
+    spec = _configured_backend_spec(config, backend)
+    missing = []
+    for key in _required_video_model_keys(backend, capabilities):
+        entry = spec.get("models", {}).get(key)
+        path = _video_model_path(config, entry)
+        if not path or not os.path.isfile(path):
+            shown = path or repr(entry)
+            missing.append(f"{key}={shown}")
+    if missing:
+        raise RuntimeError(
+            f"影片 backend {backend} 缺少必要模型，已在 upload/queue 前停止: "
+            + "; ".join(missing)
+            + f"；config={config.get('_source')}"
+        )
+
+
+def _required_video_nodes(backend, capabilities, config, control_type=None):
+    builtin = VIDEO_BACKEND_SPECS[backend]["required_nodes"]
+    spec = _configured_backend_spec(config, backend)
+    configured = spec.get("required_nodes")
+    if not isinstance(configured, dict):
+        configured = builtin
+    nodes = []
+    # The graph builder is the source of truth for task shape: I2V/last-frame
+    # uses the I2V sampler, character_ref uses the reference sampler, and
+    # control_video uses the control sampler. Do not validate unrelated graph
+    # nodes just because they belong to the same backend.
+    graph_capability = "i2v" if "i2v" in capabilities else None
+    if graph_capability is None and "last_frame" in capabilities:
+        graph_capability = "last_frame"
+    if graph_capability is None and "character_ref" in capabilities:
+        graph_capability = "character_ref"
+    if graph_capability is None and "control_video" in capabilities:
+        graph_capability = "control_video"
+    selected = [graph_capability] if graph_capability else []
+    for capability in selected:
+        values = configured.get(capability, builtin.get(capability, ()))
+        if isinstance(values, str):
+            values = (values,)
+        nodes.extend(values or ())
+    if "control_video" in capabilities and control_type:
+        nodes.append(VIDEO_CONTROL_NODES[control_type])
+    return tuple(dict.fromkeys(node for node in nodes if node))
+
+
+def _fetch_comfy_object_info(comfy_url, request_timeout=DEFAULT_HTTP_TIMEOUT):
+    req = urllib.request.Request(_comfy_endpoint("object_info", comfy_url))
+    try:
+        with urllib.request.urlopen(req, timeout=request_timeout) as response:
+            payload = json.loads(response.read().decode())
+    except Exception as exc:
+        raise RuntimeError(
+            f"無法在 upload/queue 前查詢 ComfyUI /object_info: {exc}"
+        ) from exc
+    if not isinstance(payload, dict):
+        raise RuntimeError("ComfyUI /object_info 回應不是 JSON object，已停止影片 task")
+    return set(payload)
+
+
+def validate_comfy_video_nodes(comfy_url, required_nodes, request_timeout=DEFAULT_HTTP_TIMEOUT):
+    required = tuple(dict.fromkeys(required_nodes))
+    available = _fetch_comfy_object_info(comfy_url, request_timeout=request_timeout)
+    missing = sorted(set(required) - available)
+    if missing:
+        raise RuntimeError(
+            "ComfyUI 缺少影片 graph 必要 nodes，已在 upload/queue 前停止: "
+            + ", ".join(missing)
+        )
+    return available
+
+
+def _runtime_versions_for_video():
+    versions = {"python": ".".join(str(part) for part in sys.version_info[:3])}
+    if PILImage is None:
+        raise RuntimeError("影片 task 需要 Pillow，但目前執行 Python 沒有 Pillow")
+    try:
+        import PIL
+    except ImportError as exc:
+        raise RuntimeError("影片 task 需要 Pillow，但目前執行 Python 無法 import PIL") from exc
+    versions["pillow"] = getattr(PIL, "__version__", None)
+    try:
+        import torch
+    except ImportError as exc:
+        raise RuntimeError("影片 task 需要目前 ComfyUI Python 的 PyTorch runtime") from exc
+    versions["torch"] = getattr(torch, "__version__", None)
+    try:
+        import av
+    except ImportError as exc:
+        raise RuntimeError("影片 task 需要 PyAV 以驗證輸出 FPS/幀數/音訊") from exc
+    versions["pyav"] = getattr(av, "__version__", None)
+    return versions, torch
+
+
+def validate_video_runtime(config):
+    actual, torch = _runtime_versions_for_video()
+    expected = config.get("runtime")
+    if isinstance(expected, dict):
+        mismatches = []
+        for key, expected_value in expected.items():
+            if expected_value in (None, "", "pending"):
+                continue
+            if isinstance(expected_value, dict):
+                expected_value = expected_value.get("version")
+            if expected_value and str(actual.get(key)) != str(expected_value):
+                mismatches.append(f"{key}: config={expected_value!r}, actual={actual.get(key)!r}")
+        if mismatches:
+            raise RuntimeError(
+                "影片 runtime 與 capability config 不一致，已在 upload/queue 前停止: "
+                + "; ".join(mismatches)
+            )
+    device = config.get("device_config")
+    if isinstance(device, dict) and device.get("backend") == "cuda":
+        if not torch.cuda.is_available():
+            raise RuntimeError("capability config 要求 CUDA，但目前 PyTorch 看不到 CUDA")
+        expected_gpu = device.get("gpu_name")
+        if expected_gpu:
+            actual_gpu = torch.cuda.get_device_name(0)
+            if actual_gpu != expected_gpu:
+                raise RuntimeError(
+                    f"capability config 要求 GPU {expected_gpu!r}，目前是 {actual_gpu!r}；"
+                    "影片模型不會跨 GPU 靜默切換"
+                )
+    return actual
+
+
+def configure_video_capability(task, requested_backend=None, runtime_config_path=None,
+                               video_config_path=None, comfy_url=None,
+                               request_timeout=DEFAULT_HTTP_TIMEOUT, control_type=None):
+    """Select and validate one configured backend before any input upload."""
+    global ACTIVE_VIDEO_CONFIG
+    config = load_video_capabilities(runtime_config_path, video_config_path)
+    backend = requested_backend or config.get("default_backend")
+    if not backend:
+        raise RuntimeError(
+            f"影片 task {task} 沒有 backend 選擇；請明確給 --backend，"
+            "或在 capability config 設定 default_backend。"
+        )
+    if backend not in VIDEO_BACKEND_SPECS:
+        raise RuntimeError(f"未知影片 backend {backend!r}；可用: {', '.join(VIDEO_BACKENDS)}")
+    configured = _configured_capabilities(config, backend)
+    required = _video_task_capabilities(task)
+    missing_caps = [cap for cap in required if cap not in configured]
+    if missing_caps:
+        raise RuntimeError(
+            f"task {task} 在 backend {backend} 沒有完整 capability: "
+            f"缺 {', '.join(missing_caps)}；不會靜默改用另一個 backend"
+        )
+    validate_video_runtime(config)
+    _validate_video_models(config, backend, required)
+    if not comfy_url:
+        raise RuntimeError("影片生成需要 ComfyUI URL 以驗證 /object_info")
+    nodes = _required_video_nodes(backend, required, config, control_type=control_type)
+    validate_comfy_video_nodes(comfy_url, nodes, request_timeout=request_timeout)
+    ACTIVE_VIDEO_CONFIG = config
+    return backend
 
 
 def upload_image(path, comfy_url=None, request_timeout=DEFAULT_HTTP_TIMEOUT):
@@ -430,7 +885,12 @@ def _safe_output_path(output_dir, filename):
         raise ValueError("ComfyUI output 缺少有效 filename")
     # Check both POSIX and Windows spellings because a Windows deployment may
     # send back a backslash path even when this process runs on POSIX.
-    if os.path.isabs(filename) or ntpath.isabs(filename) or ntpath.splitdrive(filename)[0]:
+    if (
+        os.path.isabs(filename)
+        or ntpath.isabs(filename)
+        or ntpath.splitdrive(filename)[0]
+        or filename.startswith(("/", "\\"))
+    ):
         raise ValueError(f"拒絕不安全的 output filename: {filename!r}")
     components = filename.replace("\\", "/").split("/")
     if ".." in components:
@@ -454,7 +914,7 @@ def _safe_output_path(output_dir, filename):
 
 
 def download_outputs(history_entry, output_dir=None, node_ids=None, comfy_url=None,
-                     request_timeout=DEFAULT_HTTP_TIMEOUT):
+                     request_timeout=DEFAULT_HTTP_TIMEOUT, allow_overwrite=True):
     """Download selected image/video outputs with safe paths and atomic writes."""
     validate_timeout(request_timeout)
     if not isinstance(history_entry, dict) or not isinstance(history_entry.get("outputs"), dict):
@@ -463,6 +923,7 @@ def download_outputs(history_entry, output_dir=None, node_ids=None, comfy_url=No
     paths = []
     os.makedirs(output_dir, exist_ok=True)
     selected_ids = {str(node_id) for node_id in node_ids} if node_ids is not None else None
+    downloads = []
     for node_id, node_out in history_entry.get("outputs", {}).items():
         if selected_ids is not None and str(node_id) not in selected_ids:
             continue
@@ -475,26 +936,49 @@ def download_outputs(history_entry, output_dir=None, node_ids=None, comfy_url=No
             for item in items:
                 filename = item.get("filename") if isinstance(item, dict) else None
                 local_path = _safe_output_path(output_dir, filename)
-                query = urllib.parse.urlencode({
-                    "filename": filename,
-                    "subfolder": str(item.get("subfolder", "")),
-                    "type": str(item.get("type", "output")),
-                })
-                url = f"{_comfy_endpoint('view', comfy_url)}?{query}"
-                os.makedirs(os.path.dirname(local_path), exist_ok=True)
-                partial_path = f"{local_path}.{uuid.uuid4().hex}.part"
-                try:
-                    with urllib.request.urlopen(url, timeout=request_timeout) as response, open(partial_path, "wb") as output:
-                        while chunk := response.read(1024 * 1024):
-                            output.write(chunk)
-                    os.replace(partial_path, local_path)
-                except Exception:
-                    try:
-                        os.unlink(partial_path)
-                    except FileNotFoundError:
-                        pass
-                    raise
-                paths.append(local_path)
+                downloads.append((filename, item, local_path))
+
+    if not allow_overwrite:
+        existing = [path for _, _, path in downloads if os.path.lexists(path)]
+        if existing:
+            raise RuntimeError(
+                "拒絕覆寫既有影片輸出，請換 --output-dir/--name，或明確使用 --overwrite: "
+                + ", ".join(existing)
+            )
+    duplicate_paths = []
+    seen_paths = set()
+    for _, _, path in downloads:
+        canonical = os.path.normcase(os.path.realpath(os.path.abspath(path)))
+        if canonical in seen_paths:
+            duplicate_paths.append(path)
+        seen_paths.add(canonical)
+    if duplicate_paths:
+        raise RuntimeError(
+            "ComfyUI history 有多個 output 指向同一個本機檔名，拒絕互相覆寫: "
+            + ", ".join(duplicate_paths)
+        )
+
+    for filename, item, local_path in downloads:
+        query = urllib.parse.urlencode({
+            "filename": filename,
+            "subfolder": str(item.get("subfolder", "")),
+            "type": str(item.get("type", "output")),
+        })
+        url = f"{_comfy_endpoint('view', comfy_url)}?{query}"
+        os.makedirs(os.path.dirname(local_path), exist_ok=True)
+        partial_path = f"{local_path}.{uuid.uuid4().hex}.part"
+        try:
+            with urllib.request.urlopen(url, timeout=request_timeout) as response, open(partial_path, "wb") as output:
+                while chunk := response.read(1024 * 1024):
+                    output.write(chunk)
+            os.replace(partial_path, local_path)
+        except Exception:
+            try:
+                os.unlink(partial_path)
+            except FileNotFoundError:
+                pass
+            raise
+        paths.append(local_path)
     if not paths:
         selected = f" node_ids={sorted(selected_ids)}" if selected_ids is not None else ""
         raise RuntimeError(f"ComfyUI 沒有產生任何可下載的 output{selected}")
@@ -1084,23 +1568,43 @@ def build_layer_split(image_filename, mask_filename, layer_name):
     }, "4"
 
 
-def backend_has(backend, cap):
+def backend_has(backend, cap, capability_config=None):
+    config = capability_config or ACTIVE_VIDEO_CONFIG
+    if config is not None:
+        try:
+            return cap in _configured_capabilities(config, backend)
+        except RuntimeError:
+            return False
     return cap in VIDEO_BACKEND_CAPS.get(backend, ())
 
 
-def require_video_backend(task, backend):
+def require_video_backend(task, backend, capability_config=None):
     """確認 task/backend 組合已實作，未支援時直接 fail-fast。
 
     backend 是 task 的明確實作選擇；不能從 process-wide ``sys.argv`` 猜測
     呼叫端是否指定過它，也不能在未支援時靜默改走另一個 backend。
     """
+    if not backend:
+        raise SystemExit(
+            f"{task} 沒有選定影片 backend；請明確給 --backend，"
+            "或在 machine capability config 設定 default_backend。"
+        )
     if backend not in VIDEO_BACKENDS:
         raise SystemExit(f"未知 --backend {backend!r},可用: {', '.join(VIDEO_BACKENDS)}")
-    need = VIDEO_TASK_CAPS.get(task)
-    if need and not backend_has(backend, need):
-        ok = [b for b, caps in VIDEO_BACKEND_CAPS.items() if need in caps]
+    needs = _video_task_capabilities(task)
+    if capability_config is None:
+        available = set(VIDEO_BACKEND_CAPS.get(backend, ()))
+        ok = [b for b, caps in VIDEO_BACKEND_CAPS.items() if all(cap in caps for cap in needs)]
+    else:
+        available = _configured_capabilities(capability_config, backend)
+        ok = [
+            b for b in capability_config.get("backends", {})
+            if all(cap in _configured_capabilities(capability_config, b) for cap in needs)
+        ]
+    missing = [cap for cap in needs if cap not in available]
+    if missing:
         raise SystemExit(
-            f"{task} 目前沒有 {backend} 實作(缺 {need})。"
+            f"{task} 目前沒有 {backend} 實作(缺 {', '.join(missing)})。"
             f"可用: {', '.join(ok) or '無'}。"
             f"不要因此改 task 名稱;接上這個 backend 之後同一個 CLI 就能跑。"
         )
@@ -1180,6 +1684,30 @@ def video_canvas(image_path, width=None, height=None):
     w = max(32, int(src_w * scale) // 32 * 32)
     h = max(32, int(src_h * scale) // 32 * 32)
     return w, h
+
+
+def _image_size(image_path):
+    _require_pillow()
+    try:
+        with PILImage.open(image_path) as image:
+            return image.size
+    except (OSError, ValueError) as exc:
+        raise ValueError(f"無法讀取影片輸入圖片: {image_path}") from exc
+
+
+def validate_transition_images(start_path, end_path):
+    """Reject incompatible A/B aspect ratios before either image is uploaded."""
+    start_width, start_height = _image_size(start_path)
+    end_width, end_height = _image_size(end_path)
+    start_ratio = start_width / float(start_height)
+    end_ratio = end_width / float(end_height)
+    if not math.isclose(start_ratio, end_ratio, rel_tol=0.0, abs_tol=0.01):
+        raise ValueError(
+            "transition 的 --start/--end 必須有相近畫布比例；"
+            f"目前是 {start_width}x{start_height} 與 {end_width}x{end_height}，"
+            "避免尾幀被錯誤拉伸後才送進模型。"
+        )
+    return (start_width, start_height), (end_width, end_height)
 
 
 def wan_frame_count(duration_sec):
@@ -1291,10 +1819,10 @@ def build_img2video_wan(prompt, image_filename, negative=None, width=832, height
     negative = negative or VIDEO_NEG_DEFAULT
     g = {
         "37": {"class_type": "UNETLoader", "inputs": {
-            "unet_name": VIDEO_WAN_UNET, "weight_dtype": "default"}},
+            "unet_name": _video_model_file_name("wan", "i2v_unet"), "weight_dtype": "default"}},
         "38": {"class_type": "CLIPLoader", "inputs": {
-            "clip_name": VIDEO_WAN_CLIP, "type": "wan", "device": "default"}},
-        "39": {"class_type": "VAELoader", "inputs": {"vae_name": VIDEO_WAN_VAE}},
+            "clip_name": _video_model_file_name("wan", "clip"), "type": "wan", "device": "default"}},
+        "39": {"class_type": "VAELoader", "inputs": {"vae_name": _video_model_file_name("wan", "vae")}},
         "48": {"class_type": "ModelSamplingSD3", "inputs": {"model": ["37", 0], "shift": 8.0}},
         "6": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": ["38", 0]}},
         "7": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": ["38", 0]}},
@@ -1325,10 +1853,10 @@ def build_pose_drive_wan(prompt, image_filename, motion_filename, width=768, hei
     negative = negative or VIDEO_NEG_DEFAULT
     g = {
         "37": {"class_type": "UNETLoader", "inputs": {
-            "unet_name": VIDEO_WAN_FUN_UNET, "weight_dtype": "default"}},
+            "unet_name": _video_model_file_name("wan", "control_unet"), "weight_dtype": "default"}},
         "38": {"class_type": "CLIPLoader", "inputs": {
-            "clip_name": VIDEO_WAN_CLIP, "type": "wan", "device": "default"}},
-        "39": {"class_type": "VAELoader", "inputs": {"vae_name": VIDEO_WAN_VAE}},
+            "clip_name": _video_model_file_name("wan", "clip"), "type": "wan", "device": "default"}},
+        "39": {"class_type": "VAELoader", "inputs": {"vae_name": _video_model_file_name("wan", "vae")}},
         "48": {"class_type": "ModelSamplingSD3", "inputs": {"model": ["37", 0], "shift": 8.0}},
         "6": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": ["38", 0]}},
         "7": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": ["38", 0]}},
@@ -1392,16 +1920,18 @@ def extract_last_frame(video_path, dest_path):
     os.makedirs(os.path.dirname(os.path.abspath(dest_path)) or ".", exist_ok=True)
     container = av.open(video_path)
     last = None
-    for frame in container.decode(video=0):
-        last = frame
-    container.close()
+    try:
+        for frame in container.decode(video=0):
+            last = frame
+    finally:
+        container.close()
     if last is None:
         raise RuntimeError(f"影片沒有畫面: {video_path}")
     last.to_image().save(dest_path)
     return dest_path
 
 
-def concat_videos(video_paths, dest_path):
+def concat_videos(video_paths, dest_path, allow_overwrite=False):
     """外部組裝短過場。解析度/fps 跟第一支對齊,必要時重編碼。不是剪接台。
     每支都有音軌才把立體聲接上去;有任何一支無聲就整段當無聲,
     不要一半有聲一半靜音造成時間軸錯位。"""
@@ -1413,6 +1943,11 @@ def concat_videos(video_paths, dest_path):
         source_canonical = os.path.normcase(os.path.realpath(os.path.abspath(os.fspath(source))))
         if source_canonical == dest_canonical:
             raise ValueError(f"video_concat 輸入影片不可與輸出路徑相同: {source!r}")
+    if os.path.lexists(dest_path) and not allow_overwrite:
+        raise RuntimeError(
+            f"拒絕覆寫既有 video_concat 輸出: {dest_path!r}；"
+            "請換 --name，或明確使用 --overwrite"
+        )
     _require_pillow()
     import av
 
@@ -1443,6 +1978,10 @@ def concat_videos(video_paths, dest_path):
         raise ValueError(
             f"video_concat 所有輸入影片必須使用相同 FPS；"
             f"第一支={float(expected_fps):g} FPS，{details}"
+        )
+    if expected_fps != Fraction(VIDEO_FPS, 1):
+        raise ValueError(
+            f"video_concat 只接受產線 {VIDEO_FPS} FPS 影片，目前第一支是 {float(expected_fps):g} FPS"
         )
 
     width, height = stream_specs[0][0], stream_specs[0][1]
@@ -1528,17 +2067,76 @@ def concat_videos(video_paths, dest_path):
     return dest_path
 
 
+def inspect_video_output(video_path, task=None, backend=None, elapsed_seconds=None):
+    """Read the delivered mp4 itself so a filename alone never counts as a pass."""
+    import av
+
+    video_path = os.fspath(video_path)
+    if not os.path.isfile(video_path):
+        raise RuntimeError(f"影片輸出不存在: {video_path}")
+    container = av.open(video_path)
+    try:
+        video_stream = _video_streams(container)[0]
+        fps_fraction = _fps_fraction(getattr(video_stream, "average_rate", None))
+        if fps_fraction is None or fps_fraction <= 0:
+            raise RuntimeError(f"影片輸出缺少有效 FPS: {video_path}")
+        frame_count = sum(1 for _ in container.decode(video=0))
+        audio_streams = list(getattr(container.streams, "audio", ()) or ())
+        audio = []
+        for stream in audio_streams:
+            codec_context = getattr(stream, "codec_context", None)
+            layout = getattr(stream, "layout", None)
+            audio.append({
+                "codec": getattr(codec_context, "name", None),
+                "channels": getattr(codec_context, "channels", None),
+                "layout": getattr(layout, "name", None) or (str(layout) if layout else None),
+                "sample_rate": getattr(codec_context, "sample_rate", None),
+            })
+        metadata = {
+            "task": task,
+            "backend": backend,
+            "path": os.path.abspath(video_path),
+            "size_bytes": os.path.getsize(video_path),
+            "width": video_stream.width,
+            "height": video_stream.height,
+            "fps": float(fps_fraction),
+            "frames": frame_count,
+            "duration_seconds": round(frame_count / float(fps_fraction), 6),
+            "audio": bool(audio),
+            "audio_streams": audio,
+        }
+    finally:
+        container.close()
+    if elapsed_seconds is not None:
+        metadata["elapsed_seconds"] = round(float(elapsed_seconds), 3)
+    return metadata
+
+
+def report_video_output(video_path, task, backend, elapsed_seconds=None):
+    metadata = inspect_video_output(
+        video_path, task=task, backend=backend, elapsed_seconds=elapsed_seconds
+    )
+    if not math.isclose(metadata["fps"], float(VIDEO_FPS), rel_tol=0.0, abs_tol=VIDEO_FPS_TOLERANCE):
+        raise RuntimeError(
+            f"影片輸出 FPS 不符合產線契約: {metadata['fps']:g}，需要接近 {VIDEO_FPS}: {video_path}"
+        )
+    if metadata["frames"] < 1:
+        raise RuntimeError(f"影片輸出沒有影格: {video_path}")
+    print("[影片驗證] " + json.dumps(metadata, ensure_ascii=False, sort_keys=True))
+    return metadata
+
+
 def build_img2video_h3(prompt, image_filename, width=768, height=768, seed=None, duration=2.0,
                        last_image_filename=None, filename_prefix="img2video"):
     seed = seed_or_random(seed)
     length = h3_frame_count(duration)
     g = {
         "6": {"class_type": "UNETLoader", "inputs": {
-            "unet_name": VIDEO_H3_UNET, "weight_dtype": "default"}},
+            "unet_name": _video_model_file_name("h3", "i2v_unet"), "weight_dtype": "default"}},
         "13": {"class_type": "CLIPLoader", "inputs": {
-            "clip_name": VIDEO_H3_CLIP, "type": "minimax", "device": "default"}},
-        "11": {"class_type": "VAELoader", "inputs": {"vae_name": VIDEO_H3_VAE}},
-        "24": {"class_type": "VAELoader", "inputs": {"vae_name": VIDEO_H3_AUDIO_VAE}},
+            "clip_name": _video_model_file_name("h3", "clip"), "type": "minimax", "device": "default"}},
+        "11": {"class_type": "VAELoader", "inputs": {"vae_name": _video_model_file_name("h3", "video_vae")}},
+        "24": {"class_type": "VAELoader", "inputs": {"vae_name": _video_model_file_name("h3", "audio_vae")}},
         "shift": {"class_type": "MiniMaxH3SigmaShift", "inputs": {
             "model": ["6", 0], "shift_video": 12.0, "shift_audio": 3.0}},
         "56": {"class_type": "LoadImage", "inputs": {"image": image_filename}},
@@ -1666,11 +2264,11 @@ def build_character_video_h3(prompt, ref_filenames, width=768, height=768, seed=
     prompt = h3_ref_prompt(prompt, len(ref_filenames))
     g = {
         "6": {"class_type": "UNETLoader", "inputs": {
-            "unet_name": VIDEO_H3_REF_UNET, "weight_dtype": "default"}},
+            "unet_name": _video_model_file_name("h3", "ref_unet"), "weight_dtype": "default"}},
         "13": {"class_type": "CLIPLoader", "inputs": {
-            "clip_name": VIDEO_H3_CLIP, "type": "minimax", "device": "default"}},
-        "11": {"class_type": "VAELoader", "inputs": {"vae_name": VIDEO_H3_VAE}},
-        "24": {"class_type": "VAELoader", "inputs": {"vae_name": VIDEO_H3_AUDIO_VAE}},
+            "clip_name": _video_model_file_name("h3", "clip"), "type": "minimax", "device": "default"}},
+        "11": {"class_type": "VAELoader", "inputs": {"vae_name": _video_model_file_name("h3", "video_vae")}},
+        "24": {"class_type": "VAELoader", "inputs": {"vae_name": _video_model_file_name("h3", "audio_vae")}},
         "shift": {"class_type": "MiniMaxH3SigmaShift", "inputs": {
             "model": ["6", 0], "shift_video": 12.0, "shift_audio": 3.0}},
         "104": {"class_type": "MiniMaxH3ReferenceToVideo", "inputs": {
@@ -1713,11 +2311,11 @@ def build_pose_drive_h3(prompt, image_filename, motion_filename, width=768, heig
     prompt = h3_pose_drive_prompt(prompt)
     g = {
         "6": {"class_type": "UNETLoader", "inputs": {
-            "unet_name": VIDEO_H3_REF_UNET, "weight_dtype": "default"}},
+            "unet_name": _video_model_file_name("h3", "ref_unet"), "weight_dtype": "default"}},
         "13": {"class_type": "CLIPLoader", "inputs": {
-            "clip_name": VIDEO_H3_CLIP, "type": "minimax", "device": "default"}},
-        "11": {"class_type": "VAELoader", "inputs": {"vae_name": VIDEO_H3_VAE}},
-        "24": {"class_type": "VAELoader", "inputs": {"vae_name": VIDEO_H3_AUDIO_VAE}},
+            "clip_name": _video_model_file_name("h3", "clip"), "type": "minimax", "device": "default"}},
+        "11": {"class_type": "VAELoader", "inputs": {"vae_name": _video_model_file_name("h3", "video_vae")}},
+        "24": {"class_type": "VAELoader", "inputs": {"vae_name": _video_model_file_name("h3", "audio_vae")}},
         "shift": {"class_type": "MiniMaxH3SigmaShift", "inputs": {
             "model": ["6", 0], "shift_video": 12.0, "shift_audio": 3.0}},
         "56": {"class_type": "LoadImage", "inputs": {"image": image_filename}},
@@ -1784,6 +2382,11 @@ def _add_runtime_arguments(parser):
         help="明確指定含 comfyui_url 的 runtime JSON（不會自動搜尋 repo local_config.json）。",
     )
     parser.add_argument(
+        "--video-config", dest="video_config_path", default=argparse.SUPPRESS,
+        help=("明確指定 machine-specific video_capabilities.json；影片不會從 task 名稱猜測 "
+              "H3/Wan。未指定時可由 --config 的 video_config 或 ComfyUI/tools/video_capabilities.json 找到。"),
+    )
+    parser.add_argument(
         "--timeout", type=float, default=argparse.SUPPRESS,
         help=(f"prompt 送達後輪詢生成結果的秒數上限；圖片預設 {DEFAULT_TIMEOUT:g}，"
               f"影片預設 {DEFAULT_VIDEO_TIMEOUT:g}。"),
@@ -1839,6 +2442,10 @@ def _validate_task_capabilities(args):
 
 
 def main(argv=None):
+    global ACTIVE_VIDEO_CONFIG
+    # A process may invoke main() more than once in tests or an embedding. Do
+    # not let a previous machine config leak into a later task.
+    ACTIVE_VIDEO_CONFIG = None
     ap = argparse.ArgumentParser(description="穩定產圖核心腳本")
     _add_runtime_arguments(ap)
     sub = ap.add_subparsers(dest="task", required=True)
@@ -1966,8 +2573,13 @@ def main(argv=None):
 
     video_common = argparse.ArgumentParser(add_help=False, parents=[common])
     video_common.add_argument(
-        "--backend", choices=list(VIDEO_BACKENDS), default=DEFAULT_VIDEO_BACKEND,
-        help="影片實作後端。不給用這台機器的預設。某個 task 若還沒接這個 backend,會直接報錯,不要改 task 名。",
+        "--backend", choices=list(VIDEO_BACKENDS), default=argparse.SUPPRESS,
+        help=("影片實作後端；不給時只使用 capability config 明確設定的 default_backend，"
+              "不會無條件預設 H3。某個 task 若還沒接這個 backend，會直接報錯。"),
+    )
+    video_common.add_argument(
+        "--overwrite", action="store_true",
+        help="明確允許覆寫同名影片輸出；預設拒絕以免重跑破壞既有素材。",
     )
 
     p_vid = sub.add_parser(
@@ -1995,6 +2607,7 @@ def main(argv=None):
     p_fx.add_argument("--duration", type=float, default=2.0, help="秒數,鎖在 2~6,預設 2")
     p_fx.add_argument("--width", type=int)
     p_fx.add_argument("--height", type=int)
+    p_fx.add_argument("--negative", help="負向詞;用不到的 backend 會忽略")
     p_fx.add_argument("--seed", type=int)
     p_fx.add_argument("--no-extract-frames", dest="extract_frames", action="store_false",
                       help="不要抽 png 序列(預設會抽)")
@@ -2036,6 +2649,10 @@ def main(argv=None):
     )
     p_cat.add_argument("--video", action="append", required=True, help="可重複給多次,順序就是播放順序")
     p_cat.add_argument("--name", default="video_concat", help="輸出檔名前綴,預設 video_concat")
+    p_cat.add_argument(
+        "--overwrite", action="store_true",
+        help="明確允許覆寫既有輸出；預設拒絕以免重跑破壞既有素材。",
+    )
 
     p_cam = sub.add_parser(
         "camera_move",
@@ -2126,6 +2743,22 @@ def main(argv=None):
         comfy_url = resolve_comfy_url(getattr(args, "comfy_url", None), getattr(args, "config_path", None))
     request_timeout = min(DEFAULT_HTTP_TIMEOUT, float(args.timeout))
 
+    if args.task in VIDEO_TASKS:
+        try:
+            args.backend = configure_video_capability(
+                args.task,
+                requested_backend=getattr(args, "backend", None),
+                runtime_config_path=getattr(args, "config_path", None),
+                video_config_path=getattr(args, "video_config_path", None),
+                comfy_url=comfy_url,
+                request_timeout=request_timeout,
+                control_type=getattr(args, "control_type", None),
+            )
+        except (RuntimeError, ValueError) as exc:
+            raise SystemExit(str(exc)) from exc
+
+    video_started = time.monotonic() if args.task in VIDEO_TASKS or args.task == "video_concat" else None
+
     def upload(path):
         return upload_image(path, comfy_url=comfy_url, request_timeout=request_timeout)
 
@@ -2198,7 +2831,7 @@ def main(argv=None):
         mask_fn = upload(args.mask)
         prompt, out_id = build_layer_split(img_fn, mask_fn, args.layer_name)
     elif args.task == "img2video":
-        backend = require_video_backend(args.task, args.backend)
+        backend = require_video_backend(args.task, args.backend, ACTIVE_VIDEO_CONFIG)
         duration = _require_video_duration(args.duration)
         _require_wh_pair(args)
         width, height = video_canvas(args.image, args.width, args.height)
@@ -2208,7 +2841,7 @@ def main(argv=None):
             filename_prefix="img2video", negative=args.negative,
         )
     elif args.task == "fx_loop":
-        backend = require_video_backend(args.task, args.backend)
+        backend = require_video_backend(args.task, args.backend, ACTIVE_VIDEO_CONFIG)
         duration = _require_video_duration(args.duration)
         _require_wh_pair(args)
         width, height = video_canvas(args.image, args.width, args.height)
@@ -2216,13 +2849,17 @@ def main(argv=None):
         loop_prompt = args.prompt if "loop" in args.prompt.lower() else f"{args.prompt}, {VIDEO_LOOP_SUFFIX}"
         prompt, out_id = run_i2v(
             backend, loop_prompt, img_fn, width, height, args.seed, duration,
-            last_image_filename=img_fn, filename_prefix="fx_loop",
+            last_image_filename=img_fn, filename_prefix="fx_loop", negative=args.negative,
         )
     elif args.task == "transition":
-        backend = require_video_backend(args.task, args.backend)
+        backend = require_video_backend(args.task, args.backend, ACTIVE_VIDEO_CONFIG)
         duration = _require_video_duration(args.duration)
         if (args.width is None) ^ (args.height is None):
             raise SystemExit("--width 跟 --height 要一起給,或兩個都不給。")
+        try:
+            validate_transition_images(args.start, args.end)
+        except (OSError, ValueError) as exc:
+            raise SystemExit(str(exc)) from exc
         width, height = video_canvas(args.start, args.width, args.height)
         start_fn = upload(args.start)
         end_fn = upload(args.end)
@@ -2233,7 +2870,7 @@ def main(argv=None):
     elif args.task == "clip_extend":
         if bool(args.video) == bool(args.image):
             raise SystemExit("clip_extend 要 --video 上一支 mp4,或 --image 上一鏡尾幀,只能給一個。")
-        backend = require_video_backend(args.task, args.backend)
+        backend = require_video_backend(args.task, args.backend, ACTIVE_VIDEO_CONFIG)
         duration = _require_video_duration(args.duration)
         _require_wh_pair(args)
         still = args.image
@@ -2263,11 +2900,15 @@ def main(argv=None):
         except (TypeError, ValueError) as exc:
             raise SystemExit(str(exc)) from exc
         os.makedirs(out_dir, exist_ok=True)
-        concat_videos(args.video, dest)
+        concat_videos(args.video, dest, allow_overwrite=args.overwrite)
         print(f"[完成] {dest}")
+        report_video_output(
+            dest, task="video_concat", backend="local",
+            elapsed_seconds=time.monotonic() - video_started if video_started else None,
+        )
         return
     elif args.task == "character_video":
-        backend = require_video_backend(args.task, args.backend)
+        backend = require_video_backend(args.task, args.backend, ACTIVE_VIDEO_CONFIG)
         refs = args.character_ref
         if len(refs) > CHARACTER_REF_MAX:
             raise SystemExit(
@@ -2282,7 +2923,7 @@ def main(argv=None):
             filename_prefix="character_video",
         )
     elif args.task == "camera_move":
-        backend = require_video_backend(args.task, args.backend)
+        backend = require_video_backend(args.task, args.backend, ACTIVE_VIDEO_CONFIG)
         duration = _require_video_duration(args.duration)
         _require_wh_pair(args)
         width, height = video_canvas(args.image, args.width, args.height)
@@ -2308,7 +2949,7 @@ def main(argv=None):
         finally:
             _remove_temp_file(end_path)
     elif args.task == "pose_drive":
-        backend = require_video_backend(args.task, args.backend)
+        backend = require_video_backend(args.task, args.backend, ACTIVE_VIDEO_CONFIG)
         duration = _require_video_duration(args.duration)
         _require_wh_pair(args)
         print(
@@ -2343,11 +2984,31 @@ def main(argv=None):
         node_ids=[target_output_id] if target_output_id else None,
         comfy_url=comfy_url,
         request_timeout=request_timeout,
+        allow_overwrite=(getattr(args, "overwrite", False) if args.task in VIDEO_TASKS else True),
     )
+    if args.task in VIDEO_TASKS:
+        video_paths = [path for path in paths if path.lower().endswith(".mp4")]
+        if not video_paths:
+            raise RuntimeError(f"影片 task {args.task} 沒有產生 mp4 output，已拒絕把錯誤輸出當成成功")
+    else:
+        video_paths = []
     for p in paths:
         print(f"[完成] {p}")
-        if getattr(args, "extract_frames", False) and p.lower().endswith(".mp4"):
-            extract_video_frames(p, getattr(args, "output_dir", None))
+        if p.lower().endswith(".mp4") and args.task in VIDEO_TASKS:
+            metadata = report_video_output(
+                p, task=args.task, backend=args.backend,
+                elapsed_seconds=time.monotonic() - video_started if video_started else None,
+            )
+            if getattr(args, "extract_frames", False):
+                frame_paths, frame_dir = extract_video_frames(
+                    p, getattr(args, "output_dir", None)
+                )
+                if len(frame_paths) != metadata["frames"]:
+                    raise RuntimeError(
+                        f"抽幀數量與影片不一致: video={metadata['frames']}, "
+                        f"frames={len(frame_paths)}, dir={frame_dir}"
+                    )
+                print(f"[幀驗證] task={args.task} backend={args.backend} frames={len(frame_paths)} dir={frame_dir}")
 
 
 if __name__ == "__main__":

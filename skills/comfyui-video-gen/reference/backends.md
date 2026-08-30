@@ -2,7 +2,7 @@
 
 對外契約是 **task 名 + `--backend`**。模型檔名、節點、prompt tag 只活在對應 backend 裡。換實作時 task 名稱不變。
 
-這台機器 bake-off 後的**預設** `DEFAULT_VIDEO_BACKEND = h3`。agent 通常不用問;使用者只要快、可接受無聲才 `--backend wan`。某個 task 若這個 backend 還沒接,`generate.py` 會直接報錯——不要因此改成另一個 task。
+backend 的可用性與預設值來自已安裝機器的 `video_capabilities.json`，不是 source code 常數。這台 XU-Nano-PC 的歷史 bake-off 偏好 H3，但只有在該機器的 capability config 明確寫入 `default_backend: h3` 時才成立；若是 `null`，每次影片 CLI 都必須明確給 `--backend`。某個 task 若這個 backend 還沒接,`generate.py` 會直接報錯——不要因此改成另一個 task，也不會靜默 fallback。
 
 ## 現在誰接得上什麼
 
@@ -17,11 +17,22 @@
 | task | 需要的能力 |
 |---|---|
 | `img2video` / `clip_extend` / `camera_move` | `i2v` |
-| `fx_loop` / `transition` | `last_frame` |
+| `fx_loop` / `transition` | `i2v` + `last_frame` |
 | `character_video` | `character_ref` |
 | `pose_drive` | `control_video` |
 
 `camera_move` 在有 `last_frame` 的 backend 會再餵幾何終點靜幀;沒有就只靠運鏡枚舉收成的 prompt。`orbit_*` 平面裁切做不出繞拍,一律只走 prompt。
+
+## Capability config 與 fail-fast
+
+`tools_src/detect_video_capabilities.py` 只檢查指定的 ComfyUI `.venv`、既有 `models/` 檔案與（若提供 URL）`/object_info`；它不會下載模型、custom node 或 Python 套件。產出的 `video_capabilities.json` 由 `generate.py` 在影片 task 上傳任何輸入前重新驗證：
+
+- backend 必須由 `--backend` 或 config 的 `default_backend` 選定；沒有選定就停止。
+- config 宣告的模型檔案、Python/PyTorch/Pillow/PyAV 與 CUDA/GPU 必須仍與目前執行環境一致。
+- 目前 ComfyUI `/object_info` 必須包含該 task graph 的必要 nodes；缺任何一項都不會進 upload 或 queue。
+- 圖片的 `device_config.json`/SDXL tier 與影片 backend 是兩套責任。`--style`、圖片 checkpoint 不會替影片選 H3/Wan。
+
+使用已安裝機器時，可先用 `detect_video_capabilities.py --default-backend h3` 明確記錄偏好；若不想設偏好，省略該旗標，之後在每次影片 CLI 明確傳 `--backend`。若要用 `pose`/`depth`，先確認 `comfyui_controlnet_aux` 的前處理模型已存在；缺少時不要在沒有使用者同意下讓第一次 smoke test 觸發下載。
 
 ## 這台機器對應的檔(裝機用,不要寫進 CLI)
 

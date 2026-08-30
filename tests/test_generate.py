@@ -13,12 +13,24 @@ from unittest import mock
 
 
 MODULE_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "tools_src", "generate.py")
+DETECTOR_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(__file__)), "tools_src", "detect_video_capabilities.py"
+)
 
 
 def load_generate_module():
     stderr = io.StringIO()
     with contextlib.redirect_stderr(stderr):
         spec = importlib.util.spec_from_file_location("generate_under_test", MODULE_PATH)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+    return module
+
+
+def load_detector_module():
+    stderr = io.StringIO()
+    with contextlib.redirect_stderr(stderr):
+        spec = importlib.util.spec_from_file_location("detect_video_capabilities_under_test", DETECTOR_PATH)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
     return module
@@ -42,9 +54,11 @@ class GenerateTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.generate = load_generate_module()
+        cls.detector = load_detector_module()
 
     def setUp(self):
         self.generate.COMFY_URL = None
+        self.generate.ACTIVE_VIDEO_CONFIG = None
         self.generate.DEVICE = {
             "tier": "sdxl",
             "checkpoint": "test.safetensors",
@@ -223,15 +237,21 @@ class GenerateTests(unittest.TestCase):
 
     def test_video_timeout_defaults_and_cli_override(self):
         common_patches = {
+            "configure_video_capability": mock.patch.object(
+                self.generate, "configure_video_capability", return_value="h3"
+            ),
             "video_canvas": mock.patch.object(self.generate, "video_canvas", return_value=(64, 64)),
             "upload_image": mock.patch.object(self.generate, "upload_image", return_value="still.png"),
             "run_i2v": mock.patch.object(self.generate, "run_i2v", return_value=({}, "1")),
-            "download_outputs": mock.patch.object(self.generate, "download_outputs", return_value=[]),
+            "download_outputs": mock.patch.object(self.generate, "download_outputs", return_value=["out.mp4"]),
             "submit_and_wait": mock.patch.object(self.generate, "submit_and_wait", return_value={"outputs": {}}),
+            "report_video_output": mock.patch.object(
+                self.generate, "report_video_output", return_value={"frames": 49}
+            ),
         }
-        with common_patches["video_canvas"], common_patches["upload_image"], \
+        with common_patches["configure_video_capability"], common_patches["video_canvas"], common_patches["upload_image"], \
                 common_patches["run_i2v"], common_patches["download_outputs"], \
-                common_patches["submit_and_wait"] as submit:
+                common_patches["submit_and_wait"] as submit, common_patches["report_video_output"]:
             self.generate.main([
                 "img2video", "--comfy-url", "http://server:8188",
                 "--image", "still.png", "--prompt", "idle",
@@ -248,13 +268,19 @@ class GenerateTests(unittest.TestCase):
     def test_video_concat_is_local_and_does_not_resolve_comfy_url(self):
         with tempfile.TemporaryDirectory() as output_dir:
             with mock.patch.object(self.generate, "resolve_comfy_url", side_effect=AssertionError("must stay local")), \
-                    mock.patch.object(self.generate, "concat_videos") as concat:
+                    mock.patch.object(self.generate, "concat_videos") as concat, \
+                    mock.patch.object(self.generate, "report_video_output") as report:
                 self.generate.main([
                     "video_concat", "--video", "a.mp4", "--video", "b.mp4",
                     "--output-dir", output_dir,
                 ])
         concat.assert_called_once_with(
-            ["a.mp4", "b.mp4"], os.path.join(output_dir, "video_concat.mp4")
+            ["a.mp4", "b.mp4"], os.path.join(output_dir, "video_concat.mp4"),
+            allow_overwrite=False,
+        )
+        report.assert_called_once_with(
+            os.path.join(output_dir, "video_concat.mp4"),
+            task="video_concat", backend="local", elapsed_seconds=mock.ANY,
         )
 
     def test_video_concat_name_rejects_absolute_and_traversal_paths(self):
@@ -309,11 +335,13 @@ class GenerateTests(unittest.TestCase):
     def test_clip_extend_generated_still_is_unique_and_cleaned(self):
         with tempfile.TemporaryDirectory() as output_dir:
             with mock.patch.object(self.generate, "extract_last_frame") as extract, \
+                    mock.patch.object(self.generate, "configure_video_capability", return_value="h3"), \
                     mock.patch.object(self.generate, "video_canvas", return_value=(64, 64)), \
                     mock.patch.object(self.generate, "upload_image", return_value="last.png") as upload, \
                     mock.patch.object(self.generate, "run_i2v", return_value=({}, "1")), \
                     mock.patch.object(self.generate, "submit_and_wait", return_value={"outputs": {}}), \
-                    mock.patch.object(self.generate, "download_outputs", return_value=[]):
+                    mock.patch.object(self.generate, "download_outputs", return_value=["out.mp4"]), \
+                    mock.patch.object(self.generate, "report_video_output", return_value={"frames": 49}):
                 self.generate.main([
                     "clip_extend", "--comfy-url", "http://server:8188", "--video", "previous.mp4",
                     "--prompt", "continue", "--output-dir", output_dir,
@@ -330,6 +358,7 @@ class GenerateTests(unittest.TestCase):
         )
         fake_av = SimpleNamespace(open=mock.Mock(return_value=container))
         with mock.patch.dict(sys.modules, {"av": fake_av}), \
+                mock.patch.object(self.generate, "configure_video_capability", return_value="h3"), \
                 mock.patch.object(self.generate, "upload_image") as upload:
             with self.assertRaisesRegex(SystemExit, "24 FPS"):
                 self.generate.main([
@@ -369,6 +398,169 @@ class GenerateTests(unittest.TestCase):
             self.assertFalse(os.path.exists(os.path.join(frame_dir, "999.png")))
             self.assertTrue(os.path.exists(os.path.join(frame_dir, "keep.txt")))
             container.close.assert_called_once_with()
+
+    def test_video_capability_requires_explicit_default_or_backend(self):
+        with tempfile.NamedTemporaryFile("w", delete=False) as config_file:
+            json.dump({
+                "schema_version": 1,
+                "default_backend": None,
+                "backends": {
+                    "wan": {
+                        "capabilities": ["i2v"],
+                        "models": {},
+                    },
+                },
+            }, config_file)
+            config_path = config_file.name
+        try:
+            with mock.patch.object(self.generate, "validate_video_runtime"), \
+                    mock.patch.object(self.generate, "validate_comfy_video_nodes"):
+                with self.assertRaisesRegex(RuntimeError, "請明確給 --backend"):
+                    self.generate.configure_video_capability(
+                        "img2video", runtime_config_path=None,
+                        video_config_path=config_path, comfy_url="http://server:8188",
+                    )
+        finally:
+            os.unlink(config_path)
+
+    def test_video_capability_selects_configured_backend_and_task_nodes(self):
+        with tempfile.TemporaryDirectory() as model_dir:
+            model_paths = {}
+            for key, filename in self.generate.VIDEO_BACKEND_SPECS["wan"]["models"].items():
+                path = os.path.join(model_dir, f"{key}.safetensors")
+                with open(path, "wb") as model:
+                    model.write(b"model")
+                model_paths[key] = {"file": filename, "path": path}
+            with tempfile.NamedTemporaryFile("w", delete=False, suffix=".json") as config_file:
+                json.dump({
+                    "schema_version": 1,
+                    "default_backend": "wan",
+                    "runtime": {},
+                    "backends": {
+                        "wan": {
+                            "available": True,
+                            "capabilities": ["i2v", "control_video"],
+                            "models": model_paths,
+                        },
+                    },
+                }, config_file)
+                config_path = config_file.name
+            try:
+                with mock.patch.object(self.generate, "validate_video_runtime"), \
+                        mock.patch.object(self.generate, "validate_comfy_video_nodes") as nodes:
+                    selected = self.generate.configure_video_capability(
+                        "img2video", video_config_path=config_path,
+                        comfy_url="http://server:8188",
+                    )
+                self.assertEqual("wan", selected)
+                nodes.assert_called_once()
+                required_nodes = nodes.call_args.args[1]
+                self.assertIn("Wan22ImageToVideoLatent", required_nodes)
+                self.assertNotIn("Wan22FunControlToVideo", required_nodes)
+            finally:
+                os.unlink(config_path)
+
+    def test_video_capability_missing_model_stops_before_node_check(self):
+        with tempfile.NamedTemporaryFile("w", delete=False, suffix=".json") as config_file:
+            json.dump({
+                "schema_version": 1,
+                "default_backend": "wan",
+                "backends": {
+                    "wan": {
+                        "capabilities": ["i2v"],
+                        "models": {
+                            "i2v_unet": {"file": "missing.safetensors", "path": "missing.safetensors"},
+                        },
+                    },
+                },
+            }, config_file)
+            config_path = config_file.name
+        try:
+            with mock.patch.object(self.generate, "validate_video_runtime"), \
+                    mock.patch.object(self.generate, "validate_comfy_video_nodes") as nodes:
+                with self.assertRaisesRegex(RuntimeError, "upload/queue 前停止"):
+                    self.generate.configure_video_capability(
+                        "img2video", video_config_path=config_path,
+                        comfy_url="http://server:8188",
+                    )
+            nodes.assert_not_called()
+        finally:
+            os.unlink(config_path)
+
+    def test_main_video_capability_failure_happens_before_upload(self):
+        with mock.patch.object(
+                self.generate, "configure_video_capability",
+                side_effect=RuntimeError("missing video runtime"),
+        ), mock.patch.object(self.generate, "upload_image") as upload:
+            with self.assertRaisesRegex(SystemExit, "missing video runtime"):
+                self.generate.main([
+                    "img2video", "--comfy-url", "http://server:8188",
+                    "--image", "still.png", "--prompt", "idle",
+                ])
+        upload.assert_not_called()
+
+    def test_video_outputs_refuse_existing_path_without_overwrite(self):
+        with tempfile.TemporaryDirectory() as output_dir:
+            existing = os.path.join(output_dir, "clip.mp4")
+            with open(existing, "wb") as output:
+                output.write(b"keep")
+            history = {"outputs": {"1": {"videos": [{"filename": "clip.mp4"}]}}}
+            with mock.patch.object(self.generate.urllib.request, "urlopen") as opener:
+                with self.assertRaisesRegex(RuntimeError, "拒絕覆寫"):
+                    self.generate.download_outputs(
+                        history, output_dir, comfy_url="http://server:8188",
+                        allow_overwrite=False,
+                    )
+            opener.assert_not_called()
+            with self.assertRaisesRegex(RuntimeError, "拒絕覆寫"):
+                self.generate.concat_videos(["a.mp4", "b.mp4"], existing)
+
+    def test_transition_rejects_mismatched_aspect_before_upload(self):
+        with mock.patch.object(self.generate, "_image_size", side_effect=[(512, 512), (768, 512)]):
+            with self.assertRaisesRegex(ValueError, "比例"):
+                self.generate.validate_transition_images("a.png", "b.png")
+
+    def test_detector_reports_present_backends_without_choosing_h3(self):
+        catalog = self.detector._load_generate_catalog()
+        with tempfile.TemporaryDirectory() as comfyui_path:
+            model_root = os.path.join(comfyui_path, "models")
+            for backend, implementation in catalog.VIDEO_BACKEND_SPECS.items():
+                for key, filename in implementation["models"].items():
+                    directory = self.detector.MODEL_DIRECTORIES[backend][key]
+                    path = os.path.join(model_root, directory, filename)
+                    os.makedirs(os.path.dirname(path), exist_ok=True)
+                    with open(path, "wb") as model:
+                        model.write(b"model")
+            device_path = os.path.join(comfyui_path, "tools", "device_config.json")
+            os.makedirs(os.path.dirname(device_path), exist_ok=True)
+            with open(device_path, "w", encoding="utf-8") as device:
+                json.dump({"backend": "cuda", "gpu_name": "Test GPU"}, device)
+            classes = set()
+            for implementation in catalog.VIDEO_BACKEND_SPECS.values():
+                for nodes in implementation["required_nodes"].values():
+                    classes.update(nodes)
+            classes.add("OpenposePreprocessor")
+            args = SimpleNamespace(
+                comfyui_path=comfyui_path,
+                python_exe=sys.executable,
+                model_root=None,
+                device_config=device_path,
+                comfy_url="http://server:8188",
+                http_timeout=1.0,
+                default_backend=None,
+                control_type="pose",
+            )
+            with mock.patch.object(self.detector, "_runtime_probe", return_value={
+                "python": "3.13.9", "pillow": "12.2.0", "torch": "2.13.0+cu130",
+                "pyav": "18.1.0", "torch_cuda": True, "gpu_name": "Test GPU",
+            }), mock.patch.object(self.detector, "_query_object_info", return_value={
+                "status": "available", "classes": sorted(classes), "error": None,
+            }):
+                config = self.detector.detect(args)
+            self.assertIsNone(config["default_backend"])
+            self.assertTrue(config["backends"]["h3"]["available"])
+            self.assertTrue(config["backends"]["wan"]["available"])
+            self.assertIn("i2v", config["backends"]["h3"]["capabilities"])
 
     def test_concat_rejects_mismatched_fps_before_creating_output(self):
         def fake_open(path, mode="r"):

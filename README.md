@@ -4,7 +4,7 @@
 
 這個 repository（儲存庫）同時保存環境建置紀錄、產圖流程說明，以及一支把固定工作流封裝成 CLI（命令列介面）的穩定產圖腳本。它也提供給 AI agent（AI 代理）使用的任務判斷與操作規則，因此可以直接用自然語言控制這條產圖產線：AI agent 會判斷需求、準備結構化參數、呼叫固定流程，並把結果存回指定的 `output/` 資料夾。使用者不需要每次從零拉節點；維護者才需要深入調整 ComfyUI graph（節點圖）。
 
-產線的可重現性以 [`docs/tested-versions.md`](docs/tested-versions.md) 為準。它只記錄已在同一台機器上驗證過的 commit、套件版本與模型 SHA-256；目前 manifest 仍是「待在已安裝機器擷取」，不能把未查證的版本或 hash 當成已驗證基準。
+產線的可重現性以 [`docs/tested-versions.md`](docs/tested-versions.md) 為準。XU-Nano-PC 的 manifest 已完成 commit、套件版本、GPU/driver、模型 SHA-256 與 smoke capture；其他機器仍須各自擷取，不能把未查證的版本或 hash 當成已驗證基準。
 
 ## AI agent 操作模式
 
@@ -124,6 +124,7 @@ python -m unittest discover -s tests -p 'test_*.py' -v
 ├── 教學.md                              # 完整建置與操作教學
 ├── tools_src/
 │   ├── detect_device.py                 # 偵測 GPU／VRAM／作業系統能力
+│   ├── detect_video_capabilities.py     # 偵測影片模型／runtime／ComfyUI nodes
 │   └── generate.py                      # 穩定產圖腳本的原始碼
 ├── skills/
 │   ├── comfyui-art-gen/                 # AI agent 的需求判斷與產圖流程
@@ -143,6 +144,7 @@ python -m unittest discover -s tests -p 'test_*.py' -v
 
 - `tools_src/generate.py` 是產圖腳本的唯一原始碼；不要直接修改 ComfyUI 安裝目錄裡的部署副本。
 - `local_config.json` 包含每台機器的實際路徑，已排除在 Git 版本控制之外；請在 CLI 明確傳入 `--comfy-url` 或 `--config`，不要依賴部署副本自行猜路徑。
+- 影片 task 另外使用每台機器的 `video_capabilities.json`；可由 `tools_src/detect_video_capabilities.py` 掃描既有模型、runtime 與 `/object_info` 產生。它不會下載資產，`generate.py` 會在 upload/queue 前重新驗證；沒有明確 default 時要傳 `--backend`，不會靜默改用 H3/Wan。
 - `workflows/` 是本機 ComfyUI workflow 參考檔，刻意不進 Git；新 clone 不會帶這些 JSON，換機器時需從已安裝機器匯出/複製，或直接依 CLI 流程操作。
 - `output/` 的生成結果預設不進 Git，避免把大型或含私人內容的素材意外提交。
 - 更換電腦或顯示卡後，至少重新執行 `detect_device.py`，不要假設 checkpoint 與解析度仍然相同。
@@ -154,6 +156,7 @@ python -m unittest discover -s tests -p 'test_*.py' -v
 - [產圖流程](skills/comfyui-art-gen/SKILL.md)：如何把需求分類並呼叫正確 task
 - [安裝流程](skills/comfyui-install/SKILL.md)：新機器的環境與模型準備
 - [模型清單](skills/comfyui-install/reference/models.md)：模型基準與硬碟空間估算（可重現版本以 manifest 為準）
+- [影片能力與 backend](skills/comfyui-video-gen/reference/backends.md)：machine-specific capability config、task/backend 邊界與 fail-fast 規則
 - [已驗證版本清單](docs/tested-versions.md)：版本、commit、模型 SHA-256 與 smoke test 紀錄格式
 - [CI 基本檢查](.github/workflows/ci.yml)：`compileall` 與 Python 標準庫 `unittest`
 - [圖示結構範本](skills/comfyui-art-gen/reference/structure-ref.md)：`icon_asset --structure-ref` 與圖層拆分

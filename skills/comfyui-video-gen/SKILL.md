@@ -16,7 +16,7 @@
 
 ## 環境
 
-先讀 `local_config.json`。ComfyUI 要在 `<comfyui_url>` 跑著；每個需要送工作給 ComfyUI 的 CLI 範例都要明確帶 `--comfy-url <URL>` 或 `--config <local_config.json>`，不要假設腳本會自動搜尋設定檔。影片生成等待上限建議帶 `--timeout 1800`（秒）；這是輪詢 ComfyUI 生成結果的上限，不是 server port。純本地的 `video_concat` 不需要 URL 或 timeout。
+先讀 `local_config.json`。影片另外需要已安裝機器的 `video_capabilities.json`：若不存在或模型/runtime/nodes 有變，先依 `skills/comfyui-install/SKILL.md` 執行 `tools_src/detect_video_capabilities.py`；偵測器只掃描既有內容，不下載模型或套件。ComfyUI 要在 `<comfyui_url>` 跑著；每個需要送工作給 ComfyUI 的 CLI 範例都要明確帶 `--comfy-url <URL>` 或 `--config <local_config.json>`，必要時再帶 `--video-config <video_capabilities.json>`，不要假設腳本會自動搜尋 repository 設定檔。影片生成等待上限建議帶 `--timeout 1800`（秒）；這是輪詢 ComfyUI 生成結果的上限，不是 server port。純本地的 `video_concat` 不需要 URL 或 timeout。
 
 `<python_exe> <generate_script> <task> [--comfy-url <URL> | --config <local_config.json>] [--timeout 1800] [options] --output-dir <output_dir>`
 
@@ -34,7 +34,7 @@
 | 「把這幾支短片接成一支」 | `video_concat` |
 | 「做一部有劇情的片子 / 15 秒過場」 | **先出鏡頭表**,再逐鏡呼叫上面的 task,最後 `video_concat`。不准收成一個超長 prompt |
 
-`--backend` 通常不用問(用這台機器的預設)。只要快、可接受無聲才指定另一個。哪個 task 接了哪個 backend,見 `reference/backends.md`;沒接上的組合腳本會報錯,不要因此改 task 名。
+`--backend` 只有在 capability config 明確寫了 `default_backend` 時才可以省略；若 config 是 `null`，必須問清楚或要求使用者明確指定。不要因模型缺失、node 缺失或 task 不支援而自動換 H3/Wan。哪個 task 接了哪個 backend,見 `reference/backends.md`;沒接上的組合腳本會在 upload/queue 前報錯,不要因此改 task 名。
 
 時長沒要求就 **2 秒**,上限 6 秒,更長拆鏡。
 
@@ -95,28 +95,28 @@
 
 ```
 img2video:
-  <python_exe> <generate_script> img2video --config <local_config.json> --timeout 1800 --image <path> --prompt "..." [--backend h3|wan] [--duration 2] [--extract-frames] --output-dir <output_dir>
+  <python_exe> <generate_script> img2video --config <local_config.json> [--video-config <video_capabilities.json>] --timeout 1800 --image <path> --prompt "..." [--backend h3|wan] [--duration 2] [--extract-frames] [--overwrite] --output-dir <output_dir>
 
 fx_loop:
-  <python_exe> <generate_script> fx_loop --config <local_config.json> --timeout 1800 --image <path> --prompt "..." [--backend h3|wan] [--duration 2] [--no-extract-frames] --output-dir <output_dir>
+  <python_exe> <generate_script> fx_loop --config <local_config.json> [--video-config <video_capabilities.json>] --timeout 1800 --image <path> --prompt "..." [--backend h3|wan] [--duration 2] [--no-extract-frames] [--overwrite] --output-dir <output_dir>
 
 transition:
-  <python_exe> <generate_script> transition --config <local_config.json> --timeout 1800 --start <A> --end <B> --prompt "..." [--backend h3|wan] [--duration 2] [--extract-frames] --output-dir <output_dir>
+  <python_exe> <generate_script> transition --config <local_config.json> [--video-config <video_capabilities.json>] --timeout 1800 --start <A> --end <B> --prompt "..." [--backend h3|wan] [--duration 2] [--extract-frames] [--overwrite] --output-dir <output_dir>
 
 clip_extend:
-  <python_exe> <generate_script> clip_extend --config <local_config.json> --timeout 1800 --video <prev.mp4> --prompt "..." [--backend h3|wan] [--duration 2] [--extract-frames] --output-dir <output_dir>
+  <python_exe> <generate_script> clip_extend --config <local_config.json> [--video-config <video_capabilities.json>] --timeout 1800 --video <prev.mp4> --prompt "..." [--backend h3|wan] [--duration 2] [--extract-frames] [--overwrite] --output-dir <output_dir>
 
 video_concat:
-  <python_exe> <generate_script> video_concat --video <a.mp4> --video <b.mp4> --output-dir <output_dir>
+  <python_exe> <generate_script> video_concat --video <a.mp4> --video <b.mp4> --output-dir <output_dir> [--overwrite]
 
 character_video:
-  <python_exe> <generate_script> character_video --config <local_config.json> --timeout 1800 --character-ref <path> [--character-ref <path2>] --prompt "..." [--backend h3|wan] [--duration 2] [--extract-frames] --output-dir <output_dir>
+  <python_exe> <generate_script> character_video --config <local_config.json> [--video-config <video_capabilities.json>] --timeout 1800 --character-ref <path> [--character-ref <path2>] --prompt "..." [--backend h3|wan] [--duration 2] [--extract-frames] [--overwrite] --output-dir <output_dir>
 
 camera_move:
-  <python_exe> <generate_script> camera_move --config <local_config.json> --timeout 1800 --image <path> --camera zoom_in|zoom_out|pan_left|pan_right|pan_up|pan_down|orbit_cw|orbit_ccw|static [--prompt "..."] [--backend h3|wan] [--duration 2] [--extract-frames] --output-dir <output_dir>
+  <python_exe> <generate_script> camera_move --config <local_config.json> [--video-config <video_capabilities.json>] --timeout 1800 --image <path> --camera zoom_in|zoom_out|pan_left|pan_right|pan_up|pan_down|orbit_cw|orbit_ccw|static [--prompt "..."] [--backend h3|wan] [--duration 2] [--extract-frames] [--overwrite] --output-dir <output_dir>
 
 pose_drive:
-  <python_exe> <generate_script> pose_drive --config <local_config.json> --timeout 1800 --image <char.png> --motion-ref <motion.mp4> --prompt "..." [--control-type pose|canny|depth] [--backend h3|wan] [--duration 2] [--extract-frames] --output-dir <output_dir>
+  <python_exe> <generate_script> pose_drive --config <local_config.json> [--video-config <video_capabilities.json>] --timeout 1800 --image <char.png> --motion-ref <motion.mp4> --prompt "..." [--control-type pose|canny|depth] [--backend h3|wan] [--duration 2] [--extract-frames] [--overwrite] --output-dir <output_dir>
 ```
 
 ## 已知限制
@@ -127,7 +127,8 @@ pose_drive:
 - 沒有影片去背
 - `camera_move` 的 `--camera` 是枚舉;有 last_frame 的 backend 會再餵幾何終點靜幀(見 `reference/camera-move.md`)。`orbit_*` 只靠 prompt
 - `video_concat` 每支都有音軌才接立體聲;有任何一支無聲,整段當無聲(不要半段有聲)
-- `pose_drive` 要角色靜幀 + 動作影片,而且**靜幀姿勢要接近動作片第一幀**;對不上會雙人/重影,不要拿兩張不相干的素材硬綁。預設 h3 臉比 wan 穩,仍不是像素鎖臉;只要快才 `--backend wan`
-- 各 backend 能力表 / 這台機器預設是誰,見 `reference/backends.md`
+- `pose_drive` 要角色靜幀 + 動作影片,而且**靜幀姿勢要接近動作片第一幀**;對不上會雙人/重影,不要拿兩張不相干的素材硬綁。歷史上 H3 臉比 Wan 穩，實際選擇以 capability config 為準；只要快才在確認 capability 後明確給 `--backend wan`
+- 每支影片輸出都會在 CLI 回報 task/backend、尺寸、FPS、幀數、音訊、耗時與輸出路徑；同名輸出預設拒絕覆寫，只有明確給 `--overwrite` 才會更新
+- 各 backend 能力表 / machine-specific config 規則,見 `reference/backends.md`
 
 細節見 `DESIGN.md`。

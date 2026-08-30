@@ -11,6 +11,7 @@
 - `local_config.json` —— **這台機器的實際安裝路徑**(ComfyUI 裝在哪、python.exe 在哪),不進版控,每台機器內容都不一樣。不存在的話代表這台機器還沒裝好,照 `skills/comfyui-install/SKILL.md` 的流程走
 - `tools_src/generate.py` —— 實際執行產圖的穩定核心腳本(原始碼,版本控管在這裡)。部署到 ComfyUI 機器上的執行副本在 `<ComfyUI 安裝路徑>/tools/generate.py`,由安裝流程複製過去,不要繞過它自己組 ComfyUI API 呼叫
 - `tools_src/detect_device.py` —— 設備能力偵測(GPU/VRAM/OS),輸出 `device_config.json` 給 `generate.py` 讀取,決定用哪個 checkpoint/解析度
+- `tools_src/detect_video_capabilities.py` —— 影片能力偵測(既有模型、影片 runtime、可選的 ComfyUI nodes),輸出 machine-specific `video_capabilities.json`;只掃描已安裝內容,不下載模型或套件
 - `workflows/` —— **不進版控**(見 `.gitignore`)。ComfyUI workflow JSON 檔案,是 `generate.py` 背後鎖死的產圖流程定義,給維護這條產線的人(不是美術)在 ComfyUI 網頁介面手動開、除錯、開發新能力時視覺化參考用,屬於本機個人產物,跟 `教學.md` 第 9 章「自己存一份到 `~/ComfyUI/user/default/workflows/`」是同一件事。不強制每個 `generate.py` 新能力都要補對應檔案——有空、真的會用到再補,不用當成義務性的同步負擔
 
 ## 給任何 agent 的原則
@@ -19,5 +20,6 @@
 - 產圖流程要穩定、可重複——不要每次臨場亂組 ComfyUI 節點圖,新增能力時比照 `generate.py` 的模式(鎖死大部分參數,只留必要欄位可調)
 - 安裝/裝機是相反的情境:硬體排列組合太多,**刻意不寫死成腳本**,交給 agent 臨場判斷,細節見 `skills/comfyui-install/SKILL.md`
 - 換一台機器 / 換一顆顯卡時,至少重跑 `detect_device.py` 重新產生 `device_config.json`,不要假設 checkpoint 名稱或解析度跟這台機器一樣
+- 影片模型、ComfyUI 版本、custom node 或 runtime 改變時,也要重跑 `detect_video_capabilities.py`;影片 task 不從圖片 tier 或 source code 猜 backend,缺模型/runtime/node 必須在 upload/queue 前停止
 - 目前沒有預算,只用本機免費模型;之後有預算要接外部雲端 API(GPT/BFL/Kling 等),ComfyUI 本身已經有對應的 API 節點,不用重建產線,詳見 `教學.md` 第 0.5 章 C 段
 - 如果需要在這個 repo 裡寫 `.ps1` 檔案,要存成**帶 BOM 的 UTF-8**——Windows PowerShell 5.1 沒有 BOM 會照系統 ANSI 編碼讀檔,中文字會把語法解析弄壞(這個專案已經踩過一次這個坑)

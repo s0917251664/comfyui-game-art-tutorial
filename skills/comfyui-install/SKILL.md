@@ -32,16 +32,18 @@
    - `comfyui_controlnet_aux`:`https://github.com/Fannovel16/comfyui_controlnet_aux.git`(提供 `OpenposePreprocessor`、`DepthAnythingV2Preprocessor` 等前處理節點,第 7 章 pose/depth 控制類型要用)
    若 manifest 有對應的 `custom_nodes.<name>.commit`，各 repo 都要 checkout 那個精確 commit；欄位為 `null` 時，安裝後擷取各自的 `git rev-parse HEAD`，不要把 `main` 當成鎖定版本。裝完後確認各自的 `requirements.txt`(如果有)也裝了。`comfyui_controlnet_aux` 的前處理器模型(DWPose、Depth Anything 權重)會在第一次真的執行到的時候自己下載到它自己的 `ckpts/` 資料夾,不用手動預先下載。
 8. **模型**:先確認 `device_config.json` 的 `tier` 落在哪個 family,再決定要裝哪一組。**這件事不是只有底模(checkpoint)要跟著 tier 換,ControlNet/IPAdapter/CLIP Vision 全部都是跟底模綁定的,底模架構變了,這些都要跟著換成對應版本,不能只換 checkpoint、其他照抄。** 完整清單(SDXL 家族的檔名/下載來源表,以及 sd15 tier 的處理方式)見 `reference/models.md`——那是安裝流程的模型家族、檔名與來源基準，不是 hash-level 的可重現版本鎖定；真正可重現的 commit、套件版本與模型 SHA-256 以 `docs/tested-versions.md` 為準。若 manifest 仍是 `pending_on_installed_machine`，不要把表格裡的歷史日期、檔名或大小當成已鎖定版本，也不要自行換成更新模型；真的想評估升級用 `skills/comfyui-pipeline-review/SKILL.md`,不是安裝流程該做的事。每個實際使用的模型都要在 manifest 記錄檔案路徑、模型家族、來源與 SHA-256；目前 manifest 未擷取完成前不可捏造 hash。
-9. **產圖腳本**:把 `tools_src/generate.py` 複製(覆蓋)到 `<ComfyUI 安裝路徑>/tools/generate.py`——**這支永遠以 repo 裡的原始碼為準**,不要在部署副本上直接改邏輯。
-10. **啟動用的小捷徑**(方便使用者之後自己開伺服器,不一定要是腳本,一行指令也行):在 `<ComfyUI 安裝路徑>` 附近留一個能一鍵/一行啟動 `main.py --listen 127.0.0.1 --port <port>` 的方式。**先確認 port 8188 沒被佔用**(例如這台機器如果已經裝了 ComfyUI 桌面版且常駐執行,要換別的 port,如 8189)。把最後使用的 URL 寫入 `local_config.json`；產圖 CLI 不會自動猜測部署副本旁的 repo 設定。
-11. **寫入 repo 根目錄的 `local_config.json`**(不進版控,每台機器內容不同):
+9. **影片能力偵測(只有要開影片時)**:把 `tools_src/detect_video_capabilities.py` 與 `tools_src/generate.py` 複製到 `<ComfyUI 安裝路徑>/tools/`，等 ComfyUI、custom nodes、影片模型與 `.venv` 都確認存在後，使用該 `.venv` 執行 detector。可帶 `--comfy-url http://127.0.0.1:<port>` 檢查 `/object_info`，也可省略 URL 先只掃描檔案/runtime；偵測器**不會下載模型、套件或前處理權重**。不給 `--default-backend` 就把 `default_backend` 保持 `null`，每次 CLI 必須明確給 `--backend`；若明確給 `--default-backend h3|wan`，它必須是這台機器已完整具備的 backend。`pose`/`depth` 的 `comfyui_controlnet_aux` 前處理模型若尚未在 `ckpts/`，先停下告知使用者，不能讓 smoke test 靜默觸發大型下載。輸出預設是 `<ComfyUI 安裝路徑>/tools/video_capabilities.json`，已有檔案時需明確給 `--overwrite`。
+10. **產圖腳本**:把 `tools_src/generate.py` 複製(覆蓋)到 `<ComfyUI 安裝路徑>/tools/generate.py`——**這支永遠以 repo 裡的原始碼為準**,不要在部署副本上直接改邏輯。影片 detector 也要跟 source 同步部署。
+11. **啟動用的小捷徑**(方便使用者之後自己開伺服器,不一定要是腳本,一行指令也行):在 `<ComfyUI 安裝路徑>` 附近留一個能一鍵/一行啟動 `main.py --listen 127.0.0.1 --port <port>` 的方式。**先確認 port 8188 沒被佔用**(例如這台機器如果已經裝了 ComfyUI 桌面版且常駐執行,要換別的 port,如 8189)。把最後使用的 URL 寫入 `local_config.json`；產圖 CLI 不會自動猜測部署副本旁的 repo 設定。
+12. **寫入 repo 根目錄的 `local_config.json`**(不進版控,每台機器內容不同):
     ```json
     {
       "comfyui_path": "<ComfyUI 安裝路徑>",
       "python_exe": "<.venv 裡 python 執行檔的完整路徑>",
       "generate_script": "<ComfyUI 安裝路徑>/tools/generate.py",
+      "video_config": "<ComfyUI 安裝路徑>/tools/video_capabilities.json",
       "comfyui_url": "http://127.0.0.1:<實際用的 port>",
-      "start_script": "<步驟 10 的啟動方式,路徑或指令>",
+      "start_script": "<步驟 11 的啟動方式,路徑或指令>",
       "output_dir": "<這個 repo 根目錄>/output"
     }
     ```
@@ -69,7 +71,7 @@
 ## 執行原則
 
 - **冪等**:每一步先檢查是否已經成立,成立就跳過,不要盲目重跑或覆蓋使用者已經調整過的東西(`generate.py` 除外——它永遠要跟 repo 同步)
-- **換機器/換顯卡**:至少重跑步驟 4(設備偵測)跟步驟 11(重寫 `local_config.json`),不要假設 checkpoint 或路徑沒變；若 tier 變成 `sd15`，先看 `skills/comfyui-art-gen/SKILL.md` 的能力矩陣，ControlNet/IPAdapter/CLIP Vision 不可沿用 SDXL 版本。
+- **換機器/換顯卡**:至少重跑步驟 4(設備偵測)、步驟 9(影片 capability 若有使用)跟步驟 12(重寫 `local_config.json`),不要假設 checkpoint 或路徑沒變；若 tier 變成 `sd15`，先看 `skills/comfyui-art-gen/SKILL.md` 的能力矩陣，ControlNet/IPAdapter/CLIP Vision 不可沿用 SDXL 版本。
 - **下載失敗/網路受限**:如實回報,不要用假路徑頂替或假裝下載成功
 - **版本收尾**:完成安裝後擷取 ComfyUI/custom node commit、Python/PyTorch/Pillow 版本、實際模型 SHA-256，再記錄至少一次實機 smoke test 的日期、指令與輸出；在這些資料齊全前，manifest 保持 `pending_on_installed_machine`。
 - **收尾**:全部完成後,把最終的 `local_config.json` 內容念給使用者確認一次,並提醒他下一步可以直接用自然語言要求產圖(見 `skills/comfyui-art-gen/SKILL.md`)。若這台機器沒有可用的 ComfyUI/模型，就只能完成文件與離線檢查，必須明確回報尚未 deploy/smoke test。

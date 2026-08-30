@@ -154,9 +154,9 @@
 - **先有靜幀,再有鏡頭。** 角色/場景/道具能用現有圖片產線 lock 的,不要改用文生影片賭第一幀。
 - **一次一支鏡頭。** 使用者說「做一部片子」時,skill 拆鏡頭表,不要把它收成一個超長 prompt。
 - **完整成片組裝在 ComfyUI 外面。** 產線交出檔名帶鏡號的素材(`output/shot_A12_img2video.mp4`)，`video_concat` 只做基本本地順序串接；字幕、配樂、混音與完整時間線留給外部工具。
-- **歷史 bake-off 結束前不鎖死單一影片 backend。** 現況已依對打結果把 `h3` 設為預設，`wan` 保留為可明確指定的快速無聲選項；Wan 14B 仍不當預設，社群 GGUF 把 14B 塞進 16GB 是研究項。
+- **影片 backend 不由 source code 隱含選擇。** 歷史 bake-off 偏好 H3；每台機器由 `detect_video_capabilities.py` 依既有模型/runtime/nodes 產生 capability config，只有 config 明確寫入 `default_backend` 才有預設，否則 CLI 要求 `--backend`。Wan 14B 仍不當本機基準，社群 GGUF 把 14B 塞進 16GB 是研究項。
 - **不要把 SDXL 的 ControlNet/IPAdapter 節點接到影片 graph 上。** 這是已知會 shape mismatch 的架構邊界,比 `sd15` tier 那筆技術債更硬。
-- **對外契約是 task + `--backend`,不是模型名。** 輸出檔名前綴用 task 名。模型檔、節點、私有 prompt tag 只活在 backend 實作裡。某個 task 還沒接某個 backend 時直接報錯,不要改 task 名稱硬接。
+- **對外契約是 task + `--backend`,不是模型名。** 輸出檔名前綴用 task 名。模型檔、節點、私有 prompt tag 只活在 backend 實作裡。某個 task 還沒接某個 backend、或 capability config 缺模型/runtime/node 時，必須在 upload/queue 前直接報錯,不要改 task 名稱硬接或靜默 fallback。
 
 ---
 
@@ -205,7 +205,7 @@
 
 > **歷史設計註記(2026-08-26):** 第一次選 Wan 2.2 5B,有一部分是因為 `教學.md` 跟 Mac 上已經有 Fun Control 5B——那是路徑依賴,不是 bake-off 結果。使用者追問後重掃過「這台 4080 16GB 現在真正能本機跑、有 ComfyUI 官方模板」的候選,結論與當時的選擇保留在這裡。
 
-這張表同時包含設計階段的候選與當時機器的實測紀錄，不是 hash-level 的可重現版本鎖定。現在的對外預設是 `--backend h3`；`wan` 保留為較快、無聲的明確選項。精確 ComfyUI/custom node commit、PyAV/套件版本與影片模型 SHA-256 要以 [`docs/tested-versions.md`](../../docs/tested-versions.md) 為準；該 manifest 目前仍是 `pending_on_installed_machine`，所以本節的檔名、大小與日期不能單獨當成可重建證據。
+這張表同時包含設計階段的候選與當時機器的實測紀錄，不是 hash-level 的可重現版本鎖定。歷史對外偏好是 H3，但現行 CLI 只接受 machine-specific capability config 的明確 default，或使用者明確給 `--backend`；`wan` 保留為較快、無聲的選項。精確 ComfyUI/custom node commit、PyAV/套件版本與影片模型 SHA-256 要以 [`docs/tested-versions.md`](../../docs/tested-versions.md) 為準；manifest 未完成 capture 前，本節的檔名、大小與日期不能單獨當成可重建證據。
 
 這台機器的歷史測試環境是 Windows 11、RTX 4080 16GB。Mac M3 Max 上的 `wan2.2_fun_control_5B_bf16.safetensors` + `wan2.2_vae` + `umt5_xxl_fp8` 是舊機器紀錄,不能當成任何新 clone 已安裝。
 
@@ -217,7 +217,7 @@
 | Wan 2.2 14B I2V/T2V/FLF2V | **不當預設** | 官方路徑要的 VRAM 遠超 16GB。社群 GGUF/FP8 能塞進 16GB 是 enticing,但那是另一條易碎路徑(量化、offload、custom node),不能當「鎖死可重複」的預設。需要 `transition` 畫質不夠時再當**選用升級**,走 pipeline-review 核准流程 |
 | LTX 2.3 | 不當第一波 | 有原生音訊、16GB 能擠,但授權不是乾淨 Apache、顯存/系統 RAM 需求說法混亂,生態跟我們現有 ComfyUI native 節點不完全同一套。等有聲音需求再評估 |
 | HunyuanVideo 1.5 | 不當第一波 | 人臉寫實口碑好,但不是這條遊戲美術產線的第一優先,且 VRAM 說法偏 24GB |
-| **MiniMax H3 FL2VA / Ref2VA** | **目前預設 `h3`；已實測** | FL2VA 負責 I2V/首尾幀，Ref2VA 負責 `character_video`/`pose_drive`；H3 產 AAC 音訊。實際模型檔案與 runtime 版本仍以 pending manifest 補捕捉 |
+| **MiniMax H3 FL2VA / Ref2VA** | **歷史 bake-off 首選；由 config 明確啟用** | FL2VA 負責 I2V/首尾幀，Ref2VA 負責 `character_video`/`pose_drive`；H3 產 AAC 音訊。實際模型檔案與 runtime 版本以 machine capability config 與 manifest 為準 |
 | Kling / Luma / Runway 等 API | 有預算再接 | `教學.md` 第 0.5 章 C 段已列。產線預留「同一 task 名稱、換 backend」的位置,第一波不實作 |
 | **Wan 2.5 / 2.6 / 2.7 / 3.0** | **不當本機預設,有預算當同一 task 的雲端 backend** | 見下面「為什麼不用 2.5」 |
 
@@ -236,7 +236,7 @@
 
 網路上「Wan 2.5 ComfyUI workflow」大多數是 Partner Node 或代跑平台,不是你可以下載進 `models/diffusion_models/` 的 checkpoint。另外 **LTX 2.5** 是 Lightricks 的另一個本機模型,名字容易跟 Wan 2.5 混,不是同一個東西。
 
-產線預留的位置仍然是:**task 名稱不變(`img2video` 等),有預算時加雲端 backend。** 目前本機預設已依 bake-off 結果改為 `h3`，`wan` 仍可明確指定；不要為了追版本號把本機產線改成必須刷卡才能跑。如果哪天 Wan 真的再出一版開源權重,走 `comfyui-pipeline-review` 核准再換,跟圖片產線換底模同一套紀律。
+產線預留的位置仍然是:**task 名稱不變(`img2video` 等),有預算時加雲端 backend。** 本機 backend 由每台機器的 capability config 決定；不要為了追版本號把本機產線改成必須刷卡才能跑。如果哪天 Wan 真的再出一版開源權重,走 `comfyui-pipeline-review` 核准再換,跟圖片產線換底模同一套紀律。
 
 ### 2026-08-26 本機開源 bake-off(這台 4080 16GB)
 
@@ -255,7 +255,7 @@
 
 > **歷史決策(2026-08-26):** 這一輪 bake-off 只用 Wan 2.2 5B 跟 MiniMax H3。LTX-2.5 官方權重 gated,當時選擇不走授權申請,本輪不下、不測；原本先不鎖死單一模型，要求用同一張靜幀與同一句 prompt 對打，再決定預設。
 
-目前結果已收斂：`generate.py` 預設為 `h3`，`wan` 保留為可明確指定的 backend；LTX 若日後接受授權再另行補測，不提前裝。
+目前結果已收斂：歷史 bake-off 偏好 H3；`generate.py` 不再內建 backend 預設，實際機器由 capability config 明確選 H3 或 Wan，LTX 若日後接受授權再另行補測，不提前裝。
 
 對打規則(歷史紀錄，已依此執行；保留供後續模型比較):
 
@@ -291,7 +291,7 @@ MiniMax H3 實務:權重公開、不 gated。這台機器是 torch 2.13+cu130,�
 
 注意:來源靜幀是正方形,這次兩邊都硬出 16:9,等於先被裁/拉過,不是最終產線預設比例。這次是「流程能出片 + 保原圖誰比較像」的煙測,不是交件級畫質評比。H3 在 2 秒短片、int8、16GB 上沒有社區傳說的「十幾分鐘」,但更長/更高解析還要另測。
 
-Fun Control 5B(`wan2.2_fun_control_5B_bf16.safetensors`,約 9.32 GiB)是歷史規劃中的第 2 波模型；目前仍是 `wan` 的可選 `control_video` 依賴，不是 `h3` 預設。檔案完整性與可重現版本以 pending manifest 為準。
+Fun Control 5B(`wan2.2_fun_control_5B_bf16.safetensors`,約 9.32 GiB)是歷史規劃中的第 2 波模型；目前仍是 `wan` 的可選 `control_video` 依賴，不是 `h3` 預設。XU-Nano-PC 的檔案完整性與可重現版本已寫入 verified manifest，其他機器以各自 capture 為準。
 
 MiniMax H3 官方最小組(Comfy-Org,2026-08-26 核過 Hugging Face API):
 
@@ -303,7 +303,7 @@ MiniMax H3 官方最小組(Comfy-Org,2026-08-26 核過 Hugging Face API):
 | `minimax_h3_audio_vae_fp32.safetensors` | `models/vae/` | 0.56 GiB |
 | **H3 FL2VA 最小組合計** | | **約 39.6 GiB** |
 
-三邊 bake-off 硬碟(Wan 16.9 + H3 39.6 + LTX int8 distilled 預估再 30 上下)落在約 90 GiB 級,這台 C: 2026-08-26 剩約 268 GB,空間夠。**歷史上 H3 bake-off 當下不另外下載 Ref2VA / bf16 / 非 pruned 的 34GB int8；2026-08-27 已補裝 Ref2VA**(`minimax_h3_ref2va_pruned_int8_convrot.safetensors`,19.53 GiB)給 `character_video` / `pose_drive`，CLIP 跟兩個 VAE 跟 FL2VA 共用,不用再下一份。精確檔案 hash 尚未寫入 pending manifest。
+三邊 bake-off 硬碟(Wan 16.9 + H3 39.6 + LTX int8 distilled 預估再 30 上下)落在約 90 GiB 級,這台 C: 2026-08-26 剩約 268 GB,空間夠。**歷史上 H3 bake-off 當下不另外下載 Ref2VA / bf16 / 非 pruned 的 34GB int8；2026-08-27 已補裝 Ref2VA**(`minimax_h3_ref2va_pruned_int8_convrot.safetensors`,19.53 GiB)給 `character_video` / `pose_drive`，CLIP 跟兩個 VAE 跟 FL2VA 共用,不用再下一份。XU-Nano-PC 的精確檔案 hash 已寫入 verified manifest，其他機器必須自行重算。
 
 `detect_device.py` 之後要多一個影片 family(例如 `wan5b`),**不要**把 Wan checkpoint 塞進現有 `sdxl` tier 的 `CKPT` 欄位。圖片跟影片的 device_config 應該是兩組鍵,同一張卡可以同時是 `sdxl` + `wan5b`。
 
@@ -320,7 +320,7 @@ MiniMax H3 官方最小組(Comfy-Org,2026-08-26 核過 Hugging Face API):
 - **文字、Logo、UI 字還是弱項。** 靜態已經承認這點,影片只會更差。
 - **聲音依 backend 而異。** Wan 2.2 產出無聲 mp4；目前預設 H3 會產 AAC 音軌。`video_concat` 只有在每支輸入都有音軌時才保留立體聲，混入無聲片段會使整段無聲；對白、配樂與混音仍留給外部工具。
 - **5B 畫質是草稿/中段可用,不是院線。** 交件級鏡頭以後可能要 14B 選用路徑或雲端 API,那是明確的升級決策,不是裝完 5B 就自動變好。
-- **乾淨 clone 不附帶影片模型與本機設定。** Windows RTX 4080 的安裝/實測只是歷史紀錄；新機器仍須依安裝流程部署，並以 `docs/tested-versions.md` 的 pending manifest 完成版本與 hash 捕捉後才可宣稱可重現。
+- **乾淨 clone 不附帶影片模型與本機設定。** Windows RTX 4080 的安裝/實測只代表 XU-Nano-PC；新機器仍須依安裝流程部署，並以 `docs/tested-versions.md` 的 machine-specific manifest 完成版本與 hash 捕捉後才可宣稱可重現。
 
 ---
 
@@ -339,14 +339,14 @@ MiniMax H3 官方最小組(Comfy-Org,2026-08-26 核過 Hugging Face API):
 - 已下載 Wan 2.2 TI2V 5B 跟 MiniMax H3 FL2VA pruned int8。LTX-2.5 本輪不下
 - 每個 backend 先跑通官方 template(至少 I2V),再用同一張靜幀對打
 - 紀錄實際 VRAM、耗時、解析度、幀數、保原圖程度。這些數字進 `教學.md`,不靠網路上的「應該可以」
-- 此階段結束的驗收:**兩邊都能出 mp4 並有對打紀錄；後續 CLI 已完成，現行預設為 H3**
+- 此階段結束的驗收:**兩邊都能出 mp4 並有對打紀錄；後續 CLI 已完成，現行選擇由 machine capability config 決定**
 
 ### 第 2 階段:第一個穩定 task = `img2video`(已完成)
 
 - `generate.py` 已新增 task,鎖死模型檔名、步數、預設解析度/幀數
 - skill 固定問題:要動的那張圖、怎麼動、要不要 loop(不要就走 `img2video`,要就走 `fx_loop` 或同一 task 的 loop 預設)
 - 用現有產線的一張角色圖、一張圖示、一張場景,各跑一次,打開影片驗收(動作對不對、還是不是那張圖)
-- 文件:`教學.md` 功能地圖已同步；install `models.md` 已有影片段落；版本與實機 smoke 狀態仍依 pending manifest 收尾
+- 文件:`教學.md` 功能地圖已同步；install `models.md` 已有影片段落；XU-Nano-PC 的版本與實機 smoke 已寫入 verified manifest，其他機器仍要各自 capture
 - 此階段結束的驗收:**使用者用自然語言說「讓這張圖動起來」,agent 能穩定交一支短 mp4**
 
 ### 第 3 階段:`fx_loop` + 抽幀包裝(已完成)
@@ -410,7 +410,7 @@ MiniMax H3 官方最小組(Comfy-Org,2026-08-26 核過 Hugging Face API):
 
 1. **四種成品都要,不刪階段。** 特效循環、靜幀 I2V、內容轉場、有分鏡的短過場全部是產品範圍。落地順序仍按第 8 節走(一次穩一個),但任何階段都不能因為「先做最小可用」就被拿掉。
 2. **交付格式:mp4 plate 跟 sprite frames 兩個都要。** 所有已上線 task 都會留下影片檔；`fx_loop` 預設抽幀到 `output/` 子目錄，`img2video` 預設不抽幀，其餘 task 也要明確加 `--extract-frames` 才抽幀。不要把這個輸出契約寫反。
-3. **這台 4080 的第 1 階段雙模型 bake-off 已完成:** 已實測 Wan 2.2 TI2V 5B 與 MiniMax H3；目前 `generate.py` 預設 `h3`，`wan` 仍可明確指定。LTX-2.5 本輪不做；精確版本與模型 hash 仍以 pending manifest 收尾。
+3. **這台 4080 的第 1 階段雙模型 bake-off 已完成:** 已實測 Wan 2.2 TI2V 5B 與 MiniMax H3；歷史偏好 H3，但 `generate.py` 現在要求 machine capability config 明確選擇，`wan` 仍可明確指定。LTX-2.5 本輪不做；XU-Nano-PC 的精確版本與模型 hash 已寫入 verified manifest，其他機器仍須各自 capture。
 4. **「有劇情的長片」是近半年真的要交的產品,不是北極星。** 鏡頭表從第一份影片操作 skill 就是一等公民——使用者說「做一部片子」時仍然先出鏡頭表再逐鏡生成,不准收成一個超長 prompt。`clip_extend` / `pose_drive` / `video_concat` 現在都有 CLI，但不代表一次呼叫就能自動完成長片的導演、聲音與剪輯。
 
 ---
@@ -418,6 +418,6 @@ MiniMax H3 官方最小組(Comfy-Org,2026-08-26 核過 Hugging Face API):
 ## 11. 刻意沒做的決定
 
 - 不在這份文件裡鎖死步數、CFG、精確幀數、精確解析度——那要第 1 階段實測後才能寫進 `generate.py`
-- （歷史決策）不把 Hunyuan / Wan 14B GGUF / LTX-2.5 寫成這一輪必測；Wan 2.2 5B 跟 MiniMax H3 已完成對打，目前依結果鎖定 `h3` 為預設，精確版本仍待 manifest capture
+- （歷史決策）不把 Hunyuan / Wan 14B GGUF / LTX-2.5 寫成這一輪必測；Wan 2.2 5B 跟 MiniMax H3 已完成對打，歷史結果偏好 H3，但精確啟用 backend 交由 machine capability config，版本仍以 manifest capture 為準
 - 不設計 ComfyUI 內建時間線 UI——跟「使用者不用學拉節點」衝突
 - 不把完整時間線、字幕、配樂與混音塞進 `video_concat`；它只負責基本本地串接

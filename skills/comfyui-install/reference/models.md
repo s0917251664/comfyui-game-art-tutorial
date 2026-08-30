@@ -4,7 +4,7 @@
 
 **這件事不是只有底模(checkpoint)要跟著 tier 換,ControlNet/IPAdapter/CLIP Vision 全部都是跟底模綁定的,底模架構變了,這些都要跟著換成對應版本,不能只換 checkpoint、其他照抄。**
 
-> **這張表是安裝流程的模型家族、檔名與來源基準,不是 hash-level 的可重現版本 manifest。** 裝機時只管照表裝,不要因為你知道有更新的模型就自作主張換掉——不同人在不同時間裝出來的美術基準要一致,是這整條產線存在的意義。實際可重現的 ComfyUI/custom node commit、套件版本與模型 SHA-256 以 [`docs/tested-versions.md`](../../../docs/tested-versions.md) 為準；該 manifest 若仍是 `pending_on_installed_machine`，表格中的日期、大小與檔名都不可被宣稱為已鎖定版本。真的想評估要不要升級,用 `skills/comfyui-pipeline-review/SKILL.md`,那是獨立於安裝流程之外、需要使用者明確觸發跟核准的另一件事。
+> **這張表是安裝流程的模型家族、檔名與來源基準,不是 hash-level 的可重現版本 manifest。** 裝機時只管照表裝,不要因為你知道有更新的模型就自作主張換掉——不同人在不同時間裝出來的美術基準要一致,是這整條產線存在的意義。實際可重現的 ComfyUI/custom node commit、套件版本與模型 SHA-256 以 [`docs/tested-versions.md`](../../../docs/tested-versions.md) 為準；XU-Nano-PC 的 manifest 已完成 verified capture，其他機器若仍是 `pending_on_installed_machine`，表格中的日期、大小與檔名不可單獨被宣稱為已鎖定版本。真的想評估要不要升級,用 `skills/comfyui-pipeline-review/SKILL.md`,那是獨立於安裝流程之外、需要使用者明確觸發跟核准的另一件事。
 
 ## `sdxl_high` / `sdxl` / `sdxl_light` tier(SDXL 家族,目前唯一實際驗證過的組合)
 
@@ -59,7 +59,7 @@ VRAM 較緊張時(`sdxl_light` tier),Depth/OpenPose 這兩個 ControlNet 檔案�
 
 **不是每台機器的基本配備,只有使用者明確要產短片才裝。** 跟 SDXL 底模/ControlNet/IPAdapter **完全不相容**,是另一組 UNET/VAE/文字編碼器,不要塞進上面的 SDXL 表格、也不要假設 `CKPT` 能拿來產影片。
 
-以下是 Windows / RTX 4080 的歷史安裝與實測紀錄(路徑相對於 `<ComfyUI 安裝路徑>/models/`)，不是目前 repository 可直接重建的鎖定檔。當時的檔名、大小與日期可作為辨識線索；實際版本與內容完整性仍須在已安裝機器擷取，填入 [`docs/tested-versions.md`](../../../docs/tested-versions.md) 的 `pending_on_installed_machine` manifest，完成 smoke test 後才可改為 `verified`:
+以下是 Windows / RTX 4080 的歷史安裝與實測紀錄(路徑相對於 `<ComfyUI 安裝路徑>/models/`)，不是目前 repository 可直接重建的鎖定檔。當時的檔名、大小與日期可作為辨識線索；XU-Nano-PC 的實際版本、hash 與 smoke 已填入 [`docs/tested-versions.md`](../../../docs/tested-versions.md) 的 `verified` manifest，其他已安裝機器仍須自行擷取並從 `pending_on_installed_machine` 完成 smoke 後再改為 `verified`:
 
 | 用途 | 子資料夾 | 檔名 | 下載來源 | 實際大小 | 最後確認日期 |
 |---|---|---|---|---|---|
@@ -74,6 +74,8 @@ VRAM 較緊張時(`sdxl_light` tier),Depth/OpenPose 這兩個 ControlNet 檔案�
 | MiniMax H3 audio VAE | `vae` | `minimax_h3_audio_vae_fp32.safetensors` | 同上 `vae/` | 0.56 GiB | 2026-08-26 |
 
 Wan + H3 FL2VA 約 56.4 GiB;加上 Ref2VA 約 76 GiB。Ref2VA 跟 FL2VA 是不同 UNET,h3 的 `character_ref` / `control_video` 不能拿 FL2VA 頂替。h3 的 `pose_drive` 也用這顆 Ref2VA,不用再下 Fun ControlNet。`camera_move` 不另外下模型(走已有 I2V backend)。對照見 `skills/comfyui-video-gen/reference/backends.md`。torch 需 cu130 才能走 H3 的 `int8_convrot`(這台已是 2.13.0+cu130)。LTX-2.5 本輪不裝(Hugging Face gated)。下載前先講空間,原則同風格底模。
+
+模型安裝完成後，若要開影片能力，執行 `tools_src/detect_video_capabilities.py` 產生 machine-specific `video_capabilities.json`。它會把每個 backend 的模型路徑與可用 capability 寫入設定，但不會計算大型檔案 hash，也不會下載缺檔；可重現的 SHA-256 仍要在 smoke test 收尾時填入 `docs/tested-versions.md`。`generate.py` 每次影片 task 都會重新檢查模型檔案、runtime 與 ComfyUI nodes，避免把「檔案曾經存在」誤當成目前可跑。
 
 ## `sd15` tier(VRAM < 8GB,SD1.5 家族)
 
