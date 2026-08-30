@@ -57,9 +57,9 @@ VRAM 較緊張時(`sdxl_light` tier),Depth/OpenPose 這兩個 ControlNet 檔案�
 
 ## `sd15` tier(VRAM < 8GB,SD1.5 家族)
 
-**這條路線目前這個 repo 完全沒有實機驗證過**,`tools_src/generate.py` 裡 `CONTROLNET_MODELS`/`ip-adapter_file`/`clip_name` 這幾個模型檔名目前是寫死指向 SDXL 版本,直接在 sd15 tier 上跑會炸(底模跟 ControlNet/IPAdapter 架構對不上)。遇到這個 tier 時:
+**這條路線目前這個 repo 完全沒有實機驗證過**。`tools_src/generate.py` 裡 `CONTROLNET_MODELS`/`ip-adapter_file`/`clip_name` 仍指向 SDXL 版本，因此 CLI 目前會對需要 ControlNet/IPAdapter 的 SD1.5 組合先 fail-fast（提早拒絕）；只有繞過 capability gate、直接把 SDXL add-on graph 跟 SD1.5 底模混用時，才會因架構不符發生 shape mismatch。遇到這個 tier 時:
 
 1. 先跟使用者說清楚這是還沒驗證過的路線,不是「裝了就一定動」
 2. `checkpoint` 換成 `device_config.json` 裡指定的 SD1.5 系列模型(如 DreamShaper),下載來源跟使用者確認,不要臆測網址
-3. ControlNet/IPAdapter/CLIP Vision 要找對應的 **SD1.5 版本**(不是 SDXL 版本,檔名/來源都不同,自己去 Hugging Face/Civitai 找對應版本,不要套用上面 SDXL 那張表的網址)
-4. 裝完之後**回頭修改 `tools_src/generate.py` 的 `CONTROLNET_MODELS` 等常數**,讓它們也依 tier 選擇對應檔名(現在是寫死的,這是已知要補的技術債,見程式碼裡的註解)
+3. ControlNet/IPAdapter/CLIP Vision 路徑目前會被 capability gate 主動拒絕；只下載對應的 **SD1.5 版本**並不會自動開通，不能把「模型已安裝」當成「task 已支援」
+4. 真正新增 SD1.5 add-on 支援時，要照 `skills/comfyui-new-tool-checklist/SKILL.md` 完整處理：建立依 tier 選擇的模型映射、更新 capability gate、補 graph/CLI 測試、完成 ComfyUI 實機 smoke test，再同步文件。只修改 `CONTROLNET_MODELS` 常數仍不完整，IPAdapter/CLIP Vision 與 gate 也必須一起處理

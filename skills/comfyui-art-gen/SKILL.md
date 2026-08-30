@@ -36,12 +36,18 @@
 ```
 
 - **這份檔案不進版控,每台機器內容不一樣**——不要把裡面的實際路徑寫死抄進任何會進版控的文件(包括這份 SKILL.md 自己)
-- 如果 `local_config.json` 不存在:代表這台機器還沒裝好,照 `skills/comfyui-install/SKILL.md` 的流程完成安裝,它會產生這份設定檔
+- 如果 `local_config.json` 不存在:代表這台機器還沒裝好,照 `skills/comfyui-install/SKILL.md` 的流程完成安裝,它會產生這份設定檔；沒有這份檔案就不要假裝可以做實機產圖
 - 執行方式:`<python_exe> <generate_script> <task> [options]`
 - 前提:ComfyUI 伺服器要在 `<comfyui_url>` 跑著(沒開的話先執行 `<start_script>`)
+- **URL 要明確傳入**:部署在 ComfyUI 目錄裡的 `generate.py` 不會依相對路徑自動尋找 repository 的 `local_config.json`。優先用 `--comfy-url <comfyui_url>`；也可用 `--config <local_config.json>`，或設定 `COMFY_URL`/`COMFYUI_URL`。解析優先順序是 CLI URL → URL 環境變數 → 明確指定的 runtime config(`--config` 或 `COMFY_CONFIG`/`COMFYUI_CONFIG`/`COMFY_CONFIG_PATH`)；沒有來源就先報錯，不要送到預設 port 猜測。
+- **等待上限要依任務調整**:共同選項 `--timeout <秒數>` 控制 prompt 送達 ComfyUI 後輪詢生成結果的上限，必須是有限正數；上傳、送出與下載各自另有不超過 30 秒的 HTTP request timeout，所以它不是整支 CLI 的 wall-clock 上限。CPU、batch 或 upscale 需要較久時才提高。它不會改變 `steps`，也不代表 ComfyUI 在逾時後停止背景工作，逾時後不要未確認狀態就重複送出同一任務。
 - 原始碼版本控管在這個 repo 的 `tools_src/generate.py`,`<generate_script>` 只是部署後的執行副本
 - **產出圖片一律要存回 `<output_dir>`(repo 裡的 `output/`),不要讓使用者需要跑去 ComfyUI 安裝目錄找圖**:每次呼叫都加上 `--output-dir <output_dir>`。腳本執行完會印出實際路徑,直接把這個路徑告訴使用者。`generate.py` 本身部署在 ComfyUI 安裝目錄底下只是執行環境,使用者體感上應該完全感覺不到 ComfyUI 這個東西的存在
 - **換到別的設備時**:照 `skills/comfyui-install/SKILL.md` 的流程重新走一次(或至少重跑 `tools_src/detect_device.py`),會依 GPU/VRAM 自動產生 `device_config.json`,`generate.py` 會自動讀這份設定決定 checkpoint/解析度,不用手動改程式碼
+
+### 目前支援的 tier
+
+`device_config.json` 的 tier 是能力契約，不只是解析度建議。SDXL 家族(`sdxl_high`、`sdxl`、`sdxl_light`)目前是 ControlNet/IPAdapter/風格底模的實測路線；`sd15` 只能走不依賴 SDXL add-on 的基礎路徑。`pose_only`、`style_lock`、`character_action` 永遠需要 SDXL；`icon_asset` 只有不帶 `--structure-ref`/`--appearance-ref` 時可走基礎路徑；`guided_inpaint` 只有不帶 ControlNet 與外觀參考圖時可走一般 inpaint。`--style` 的 `realistic`/`illustration`/`anime` 以及任何 SDXL ControlNet/IPAdapter 參數在 `sd15` 上會在上傳前被拒絕。這些不是替 SD1.5 選一套模型就會自動修好，必須另行匹配並實機驗證。
 
 ## 任務判斷(先分類,再決定要問什麼)
 
@@ -58,11 +64,11 @@
 | 「這張圖放大」「解析度不夠」「細節加銳利一點」「要交件/要印出來所以要更高解析度」 | `upscale` | 已經有確定要用的成品圖,想要更高解析度 + 補細節,不是想重新構圖 |
 | 「這張已經定稿的合成圖,幫我拆出外框/中心鈕這幾塊各自的圖層」 | `layer_split` | 已經有一張定稿的完成圖,想事後切出幾個大塊區域各自疊放/調色,不是重新生成內容;拆幾層呼叫幾次,細節/使用限制見「複合元件的圖層」小節 |
 | 「去背」「透明背景」 | 加 `--remove-bg` 旗標,可疊加在 `concept`/`pose_only`/`style_lock`/`character_action`/`refine` 之後(`icon_asset` 永遠去背,不用加旗標) | — |
-| 「多出幾個版本比較」「一次看幾種可能性」 | 加 `--batch N` 旗標,只有 `concept`/`pose_only`/`style_lock`/`character_action` 支援(探索型任務才需要);問使用者要幾張,沒概念就用 3 | — |
+| 「多出幾個版本比較」「一次看幾種可能性」 | 加 `--batch N` 旗標,只有 `concept`/`icon_asset`/`pose_only`/`style_lock`/`character_action` 支援(探索型任務才需要);問使用者要幾張,沒概念就用 3 | — |
 
 ## 各 task 該問的固定問題
 
-> **這四個 task(concept / pose_only / style_lock / character_action)都要多問一題:圖片尺寸/比例有沒有要求?** 例如直式角色圖、橫式場景圖、正方形圖示、遊戲引擎規定的固定尺寸。使用者沒概念或沒特別要求就用預設值(不用主動報數字出來),有要求就用 `--width`/`--height` 帶入(數值必須是 8 的倍數,常見值:1024x1024 方形、832x1216 直式、1216x832 橫式)。這題容易被忽略但常常很重要——遊戲素材有固定尺寸規格是常態,產出來尺寸不對通常等於要重做。
+> **這四個 task(concept / pose_only / style_lock / character_action)都要多問一題:圖片尺寸/比例有沒有要求?** 例如直式角色圖、橫式場景圖、正方形圖示、遊戲引擎規定的固定尺寸。使用者沒概念或沒特別要求就用預設值(不用主動報數字出來),有要求就用 `--width`/`--height` 帶入(數值必須是正整數且為 8 的倍數,實際可用上限仍受 VRAM/設備限制,常見值:1024x1024 方形、832x1216 直式、1216x832 橫式)。這題容易被忽略但常常很重要——遊戲素材有固定尺寸規格是常態,產出來尺寸不對通常等於要重做。
 
 > **`--style`(除 `layer_split` 外全部 task 都支援)不用主動問,使用者對這次美術方向有明確偏好時才用。** 例如「這次想要偏插畫感/概念設計稿的感覺」→ `--style illustration`,「二次元/動漫風」→ `--style anime`,「寫實一點」→ `--style realistic`。不給就完全沿用這台機器裝機時鎖定的預設 checkpoint,不要為了「風格更好」自作主張加這個旗標。只支援 SDXL 家族 tier,對應 checkpoint 沒下載過會直接報錯,細節見 `reference/full-params.md` 跟 `reference/known-limitations.md`。**用 `--style anime` 時,prompt 開頭一定要加 `score_9, score_8_up, score_7_up`(Pony Diffusion V6 XL 的固定用法,至少 3 個 score 標籤),不加實測會出現灰階/構圖跑掉的不穩定結果,細節見 `skills/comfyui-install/reference/models.md`「使用眉角」。**
 
@@ -155,45 +161,61 @@
 3. 要放大幾倍(--scale,預設 2,最高建議到 4)
 4. 補細節強度(--denoise,預設 0.4)通常不用問,除非使用者說「細節補太多跑掉了」(調低)或「還是不夠銳利」(調高)
 
+### 參數界線與送出前檢查
+
+`generate.py` 會在建立 graph 或上傳參考圖前檢查可調參數；超出界線就直接報錯，不要用環境或手寫 workflow 繞過固定 CLI 契約：
+
+- `width`、`height`:正整數且為 8 的倍數；沒有設定通用的最大像素值，是否能跑仍取決於該 tier 的 VRAM。
+- `batch`:正整數（`>= 1`），只有探索型 task 支援；帶 `--structure-ref` 的 `icon_asset` 仍以單張範本 latent 為準。
+- `ip-weight`、`pose-strength`、`control-strength`、`appearance-weight`、`lora-strength`、`denoise`:有限數值 `0..1`（包含端點）。
+- `scale`:有限數值 `> 0` 且 `<= 4`。
+- `timeout`:有限正數（秒）。`seed` 則必須是整數；`--style`/`--rating`/`--control-type` 維持白名單選項。
+
+完整適用 task、預設值與何時使用見 `reference/full-params.md`。這裡列出的 0..1 是腳本實際接受的界線；不要再沿用舊文件中把 `pose-strength`/`control-strength` 寫成 0..10 的說法。
+
 ## 執行
 
 確定好參數後,直接呼叫,不用再跟使用者確認一次(前面問過的就是確認過了)。**每一次呼叫都要加 `--output-dir <local_config.json 裡的 output_dir>`**,讓成品留在這個 repo 裡:
 
 ```
 concept:
-  <python_exe> <generate_script> concept --prompt "..." [--negative "..."] [--width W --height H] [--batch 3] [--lora <檔名> --lora-strength 0.8] [--style realistic|illustration|anime] [--remove-bg] --output-dir <output_dir>
+  <python_exe> <generate_script> concept --prompt "..." [--negative "..."] [--width W --height H] [--batch 3] [--lora <檔名> --lora-strength 0.8] [--style realistic|illustration|anime] [--remove-bg] --comfy-url <comfyui_url> --timeout 180 --output-dir <output_dir>
 
 icon_asset:
-  <python_exe> <generate_script> icon_asset --prompt "..." [--negative "..."] [--width W --height H] [--batch 3] [--lora <檔名> --lora-strength 0.8] [--structure-ref <範本圖路徑>] [--appearance-ref <路徑> --appearance-weight 0.8] [--style realistic|illustration|anime] --output-dir <output_dir>
+  <python_exe> <generate_script> icon_asset --prompt "..." [--negative "..."] [--width W --height H] [--batch 3] [--lora <檔名> --lora-strength 0.8] [--structure-ref <範本圖路徑>] [--appearance-ref <路徑> --appearance-weight 0.8] [--style realistic|illustration|anime] --comfy-url <comfyui_url> --timeout 180 --output-dir <output_dir>
 
 pose_only:
-  <python_exe> <generate_script> pose_only --prompt "..." --pose-ref <path> [--pose-strength 1.0] [--control-type canny|pose|depth] [--width W --height H] [--batch 3] [--lora <檔名> --lora-strength 0.8] [--style realistic|illustration|anime] [--remove-bg] --output-dir <output_dir>
+  <python_exe> <generate_script> pose_only --prompt "..." --pose-ref <path> [--pose-strength 1.0] [--control-type canny|pose|depth] [--width W --height H] [--batch 3] [--lora <檔名> --lora-strength 0.8] [--style realistic|illustration|anime] [--remove-bg] --comfy-url <comfyui_url> --timeout 180 --output-dir <output_dir>
 
 style_lock:
-  <python_exe> <generate_script> style_lock --prompt "..." --character-ref <path> [--ip-weight 0.8] [--width W --height H] [--batch 3] [--lora <檔名> --lora-strength 0.8] [--style realistic|illustration|anime] [--remove-bg] --output-dir <output_dir>
+  <python_exe> <generate_script> style_lock --prompt "..." --character-ref <path> [--ip-weight 0.8] [--width W --height H] [--batch 3] [--lora <檔名> --lora-strength 0.8] [--style realistic|illustration|anime] [--remove-bg] --comfy-url <comfyui_url> --timeout 180 --output-dir <output_dir>
 
 character_action:
-  <python_exe> <generate_script> character_action --prompt "..." --character-ref <path> --pose-ref <path> [--control-type canny|pose|depth] [--width W --height H] [--batch 3] [--lora <檔名> --lora-strength 0.8] [--style realistic|illustration|anime] [--remove-bg] --output-dir <output_dir>
+  <python_exe> <generate_script> character_action --prompt "..." --character-ref <path> --pose-ref <path> [--control-type canny|pose|depth] [--width W --height H] [--batch 3] [--lora <檔名> --lora-strength 0.8] [--style realistic|illustration|anime] [--remove-bg] --comfy-url <comfyui_url> --timeout 180 --output-dir <output_dir>
 
 refine:
-  <python_exe> <generate_script> refine --prompt "..." --image <path> [--denoise 0.6] [--style realistic|illustration|anime] [--remove-bg] --output-dir <output_dir>
+  <python_exe> <generate_script> refine --prompt "..." --image <path> [--denoise 0.6] [--style realistic|illustration|anime] [--remove-bg] --comfy-url <comfyui_url> --timeout 180 --output-dir <output_dir>
 
 inpaint:
-  <python_exe> <generate_script> inpaint --prompt "..." --image <path> --mask <path> [--denoise 0.9] [--style realistic|illustration|anime] --output-dir <output_dir>
+  <python_exe> <generate_script> inpaint --prompt "..." --image <path> --mask <path> [--denoise 1.0] [--style realistic|illustration|anime] --comfy-url <comfyui_url> --timeout 180 --output-dir <output_dir>
 
 guided_inpaint:
-  <python_exe> <generate_script> guided_inpaint --prompt "..." --image <path> --mask <path> [--control-type pose|canny|depth] [--control-ref <path>] [--control-strength 1.0] [--appearance-ref <path>] [--appearance-weight 0.8] [--denoise 1.0] [--style realistic|illustration|anime] --output-dir <output_dir>
+  <python_exe> <generate_script> guided_inpaint --prompt "..." --image <path> --mask <path> [--control-type pose|canny|depth] [--control-ref <path>] [--control-strength 1.0] [--appearance-ref <path>] [--appearance-weight 0.8] [--denoise 1.0] [--style realistic|illustration|anime] --comfy-url <comfyui_url> --timeout 180 --output-dir <output_dir>
 
 upscale:
-  <python_exe> <generate_script> upscale --prompt "..." --image <path> [--scale 2.0] [--denoise 0.4] [--style realistic|illustration|anime] --output-dir <output_dir>
+  <python_exe> <generate_script> upscale --prompt "..." --image <path> [--scale 2.0] [--denoise 0.4] [--style realistic|illustration|anime] --comfy-url <comfyui_url> --timeout 180 --output-dir <output_dir>
 
 layer_split:
-  <python_exe> <generate_script> layer_split --image <path> --mask <path> --layer-name <name> --output-dir <output_dir>
+  <python_exe> <generate_script> layer_split --image <path> --mask <path> --layer-name <name> --comfy-url <comfyui_url> --timeout 180 --output-dir <output_dir>
 ```
 
 (`<python_exe>`、`<generate_script>`、`<output_dir>` 都從 `local_config.json` 讀,不要寫死實際路徑)
 
-執行完把腳本印出的圖片路徑告訴使用者,不用額外描述生成過程。如果使用者明確要求存到別的資料夾,才把 `--output-dir` 換成使用者指定的路徑。
+執行完把腳本印出的圖片路徑告訴使用者,不用額外描述生成過程。如果使用者明確要求存到別的資料夾,才把 `--output-dir` 換成使用者指定的路徑。每次要把 `local_config.json` 的 `comfyui_url` 轉成 `--comfy-url`（或明確用 `--config`），並依任務耗時調整 `--timeout`。
+
+## 離線檢查與實機 smoke test
+
+修改產線或接手新機器時，先在 repository 根目錄跑 `python -m compileall -q tools_src tests` 與 `python -m unittest discover -s tests -p 'test_*.py' -v`。這兩條指令在 Windows、macOS、Linux 都不依賴 shell 展開 glob。這些檢查不需要 Pillow、GPU 或 ComfyUI；它們只驗證 graph/參數/HTTP 邊界。真正的節點相容性、模型載入、輸出尺寸、PNG/RGBA alpha 與去背品質，仍要在有 `local_config.json` 的已安裝機器上用 `--comfy-url` 做一次 smoke test，不能把離線測試結果當成實機產圖通過。
 
 ## 深入參考(邊界情況/踩過的坑,查這裡,不用每次都讀)
 

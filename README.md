@@ -4,6 +4,8 @@
 
 這個 repository（儲存庫）同時保存環境建置紀錄、產圖流程說明，以及一支把固定工作流封裝成 CLI（命令列介面）的穩定產圖腳本。它也提供給 AI agent（AI 代理）使用的任務判斷與操作規則，因此可以直接用自然語言控制這條產圖產線：AI agent 會判斷需求、準備結構化參數、呼叫固定流程，並把結果存回指定的 `output/` 資料夾。使用者不需要每次從零拉節點；維護者才需要深入調整 ComfyUI graph（節點圖）。
 
+產線的可重現性以 [`docs/tested-versions.md`](docs/tested-versions.md) 為準。它只記錄已在同一台機器上驗證過的 commit、套件版本與模型 SHA-256；目前 manifest 仍是「待在已安裝機器擷取」，不能把未查證的版本或 hash 當成已驗證基準。
+
 ## AI agent 操作模式
 
 這個專案的目標不只是「學會使用 ComfyUI」，而是讓 AI agent 成為視覺素材產線的操作入口。使用者可以直接描述需求，例如：
@@ -53,22 +55,24 @@ cd comfyui-game-art-tutorial
 
 ### 3. 啟動 ComfyUI
 
-使用 `local_config.json` 中的 `start_script` 啟動 ComfyUI，並確認 `comfyui_url` 對應的服務正在執行。不同電腦的安裝路徑與 port（連接埠）可能不同，不要直接照抄其他機器的路徑。
+使用 `local_config.json` 中的 `start_script` 啟動 ComfyUI，並確認 `comfyui_url` 對應的服務正在執行。不同電腦的安裝路徑與 port（連接埠）可能不同，不要直接照抄其他機器的路徑。產圖腳本不會猜測或自動搜尋 `local_config.json`；執行時要明確傳入 `--comfy-url`，或用 `--config local_config.json`、`COMFY_URL`/`COMFYUI_URL` 指定服務位置。
 
 ### 4. 產生第一張圖
 
 產圖腳本的原始碼在 [`tools_src/generate.py`](tools_src/generate.py)。安裝流程會把它部署到 ComfyUI 的 `tools/generate.py`；執行時使用 `local_config.json` 指定的 Python 與部署路徑：
 
 ```bash
-<python_exe> <generate_script> concept --prompt "a female game character concept art, fantasy armor, standing pose, clean studio background" --output-dir "<repo>/output"
+<python_exe> <generate_script> concept --prompt "a female game character concept art, fantasy armor, standing pose, clean studio background" --comfy-url "<comfyui_url>" --timeout 180 --output-dir "<repo>/output"
 ```
 
-腳本執行完成後會把產出的圖片存回 repository 的 `output/` 資料夾。也可以直接在 ComfyUI 網頁介面載入已準備好的 workflow（工作流）操作。
+腳本執行完成後會把產出的圖片存回 repository 的 `output/` 資料夾。`--timeout` 是 prompt 送達 ComfyUI 後輪詢生成結果的上限（秒），必須是正數；上傳、送出與下載各自另有不超過 30 秒的 HTTP request timeout，因此它不是整支 CLI 的 wall-clock（牆鐘時間）上限。CPU、批次生成或放大任務可依實際耗時調高。沒有 ComfyUI 服務時，CLI 會在送出前失敗，不會把產圖當成已完成。
+
+也可以直接在 ComfyUI 網頁介面載入工作流（工作流檔不由本 repository 提供，詳見下方「工作流與 clone」）。
 
 產生 UI 圖示時可以使用 `icon_asset`。它會固定加入單一置中物件與簡潔背景的引導，並且永遠輸出透明背景：
 
 ```bash
-<python_exe> <generate_script> icon_asset --prompt "a magical blue gemstone" --output-dir "<repo>/output"
+<python_exe> <generate_script> icon_asset --prompt "a magical blue gemstone" --comfy-url "<comfyui_url>" --timeout 180 --output-dir "<repo>/output"
 ```
 
 如果圖示的幾何結構或色塊配置已經有明確答案，可以提供 `--structure-ref <template>` 範本圖；如果只想參考另一張圖的材質與質感，使用 `--appearance-ref <image>`。完整規則請看 [圖示結構參考說明](skills/comfyui-art-gen/reference/structure-ref.md)。
@@ -88,9 +92,30 @@ cd comfyui-game-art-tutorial
 | 放大並補細節 | `upscale` | prompt、來源圖 |
 | 從定稿圖拆出一個透明圖層 | `layer_split` | 定稿圖、遮罩圖、圖層名稱 |
 
-需要選擇哪個 task、遮罩格式以及參數細節時，請看 [`skills/comfyui-art-gen/SKILL.md`](skills/comfyui-art-gen/SKILL.md)。
+需要選擇哪個 task、遮罩格式、參數界線以及 URL/timeout 設定時，請看 [`skills/comfyui-art-gen/SKILL.md`](skills/comfyui-art-gen/SKILL.md) 與 [`完整參數規格`](skills/comfyui-art-gen/reference/full-params.md)。
 
 除 `layer_split` 外，各產圖任務都可以視需要使用 `--style realistic|illustration|anime` 切換風格底模；`--rating safe|questionable|explicit` 只適用於 `anime` 與 `illustration`，而且是模型提示標籤，不是內容審核機制。對應模型必須先依安裝文件準備好。
+
+### CLI 設定來源與參數界線
+
+`--comfy-url URL`、`--config PATH`、`--timeout SEC` 是執行環境設定。URL 優先順序是 CLI → `COMFY_URL`/`COMFYUI_URL` → 明確指定的 runtime config（`--config` 或 `COMFY_CONFIG`/`COMFYUI_CONFIG`/`COMFY_CONFIG_PATH`）；沒有任何來源時直接報錯。runtime config 至少要有 `comfyui_url`（`comfy_url` 也可相容），不會因為部署副本位於 ComfyUI 目錄就自動讀 repository 的 `local_config.json`。
+
+產圖參數會在送出前檢查：尺寸必須是正整數且為 8 的倍數；`batch` 必須 ≥1；`denoise`、`ip-weight`、`pose-strength`、`control-strength`、`appearance-weight`、`lora-strength` 必須落在 0..1；`scale` 必須大於 0 且不超過 4；`timeout` 必須是有限正數。超出界線會立即拒絕，不會先上傳參考圖或建立 ComfyUI 佇列。
+
+### SD1.5 能力範圍
+
+目前 SD1.5 tier 只可使用不依賴 SDXL add-on 的基礎路徑（例如 `concept`、`refine`、一般 `inpaint`、`upscale`，以及不帶額外參考圖的 `icon_asset`）。`pose_only`、`style_lock`、`character_action`，以及使用 `structure-ref`/`appearance-ref` 或 ControlNet/IPAdapter 的 `icon_asset`、`guided_inpaint` 仍需要 SDXL 家族模型；腳本會在上傳或排隊前拒絕這些組合。`--style` 的三個風格 checkpoint 也只支援 SDXL tier。這不是 SD1.5 模型已完成相容性驗證；若要擴充，必須另找對應的 SD1.5 ControlNet/IPAdapter/CLIP Vision 並完成實機驗證。
+
+### 本機檢查與測試
+
+不需要 GPU 或 ComfyUI 服務即可在 repository 根目錄執行：
+
+```bash
+python -m compileall -q tools_src tests
+python -m unittest discover -s tests -p 'test_*.py' -v
+```
+
+這些是 CI 的基本檢查；測試會 mock HTTP/模型邊界，不等同於真正生成圖片。要驗證節點、模型載入、圖片尺寸與 alpha，仍要在有 `local_config.json` 和已安裝 ComfyUI 的機器上做 smoke test，並把結果記到版本 manifest。
 
 ## Repository 結構
 
@@ -106,6 +131,9 @@ cd comfyui-game-art-tutorial
 │   ├── comfyui-install/                 # 新機器安裝檢查清單
 │   ├── comfyui-new-tool-checklist/      # 新增工具或技術時的檢查清單
 │   └── comfyui-pipeline-review/         # 明確要求升級盤點時使用
+├── docs/
+│   └── tested-versions.md                # 已驗證版本與模型 hash 的紀錄格式
+├── .github/workflows/ci.yml              # compileall + stdlib unittest
 ├── output/                              # 本機產出；只保留 .gitkeep
 ├── 第一張測試圖.png                      # 初次建置驗證用範例
 └── README.md
@@ -114,10 +142,11 @@ cd comfyui-game-art-tutorial
 ## 重要檔案與版本管理規則
 
 - `tools_src/generate.py` 是產圖腳本的唯一原始碼；不要直接修改 ComfyUI 安裝目錄裡的部署副本。
-- `local_config.json` 包含每台機器的實際路徑，已排除在 Git 版本控制之外。
-- `workflows/` 是本機 ComfyUI workflow 參考檔，刻意不進 Git；換機器時需依教學重新準備。
+- `local_config.json` 包含每台機器的實際路徑，已排除在 Git 版本控制之外；請在 CLI 明確傳入 `--comfy-url` 或 `--config`，不要依賴部署副本自行猜路徑。
+- `workflows/` 是本機 ComfyUI workflow 參考檔，刻意不進 Git；新 clone 不會帶這些 JSON，換機器時需從已安裝機器匯出/複製，或直接依 CLI 流程操作。
 - `output/` 的生成結果預設不進 Git，避免把大型或含私人內容的素材意外提交。
 - 更換電腦或顯示卡後，至少重新執行 `detect_device.py`，不要假設 checkpoint 與解析度仍然相同。
+- ComfyUI、custom node、Python/PyTorch/Pillow 與模型版本以 [`docs/tested-versions.md`](docs/tested-versions.md) 的已驗證 manifest 為準；未擷取完成前要保留 pending 狀態。
 
 ## 文件導覽
 
@@ -125,6 +154,8 @@ cd comfyui-game-art-tutorial
 - [產圖流程](skills/comfyui-art-gen/SKILL.md)：如何把需求分類並呼叫正確 task
 - [安裝流程](skills/comfyui-install/SKILL.md)：新機器的環境與模型準備
 - [模型清單](skills/comfyui-install/reference/models.md)：固定版本與硬碟空間估算
+- [已驗證版本清單](docs/tested-versions.md)：版本、commit、模型 SHA-256 與 smoke test 紀錄格式
+- [CI 基本檢查](.github/workflows/ci.yml)：`compileall` 與 Python 標準庫 `unittest`
 - [圖示結構範本](skills/comfyui-art-gen/reference/structure-ref.md)：`icon_asset --structure-ref` 與圖層拆分
 - [複合元件圖層](skills/comfyui-art-gen/reference/layered-assets.md)：重複元素與 UI 元件的拆分策略
 - [已知限制](skills/comfyui-art-gen/reference/known-limitations.md)：目前能力邊界與常見失敗情況
@@ -132,3 +163,7 @@ cd comfyui-game-art-tutorial
 ## 授權與第三方模型
 
 本 repository 目前沒有附加 repository-level `LICENSE`（授權檔），因此其中的程式碼、文件與圖片不應被視為可任意再利用。ComfyUI、custom nodes、checkpoint、ControlNet、IPAdapter、LoRA 與其他模型，請分別遵守各自上游專案或模型發布者的授權條款。
+
+## 工作流與 clone
+
+`workflows/` 只屬於維護者在本機用來開啟、除錯與對照的 ComfyUI JSON，已由 `.gitignore` 排除。它不會隨 `git clone` 提供，也不應在文件中假設某個 `workflows/*.json` 一定存在。要分享工作流，請在已安裝機器的 ComfyUI 介面另行匯出並交付；一般使用者也可以只透過 `generate.py` 的固定 CLI 流程產圖。

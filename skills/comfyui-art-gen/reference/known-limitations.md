@@ -2,8 +2,8 @@
 
 `skills/comfyui-art-gen/SKILL.md` 指向這裡——如實告知使用者,不要假裝能做到。
 
-- 只有本機 SDXL 一條路線,Logo/中文字排版品質不會好
-- **只在 SDXL 家族機器(`sdxl_high`/`sdxl`/`sdxl_light` tier)上驗證過。** 如果 `device_config.json` 的 `tier` 是 `sd15`(低 VRAM 機器,底模會自動換成 SD1.5 系列),`character_action`/`style_lock`/`pose_only` 這些用到 ControlNet 或 IPAdapter 的 task **目前會壞掉**——`generate.py` 裡這幾個模型檔名是寫死指向 SDXL 版本,沒有跟著 tier 換,直接跑會 shape mismatch。遇到 `sd15` tier 的機器,如實告知使用者這條路線還沒補上,不要假裝能動
+- 歷史上在既有安裝機器完成過實機端到端驗證的主產線是 SDXL；這不代表目前 clean clone／本次分支已完成版本 manifest 與 smoke test。Logo/中文字排版品質不會好。`sd15` 的基礎 graph 雖已具備程式路徑，但仍缺實機模型載入與輸出驗收，不能把離線測試當成已驗證品質
+- **SD1.5 只開放不依賴 SDXL add-on 的基礎路徑。** `concept`、`refine`、一般 `inpaint`、`upscale`，以及不帶 `--structure-ref`/`--appearance-ref` 的 `icon_asset` 可建立 SD1.5 graph；`character_action`、`style_lock`、`pose_only` 與其他使用 ControlNet/IPAdapter 的組合目前不支援。`generate.py` 會在上傳參考圖或排隊前 fail-fast（提早拒絕），不會再把 SDXL 模型硬送進 SD1.5 graph 等到 shape mismatch。若要開通這些 add-on，必須完成 tier-specific 模型映射、更新 capability gate 並做實機 smoke test
 - 需要角色/姿勢一致性的 task,沒有對應參考圖就不要硬做,結果不會有一致性
 - `refine` 的顏色/材質改變幅度受 `--denoise` 影響很大,denoise 太低時強烈的顏色指令可能蓋不過原圖(這是參數特性,不是 bug,提醒使用者可以調高再試)
 - **`guided_inpaint` 的 `pose` 結構鎖定只到手腕/關節等級,不包含手指細節。** 目前用的 OpenPose ControlNet 抓的是身體骨架關鍵點,沒有手部細節模型,所以能大幅降低「武器整個浮空/變形」這類大結構崩壞,但沒辦法保證每根手指都精確——實測手套/手指邊緣偶爾還是會有點模糊,這是目前這條路線的已知上限,不是遮罩或 prompt 沒調好

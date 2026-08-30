@@ -7,14 +7,15 @@
 - 上層(Skill/agent)的工作只是把自然語言整理成這裡要的結構化參數,不做生成邏輯本身
 
 Usage:
-    python generate.py concept --prompt "a female game character concept art, fantasy armor" [--negative ...] [--seed N] [--width 1024] [--height 1024] [--remove-bg]
-    python generate.py character_action --prompt "..." --character-ref path.png --pose-ref path.png [--pose-strength 1.0] [--remove-bg]
-    python generate.py inpaint --prompt "..." --image path.png --mask path.png [--denoise 1.0]
+    python generate.py --config local_config.json concept --prompt "a female game character concept art, fantasy armor" [--negative ...] [--seed N] [--width 1024] [--height 1024] [--remove-bg]
+    python generate.py --comfy-url http://127.0.0.1:8188 character_action --prompt "..." --character-ref path.png --pose-ref path.png [--pose-strength 1.0] [--remove-bg]
+    python generate.py --config local_config.json inpaint --prompt "..." --image path.png --mask path.png [--denoise 1.0]
 """
 import argparse
 import json
 import math
 import mimetypes
+import ntpath
 import os
 import sys
 import time
@@ -23,12 +24,149 @@ import urllib.parse
 import urllib.request
 import uuid
 
-from PIL import Image as PILImage, ImageDraw
+try:
+    from PIL import Image as PILImage, ImageDraw
+except ImportError:  # Pillow is only needed by the local template/mask helpers.
+    PILImage = None
+    ImageDraw = None
 
-COMFY_URL = "http://127.0.0.1:8188"
+# The deployment copy can live outside this repository.  Do not infer a URL from
+# the source tree; callers must provide one explicitly, through the CLI, an
+# environment variable, an explicitly named config file, or this compatibility
+# override when embedding the module.
+COMFY_URL = None
+COMFY_URL_ENV_VARS = ("COMFY_URL", "COMFYUI_URL")
+COMFY_CONFIG_ENV_VARS = (
+    "COMFY_CONFIG", "COMFYUI_CONFIG", "COMFY_CONFIG_PATH", "COMFYUI_CONFIG_PATH",
+)
+DEFAULT_TIMEOUT = 180.0
+DEFAULT_HTTP_TIMEOUT = 30.0
+DEFAULT_POLL_TIMEOUT = 15.0
+DEFAULT_POLL_INTERVAL = 1.0
+DEFAULT_POLL_RETRIES = 3
 DEFAULT_NEGATIVE = "blurry, low quality, extra fingers, deformed, watermark"
 OUTPUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "generated")
 DEVICE_CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "device_config.json")
+
+SDXL_TIERS = frozenset(("sdxl_high", "sdxl", "sdxl_light"))
+
+
+def _require_pillow():
+    if PILImage is None or ImageDraw is None:
+        raise RuntimeError("這個 helper 需要 Pillow；產圖核心的 HTTP/graph 功能不需要 Pillow。")
+
+
+def _normalise_comfy_url(url):
+    """Validate and normalise a ComfyUI base URL without inventing a default."""
+    if url is None:
+        return None
+    value = str(url).strip().rstrip("/")
+    parsed = urllib.parse.urlparse(value)
+    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+        raise ValueError(f"ComfyUI URL 必須是完整的 http(s) URL: {url!r}")
+    return value
+
+
+def _read_runtime_config(config_path):
+    try:
+        with open(config_path, encoding="utf-8") as f:
+            config = json.load(f)
+    except FileNotFoundError as exc:
+        raise RuntimeError(f"找不到指定的 runtime config: {config_path}") from exc
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"runtime config 不是有效 JSON: {config_path}") from exc
+    if not isinstance(config, dict):
+        raise RuntimeError(f"runtime config 必須是 JSON object: {config_path}")
+    return config
+
+
+def resolve_comfy_url(cli_url=None, config_path=None):
+    """Resolve the ComfyUI URL with CLI > environment > explicit config priority.
+
+    There is deliberately no automatic ``local_config.json`` lookup: a copied
+    script must not accidentally connect to a path relative to the source repo.
+    """
+    for candidate in (cli_url, *(os.environ.get(name) for name in COMFY_URL_ENV_VARS), COMFY_URL):
+        if candidate:
+            return _normalise_comfy_url(candidate)
+
+    explicit_config = config_path
+    if explicit_config is None:
+        explicit_config = next((os.environ.get(name) for name in COMFY_CONFIG_ENV_VARS if os.environ.get(name)), None)
+    if explicit_config:
+        config = _read_runtime_config(explicit_config)
+        candidate = config.get("comfyui_url") or config.get("comfy_url")
+        if candidate:
+            return _normalise_comfy_url(candidate)
+
+    raise RuntimeError(
+        "未設定 ComfyUI URL；請使用 --comfy-url、COMFY_URL/COMFYUI_URL，"
+        "或透過 --config/COMFY_CONFIG 指定含 comfyui_url 的 JSON。"
+    )
+
+
+def _comfy_endpoint(path, comfy_url=None):
+    base = _normalise_comfy_url(comfy_url) if comfy_url else resolve_comfy_url()
+    return f"{base}/{path.lstrip('/')}"
+
+
+def validate_batch(batch):
+    if isinstance(batch, bool) or not isinstance(batch, int) or batch < 1:
+        raise ValueError(f"batch 必須是正整數，目前是 {batch!r}")
+    return batch
+
+
+def validate_dimensions(width, height):
+    for name, value in (("width", width), ("height", height)):
+        if isinstance(value, bool) or not isinstance(value, int) or value <= 0 or value % 8:
+            raise ValueError(f"{name} 必須是正整數且為 8 的倍數，目前是 {value!r}")
+    return width, height
+
+
+def validate_unit_interval(value, name):
+    if isinstance(value, bool):
+        raise ValueError(f"{name} 必須落在 0..1，目前是 {value!r}")
+    try:
+        number = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} 必須落在 0..1，目前是 {value!r}") from exc
+    if not math.isfinite(number) or not 0.0 <= number <= 1.0:
+        raise ValueError(f"{name} 必須落在 0..1，目前是 {value!r}")
+    return value
+
+
+def validate_lora_strength(value):
+    return validate_unit_interval(value, "lora_strength")
+
+
+def validate_scale(scale):
+    try:
+        number = float(scale)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"scale 必須大於 0 且不超過 4，目前是 {scale!r}") from exc
+    if not math.isfinite(number) or not 0.0 < number <= 4.0:
+        raise ValueError(f"scale 必須大於 0 且不超過 4，目前是 {scale!r}")
+    return scale
+
+
+def validate_timeout(timeout):
+    try:
+        number = float(timeout)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"timeout 必須是正數，目前是 {timeout!r}") from exc
+    if not math.isfinite(number) or number <= 0:
+        raise ValueError(f"timeout 必須是正數，目前是 {timeout!r}")
+    return timeout
+
+
+def require_sdxl_capability(feature, tier=None):
+    """Fail before uploads/queueing when an SD1.5 graph needs SDXL add-ons."""
+    current_tier = DEVICE.get("tier") if tier is None else tier
+    if current_tier == "sd15" or (current_tier is not None and current_tier not in SDXL_TIERS):
+        raise RuntimeError(
+            f"{feature} 目前需要 SDXL 家族的 ControlNet/IPAdapter，"
+            f"但這台機器的 tier 是 {current_tier!r}；sd15 尚未支援這項功能。"
+        )
 
 # pose_only / character_action 的構圖控制來源,依 --control-type 選擇對應 ControlNet 模型
 # (canny=線稿邊緣,pose=骨架姿勢,depth=深度圖),需要 comfyui_controlnet_aux custom node
@@ -92,8 +230,9 @@ DEVICE = load_device_config()
 CKPT = DEVICE["checkpoint"]
 
 
-def upload_image(path):
+def upload_image(path, comfy_url=None, request_timeout=DEFAULT_HTTP_TIMEOUT):
     """上傳一張本機圖片到 ComfyUI 的 input 目錄,回傳可在 LoadImage 節點使用的檔名。"""
+    validate_timeout(request_timeout)
     filename = os.path.basename(path)
     mime = mimetypes.guess_type(path)[0] or "application/octet-stream"
     boundary = uuid.uuid4().hex
@@ -107,58 +246,182 @@ def upload_image(path):
     ).encode("utf-8") + file_data + f"\r\n--{boundary}--\r\n".encode("utf-8")
 
     req = urllib.request.Request(
-        f"{COMFY_URL}/upload/image",
+        _comfy_endpoint("upload/image", comfy_url),
         data=body,
         headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
     )
-    resp = urllib.request.urlopen(req, timeout=30)
+    resp = urllib.request.urlopen(req, timeout=request_timeout)
     result = json.loads(resp.read().decode())
-    return result["name"]
+    try:
+        return result["name"]
+    except (KeyError, TypeError) as exc:
+        raise RuntimeError("ComfyUI upload 回應缺少 name") from exc
 
 
-def submit_and_wait(prompt, timeout=180):
+def _is_transient_poll_error(exc):
+    if isinstance(exc, urllib.error.HTTPError):
+        return exc.code in (408, 425, 429, 500, 502, 503, 504)
+    return isinstance(exc, (urllib.error.URLError, TimeoutError, OSError))
+
+
+def _poll_error_text(exc):
+    if isinstance(exc, urllib.error.HTTPError):
+        try:
+            body = exc.read().decode(errors="replace")
+        except Exception:
+            body = ""
+        return f"HTTP {exc.code}" + (f": {body}" if body else "")
+    return str(exc) or exc.__class__.__name__
+
+
+def submit_and_wait(prompt, timeout=DEFAULT_TIMEOUT, comfy_url=None,
+                    poll_interval=DEFAULT_POLL_INTERVAL, max_poll_retries=DEFAULT_POLL_RETRIES):
+    """Queue a prompt and poll history, retaining prompt_id in every terminal error."""
+    validate_timeout(timeout)
+    validate_timeout(poll_interval if poll_interval else 0.000001)
+    if isinstance(max_poll_retries, bool) or not isinstance(max_poll_retries, int) or max_poll_retries < 0:
+        raise ValueError(f"max_poll_retries 必須是 0 以上的整數，目前是 {max_poll_retries!r}")
+
     payload = json.dumps({"prompt": prompt}).encode("utf-8")
     req = urllib.request.Request(
-        f"{COMFY_URL}/prompt", data=payload, headers={"Content-Type": "application/json"}
+        _comfy_endpoint("prompt", comfy_url), data=payload, headers={"Content-Type": "application/json"}
     )
     try:
-        resp = urllib.request.urlopen(req, timeout=30)
+        resp = urllib.request.urlopen(req, timeout=min(DEFAULT_HTTP_TIMEOUT, float(timeout)))
     except urllib.error.HTTPError as e:
-        raise RuntimeError(f"送出失敗: {e.code} {e.read().decode()}")
+        raise RuntimeError(f"送出失敗: {e.code} {e.read().decode(errors='replace')}") from e
 
-    result = json.loads(resp.read().decode())
+    try:
+        result = json.loads(resp.read().decode())
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise RuntimeError("ComfyUI queue 回應不是有效 JSON") from exc
+    if not isinstance(result, dict):
+        raise RuntimeError("ComfyUI queue 回應必須是 JSON object")
     if result.get("node_errors"):
         raise RuntimeError(f"節點參數錯誤: {json.dumps(result['node_errors'], ensure_ascii=False)}")
-    prompt_id = result["prompt_id"]
+    prompt_id = result.get("prompt_id")
+    if not prompt_id:
+        raise RuntimeError("ComfyUI 回應缺少 prompt_id")
 
-    start = time.time()
-    while time.time() - start < timeout:
-        hist_req = urllib.request.urlopen(f"{COMFY_URL}/history/{prompt_id}", timeout=15)
-        history = json.loads(hist_req.read().decode())
+    start = time.monotonic()
+    transient_failures = 0
+    while time.monotonic() - start < float(timeout):
+        remaining = float(timeout) - (time.monotonic() - start)
+        poll_timeout = min(DEFAULT_POLL_TIMEOUT, max(0.001, remaining))
+        try:
+            hist_req = urllib.request.urlopen(
+                _comfy_endpoint(f"history/{urllib.parse.quote(str(prompt_id), safe='')}", comfy_url),
+                timeout=poll_timeout,
+            )
+            history = json.loads(hist_req.read().decode())
+        except Exception as exc:
+            if not _is_transient_poll_error(exc):
+                raise RuntimeError(f"輪詢生成狀態失敗: {_poll_error_text(exc)}, prompt_id={prompt_id}") from exc
+            transient_failures += 1
+            if transient_failures > max_poll_retries:
+                raise RuntimeError(
+                    f"輪詢生成狀態暫時失敗，已重試 {max_poll_retries} 次: "
+                    f"{_poll_error_text(exc)}, prompt_id={prompt_id}"
+                ) from exc
+            remaining = float(timeout) - (time.monotonic() - start)
+            if remaining <= 0:
+                break
+            backoff = min(float(poll_interval) * (2 ** (transient_failures - 1)), remaining)
+            time.sleep(backoff)
+            continue
+
+        transient_failures = 0
+        if not isinstance(history, dict):
+            raise RuntimeError(f"ComfyUI history 回應格式錯誤, prompt_id={prompt_id}")
         if prompt_id in history:
             entry = history[prompt_id]
+            if not isinstance(entry, dict):
+                raise RuntimeError(f"ComfyUI history entry 回應格式錯誤, prompt_id={prompt_id}")
             status = entry.get("status", {})
+            if not isinstance(status, dict):
+                raise RuntimeError(f"ComfyUI history status 回應格式錯誤, prompt_id={prompt_id}")
             if status.get("status_str") == "error":
-                raise RuntimeError(f"生成失敗: {json.dumps(status, ensure_ascii=False)}")
+                raise RuntimeError(f"生成失敗: {json.dumps(status, ensure_ascii=False)}, prompt_id={prompt_id}")
             if status.get("completed"):
                 return entry
-        time.sleep(1)
-    raise TimeoutError(f"等待生成逾時({timeout}s),prompt_id={prompt_id}")
+        remaining = float(timeout) - (time.monotonic() - start)
+        if remaining > 0:
+            time.sleep(min(float(poll_interval), remaining))
+    raise TimeoutError(f"等待生成逾時({timeout}s), prompt_id={prompt_id}")
 
 
-def download_outputs(history_entry, output_dir=None):
+def _safe_output_path(output_dir, filename):
+    if not isinstance(filename, str) or not filename:
+        raise ValueError("ComfyUI output 缺少有效 filename")
+    # Check both POSIX and Windows spellings because a Windows deployment may
+    # send back a backslash path even when this process runs on POSIX.
+    if os.path.isabs(filename) or ntpath.isabs(filename) or ntpath.splitdrive(filename)[0]:
+        raise ValueError(f"拒絕不安全的 output filename: {filename!r}")
+    components = filename.replace("\\", "/").split("/")
+    if ".." in components:
+        raise ValueError(f"拒絕 path traversal output filename: {filename!r}")
+
+    output_root = os.fspath(output_dir)
+    root = os.path.abspath(output_root)
+    root_real = os.path.realpath(root)
+    candidate = os.path.abspath(os.path.join(output_root, *components))
+    candidate_real = os.path.realpath(candidate)
+    try:
+        # Resolve symlinks for the security check, but return the lexical path
+        # the caller supplied so output paths remain stable on macOS (/private).
+        inside = os.path.commonpath((root_real, candidate_real)) == root_real
+    except ValueError:
+        inside = False
+    if not inside:
+        raise ValueError(f"拒絕 path traversal output filename: {filename!r}")
+    # Preserve the caller's relative/absolute output-dir convention.
+    return os.path.join(output_root, *components)
+
+
+def download_outputs(history_entry, output_dir=None, node_ids=None, comfy_url=None,
+                     request_timeout=DEFAULT_HTTP_TIMEOUT):
+    """Download only selected SaveImage nodes, rejecting unsafe local paths."""
+    validate_timeout(request_timeout)
+    if not isinstance(history_entry, dict) or not isinstance(history_entry.get("outputs"), dict):
+        raise RuntimeError("ComfyUI history 沒有有效的 outputs")
     output_dir = output_dir or OUTPUT_DIR
     paths = []
     os.makedirs(output_dir, exist_ok=True)
+    selected_ids = {str(node_id) for node_id in node_ids} if node_ids is not None else None
     for node_id, node_out in history_entry.get("outputs", {}).items():
-        for img in node_out.get("images", []):
-            url = (
-                f"{COMFY_URL}/view?filename={urllib.parse.quote(img['filename'])}"
-                f"&subfolder={urllib.parse.quote(img.get('subfolder', ''))}&type={img.get('type', 'output')}"
-            )
-            local_path = os.path.join(output_dir, img["filename"])
-            urllib.request.urlretrieve(url, local_path)
+        if selected_ids is not None and str(node_id) not in selected_ids:
+            continue
+        if not isinstance(node_out, dict):
+            continue
+        images = node_out.get("images") or []
+        if not isinstance(images, (list, tuple)):
+            continue
+        for img in images:
+            filename = img.get("filename") if isinstance(img, dict) else None
+            local_path = _safe_output_path(output_dir, filename)
+            query = urllib.parse.urlencode({
+                "filename": filename,
+                "subfolder": str(img.get("subfolder", "")),
+                "type": str(img.get("type", "output")),
+            })
+            url = f"{_comfy_endpoint('view', comfy_url)}?{query}"
+            os.makedirs(os.path.dirname(local_path), exist_ok=True)
+            partial_path = f"{local_path}.{uuid.uuid4().hex}.part"
+            try:
+                with urllib.request.urlopen(url, timeout=request_timeout) as response, open(partial_path, "wb") as output:
+                    while chunk := response.read(1024 * 1024):
+                        output.write(chunk)
+                os.replace(partial_path, local_path)
+            except Exception:
+                try:
+                    os.unlink(partial_path)
+                except FileNotFoundError:
+                    pass
+                raise
             paths.append(local_path)
+    if not paths:
+        selected = f" node_ids={sorted(selected_ids)}" if selected_ids is not None else ""
+        raise RuntimeError(f"ComfyUI 沒有產生任何可下載的 output{selected}")
     return paths
 
 
@@ -171,6 +434,7 @@ def model_clip_refs(graph, lora_name=None, lora_strength=0.8, ckpt_node_id="1", 
     有指定 --lora 的話,插入一個 LoraLoader 節點(套在 checkpoint 後面),回傳它的輸出;
     後面所有節點的 model/clip 輸入都要用這裡回傳的參照,不要直接寫死 [ckpt_node_id, 0]/[ckpt_node_id, 1],
     不然 LoRA 會被跳過沒套用到。沒指定 --lora 就直接回傳 checkpoint 節點本身的輸出,行為跟原本一樣。"""
+    validate_lora_strength(lora_strength)
     if not lora_name:
         return [ckpt_node_id, 0], [ckpt_node_id, 1]
     graph[lora_node_id] = {
@@ -186,8 +450,11 @@ def model_clip_refs(graph, lora_name=None, lora_strength=0.8, ckpt_node_id="1", 
 # ---------- task: concept (Ch3 系列:純文字概念圖) ----------
 def build_concept(prompt, negative=None, width=None, height=None, seed=None, steps=25, cfg=7.0, batch_size=1,
                    lora_name=None, lora_strength=0.8, checkpoint=None):
-    width = width or DEVICE["default_width"]
-    height = height or DEVICE["default_height"]
+    width = DEVICE["default_width"] if width is None else width
+    height = DEVICE["default_height"] if height is None else height
+    validate_dimensions(width, height)
+    validate_batch(batch_size)
+    validate_lora_strength(lora_strength)
     negative = negative or DEFAULT_NEGATIVE
     graph = {"1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or CKPT}}}
     model_ref, clip_ref = model_clip_refs(graph, lora_name, lora_strength)
@@ -248,6 +515,8 @@ def build_wheel_segment_template(n_segments, width=1024, height=1024,
     hub_ratio:中心鈕半徑佔整體半徑的比例,搭配 build_wheel_layer_masks() 拆圖層時務必用同一個值,
     否則遮罩邊界會跟這張範本對不齊。
     """
+    validate_dimensions(width, height)
+    _require_pillow()
     img = PILImage.new("RGB", (width, height), (0, 0, 0))
     draw = ImageDraw.Draw(img)
     cx, cy = width / 2, height / 2
@@ -298,6 +567,8 @@ def build_wheel_layer_masks(width=1024, height=1024, frame_ratio=0.86, hub_ratio
     hub_ratio 訂得比範本圖畫的中心鈕大一些(範本圖固定畫 0.12,這裡預設 0.22),
     讓指針延伸出去的部分還是被歸進指針圖層,不會被切給獎區圖層。
     """
+    validate_dimensions(width, height)
+    _require_pillow()
     cx, cy = width / 2, height / 2
     radius = min(width, height) * 0.45
     wedge_radius = radius * frame_ratio
@@ -323,6 +594,16 @@ def build_icon_asset(prompt, negative=None, width=1024, height=1024, seed=None, 
                       structure_ref_filename=None, control_strength=STRUCTURE_REF_CONTROL_STRENGTH,
                       structure_ref_denoise=STRUCTURE_REF_DENOISE, checkpoint=None,
                       appearance_ref_filename=None, appearance_weight=0.8):
+    validate_dimensions(width, height)
+    validate_batch(batch_size)
+    validate_lora_strength(lora_strength)
+    validate_unit_interval(control_strength, "control_strength")
+    validate_unit_interval(structure_ref_denoise, "structure_ref_denoise")
+    validate_unit_interval(appearance_weight, "appearance_weight")
+    if structure_ref_filename:
+        require_sdxl_capability("icon_asset 的 structure-ref/ControlNet")
+    if appearance_ref_filename:
+        require_sdxl_capability("icon_asset 的 appearance-ref/IPAdapter")
     negative = (negative or DEFAULT_NEGATIVE) + ICON_ASSET_NEGATIVE_SUFFIX
     graph = {"1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or CKPT}}}
     model_ref, clip_ref = model_clip_refs(graph, lora_name, lora_strength)
@@ -391,9 +672,18 @@ def build_character_action(prompt, character_ref_filename, pose_ref_filename, ne
                             width=None, height=None, seed=None, steps=25, cfg=7.0,
                             ip_weight=0.8, pose_strength=1.0, batch_size=1, control_type="canny",
                             lora_name=None, lora_strength=0.8, checkpoint=None):
+    require_sdxl_capability("character_action (ControlNet/IPAdapter)")
+    validate_dimensions(
+        DEVICE["default_width"] if width is None else width,
+        DEVICE["default_height"] if height is None else height,
+    )
+    width = DEVICE["default_width"] if width is None else width
+    height = DEVICE["default_height"] if height is None else height
+    validate_batch(batch_size)
+    validate_unit_interval(ip_weight, "ip_weight")
+    validate_unit_interval(pose_strength, "pose_strength")
+    validate_lora_strength(lora_strength)
     negative = negative or DEFAULT_NEGATIVE
-    width = width or DEVICE["default_width"]
-    height = height or DEVICE["default_height"]
     graph = {"1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or CKPT}}}
     model_ref, clip_ref = model_clip_refs(graph, lora_name, lora_strength)
     graph.update({
@@ -445,6 +735,7 @@ def build_character_action(prompt, character_ref_filename, pose_ref_filename, ne
 # 務必存成帶 alpha 通道的 RGBA 圖,不要用 .convert('RGB') 之類的操作把 alpha 弄丟。
 def build_inpaint(prompt, image_filename, mask_filename, negative=None, denoise=1.0,
                    seed=None, steps=25, cfg=7.0, grow_mask_by=6, checkpoint=None):
+    validate_unit_interval(denoise, "denoise")
     negative = negative or DEFAULT_NEGATIVE
     return {
         "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or CKPT}},
@@ -489,6 +780,13 @@ def build_guided_inpaint(prompt, image_filename, mask_filename, negative=None,
                           control_ref_filename=None, control_type=None, control_strength=1.0,
                           appearance_ref_filename=None, appearance_weight=0.8,
                           denoise=1.0, seed=None, steps=25, cfg=7.0, grow_mask_by=6, checkpoint=None):
+    validate_unit_interval(denoise, "denoise")
+    validate_unit_interval(control_strength, "control_strength")
+    validate_unit_interval(appearance_weight, "appearance_weight")
+    if control_type:
+        require_sdxl_capability("guided_inpaint 的 ControlNet")
+    if appearance_ref_filename:
+        require_sdxl_capability("guided_inpaint 的 IPAdapter")
     negative = negative or DEFAULT_NEGATIVE
     graph = {
         "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or CKPT}},
@@ -548,9 +846,14 @@ def build_guided_inpaint(prompt, image_filename, mask_filename, negative=None,
 def build_pose_only(prompt, pose_ref_filename, negative=None, width=None, height=None,
                      seed=None, steps=25, cfg=7.0, pose_strength=1.0, batch_size=1,
                      control_type="canny", lora_name=None, lora_strength=0.8, checkpoint=None):
+    require_sdxl_capability("pose_only (ControlNet)")
+    width = DEVICE["default_width"] if width is None else width
+    height = DEVICE["default_height"] if height is None else height
+    validate_dimensions(width, height)
+    validate_batch(batch_size)
+    validate_unit_interval(pose_strength, "pose_strength")
+    validate_lora_strength(lora_strength)
     negative = negative or DEFAULT_NEGATIVE
-    width = width or DEVICE["default_width"]
-    height = height or DEVICE["default_height"]
     graph = {"1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or CKPT}}}
     model_ref, clip_ref = model_clip_refs(graph, lora_name, lora_strength)
     graph.update({
@@ -585,9 +888,14 @@ def build_pose_only(prompt, pose_ref_filename, negative=None, width=None, height
 def build_style_lock(prompt, character_ref_filename, negative=None, width=None, height=None,
                       seed=None, steps=25, cfg=7.0, ip_weight=0.8, batch_size=1,
                       lora_name=None, lora_strength=0.8, checkpoint=None):
+    require_sdxl_capability("style_lock (IPAdapter)")
+    width = DEVICE["default_width"] if width is None else width
+    height = DEVICE["default_height"] if height is None else height
+    validate_dimensions(width, height)
+    validate_batch(batch_size)
+    validate_unit_interval(ip_weight, "ip_weight")
+    validate_lora_strength(lora_strength)
     negative = negative or DEFAULT_NEGATIVE
-    width = width or DEVICE["default_width"]
-    height = height or DEVICE["default_height"]
     graph = {"1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or CKPT}}}
     model_ref, clip_ref = model_clip_refs(graph, lora_name, lora_strength)
     graph.update({
@@ -622,6 +930,7 @@ def build_style_lock(prompt, character_ref_filename, negative=None, width=None, 
 # ---------- task: refine(Ch5:圖生圖,草稿精緻化/材質變體)----------
 def build_refine(prompt, image_filename, negative=None, denoise=0.6,
                   seed=None, steps=25, cfg=7.0, checkpoint=None):
+    validate_unit_interval(denoise, "denoise")
     negative = negative or DEFAULT_NEGATIVE
     return {
         "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or CKPT}},
@@ -648,6 +957,8 @@ UPSCALE_MODEL = "4x-UltraSharp.pth"  # 4 倍放大模型,scale 參數透過 Imag
 
 def build_upscale(prompt, image_filename, negative=None, scale=2.0, denoise=0.4,
                    seed=None, steps=25, cfg=7.0, checkpoint=None):
+    validate_scale(scale)
+    validate_unit_interval(denoise, "denoise")
     negative = negative or DEFAULT_NEGATIVE
     return {
         "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or CKPT}},
@@ -720,13 +1031,76 @@ def attach_bg_removal(prompt, image_node_id):
     return save_id
 
 
-def main():
+def _add_runtime_arguments(parser):
+    """Add runtime options to both root and subparser for ergonomic placement."""
+    parser.add_argument(
+        "--comfy-url", dest="comfy_url", default=argparse.SUPPRESS,
+        help="ComfyUI base URL；優先於 COMFY_URL/COMFYUI_URL 與 --config。",
+    )
+    parser.add_argument(
+        "--config", "--runtime-config", dest="config_path", default=argparse.SUPPRESS,
+        help="明確指定含 comfyui_url 的 runtime JSON（不會自動搜尋 repo local_config.json）。",
+    )
+    parser.add_argument(
+        "--timeout", type=float, default=argparse.SUPPRESS,
+        help=f"prompt 送達後輪詢生成結果的秒數上限，預設 {DEFAULT_TIMEOUT:g}。",
+    )
+
+
+def _validate_cli_args(args):
+    args.timeout = getattr(args, "timeout", DEFAULT_TIMEOUT)
+    validate_timeout(args.timeout)
+    if args.task in {"concept", "icon_asset", "character_action", "pose_only", "style_lock"}:
+        validate_batch(args.batch)
+        validate_lora_strength(args.lora_strength)
+    if args.task in {"concept", "character_action", "pose_only", "style_lock", "icon_asset"}:
+        validate_dimensions(args.width, args.height)
+    if args.task in {"inpaint", "guided_inpaint", "refine", "upscale"}:
+        validate_unit_interval(args.denoise, "denoise")
+    if args.task == "upscale":
+        validate_scale(args.scale)
+    if args.task in {"character_action", "style_lock"}:
+        validate_unit_interval(args.ip_weight, "ip_weight")
+    if args.task in {"character_action", "pose_only"}:
+        validate_unit_interval(args.pose_strength, "pose_strength")
+    if args.task == "icon_asset":
+        validate_unit_interval(args.appearance_weight, "appearance_weight")
+    if args.task == "guided_inpaint":
+        validate_unit_interval(args.control_strength, "control_strength")
+        validate_unit_interval(args.appearance_weight, "appearance_weight")
+
+
+def _validate_task_capabilities(args):
+    try:
+        if args.task == "character_action":
+            require_sdxl_capability("character_action (ControlNet/IPAdapter)")
+        elif args.task == "pose_only":
+            require_sdxl_capability("pose_only (ControlNet)")
+        elif args.task == "style_lock":
+            require_sdxl_capability("style_lock (IPAdapter)")
+        elif args.task == "icon_asset":
+            if args.structure_ref:
+                require_sdxl_capability("icon_asset 的 structure-ref/ControlNet")
+            if args.appearance_ref:
+                require_sdxl_capability("icon_asset 的 appearance-ref/IPAdapter")
+        elif args.task == "guided_inpaint":
+            if args.control_type:
+                require_sdxl_capability("guided_inpaint 的 ControlNet")
+            if args.appearance_ref:
+                require_sdxl_capability("guided_inpaint 的 IPAdapter")
+    except RuntimeError as exc:
+        raise SystemExit(str(exc)) from exc
+
+
+def main(argv=None):
     ap = argparse.ArgumentParser(description="穩定產圖核心腳本")
+    _add_runtime_arguments(ap)
     sub = ap.add_subparsers(dest="task", required=True)
 
     # 共用參數:每個 task 都能指定成品要存去哪(不指定就用預設的 tools/generated/)
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--output-dir", help=f"成品存放資料夾,預設 {OUTPUT_DIR}")
+    _add_runtime_arguments(common)
 
     # 會用到底模 checkpoint 的 task 額外共用 --style(layer_split 純裁切、不吃底模,不套用這組)
     model_common = argparse.ArgumentParser(add_help=False, parents=[common])
@@ -844,7 +1218,11 @@ def main():
     p_layer.add_argument("--mask", required=True, help="這一層的遮罩圖路徑(同 inpaint 慣例,需帶 alpha 通道,要保留進這一層的區域 alpha=0)")
     p_layer.add_argument("--layer-name", required=True, help="這一層的名稱,用來組輸出檔名前綴(例如 border、center_hub)")
 
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
+    try:
+        _validate_cli_args(args)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
 
     style_checkpoint = None
     if getattr(args, "style", None):
@@ -865,20 +1243,27 @@ def main():
             )
         args.prompt = f"{RATING_TAGS[args.style][args.rating]}, {args.prompt}"
 
+    _validate_task_capabilities(args)
+    comfy_url = resolve_comfy_url(getattr(args, "comfy_url", None), getattr(args, "config_path", None))
+    request_timeout = min(DEFAULT_HTTP_TIMEOUT, float(args.timeout))
+
+    def upload(path):
+        return upload_image(path, comfy_url=comfy_url, request_timeout=request_timeout)
+
     if args.task == "concept":
         prompt, out_id = build_concept(args.prompt, args.negative, args.width, args.height, args.seed,
                                         batch_size=args.batch, lora_name=args.lora, lora_strength=args.lora_strength,
                                         checkpoint=style_checkpoint)
     elif args.task == "icon_asset":
-        structure_fn = upload_image(args.structure_ref) if args.structure_ref else None
-        appearance_fn = upload_image(args.appearance_ref) if args.appearance_ref else None
+        structure_fn = upload(args.structure_ref) if args.structure_ref else None
+        appearance_fn = upload(args.appearance_ref) if args.appearance_ref else None
         prompt, out_id = build_icon_asset(args.prompt, args.negative, args.width, args.height, args.seed,
                                            batch_size=args.batch, lora_name=args.lora, lora_strength=args.lora_strength,
                                            structure_ref_filename=structure_fn, checkpoint=style_checkpoint,
                                            appearance_ref_filename=appearance_fn, appearance_weight=args.appearance_weight)
     elif args.task == "character_action":
-        char_fn = upload_image(args.character_ref)
-        pose_fn = upload_image(args.pose_ref)
+        char_fn = upload(args.character_ref)
+        pose_fn = upload(args.pose_ref)
         prompt, out_id = build_character_action(
             args.prompt, char_fn, pose_fn, args.negative,
             width=args.width, height=args.height,
@@ -887,17 +1272,17 @@ def main():
             lora_name=args.lora, lora_strength=args.lora_strength, checkpoint=style_checkpoint,
         )
     elif args.task == "inpaint":
-        img_fn = upload_image(args.image)
-        mask_fn = upload_image(args.mask)
+        img_fn = upload(args.image)
+        mask_fn = upload(args.mask)
         prompt, out_id = build_inpaint(args.prompt, img_fn, mask_fn, args.negative,
                                         denoise=args.denoise, seed=args.seed, checkpoint=style_checkpoint)
     elif args.task == "guided_inpaint":
-        img_fn = upload_image(args.image)
-        mask_fn = upload_image(args.mask)
+        img_fn = upload(args.image)
+        mask_fn = upload(args.mask)
         control_fn = None
         if args.control_type:
-            control_fn = upload_image(args.control_ref) if args.control_ref else img_fn
-        appearance_fn = upload_image(args.appearance_ref) if args.appearance_ref else None
+            control_fn = upload(args.control_ref) if args.control_ref else img_fn
+        appearance_fn = upload(args.appearance_ref) if args.appearance_ref else None
         prompt, out_id = build_guided_inpaint(
             args.prompt, img_fn, mask_fn, args.negative,
             control_ref_filename=control_fn, control_type=args.control_type, control_strength=args.control_strength,
@@ -905,7 +1290,7 @@ def main():
             denoise=args.denoise, seed=args.seed, checkpoint=style_checkpoint,
         )
     elif args.task == "pose_only":
-        pose_fn = upload_image(args.pose_ref)
+        pose_fn = upload(args.pose_ref)
         prompt, out_id = build_pose_only(args.prompt, pose_fn, args.negative,
                                           width=args.width, height=args.height,
                                           seed=args.seed, pose_strength=args.pose_strength,
@@ -913,7 +1298,7 @@ def main():
                                           lora_name=args.lora, lora_strength=args.lora_strength,
                                           checkpoint=style_checkpoint)
     elif args.task == "style_lock":
-        char_fn = upload_image(args.character_ref)
+        char_fn = upload(args.character_ref)
         prompt, out_id = build_style_lock(args.prompt, char_fn, args.negative,
                                            width=args.width, height=args.height,
                                            seed=args.seed, ip_weight=args.ip_weight,
@@ -921,27 +1306,34 @@ def main():
                                            lora_name=args.lora, lora_strength=args.lora_strength,
                                            checkpoint=style_checkpoint)
     elif args.task == "refine":
-        img_fn = upload_image(args.image)
+        img_fn = upload(args.image)
         prompt, out_id = build_refine(args.prompt, img_fn, args.negative,
                                        denoise=args.denoise, seed=args.seed, checkpoint=style_checkpoint)
     elif args.task == "upscale":
-        img_fn = upload_image(args.image)
+        img_fn = upload(args.image)
         prompt, out_id = build_upscale(args.prompt, img_fn, args.negative,
                                         scale=args.scale, denoise=args.denoise, seed=args.seed,
                                         checkpoint=style_checkpoint)
     elif args.task == "layer_split":
-        img_fn = upload_image(args.image)
-        mask_fn = upload_image(args.mask)
+        img_fn = upload(args.image)
+        mask_fn = upload(args.mask)
         prompt, out_id = build_layer_split(img_fn, mask_fn, args.layer_name)
     else:
         raise SystemExit(f"未知 task: {args.task}")
 
+    target_output_id = None
     if args.task == "icon_asset" or getattr(args, "remove_bg", False):
-        attach_bg_removal(prompt, out_id)
+        target_output_id = attach_bg_removal(prompt, out_id)
 
     print(f"[送出] task={args.task}")
-    history = submit_and_wait(prompt)
-    paths = download_outputs(history, output_dir=getattr(args, "output_dir", None))
+    history = submit_and_wait(prompt, timeout=args.timeout, comfy_url=comfy_url)
+    paths = download_outputs(
+        history,
+        output_dir=getattr(args, "output_dir", None),
+        node_ids=[target_output_id] if target_output_id else None,
+        comfy_url=comfy_url,
+        request_timeout=request_timeout,
+    )
     for p in paths:
         print(f"[完成] {p}")
 

@@ -2,4 +2,6 @@
 output/*
 !output/.gitkeep
 local_config.json
-workflows/
+/workflows/
+__pycache__/
+*.py[cod]
