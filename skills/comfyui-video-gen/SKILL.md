@@ -16,9 +16,9 @@
 
 ## 環境
 
-先讀 `local_config.json`。ComfyUI 要在 `<comfyui_url>` 跑著。
+先讀 `local_config.json`。ComfyUI 要在 `<comfyui_url>` 跑著；每個需要送工作給 ComfyUI 的 CLI 範例都要明確帶 `--comfy-url <URL>` 或 `--config <local_config.json>`，不要假設腳本會自動搜尋設定檔。影片生成等待上限建議帶 `--timeout 1800`（秒）；這是輪詢 ComfyUI 生成結果的上限，不是 server port。純本地的 `video_concat` 不需要 URL 或 timeout。
 
-`<python_exe> <generate_script> <task> [options] --output-dir <output_dir>`
+`<python_exe> <generate_script> <task> [--comfy-url <URL> | --config <local_config.json>] [--timeout 1800] [options] --output-dir <output_dir>`
 
 ## 任務判斷
 
@@ -49,6 +49,8 @@
 1. 靜幀路徑
 2. 循環怎麼動(會自動補 seamless loop)
 3. 時長(預設 2)。預設抽幀;使用者不要 frames 才加 `--no-extract-frames`
+
+`img2video` 預設只留下 mp4；需要 png 序列時才加 `--extract-frames`。其他影片 task 也只有明確加上 `--extract-frames` 才抽幀。
 
 ### transition
 1. 起始靜幀 `--start`
@@ -93,28 +95,28 @@
 
 ```
 img2video:
-  <python_exe> <generate_script> img2video --image <path> --prompt "..." [--backend h3|wan] [--duration 2] [--extract-frames] --output-dir <output_dir>
+  <python_exe> <generate_script> img2video --config <local_config.json> --timeout 1800 --image <path> --prompt "..." [--backend h3|wan] [--duration 2] [--extract-frames] --output-dir <output_dir>
 
 fx_loop:
-  <python_exe> <generate_script> fx_loop --image <path> --prompt "..." [--backend h3|wan] [--duration 2] [--no-extract-frames] --output-dir <output_dir>
+  <python_exe> <generate_script> fx_loop --config <local_config.json> --timeout 1800 --image <path> --prompt "..." [--backend h3|wan] [--duration 2] [--no-extract-frames] --output-dir <output_dir>
 
 transition:
-  <python_exe> <generate_script> transition --start <A> --end <B> --prompt "..." [--backend h3|wan] [--duration 2] --output-dir <output_dir>
+  <python_exe> <generate_script> transition --config <local_config.json> --timeout 1800 --start <A> --end <B> --prompt "..." [--backend h3|wan] [--duration 2] [--extract-frames] --output-dir <output_dir>
 
 clip_extend:
-  <python_exe> <generate_script> clip_extend --video <prev.mp4> --prompt "..." [--backend h3|wan] [--duration 2] --output-dir <output_dir>
+  <python_exe> <generate_script> clip_extend --config <local_config.json> --timeout 1800 --video <prev.mp4> --prompt "..." [--backend h3|wan] [--duration 2] [--extract-frames] --output-dir <output_dir>
 
 video_concat:
   <python_exe> <generate_script> video_concat --video <a.mp4> --video <b.mp4> --output-dir <output_dir>
 
 character_video:
-  <python_exe> <generate_script> character_video --character-ref <path> [--character-ref <path2>] --prompt "..." [--backend h3|wan] [--duration 2] [--extract-frames] --output-dir <output_dir>
+  <python_exe> <generate_script> character_video --config <local_config.json> --timeout 1800 --character-ref <path> [--character-ref <path2>] --prompt "..." [--backend h3|wan] [--duration 2] [--extract-frames] --output-dir <output_dir>
 
 camera_move:
-  <python_exe> <generate_script> camera_move --image <path> --camera zoom_in|zoom_out|pan_left|pan_right|pan_up|pan_down|orbit_cw|orbit_ccw|static [--prompt "..."] [--backend h3|wan] [--duration 2] [--extract-frames] --output-dir <output_dir>
+  <python_exe> <generate_script> camera_move --config <local_config.json> --timeout 1800 --image <path> --camera zoom_in|zoom_out|pan_left|pan_right|pan_up|pan_down|orbit_cw|orbit_ccw|static [--prompt "..."] [--backend h3|wan] [--duration 2] [--extract-frames] --output-dir <output_dir>
 
 pose_drive:
-  <python_exe> <generate_script> pose_drive --image <char.png> --motion-ref <motion.mp4> --prompt "..." [--control-type pose|canny|depth] [--backend h3|wan] [--duration 2] [--extract-frames] --output-dir <output_dir>
+  <python_exe> <generate_script> pose_drive --config <local_config.json> --timeout 1800 --image <char.png> --motion-ref <motion.mp4> --prompt "..." [--control-type pose|canny|depth] [--backend h3|wan] [--duration 2] [--extract-frames] --output-dir <output_dir>
 ```
 
 ## 已知限制

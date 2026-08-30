@@ -4,7 +4,7 @@
 
 **這件事不是只有底模(checkpoint)要跟著 tier 換,ControlNet/IPAdapter/CLIP Vision 全部都是跟底模綁定的,底模架構變了,這些都要跟著換成對應版本,不能只換 checkpoint、其他照抄。**
 
-> **這張表是刻意鎖定的版本清單,不是「目前最好的選擇」清單。** 裝機時只管照表裝,不要因為你知道有更新的模型就自作主張換掉——不同人在不同時間裝出來的美術基準要一致,是這整條產線存在的意義。真的想評估要不要升級,用 `skills/comfyui-pipeline-review/SKILL.md`,那是獨立於安裝流程之外、需要使用者明確觸發跟核准的另一件事。
+> **這張表是安裝流程的模型家族、檔名與來源基準,不是 hash-level 的可重現版本 manifest。** 裝機時只管照表裝,不要因為你知道有更新的模型就自作主張換掉——不同人在不同時間裝出來的美術基準要一致,是這整條產線存在的意義。實際可重現的 ComfyUI/custom node commit、套件版本與模型 SHA-256 以 [`docs/tested-versions.md`](../../../docs/tested-versions.md) 為準；該 manifest 若仍是 `pending_on_installed_machine`，表格中的日期、大小與檔名都不可被宣稱為已鎖定版本。真的想評估要不要升級,用 `skills/comfyui-pipeline-review/SKILL.md`,那是獨立於安裝流程之外、需要使用者明確觸發跟核准的另一件事。
 
 ## `sdxl_high` / `sdxl` / `sdxl_light` tier(SDXL 家族,目前唯一實際驗證過的組合)
 
@@ -59,7 +59,7 @@ VRAM 較緊張時(`sdxl_light` tier),Depth/OpenPose 這兩個 ControlNet 檔案�
 
 **不是每台機器的基本配備,只有使用者明確要產短片才裝。** 跟 SDXL 底模/ControlNet/IPAdapter **完全不相容**,是另一組 UNET/VAE/文字編碼器,不要塞進上面的 SDXL 表格、也不要假設 `CKPT` 能拿來產影片。
 
-這台 Windows / RTX 4080 已裝並實測的鎖定檔(路徑相對於 `<ComfyUI 安裝路徑>/models/`):
+以下是 Windows / RTX 4080 的歷史安裝與實測紀錄(路徑相對於 `<ComfyUI 安裝路徑>/models/`)，不是目前 repository 可直接重建的鎖定檔。當時的檔名、大小與日期可作為辨識線索；實際版本與內容完整性仍須在已安裝機器擷取，填入 [`docs/tested-versions.md`](../../../docs/tested-versions.md) 的 `pending_on_installed_machine` manifest，完成 smoke test 後才可改為 `verified`:
 
 | 用途 | 子資料夾 | 檔名 | 下載來源 | 實際大小 | 最後確認日期 |
 |---|---|---|---|---|---|

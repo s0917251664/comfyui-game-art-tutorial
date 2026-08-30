@@ -6,7 +6,7 @@
 
 當使用者明確要求「評估/盤點/檢查產線有沒有新技術可以升級」時使用(例如:「幫我看一下現在模型是不是落後了」「有沒有更好的 ControlNet」「這條產線該不該換底模」)。
 
-**不要自動觸發。** 這是團隊主動決定要花時間評估時才做的事,不屬於 `skills/comfyui-install/SKILL.md`(安裝)或 `skills/comfyui-art-gen/SKILL.md`(產圖)的正常流程。裝機、產圖時看到模型清單「舊」也不代表要順便升級——那是刻意鎖死的版本,理由見 `skills/comfyui-install/SKILL.md` 裡的說明。
+**不要自動觸發。** 這是團隊主動決定要花時間評估時才做的事,不屬於 `skills/comfyui-install/SKILL.md`(安裝)或 `skills/comfyui-art-gen/SKILL.md`(產圖)的正常流程。裝機、產圖時看到模型清單「舊」也不代表要順便升級——那是刻意維持的安裝基準；精確可重現版本以 `docs/tested-versions.md` manifest 為準，manifest 仍 pending 時不要把表格內容宣稱成已鎖定版本。
 
 ## 核心原則
 

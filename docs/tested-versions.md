@@ -4,7 +4,7 @@
 
 目前狀態：**待在已安裝機器擷取（pending capture on installed machine）**。
 
-本 repository 沒有 `local_config.json`、ComfyUI 安裝目錄或模型檔，因此目前沒有可誠實填入的 ComfyUI/custom node commit、套件版本或模型 SHA-256。下列欄位刻意保留 `null`；不要用猜測的 commit 或雜湊值填補，也不要把下載頁面的檔名當作內容版本。
+本 repository 沒有 `local_config.json`、ComfyUI 安裝目錄或模型檔，因此目前沒有可誠實填入的 ComfyUI/custom node commit、套件版本（包含影片 runtime 的 PyAV）或模型 SHA-256。下列欄位刻意保留 `null`；不要用猜測的 commit、版本或雜湊值填補，也不要把下載頁面的檔名當作內容版本。
 
 ## 擷取規則
 
@@ -25,6 +25,7 @@ fi
 
 "$PYTHON_EXE" --version
 "$PYTHON_EXE" -c 'import sys; print(sys.version); import torch; print("torch", torch.__version__); import PIL; print("Pillow", PIL.__version__)'
+"$PYTHON_EXE" -c 'import av; print("PyAV", av.__version__)'
 
 # Linux 使用 sha256sum；macOS 將 sha256sum 換成 shasum -a 256。
 sha256sum "$COMFYUI_PATH/models/checkpoints/<檔名>"
@@ -33,6 +34,9 @@ sha256sum "$COMFYUI_PATH/models/ipadapter/<檔名>"
 sha256sum "$COMFYUI_PATH/models/clip_vision/<檔名>"
 sha256sum "$COMFYUI_PATH/models/background_removal/<檔名>"
 sha256sum "$COMFYUI_PATH/models/upscale_models/<檔名>"
+sha256sum "$COMFYUI_PATH/models/diffusion_models/<影片模型檔名>"
+sha256sum "$COMFYUI_PATH/models/text_encoders/<影片文字編碼器檔名>"
+sha256sum "$COMFYUI_PATH/models/vae/<影片 VAE 檔名>"
 ```
 
 Windows PowerShell 可用同等指令：
@@ -52,15 +56,19 @@ if (Get-Command nvidia-smi -ErrorAction SilentlyContinue) {
 
 & $PythonExe --version
 & $PythonExe -c "import torch, PIL; print('torch', torch.__version__); print('Pillow', PIL.__version__)"
+& $PythonExe -c "import av; print('PyAV', av.__version__)"
 Get-FileHash "$ComfyUiPath\models\checkpoints\<檔名>" -Algorithm SHA256
 Get-FileHash "$ComfyUiPath\models\controlnet\<檔名>" -Algorithm SHA256
 Get-FileHash "$ComfyUiPath\models\ipadapter\<檔名>" -Algorithm SHA256
 Get-FileHash "$ComfyUiPath\models\clip_vision\<檔名>" -Algorithm SHA256
 Get-FileHash "$ComfyUiPath\models\background_removal\<檔名>" -Algorithm SHA256
 Get-FileHash "$ComfyUiPath\models\upscale_models\<檔名>" -Algorithm SHA256
+Get-FileHash "$ComfyUiPath\models\diffusion_models\<影片模型檔名>" -Algorithm SHA256
+Get-FileHash "$ComfyUiPath\models\text_encoders\<影片文字編碼器檔名>" -Algorithm SHA256
+Get-FileHash "$ComfyUiPath\models\vae\<影片 VAE 檔名>" -Algorithm SHA256
 ```
 
-每個 hash 都要對應實際檔案、模型家族與來源 URL；若模型由 `extra_model_paths.yaml` 指向共享模型庫，請記錄共享模型庫的真實檔案路徑。完成後填上 `captured_at`、`machine`、`smoke_test`，並保留 `device_config.json` 的 tier/backend/解析度結果作為同一筆驗證的上下文。
+每個 hash 都要對應實際檔案、模型家族與來源 URL；影片模型也要涵蓋 `diffusion_models`、`text_encoders`、`vae` 三類路徑。若模型由 `extra_model_paths.yaml` 指向共享模型庫，請記錄共享模型庫的真實檔案路徑。完成後填上 `captured_at`、`machine`、一般的 `smoke_test` 與影片的 `video_smoke_test`，並保留 `device_config.json` 的 tier/backend/解析度結果作為同一筆驗證的上下文。影片 smoke test 至少要記錄實際使用的 task、backend、輸出檔案與結果；拿不到已安裝機器資料時維持 `pending_on_installed_machine`。
 
 ## Manifest 範本
 
@@ -97,8 +105,30 @@ runtime:
   python: null
   torch: null
   pillow: null
+  pyav: null
 models:
   - file: null
+    family: null
+    sha256: null
+    source: null
+    captured_from: null
+  - kind: video
+    directory: diffusion_models
+    file: null
+    family: null
+    sha256: null
+    source: null
+    captured_from: null
+  - kind: video
+    directory: text_encoders
+    file: null
+    family: null
+    sha256: null
+    source: null
+    captured_from: null
+  - kind: video
+    directory: vae
+    file: null
     family: null
     sha256: null
     source: null
@@ -108,10 +138,16 @@ smoke_test:
   date: null
   command: null
   output: null
+video_smoke_test:
+  status: not_run
+  tasks: null
+  date: null
+  command: null
+  output: null
 ```
 
 ### 版本更新門檻
 
-只有在同一個 manifest 內的 ComfyUI commit、custom node commits、Python/PyTorch/Pillow 版本與使用到的模型 SHA-256 都已擷取，並且至少完成一次最小產圖與輸出檔驗收後，才把 `capture_status` 改成 `verified`。只更新其中一項時，保留 `pending_on_installed_machine`，避免把未驗證的混合環境誤當成可重現版本。
+只有在同一個 manifest 內的 ComfyUI commit、custom node commits、Python/PyTorch/Pillow/PyAV 版本與使用到的模型 SHA-256（包含影片 `diffusion_models`、`text_encoders`、`vae`）都已擷取，並且至少完成一次最小產圖與影片 smoke test、輸出檔驗收後，才把 `capture_status` 改成 `verified`。只更新其中一項時，保留 `pending_on_installed_machine`，避免把未驗證的混合環境誤當成可重現版本。
 
 本文件不會替目前尚未查證的版本填入假的 SHA；拿不到已安裝機器的檔案，就維持 `null` 並在交付回報中說明尚未完成實機驗證。

@@ -31,7 +31,7 @@
    - `ComfyUI_IPAdapter_plus`:`https://github.com/cubiq/ComfyUI_IPAdapter_plus.git`
    - `comfyui_controlnet_aux`:`https://github.com/Fannovel16/comfyui_controlnet_aux.git`(提供 `OpenposePreprocessor`、`DepthAnythingV2Preprocessor` 等前處理節點,第 7 章 pose/depth 控制類型要用)
    若 manifest 有對應的 `custom_nodes.<name>.commit`，各 repo 都要 checkout 那個精確 commit；欄位為 `null` 時，安裝後擷取各自的 `git rev-parse HEAD`，不要把 `main` 當成鎖定版本。裝完後確認各自的 `requirements.txt`(如果有)也裝了。`comfyui_controlnet_aux` 的前處理器模型(DWPose、Depth Anything 權重)會在第一次真的執行到的時候自己下載到它自己的 `ckpts/` 資料夾,不用手動預先下載。
-8. **模型**:先確認 `device_config.json` 的 `tier` 落在哪個 family,再決定要裝哪一組。**這件事不是只有底模(checkpoint)要跟著 tier 換,ControlNet/IPAdapter/CLIP Vision 全部都是跟底模綁定的,底模架構變了,這些都要跟著換成對應版本,不能只換 checkpoint、其他照抄。** 完整清單(SDXL 家族的檔名/下載來源表,以及 sd15 tier 的處理方式)見 `reference/models.md`——**那張表是刻意鎖定的版本清單,不是「目前最好的選擇」清單,只管照表裝,不要自作主張換掉更新的模型**(真的想評估升級用 `skills/comfyui-pipeline-review/SKILL.md`,不是安裝流程該做的事)。每個實際使用的模型都要在 manifest 記錄檔案路徑、模型家族、來源與 SHA-256；目前 manifest 未擷取完成前不可捏造 hash。
+8. **模型**:先確認 `device_config.json` 的 `tier` 落在哪個 family,再決定要裝哪一組。**這件事不是只有底模(checkpoint)要跟著 tier 換,ControlNet/IPAdapter/CLIP Vision 全部都是跟底模綁定的,底模架構變了,這些都要跟著換成對應版本,不能只換 checkpoint、其他照抄。** 完整清單(SDXL 家族的檔名/下載來源表,以及 sd15 tier 的處理方式)見 `reference/models.md`——那是安裝流程的模型家族、檔名與來源基準，不是 hash-level 的可重現版本鎖定；真正可重現的 commit、套件版本與模型 SHA-256 以 `docs/tested-versions.md` 為準。若 manifest 仍是 `pending_on_installed_machine`，不要把表格裡的歷史日期、檔名或大小當成已鎖定版本，也不要自行換成更新模型；真的想評估升級用 `skills/comfyui-pipeline-review/SKILL.md`,不是安裝流程該做的事。每個實際使用的模型都要在 manifest 記錄檔案路徑、模型家族、來源與 SHA-256；目前 manifest 未擷取完成前不可捏造 hash。
 9. **產圖腳本**:把 `tools_src/generate.py` 複製(覆蓋)到 `<ComfyUI 安裝路徑>/tools/generate.py`——**這支永遠以 repo 裡的原始碼為準**,不要在部署副本上直接改邏輯。
 10. **啟動用的小捷徑**(方便使用者之後自己開伺服器,不一定要是腳本,一行指令也行):在 `<ComfyUI 安裝路徑>` 附近留一個能一鍵/一行啟動 `main.py --listen 127.0.0.1 --port <port>` 的方式。**先確認 port 8188 沒被佔用**(例如這台機器如果已經裝了 ComfyUI 桌面版且常駐執行,要換別的 port,如 8189)。把最後使用的 URL 寫入 `local_config.json`；產圖 CLI 不會自動猜測部署副本旁的 repo 設定。
 11. **寫入 repo 根目錄的 `local_config.json`**(不進版控,每台機器內容不同):
@@ -64,7 +64,7 @@
 
 ## 進階(選配):影片模型(`img2video` / `character_video`)
 
-**只有使用者明確要產短片才裝,不是每台機器的基本配備。** 跟 SDXL 完全不同的一組模型,清單/大小見 `reference/models.md`「選用影片模型」。動手下載前先講空間(Wan + H3 FL2VA 約 56GB;若要 `character_video` / h3 的 `pose_drive` 再加 H3 Ref2VA ~19.5GB,合計約 76GB)。不要把影片 checkpoint 寫進 `device_config.json` 的圖片 `CKPT` 欄位。h3 的角色參考跟動作驅動都用 Ref2VA UNET(跟 I2V 那顆 FL2VA 不同),對照表見 `skills/comfyui-video-gen/reference/backends.md`。
+**只有使用者明確要產短片才裝,不是每台機器的基本配備。** 跟 SDXL 完全不同的一組模型,清單/大小見 `reference/models.md`「選用影片模型」。該段的日期與大小是歷史安裝/實測紀錄，不等於已捕捉的可重現版本；實際 ComfyUI、PyAV、模型 SHA-256 與影片 smoke test 要填回 [`docs/tested-versions.md`](../../docs/tested-versions.md)，在 `pending_on_installed_machine` 期間不可捏造或宣稱已鎖定。動手下載前先講空間(Wan + H3 FL2VA 約 56GB;若要 `character_video` / h3 的 `pose_drive` 再加 H3 Ref2VA ~19.5GB,合計約 76GB)。不要把影片 checkpoint 寫進 `device_config.json` 的圖片 `CKPT` 欄位。h3 的角色參考跟動作驅動都用 Ref2VA UNET(跟 I2V 那顆 FL2VA 不同),對照表見 `skills/comfyui-video-gen/reference/backends.md`。
 
 ## 執行原則
 

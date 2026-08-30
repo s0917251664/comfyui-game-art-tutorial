@@ -16,12 +16,15 @@ Usage:
     python generate.py --config local_config.json pose_drive --image char.png --motion-ref motion.mp4 --prompt "the character performs the motion"
 """
 import argparse
+from fractions import Fraction
 import json
 import math
 import mimetypes
 import ntpath
 import os
+import re
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.parse
@@ -242,6 +245,7 @@ VIDEO_H3_AUDIO_VAE = "minimax_h3_audio_vae_fp32.safetensors"
 VIDEO_MAX_SIDE = 768
 VIDEO_STEPS = 20
 VIDEO_FPS = 24
+VIDEO_FPS_TOLERANCE = 0.5
 VIDEO_DURATION_MIN = 2
 VIDEO_DURATION_MAX = 6
 DEFAULT_VIDEO_TIMEOUT = 1800.0
@@ -1085,20 +1089,16 @@ def backend_has(backend, cap):
 
 
 def require_video_backend(task, backend):
-    """task 要的能力這個 backend 若還沒接,直接說,不要改成另一個 task、也不要假裝跑過。
-    若呼叫端沒寫 --backend、而預設又還沒接、且全場只剩一個實作,就改走那個(task 契約不變)。"""
+    """確認 task/backend 組合已實作，未支援時直接 fail-fast。
+
+    backend 是 task 的明確實作選擇；不能從 process-wide ``sys.argv`` 猜測
+    呼叫端是否指定過它，也不能在未支援時靜默改走另一個 backend。
+    """
     if backend not in VIDEO_BACKENDS:
         raise SystemExit(f"未知 --backend {backend!r},可用: {', '.join(VIDEO_BACKENDS)}")
     need = VIDEO_TASK_CAPS.get(task)
     if need and not backend_has(backend, need):
         ok = [b for b, caps in VIDEO_BACKEND_CAPS.items() if need in caps]
-        explicit = any(a == "--backend" or a.startswith("--backend=") for a in sys.argv)
-        if not explicit and len(ok) == 1:
-            print(
-                f"[backend] {task} 目前只有 {ok[0]} 實作,改走 {ok[0]}(預設 {backend} 還沒接)",
-                file=sys.stderr,
-            )
-            return ok[0]
         raise SystemExit(
             f"{task} 目前沒有 {backend} 實作(缺 {need})。"
             f"可用: {', '.join(ok) or '無'}。"
@@ -1195,6 +1195,95 @@ def h3_frame_count(duration_sec):
     return x + (5 - (x % 17)) % 17
 
 
+def _make_temp_image_path(output_dir, prefix):
+    """在指定輸出目錄建立唯一的暫存 PNG 路徑，並關閉 mkstemp 的 fd。
+
+    呼叫端會在上傳到 ComfyUI 後刪除這個檔案；使用 ``mkstemp`` 避免同時執行
+    多個影片 task 時共用固定檔名，也避免 Windows 上開啟中的 NamedTemporaryFile
+    無法被 Pillow/ffmpeg 重新開啟。
+    """
+    output_dir = os.fspath(output_dir)
+    os.makedirs(output_dir, exist_ok=True)
+    fd, path = tempfile.mkstemp(prefix=prefix, suffix=".png", dir=output_dir)
+    os.close(fd)
+    return path
+
+
+def _remove_temp_file(path):
+    if not path:
+        return
+    try:
+        os.unlink(path)
+    except FileNotFoundError:
+        pass
+
+
+def _video_streams(container):
+    streams = getattr(container, "streams", None)
+    video = getattr(streams, "video", ()) if streams is not None else ()
+    if not video:
+        raise RuntimeError("影片沒有 video stream")
+    return video
+
+
+def _fps_fraction(rate):
+    """將 PyAV 的 Fraction/數值 frame rate 正規化成可精確比較的 Fraction。"""
+    if rate is None:
+        return None
+    if isinstance(rate, Fraction):
+        return rate
+    try:
+        numerator, denominator = rate.numerator, rate.denominator
+    except AttributeError:
+        numerator = denominator = None
+    if numerator is not None and denominator is not None:
+        try:
+            return Fraction(numerator, denominator)
+        except (TypeError, ValueError, ZeroDivisionError):
+            pass
+    try:
+        return Fraction(str(rate))
+    except (TypeError, ValueError, ZeroDivisionError):
+        try:
+            return Fraction(str(float(rate)))
+        except (TypeError, ValueError, ZeroDivisionError, OverflowError) as exc:
+            raise ValueError(f"無法辨識影片 FPS: {rate!r}") from exc
+
+
+def _read_motion_fps(video_path):
+    """讀取動作參考片的平均 FPS；未知或無法解析時不猜測。"""
+    try:
+        import av
+    except ImportError as exc:
+        raise RuntimeError("pose_drive 需要 PyAV 才能驗證 --motion-ref 的 FPS") from exc
+    container = av.open(video_path)
+    try:
+        stream = _video_streams(container)[0]
+        rate = getattr(stream, "average_rate", None)
+    finally:
+        container.close()
+    if rate is None:
+        raise ValueError(f"--motion-ref 無法辨識 FPS: {video_path}")
+    try:
+        fps = float(rate)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ValueError(f"--motion-ref 無法辨識 FPS: {rate!r}") from exc
+    if not math.isfinite(fps):
+        raise ValueError(f"--motion-ref 無法辨識 FPS: {rate!r}")
+    return fps
+
+
+def validate_motion_reference_fps(video_path):
+    """pose_drive 不做重採樣，只接受接近產線 24 FPS 的動作參考影片。"""
+    fps = _read_motion_fps(video_path)
+    if not math.isclose(fps, float(VIDEO_FPS), rel_tol=0.0, abs_tol=VIDEO_FPS_TOLERANCE):
+        raise ValueError(
+            f"--motion-ref 必須是接近 {VIDEO_FPS} FPS 的影片，目前是 {fps:g} FPS；"
+            "產線不會靜默重採樣，請先轉成 24 FPS。"
+        )
+    return fps
+
+
 def build_img2video_wan(prompt, image_filename, negative=None, width=832, height=480,
                         seed=None, duration=2.0, filename_prefix="img2video"):
     seed = seed_or_random(seed)
@@ -1271,14 +1360,28 @@ def extract_video_frames(video_path, output_dir=None):
     # SaveVideo 常吐 foo_00001_.mp4,直接加 _frames 會變成 foo_00001__frames。
     stem = os.path.splitext(os.path.basename(video_path))[0].rstrip("_")
     frame_dir = os.path.join(output_dir, stem + "_frames")
+    if os.path.islink(frame_dir):
+        raise RuntimeError(f"抽幀目錄是 symlink，拒絕清理: {frame_dir}")
     os.makedirs(frame_dir, exist_ok=True)
+    # 這個目錄是腳本的固定抽幀輸出位置；只清掉本腳本產生的數字 PNG，
+    # 避免重跑時上一次較長影片留下的尾幀混入本次結果，也不碰其他檔案。
+    for entry in os.scandir(frame_dir):
+        if not re.fullmatch(r"\d+\.png", entry.name):
+            continue
+        if entry.is_symlink():
+            raise RuntimeError(f"抽幀輸出檔是 symlink，拒絕覆寫: {entry.path}")
+        if not entry.is_file(follow_symlinks=False):
+            raise RuntimeError(f"抽幀輸出檔不是一般檔案: {entry.path}")
+        os.unlink(entry.path)
     container = av.open(video_path)
     paths = []
-    for i, frame in enumerate(container.decode(video=0)):
-        p = os.path.join(frame_dir, f"{i:03d}.png")
-        frame.to_image().save(p)
-        paths.append(p)
-    container.close()
+    try:
+        for i, frame in enumerate(container.decode(video=0)):
+            p = os.path.join(frame_dir, f"{i:03d}.png")
+            frame.to_image().save(p)
+            paths.append(p)
+    finally:
+        container.close()
     print(f"[抽幀] {len(paths)} 張 -> {frame_dir}")
     return paths, frame_dir
 
@@ -1302,65 +1405,124 @@ def concat_videos(video_paths, dest_path):
     """外部組裝短過場。解析度/fps 跟第一支對齊,必要時重編碼。不是剪接台。
     每支都有音軌才把立體聲接上去;有任何一支無聲就整段當無聲,
     不要一半有聲一半靜音造成時間軸錯位。"""
-    _require_pillow()
-    import av
     if len(video_paths) < 2:
         raise RuntimeError("video_concat 至少要兩支影片")
-    first = av.open(video_paths[0])
-    vs = first.streams.video[0]
-    width, height = vs.width, vs.height
-    fps = vs.average_rate or VIDEO_FPS
-    first.close()
+    dest_path = os.fspath(dest_path)
+    dest_canonical = os.path.normcase(os.path.realpath(os.path.abspath(dest_path)))
+    for source in video_paths:
+        source_canonical = os.path.normcase(os.path.realpath(os.path.abspath(os.fspath(source))))
+        if source_canonical == dest_canonical:
+            raise ValueError(f"video_concat 輸入影片不可與輸出路徑相同: {source!r}")
+    _require_pillow()
+    import av
+
+    stream_specs = []
+    for source in video_paths:
+        inp = av.open(source)
+        try:
+            vs = _video_streams(inp)[0]
+            # 保留原本無 average_rate 時採 24 FPS 的行為；有明確 rate 時則用
+            # Fraction 精確比較，避免 24/25 或 23.976/24 被靜默混接。
+            fps = _fps_fraction(getattr(vs, "average_rate", None))
+            if fps is None:
+                fps = Fraction(VIDEO_FPS, 1)
+            elif fps <= 0:
+                raise ValueError(f"影片 FPS 必須大於 0: {source!r}")
+            stream_specs.append((vs.width, vs.height, fps))
+        finally:
+            inp.close()
+
+    expected_fps = stream_specs[0][2]
+    mismatched = [
+        (source, spec[2])
+        for source, spec in zip(video_paths, stream_specs)
+        if spec[2] != expected_fps
+    ]
+    if mismatched:
+        details = ", ".join(f"{source!r}={float(rate):g} FPS" for source, rate in mismatched)
+        raise ValueError(
+            f"video_concat 所有輸入影片必須使用相同 FPS；"
+            f"第一支={float(expected_fps):g} FPS，{details}"
+        )
+
+    width, height = stream_specs[0][0], stream_specs[0][1]
+    fps = expected_fps
     keep_audio = True
     for src in video_paths:
         inp = av.open(src)
-        if not inp.streams.audio:
-            keep_audio = False
-        inp.close()
+        try:
+            if not getattr(inp.streams, "audio", ()):
+                keep_audio = False
+        finally:
+            inp.close()
         if not keep_audio:
             break
-    os.makedirs(os.path.dirname(os.path.abspath(dest_path)) or ".", exist_ok=True)
-    out = av.open(dest_path, "w")
-    out_v = out.add_stream("libx264", rate=fps)
-    out_v.width = width
-    out_v.height = height
-    out_v.pix_fmt = "yuv420p"
-    # 兩個 stream 都要在寫任何 packet 之前建好,不然 mp4 mux 會 EINVAL
-    out_a = out.add_stream("aac", rate=32000) if keep_audio else None
-    for src in video_paths:
-        inp = av.open(src)
-        for frame in inp.decode(video=0):
-            img = frame.to_image()
-            if img.size != (width, height):
-                img = img.resize((width, height), PILImage.Resampling.LANCZOS)
-            of = av.VideoFrame.from_image(img)
-            for packet in out_v.encode(of):
-                out.mux(packet)
-        inp.close()
-    for packet in out_v.encode():
-        out.mux(packet)
-    if out_a:
-        resampler = av.AudioResampler(format="fltp", layout="stereo", rate=32000)
-        sample_i = 0
+    dest_dir = os.path.dirname(os.path.abspath(dest_path)) or "."
+    os.makedirs(dest_dir, exist_ok=True)
+    fd, temp_dest = tempfile.mkstemp(
+        prefix=f".{os.path.basename(dest_path)}.", suffix=".mp4", dir=dest_dir
+    )
+    os.close(fd)
+    out = None
+    try:
+        out = av.open(temp_dest, "w")
+        out_v = out.add_stream("libx264", rate=fps)
+        out_v.width = width
+        out_v.height = height
+        out_v.pix_fmt = "yuv420p"
+        # 兩個 stream 都要在寫任何 packet 之前建好,不然 mp4 mux 會 EINVAL
+        out_a = out.add_stream("aac", rate=32000) if keep_audio else None
         for src in video_paths:
-            ain = av.open(src)
-            frames_in = list(ain.decode(audio=0))
-            ain.close()
-            frames_in.append(None)
-            for frame in frames_in:
-                resampled = resampler.resample(frame) or []
-                if not isinstance(resampled, (list, tuple)):
-                    resampled = [resampled]
-                for rf in resampled:
-                    if rf is None:
-                        continue
-                    rf.pts = sample_i
-                    sample_i += rf.samples
-                    for packet in out_a.encode(rf) or []:
+            inp = av.open(src)
+            try:
+                for frame in inp.decode(video=0):
+                    img = frame.to_image()
+                    if img.size != (width, height):
+                        img = img.resize((width, height), PILImage.Resampling.LANCZOS)
+                    of = av.VideoFrame.from_image(img)
+                    for packet in out_v.encode(of):
                         out.mux(packet)
-        for packet in out_a.encode(None) or []:
+            finally:
+                inp.close()
+        for packet in out_v.encode():
             out.mux(packet)
-    out.close()
+        if out_a:
+            resampler = av.AudioResampler(format="fltp", layout="stereo", rate=32000)
+            sample_i = 0
+            for src in video_paths:
+                ain = av.open(src)
+                try:
+                    frames_in = list(ain.decode(audio=0))
+                finally:
+                    ain.close()
+                frames_in.append(None)
+                for frame in frames_in:
+                    resampled = resampler.resample(frame) or []
+                    if not isinstance(resampled, (list, tuple)):
+                        resampled = [resampled]
+                    for rf in resampled:
+                        if rf is None:
+                            continue
+                        rf.pts = sample_i
+                        sample_i += rf.samples
+                        for packet in out_a.encode(rf) or []:
+                            out.mux(packet)
+            for packet in out_a.encode(None) or []:
+                out.mux(packet)
+        out.close()
+        out = None
+        os.replace(temp_dest, dest_path)
+    except Exception:
+        if out is not None:
+            try:
+                out.close()
+            except Exception:
+                pass
+        try:
+            os.unlink(temp_dest)
+        except FileNotFoundError:
+            pass
+        raise
     note = "含立體聲" if keep_audio else "無聲(有鏡頭沒有音軌,整段不接聲音)"
     print(f"[接片] {len(video_paths)} 支 -> {dest_path} ({note})")
     return dest_path
@@ -1957,7 +2119,11 @@ def main(argv=None):
         args.prompt = f"{RATING_TAGS[args.style][args.rating]}, {args.prompt}"
 
     _validate_task_capabilities(args)
-    comfy_url = resolve_comfy_url(getattr(args, "comfy_url", None), getattr(args, "config_path", None))
+    # video_concat 只在本機用 PyAV 組裝既有影片，不會上傳、排程或下載
+    # ComfyUI output；因此不能因為共用 parser 就強迫它先解析 ComfyUI URL。
+    comfy_url = None
+    if args.task != "video_concat":
+        comfy_url = resolve_comfy_url(getattr(args, "comfy_url", None), getattr(args, "config_path", None))
     request_timeout = min(DEFAULT_HTTP_TIMEOUT, float(args.timeout))
 
     def upload(path):
@@ -2071,22 +2237,32 @@ def main(argv=None):
         duration = _require_video_duration(args.duration)
         _require_wh_pair(args)
         still = args.image
+        temp_still = None
         if args.video:
             out_dir = getattr(args, "output_dir", None) or OUTPUT_DIR
-            os.makedirs(out_dir, exist_ok=True)
-            still = os.path.join(out_dir, "_clip_extend_last.png")
-            extract_last_frame(args.video, still)
-            print(f"[連戲] 上一鏡尾幀 -> {still}")
-        width, height = video_canvas(still, args.width, args.height)
-        img_fn = upload(still)
+            temp_still = _make_temp_image_path(out_dir, "_clip_extend_last_")
+            try:
+                extract_last_frame(args.video, temp_still)
+                print(f"[連戲] 上一鏡尾幀 -> {temp_still}")
+                still = temp_still
+                width, height = video_canvas(still, args.width, args.height)
+                img_fn = upload(still)
+            finally:
+                _remove_temp_file(temp_still)
+        else:
+            width, height = video_canvas(still, args.width, args.height)
+            img_fn = upload(still)
         prompt, out_id = run_i2v(
             backend, args.prompt, img_fn, width, height, args.seed, duration,
             filename_prefix="clip_extend", negative=args.negative,
         )
     elif args.task == "video_concat":
         out_dir = getattr(args, "output_dir", None) or OUTPUT_DIR
+        try:
+            dest = _safe_output_path(out_dir, f"{args.name}.mp4")
+        except (TypeError, ValueError) as exc:
+            raise SystemExit(str(exc)) from exc
         os.makedirs(out_dir, exist_ok=True)
-        dest = os.path.join(out_dir, f"{args.name}.mp4")
         concat_videos(args.video, dest)
         print(f"[完成] {dest}")
         return
@@ -2113,21 +2289,24 @@ def main(argv=None):
         img_fn = upload(args.image)
         cam_prompt = camera_move_prompt(args.camera, args.prompt)
         last_fn = None
-        if backend_has(backend, "last_frame"):
-            if args.camera == "static":
-                last_fn = img_fn
-            elif args.camera not in ("orbit_cw", "orbit_ccw"):
-                out_dir = getattr(args, "output_dir", None) or OUTPUT_DIR
-                os.makedirs(out_dir, exist_ok=True)
-                end_path = os.path.join(out_dir, "_camera_end.png")
-                build_camera_end_still(args.image, args.camera, width, height, end_path)
-                print(f"[運鏡] 終點靜幀 -> {end_path}")
-                last_fn = upload(end_path)
-        prompt, out_id = run_i2v(
-            backend, cam_prompt, img_fn, width, height, args.seed, duration,
-            last_image_filename=last_fn, filename_prefix="camera_move",
-            negative=args.negative,
-        )
+        end_path = None
+        try:
+            if backend_has(backend, "last_frame"):
+                if args.camera == "static":
+                    last_fn = img_fn
+                elif args.camera not in ("orbit_cw", "orbit_ccw"):
+                    out_dir = getattr(args, "output_dir", None) or OUTPUT_DIR
+                    end_path = _make_temp_image_path(out_dir, "_camera_end_")
+                    build_camera_end_still(args.image, args.camera, width, height, end_path)
+                    print(f"[運鏡] 終點靜幀 -> {end_path}")
+                    last_fn = upload(end_path)
+            prompt, out_id = run_i2v(
+                backend, cam_prompt, img_fn, width, height, args.seed, duration,
+                last_image_filename=last_fn, filename_prefix="camera_move",
+                negative=args.negative,
+            )
+        finally:
+            _remove_temp_file(end_path)
     elif args.task == "pose_drive":
         backend = require_video_backend(args.task, args.backend)
         duration = _require_video_duration(args.duration)
@@ -2137,6 +2316,10 @@ def main(argv=None):
             "對不上(例如站姿去套走路)會雙人/重影。",
             file=sys.stderr,
         )
+        try:
+            validate_motion_reference_fps(args.motion_ref)
+        except (RuntimeError, ValueError) as exc:
+            raise SystemExit(str(exc)) from exc
         width, height = video_canvas(args.image, args.width, args.height)
         img_fn = upload(args.image)
         motion_fn = upload(args.motion_ref)
