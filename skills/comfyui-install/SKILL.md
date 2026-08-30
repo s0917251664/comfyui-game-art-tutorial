@@ -62,6 +62,10 @@
 3. 下載到 `<ComfyUI 安裝路徑>/models/checkpoints/`,不用額外裝 ControlNet/IPAdapter/CLIP Vision(這些綁的是 SDXL 架構,不是特定微調版,現有那份就夠用)
 4. 裝完不用改 `tools_src/generate.py`(`STYLE_CHECKPOINTS` 白名單已經寫死對應檔名),使用者之後用 `--style realistic`/`illustration`/`anime` 就能直接切換
 
+## 進階(選配):影片模型(`img2video` / `character_video`)
+
+**只有使用者明確要產短片才裝,不是每台機器的基本配備。** 跟 SDXL 完全不同的一組模型,清單/大小見 `reference/models.md`「選用影片模型」。動手下載前先講空間(Wan + H3 FL2VA 約 56GB;若要 `character_video` / h3 的 `pose_drive` 再加 H3 Ref2VA ~19.5GB,合計約 76GB)。不要把影片 checkpoint 寫進 `device_config.json` 的圖片 `CKPT` 欄位。h3 的角色參考跟動作驅動都用 Ref2VA UNET(跟 I2V 那顆 FL2VA 不同),對照表見 `skills/comfyui-video-gen/reference/backends.md`。
+
 ## 執行原則
 
 - **冪等**:每一步先檢查是否已經成立,成立就跳過,不要盲目重跑或覆蓋使用者已經調整過的東西(`generate.py` 除外——它永遠要跟 repo 同步)

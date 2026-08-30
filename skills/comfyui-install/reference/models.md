@@ -55,6 +55,26 @@ VRAM 較緊張時(`sdxl_light` tier),Depth/OpenPose 這兩個 ControlNet 檔案�
 
 **這是概估值,不是精確保證**——實際檔案大小以下載當下來源網站顯示的為準,Python 依賴套件版本更新也會讓虛擬環境大小浮動。裝機前把這個範圍念給使用者聽,提醒**硬碟至少要留 30GB 以上可用空間**比較保險,不要裝到一半才發現空間不夠中斷——那樣通常需要手動清理已下載一半的檔案才能重來,比事前確認空間麻煩很多。
 
+## 選用影片模型(`generate.py img2video` / `character_video`,選配)
+
+**不是每台機器的基本配備,只有使用者明確要產短片才裝。** 跟 SDXL 底模/ControlNet/IPAdapter **完全不相容**,是另一組 UNET/VAE/文字編碼器,不要塞進上面的 SDXL 表格、也不要假設 `CKPT` 能拿來產影片。
+
+這台 Windows / RTX 4080 已裝並實測的鎖定檔(路徑相對於 `<ComfyUI 安裝路徑>/models/`):
+
+| 用途 | 子資料夾 | 檔名 | 下載來源 | 實際大小 | 最後確認日期 |
+|---|---|---|---|---|---|
+| Wan 2.2 5B UNET | `diffusion_models` | `wan2.2_ti2v_5B_fp16.safetensors` | `Comfy-Org/Wan_2.2_ComfyUI_Repackaged` `split_files/diffusion_models/` | 9.31 GiB | 2026-08-26 |
+| Wan 2.2 Fun Control 5B UNET(wan 的 control_video 能力) | `diffusion_models` | `wan2.2_fun_control_5B_bf16.safetensors` | 同上 `split_files/diffusion_models/` | 9.32 GiB | 2026-08-27 |
+| Wan 2.2 VAE | `vae` | `wan2.2_vae.safetensors` | 同上 `split_files/vae/` | 1.31 GiB | 2026-08-26 |
+| Wan / 共用文字編碼器 | `text_encoders` | `umt5_xxl_fp8_e4m3fn_scaled.safetensors` | `Comfy-Org/Wan_2.1_ComfyUI_repackaged` `split_files/text_encoders/` | 6.27 GiB | 2026-08-26 |
+| MiniMax H3 UNET(I2V / 首尾幀) | `diffusion_models` | `minimax_h3_fl2va_pruned_int8_convrot.safetensors` | `Comfy-Org/MiniMax-H3` `diffusion_models/` | 19.53 GiB | 2026-08-26 |
+| MiniMax H3 UNET(h3 的 character_ref / control_video) | `diffusion_models` | `minimax_h3_ref2va_pruned_int8_convrot.safetensors` | 同上 `diffusion_models/` | 19.53 GiB | 2026-08-27 |
+| MiniMax H3 文字編碼器 | `text_encoders` | `qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors` | 同上 `text_encoders/` | 14.61 GiB | 2026-08-26 |
+| MiniMax H3 video VAE | `vae` | `minimax_h3_video_vae_fp16.safetensors` | 同上 `vae/` | 4.85 GiB | 2026-08-26 |
+| MiniMax H3 audio VAE | `vae` | `minimax_h3_audio_vae_fp32.safetensors` | 同上 `vae/` | 0.56 GiB | 2026-08-26 |
+
+Wan + H3 FL2VA 約 56.4 GiB;加上 Ref2VA 約 76 GiB。Ref2VA 跟 FL2VA 是不同 UNET,h3 的 `character_ref` / `control_video` 不能拿 FL2VA 頂替。h3 的 `pose_drive` 也用這顆 Ref2VA,不用再下 Fun ControlNet。`camera_move` 不另外下模型(走已有 I2V backend)。對照見 `skills/comfyui-video-gen/reference/backends.md`。torch 需 cu130 才能走 H3 的 `int8_convrot`(這台已是 2.13.0+cu130)。LTX-2.5 本輪不裝(Hugging Face gated)。下載前先講空間,原則同風格底模。
+
 ## `sd15` tier(VRAM < 8GB,SD1.5 家族)
 
 **這條路線目前這個 repo 完全沒有實機驗證過**。`tools_src/generate.py` 裡 `CONTROLNET_MODELS`/`ip-adapter_file`/`clip_name` 仍指向 SDXL 版本，因此 CLI 目前會對需要 ControlNet/IPAdapter 的 SD1.5 組合先 fail-fast（提早拒絕）；只有繞過 capability gate、直接把 SDXL add-on graph 跟 SD1.5 底模混用時，才會因架構不符發生 shape mismatch。遇到這個 tier 時:

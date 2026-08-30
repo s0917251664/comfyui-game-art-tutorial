@@ -10,6 +10,10 @@ Usage:
     python generate.py --config local_config.json concept --prompt "a female game character concept art, fantasy armor" [--negative ...] [--seed N] [--width 1024] [--height 1024] [--remove-bg]
     python generate.py --comfy-url http://127.0.0.1:8188 character_action --prompt "..." --character-ref path.png --pose-ref path.png [--pose-strength 1.0] [--remove-bg]
     python generate.py --config local_config.json inpaint --prompt "..." --image path.png --mask path.png [--denoise 1.0]
+    python generate.py --config local_config.json img2video --image still.png --prompt "camera locked, idle motion" [--backend h3|wan] [--duration 2] [--timeout 1800]
+    python generate.py --comfy-url http://127.0.0.1:8188 character_video --character-ref char.png --prompt "the same character running through a corridor" [--duration 2]
+    python generate.py --config local_config.json camera_move --image still.png --camera zoom_in [--duration 2]
+    python generate.py --config local_config.json pose_drive --image char.png --motion-ref motion.mp4 --prompt "the character performs the motion"
 """
 import argparse
 import json
@@ -25,10 +29,11 @@ import urllib.request
 import uuid
 
 try:
-    from PIL import Image as PILImage, ImageDraw
+    from PIL import Image as PILImage, ImageDraw, ImageFilter
 except ImportError:  # Pillow is only needed by the local template/mask helpers.
     PILImage = None
     ImageDraw = None
+    ImageFilter = None
 
 # The deployment copy can live outside this repository.  Do not infer a URL from
 # the source tree; callers must provide one explicitly, through the CLI, an
@@ -52,7 +57,7 @@ SDXL_TIERS = frozenset(("sdxl_high", "sdxl", "sdxl_light"))
 
 
 def _require_pillow():
-    if PILImage is None or ImageDraw is None:
+    if PILImage is None or ImageDraw is None or ImageFilter is None:
         raise RuntimeError("這個 helper 需要 Pillow；產圖核心的 HTTP/graph 功能不需要 Pillow。")
 
 
@@ -204,6 +209,72 @@ RATING_TAGS = {
     "illustration": {"safe": "rating:general", "questionable": "rating:questionable", "explicit": "rating:explicit"},
 }
 
+# 影片 task 的對外契約是 task 名 + --backend,不是模型名。下面這組是各 backend 的實作檔名,
+# 不能接 SDXL ControlNet/IPAdapter/--style,也不跟圖片 CKPT/tier 走。
+# 預設 backend 是這台 4080 bake-off 的結果,換機器/換實作時改 DEFAULT_VIDEO_BACKEND,
+# 不要把 h3/wan 寫進 task 名稱或輸出檔名前綴。
+VIDEO_BACKENDS = ("h3", "wan")
+DEFAULT_VIDEO_BACKEND = "h3"
+# 每個 backend 現在接得上哪些能力。task 要的能力在 VIDEO_TASK_CAPS;對不上就報錯,不要靜默改 task。
+VIDEO_BACKEND_CAPS = {
+    "h3": frozenset({"i2v", "last_frame", "character_ref", "control_video", "audio"}),
+    "wan": frozenset({"i2v", "control_video"}),
+}
+VIDEO_TASK_CAPS = {
+    "img2video": "i2v",
+    "clip_extend": "i2v",
+    "camera_move": "i2v",
+    "fx_loop": "last_frame",
+    "transition": "last_frame",
+    "character_video": "character_ref",
+    "pose_drive": "control_video",
+}
+CHARACTER_REF_MAX = 9
+VIDEO_WAN_UNET = "wan2.2_ti2v_5B_fp16.safetensors"
+VIDEO_WAN_FUN_UNET = "wan2.2_fun_control_5B_bf16.safetensors"
+VIDEO_WAN_CLIP = "umt5_xxl_fp8_e4m3fn_scaled.safetensors"
+VIDEO_WAN_VAE = "wan2.2_vae.safetensors"
+VIDEO_H3_UNET = "minimax_h3_fl2va_pruned_int8_convrot.safetensors"
+VIDEO_H3_REF_UNET = "minimax_h3_ref2va_pruned_int8_convrot.safetensors"
+VIDEO_H3_CLIP = "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors"
+VIDEO_H3_VAE = "minimax_h3_video_vae_fp16.safetensors"
+VIDEO_H3_AUDIO_VAE = "minimax_h3_audio_vae_fp32.safetensors"
+VIDEO_MAX_SIDE = 768
+VIDEO_STEPS = 20
+VIDEO_FPS = 24
+VIDEO_DURATION_MIN = 2
+VIDEO_DURATION_MAX = 6
+DEFAULT_VIDEO_TIMEOUT = 1800.0
+VIDEO_NEG_DEFAULT = (
+    "blurry, low quality, morphing face, extra limbs, camera movement, "
+    "zoom, pan, text, watermark, still image, frozen"
+)
+VIDEO_LOOP_SUFFIX = (
+    "seamless looping animation, cyclical motion that returns to the first frame, "
+    "camera locked, subject stays in place"
+)
+
+# camera_move 的運鏡枚舉(task 契約)。有 last_frame 能力的 backend 會再餵幾何終點靜幀;
+# 沒有的 backend 只靠下面這組英文運鏡句。orbit 平面裁切做不出繞拍終點,一律只走 prompt。
+CAMERA_MOVES = {
+    "static": "locked static camera, no camera movement",
+    "pan_up": "slow camera pan up",
+    "pan_down": "slow camera pan down",
+    "pan_left": "slow camera pan left",
+    "pan_right": "slow camera pan right",
+    "zoom_in": "slow camera zoom in toward the subject",
+    "zoom_out": "slow camera zoom out from the subject",
+    "orbit_cw": "slow camera orbit clockwise around the subject",
+    "orbit_ccw": "slow camera orbit counter-clockwise around the subject",
+}
+CAMERA_STILL_SUFFIX = (
+    "the subject stays completely still, no character animation, no morphing, "
+    "only the camera moves, keep identity and framing except for the camera move"
+)
+CAMERA_ZOOM = 1.35       # zoom_in 終點是來源中心 1/1.35 再拉回畫布
+CAMERA_PAN_CROP = 0.82   # pan_* 終點保留這個比例、往運鏡方向裁
+
+
 
 def build_control_preprocessor(control_type, image_node_id):
     """依 control_type 回傳對應的前處理節點(從 image_node_id 的圖片輸出接進去)。"""
@@ -231,7 +302,7 @@ CKPT = DEVICE["checkpoint"]
 
 
 def upload_image(path, comfy_url=None, request_timeout=DEFAULT_HTTP_TIMEOUT):
-    """上傳一張本機圖片到 ComfyUI 的 input 目錄,回傳可在 LoadImage 節點使用的檔名。"""
+    """上傳本機圖片或影片到 ComfyUI input，回傳 LoadImage/LoadVideo 使用的檔名。"""
     validate_timeout(request_timeout)
     filename = os.path.basename(path)
     mime = mimetypes.guess_type(path)[0] or "application/octet-stream"
@@ -380,7 +451,7 @@ def _safe_output_path(output_dir, filename):
 
 def download_outputs(history_entry, output_dir=None, node_ids=None, comfy_url=None,
                      request_timeout=DEFAULT_HTTP_TIMEOUT):
-    """Download only selected SaveImage nodes, rejecting unsafe local paths."""
+    """Download selected image/video outputs with safe paths and atomic writes."""
     validate_timeout(request_timeout)
     if not isinstance(history_entry, dict) or not isinstance(history_entry.get("outputs"), dict):
         raise RuntimeError("ComfyUI history 沒有有效的 outputs")
@@ -393,32 +464,33 @@ def download_outputs(history_entry, output_dir=None, node_ids=None, comfy_url=No
             continue
         if not isinstance(node_out, dict):
             continue
-        images = node_out.get("images") or []
-        if not isinstance(images, (list, tuple)):
-            continue
-        for img in images:
-            filename = img.get("filename") if isinstance(img, dict) else None
-            local_path = _safe_output_path(output_dir, filename)
-            query = urllib.parse.urlencode({
-                "filename": filename,
-                "subfolder": str(img.get("subfolder", "")),
-                "type": str(img.get("type", "output")),
-            })
-            url = f"{_comfy_endpoint('view', comfy_url)}?{query}"
-            os.makedirs(os.path.dirname(local_path), exist_ok=True)
-            partial_path = f"{local_path}.{uuid.uuid4().hex}.part"
-            try:
-                with urllib.request.urlopen(url, timeout=request_timeout) as response, open(partial_path, "wb") as output:
-                    while chunk := response.read(1024 * 1024):
-                        output.write(chunk)
-                os.replace(partial_path, local_path)
-            except Exception:
+        for key in ("images", "videos", "gifs"):
+            items = node_out.get(key) or []
+            if not isinstance(items, (list, tuple)):
+                continue
+            for item in items:
+                filename = item.get("filename") if isinstance(item, dict) else None
+                local_path = _safe_output_path(output_dir, filename)
+                query = urllib.parse.urlencode({
+                    "filename": filename,
+                    "subfolder": str(item.get("subfolder", "")),
+                    "type": str(item.get("type", "output")),
+                })
+                url = f"{_comfy_endpoint('view', comfy_url)}?{query}"
+                os.makedirs(os.path.dirname(local_path), exist_ok=True)
+                partial_path = f"{local_path}.{uuid.uuid4().hex}.part"
                 try:
-                    os.unlink(partial_path)
-                except FileNotFoundError:
-                    pass
-                raise
-            paths.append(local_path)
+                    with urllib.request.urlopen(url, timeout=request_timeout) as response, open(partial_path, "wb") as output:
+                        while chunk := response.read(1024 * 1024):
+                            output.write(chunk)
+                    os.replace(partial_path, local_path)
+                except Exception:
+                    try:
+                        os.unlink(partial_path)
+                    except FileNotFoundError:
+                        pass
+                    raise
+                paths.append(local_path)
     if not paths:
         selected = f" node_ids={sorted(selected_ids)}" if selected_ids is not None else ""
         raise RuntimeError(f"ComfyUI 沒有產生任何可下載的 output{selected}")
@@ -1008,6 +1080,514 @@ def build_layer_split(image_filename, mask_filename, layer_name):
     }, "4"
 
 
+def backend_has(backend, cap):
+    return cap in VIDEO_BACKEND_CAPS.get(backend, ())
+
+
+def require_video_backend(task, backend):
+    """task 要的能力這個 backend 若還沒接,直接說,不要改成另一個 task、也不要假裝跑過。
+    若呼叫端沒寫 --backend、而預設又還沒接、且全場只剩一個實作,就改走那個(task 契約不變)。"""
+    if backend not in VIDEO_BACKENDS:
+        raise SystemExit(f"未知 --backend {backend!r},可用: {', '.join(VIDEO_BACKENDS)}")
+    need = VIDEO_TASK_CAPS.get(task)
+    if need and not backend_has(backend, need):
+        ok = [b for b, caps in VIDEO_BACKEND_CAPS.items() if need in caps]
+        explicit = any(a == "--backend" or a.startswith("--backend=") for a in sys.argv)
+        if not explicit and len(ok) == 1:
+            print(
+                f"[backend] {task} 目前只有 {ok[0]} 實作,改走 {ok[0]}(預設 {backend} 還沒接)",
+                file=sys.stderr,
+            )
+            return ok[0]
+        raise SystemExit(
+            f"{task} 目前沒有 {backend} 實作(缺 {need})。"
+            f"可用: {', '.join(ok) or '無'}。"
+            f"不要因此改 task 名稱;接上這個 backend 之後同一個 CLI 就能跑。"
+        )
+    return backend
+
+
+def run_i2v(backend, prompt, image_filename, width, height, seed, duration,
+            last_image_filename=None, filename_prefix="img2video", negative=None):
+    """I2V 的 backend 入口。main() 不要自己挑 graph。"""
+    if backend == "wan":
+        return build_img2video_wan(
+            prompt, image_filename, negative=negative,
+            width=width, height=height, seed=seed, duration=duration,
+            filename_prefix=filename_prefix,
+        )
+    if backend == "h3":
+        return build_img2video_h3(
+            prompt, image_filename, width=width, height=height,
+            seed=seed, duration=duration, last_image_filename=last_image_filename,
+            filename_prefix=filename_prefix,
+        )
+    raise SystemExit(f"未知 --backend {backend!r}")
+
+
+def run_character_video(backend, prompt, ref_filenames, width, height, seed, duration,
+                        filename_prefix="character_video"):
+    if backend == "h3":
+        return build_character_video_h3(
+            prompt, ref_filenames, width=width, height=height,
+            seed=seed, duration=duration, filename_prefix=filename_prefix,
+        )
+    raise SystemExit(f"character_video 目前沒有 {backend} 實作")
+
+
+def run_pose_drive(backend, prompt, image_filename, motion_filename, width, height, seed,
+                   duration, control_type="pose", filename_prefix="pose_drive", negative=None):
+    if backend == "h3":
+        return build_pose_drive_h3(
+            prompt, image_filename, motion_filename, width=width, height=height,
+            seed=seed, duration=duration, control_type=control_type,
+            filename_prefix=filename_prefix,
+        )
+    if backend == "wan":
+        return build_pose_drive_wan(
+            prompt, image_filename, motion_filename, width=width, height=height,
+            seed=seed, duration=duration, control_type=control_type,
+            filename_prefix=filename_prefix, negative=negative,
+        )
+    raise SystemExit(f"pose_drive 目前沒有 {backend} 實作")
+
+
+def _require_video_duration(duration):
+    if not (VIDEO_DURATION_MIN <= duration <= VIDEO_DURATION_MAX):
+        raise SystemExit(
+            f"--duration 鎖在 {VIDEO_DURATION_MIN}~{VIDEO_DURATION_MAX} 秒,"
+            f"更長請拆成多個鏡頭(目前給的是 {duration})。"
+        )
+    return duration
+
+
+def _require_wh_pair(args):
+    if (getattr(args, "width", None) is None) ^ (getattr(args, "height", None) is None):
+        raise SystemExit("--width 跟 --height 要一起給,或兩個都不給(跟來源圖比例走)。")
+
+
+def video_canvas(image_path, width=None, height=None):
+    _require_pillow()
+    """把輸出畫布收到 VIDEO_MAX_SIDE 以內、且寬高都是 32 的倍數。
+    不給寬高就跟來源圖比例走(先縮最長邊)。16GB 實測只鎖到 768,再大要另測。"""
+    if width and height:
+        src_w, src_h = width, height
+    else:
+        with PILImage.open(image_path) as im:
+            src_w, src_h = im.size
+    long_side = max(src_w, src_h)
+    scale = min(1.0, VIDEO_MAX_SIDE / float(long_side))
+    w = max(32, int(src_w * scale) // 32 * 32)
+    h = max(32, int(src_h * scale) // 32 * 32)
+    return w, h
+
+
+def wan_frame_count(duration_sec):
+    """Wan22ImageToVideoLatent 的 length 是 4k+1(預設 49)。"""
+    target = int(round(duration_sec * VIDEO_FPS))
+    k = max(2, int(round((target - 1) / 4.0)))
+    return k * 4 + 1
+
+
+def h3_frame_count(duration_sec):
+    """MiniMaxH3ImageToVideo 的 length 要落在 17k+5(官方 Math Expression)。"""
+    x = max(5, int(round(duration_sec * VIDEO_FPS)))
+    return x + (5 - (x % 17)) % 17
+
+
+def build_img2video_wan(prompt, image_filename, negative=None, width=832, height=480,
+                        seed=None, duration=2.0, filename_prefix="img2video"):
+    seed = seed_or_random(seed)
+    length = wan_frame_count(duration)
+    negative = negative or VIDEO_NEG_DEFAULT
+    g = {
+        "37": {"class_type": "UNETLoader", "inputs": {
+            "unet_name": VIDEO_WAN_UNET, "weight_dtype": "default"}},
+        "38": {"class_type": "CLIPLoader", "inputs": {
+            "clip_name": VIDEO_WAN_CLIP, "type": "wan", "device": "default"}},
+        "39": {"class_type": "VAELoader", "inputs": {"vae_name": VIDEO_WAN_VAE}},
+        "48": {"class_type": "ModelSamplingSD3", "inputs": {"model": ["37", 0], "shift": 8.0}},
+        "6": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": ["38", 0]}},
+        "7": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": ["38", 0]}},
+        "56": {"class_type": "LoadImage", "inputs": {"image": image_filename}},
+        "55": {"class_type": "Wan22ImageToVideoLatent", "inputs": {
+            "vae": ["39", 0], "start_image": ["56", 0],
+            "width": width, "height": height, "length": length, "batch_size": 1}},
+        "3": {"class_type": "KSampler", "inputs": {
+            "model": ["48", 0], "positive": ["6", 0], "negative": ["7", 0],
+            "latent_image": ["55", 0], "seed": seed, "steps": VIDEO_STEPS, "cfg": 5.0,
+            "sampler_name": "uni_pc", "scheduler": "simple", "denoise": 1.0}},
+        "8": {"class_type": "VAEDecode", "inputs": {"samples": ["3", 0], "vae": ["39", 0]}},
+        "57": {"class_type": "CreateVideo", "inputs": {"images": ["8", 0], "fps": float(VIDEO_FPS)}},
+        "58": {"class_type": "SaveVideo", "inputs": {
+            "video": ["57", 0], "filename_prefix": filename_prefix,
+            "format": "mp4", "codec": "h264"}},
+    }
+    return g, "58"
+
+
+def build_pose_drive_wan(prompt, image_filename, motion_filename, width=768, height=768,
+                         seed=None, duration=2.0, control_type="pose",
+                         filename_prefix="pose_drive", negative=None):
+    """pose_drive 的 wan 實作:Fun Control 5B,角色靜幀當 ref_image,動作影片抽幀後走 canny/pose/depth。
+    跟 I2V 用的 TI2V 5B 是不同 UNET,task 層不要寫這個檔名。"""
+    seed = seed_or_random(seed)
+    length = wan_frame_count(duration)
+    negative = negative or VIDEO_NEG_DEFAULT
+    g = {
+        "37": {"class_type": "UNETLoader", "inputs": {
+            "unet_name": VIDEO_WAN_FUN_UNET, "weight_dtype": "default"}},
+        "38": {"class_type": "CLIPLoader", "inputs": {
+            "clip_name": VIDEO_WAN_CLIP, "type": "wan", "device": "default"}},
+        "39": {"class_type": "VAELoader", "inputs": {"vae_name": VIDEO_WAN_VAE}},
+        "48": {"class_type": "ModelSamplingSD3", "inputs": {"model": ["37", 0], "shift": 8.0}},
+        "6": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": ["38", 0]}},
+        "7": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": ["38", 0]}},
+        "56": {"class_type": "LoadImage", "inputs": {"image": image_filename}},
+        "80": {"class_type": "LoadVideo", "inputs": {"file": motion_filename}},
+        "81": {"class_type": "GetVideoComponents", "inputs": {"video": ["80", 0]}},
+        "82": build_control_preprocessor(control_type, "81"),
+        "55": {"class_type": "Wan22FunControlToVideo", "inputs": {
+            "positive": ["6", 0], "negative": ["7", 0], "vae": ["39", 0],
+            "width": width, "height": height, "length": length, "batch_size": 1,
+            "ref_image": ["56", 0], "control_video": ["82", 0]}},
+        "3": {"class_type": "KSampler", "inputs": {
+            "model": ["48", 0], "positive": ["55", 0], "negative": ["55", 1],
+            "latent_image": ["55", 2], "seed": seed, "steps": VIDEO_STEPS, "cfg": 5.0,
+            "sampler_name": "uni_pc", "scheduler": "simple", "denoise": 1.0}},
+        "8": {"class_type": "VAEDecode", "inputs": {"samples": ["3", 0], "vae": ["39", 0]}},
+        "57": {"class_type": "CreateVideo", "inputs": {"images": ["8", 0], "fps": float(VIDEO_FPS)}},
+        "58": {"class_type": "SaveVideo", "inputs": {
+            "video": ["57", 0], "filename_prefix": filename_prefix,
+            "format": "mp4", "codec": "h264"}},
+    }
+    return g, "58"
+
+
+def extract_video_frames(video_path, output_dir=None):
+    """把 mp4 抽成 png 序列,給遊戲引擎用。依賴 ComfyUI 環境裡的 av。"""
+    import av
+    output_dir = output_dir or os.path.dirname(os.path.abspath(video_path))
+    # SaveVideo 常吐 foo_00001_.mp4,直接加 _frames 會變成 foo_00001__frames。
+    stem = os.path.splitext(os.path.basename(video_path))[0].rstrip("_")
+    frame_dir = os.path.join(output_dir, stem + "_frames")
+    os.makedirs(frame_dir, exist_ok=True)
+    container = av.open(video_path)
+    paths = []
+    for i, frame in enumerate(container.decode(video=0)):
+        p = os.path.join(frame_dir, f"{i:03d}.png")
+        frame.to_image().save(p)
+        paths.append(p)
+    container.close()
+    print(f"[抽幀] {len(paths)} 張 -> {frame_dir}")
+    return paths, frame_dir
+
+
+def extract_last_frame(video_path, dest_path):
+    """clip_extend:上一鏡最後一幀當下一鏡靜幀。"""
+    import av
+    os.makedirs(os.path.dirname(os.path.abspath(dest_path)) or ".", exist_ok=True)
+    container = av.open(video_path)
+    last = None
+    for frame in container.decode(video=0):
+        last = frame
+    container.close()
+    if last is None:
+        raise RuntimeError(f"影片沒有畫面: {video_path}")
+    last.to_image().save(dest_path)
+    return dest_path
+
+
+def concat_videos(video_paths, dest_path):
+    """外部組裝短過場。解析度/fps 跟第一支對齊,必要時重編碼。不是剪接台。
+    每支都有音軌才把立體聲接上去;有任何一支無聲就整段當無聲,
+    不要一半有聲一半靜音造成時間軸錯位。"""
+    _require_pillow()
+    import av
+    if len(video_paths) < 2:
+        raise RuntimeError("video_concat 至少要兩支影片")
+    first = av.open(video_paths[0])
+    vs = first.streams.video[0]
+    width, height = vs.width, vs.height
+    fps = vs.average_rate or VIDEO_FPS
+    first.close()
+    keep_audio = True
+    for src in video_paths:
+        inp = av.open(src)
+        if not inp.streams.audio:
+            keep_audio = False
+        inp.close()
+        if not keep_audio:
+            break
+    os.makedirs(os.path.dirname(os.path.abspath(dest_path)) or ".", exist_ok=True)
+    out = av.open(dest_path, "w")
+    out_v = out.add_stream("libx264", rate=fps)
+    out_v.width = width
+    out_v.height = height
+    out_v.pix_fmt = "yuv420p"
+    # 兩個 stream 都要在寫任何 packet 之前建好,不然 mp4 mux 會 EINVAL
+    out_a = out.add_stream("aac", rate=32000) if keep_audio else None
+    for src in video_paths:
+        inp = av.open(src)
+        for frame in inp.decode(video=0):
+            img = frame.to_image()
+            if img.size != (width, height):
+                img = img.resize((width, height), PILImage.Resampling.LANCZOS)
+            of = av.VideoFrame.from_image(img)
+            for packet in out_v.encode(of):
+                out.mux(packet)
+        inp.close()
+    for packet in out_v.encode():
+        out.mux(packet)
+    if out_a:
+        resampler = av.AudioResampler(format="fltp", layout="stereo", rate=32000)
+        sample_i = 0
+        for src in video_paths:
+            ain = av.open(src)
+            frames_in = list(ain.decode(audio=0))
+            ain.close()
+            frames_in.append(None)
+            for frame in frames_in:
+                resampled = resampler.resample(frame) or []
+                if not isinstance(resampled, (list, tuple)):
+                    resampled = [resampled]
+                for rf in resampled:
+                    if rf is None:
+                        continue
+                    rf.pts = sample_i
+                    sample_i += rf.samples
+                    for packet in out_a.encode(rf) or []:
+                        out.mux(packet)
+        for packet in out_a.encode(None) or []:
+            out.mux(packet)
+    out.close()
+    note = "含立體聲" if keep_audio else "無聲(有鏡頭沒有音軌,整段不接聲音)"
+    print(f"[接片] {len(video_paths)} 支 -> {dest_path} ({note})")
+    return dest_path
+
+
+def build_img2video_h3(prompt, image_filename, width=768, height=768, seed=None, duration=2.0,
+                       last_image_filename=None, filename_prefix="img2video"):
+    seed = seed_or_random(seed)
+    length = h3_frame_count(duration)
+    g = {
+        "6": {"class_type": "UNETLoader", "inputs": {
+            "unet_name": VIDEO_H3_UNET, "weight_dtype": "default"}},
+        "13": {"class_type": "CLIPLoader", "inputs": {
+            "clip_name": VIDEO_H3_CLIP, "type": "minimax", "device": "default"}},
+        "11": {"class_type": "VAELoader", "inputs": {"vae_name": VIDEO_H3_VAE}},
+        "24": {"class_type": "VAELoader", "inputs": {"vae_name": VIDEO_H3_AUDIO_VAE}},
+        "shift": {"class_type": "MiniMaxH3SigmaShift", "inputs": {
+            "model": ["6", 0], "shift_video": 12.0, "shift_audio": 3.0}},
+        "56": {"class_type": "LoadImage", "inputs": {"image": image_filename}},
+        "104": {"class_type": "MiniMaxH3ImageToVideo", "inputs": {
+            "clip": ["13", 0], "vae": ["11", 0], "first_frame": ["56", 0],
+            "prompt": prompt, "width": width, "height": height, "length": length}},
+        "15": {"class_type": "RandomNoise", "inputs": {"noise_seed": seed}},
+        "17": {"class_type": "KSamplerSelect", "inputs": {"sampler_name": "res_multistep"}},
+        "9": {"class_type": "BasicScheduler", "inputs": {
+            "model": ["shift", 0], "scheduler": "simple", "steps": VIDEO_STEPS, "denoise": 1.0}},
+        "16": {"class_type": "BasicGuider", "inputs": {
+            "model": ["shift", 0], "conditioning": ["104", 0]}},
+        "14": {"class_type": "SamplerCustomAdvanced", "inputs": {
+            "noise": ["15", 0], "guider": ["16", 0], "sampler": ["17", 0],
+            "sigmas": ["9", 0], "latent_image": ["104", 1]}},
+        "10": {"class_type": "VAEDecode", "inputs": {"samples": ["14", 0], "vae": ["11", 0]}},
+        "23": {"class_type": "VAEDecodeAudio", "inputs": {"samples": ["14", 0], "vae": ["24", 0]}},
+        "91": {"class_type": "CreateVideo", "inputs": {
+            "images": ["10", 0], "audio": ["23", 0], "fps": float(VIDEO_FPS), "bit_depth": 8}},
+        "92": {"class_type": "SaveVideo", "inputs": {
+            "video": ["91", 0], "filename_prefix": filename_prefix,
+            "format": "mp4", "codec": "h264"}},
+    }
+    if last_image_filename:
+        g["56b"] = {"class_type": "LoadImage", "inputs": {"image": last_image_filename}}
+        g["104"]["inputs"]["last_frame"] = ["56b", 0]
+    return g, "92"
+
+
+def camera_move_prompt(camera, prompt=None):
+    """把 --camera 枚舉收成鎖死的 I2V prompt。使用者文字只補場景,運鏡句以枚舉為準。"""
+    if camera not in CAMERA_MOVES:
+        raise ValueError(f"未知 --camera: {camera}(可用: {', '.join(CAMERA_MOVES)})")
+    scene = (prompt or "").strip() or "the subject stays completely still"
+    return f"{scene}. {CAMERA_MOVES[camera]}. {CAMERA_STILL_SUFFIX}."
+
+
+def build_camera_end_still(image_path, camera, width, height, dest_path):
+    """給有 last_frame 能力的 backend 用的終點靜幀。zoom/pan 是對來源圖做幾何裁切/縮放。
+    靜幀裡沒有畫面外的像素,所以 pan/zoom_out 會看起來像 Ken Burns(裁近或縮小置中),
+    不能真的揭示原圖外面的東西。orbit 回傳 None。"""
+    _require_pillow()
+    if camera not in CAMERA_MOVES:
+        raise ValueError(f"未知 --camera: {camera}")
+    if camera in ("orbit_cw", "orbit_ccw"):
+        return None
+    src = PILImage.open(image_path).convert("RGB")
+    canvas = src.resize((width, height), PILImage.Resampling.LANCZOS)
+    if camera == "static":
+        out = canvas
+    elif camera == "zoom_in":
+        cw = max(32, int(width / CAMERA_ZOOM) // 2 * 2)
+        ch = max(32, int(height / CAMERA_ZOOM) // 2 * 2)
+        x, y = (width - cw) // 2, (height - ch) // 2
+        out = canvas.crop((x, y, x + cw, y + ch)).resize(
+            (width, height), PILImage.Resampling.LANCZOS
+        )
+    elif camera == "zoom_out":
+        sw = max(32, int(width / CAMERA_ZOOM))
+        sh = max(32, int(height / CAMERA_ZOOM))
+        small = canvas.resize((sw, sh), PILImage.Resampling.LANCZOS)
+        out = canvas.filter(ImageFilter.GaussianBlur(radius=16))
+        out.paste(small, ((width - sw) // 2, (height - sh) // 2))
+    else:
+        keep_w = max(32, int(width * CAMERA_PAN_CROP) // 2 * 2)
+        keep_h = max(32, int(height * CAMERA_PAN_CROP) // 2 * 2)
+        if camera == "pan_left":
+            box = (0, (height - keep_h) // 2, keep_w, (height - keep_h) // 2 + keep_h)
+        elif camera == "pan_right":
+            box = (width - keep_w, (height - keep_h) // 2, width, (height - keep_h) // 2 + keep_h)
+        elif camera == "pan_up":
+            box = ((width - keep_w) // 2, 0, (width - keep_w) // 2 + keep_w, keep_h)
+        elif camera == "pan_down":
+            box = ((width - keep_w) // 2, height - keep_h, (width - keep_w) // 2 + keep_w, height)
+        else:
+            raise ValueError(f"未知 --camera: {camera}")
+        out = canvas.crop(box).resize((width, height), PILImage.Resampling.LANCZOS)
+    os.makedirs(os.path.dirname(os.path.abspath(dest_path)) or ".", exist_ok=True)
+    out.save(dest_path)
+    return dest_path
+
+
+def h3_ref_prompt(prompt, n_refs):
+    """h3 backend 私有:Ref2VA 要用 1-based <Picture i>。不要把這組 tag 寫進 CLI/SKILL 契約。
+    使用者沒寫 tag 就自動補;寫了就原樣送。"""
+    if "<Picture" in prompt:
+        return prompt
+    if n_refs == 1:
+        prefix = (
+            "<Picture 1> is the character identity reference. "
+            "The video shows this same character in a new shot, not a copy of that still."
+        )
+    else:
+        tags = ", ".join(f"<Picture {i}>" for i in range(1, n_refs + 1))
+        prefix = (
+            f"{tags} are identity references of the same character. "
+            "The video shows this same character in a new shot, not a copy of those stills."
+        )
+    return f"{prefix} {prompt}"
+
+
+def h3_pose_drive_prompt(prompt):
+    """h3 backend 私有:身份走 <Picture 1>、動作走 <Video 1>。不要把這組 tag 寫進 CLI/SKILL。"""
+    if "<Picture" in prompt or "<Video" in prompt:
+        return prompt
+    prefix = (
+        "<Picture 1> is the character identity reference. "
+        "<Video 1> is the motion to follow (pose skeleton, edges, or depth — not a second person). "
+        "The output shows this same character performing that motion."
+    )
+    return f"{prefix} {prompt}"
+
+
+def build_character_video_h3(prompt, ref_filenames, width=768, height=768, seed=None, duration=2.0,
+                             filename_prefix="character_video"):
+    """character_video 的 h3 實作(Ref2VA)。task 契約見 run_character_video,不要從 main 直接叫這個。
+    ref_image_size 鎖 match;官方 max 保身份更好但每個 step 都帶參考 token,16GB 上沒實測過不開旗標。
+    """
+    if not (1 <= len(ref_filenames) <= CHARACTER_REF_MAX):
+        raise ValueError(
+            f"character_video 要 1~{CHARACTER_REF_MAX} 張參考圖,目前 {len(ref_filenames)}"
+        )
+    seed = seed_or_random(seed)
+    length = h3_frame_count(duration)
+    prompt = h3_ref_prompt(prompt, len(ref_filenames))
+    g = {
+        "6": {"class_type": "UNETLoader", "inputs": {
+            "unet_name": VIDEO_H3_REF_UNET, "weight_dtype": "default"}},
+        "13": {"class_type": "CLIPLoader", "inputs": {
+            "clip_name": VIDEO_H3_CLIP, "type": "minimax", "device": "default"}},
+        "11": {"class_type": "VAELoader", "inputs": {"vae_name": VIDEO_H3_VAE}},
+        "24": {"class_type": "VAELoader", "inputs": {"vae_name": VIDEO_H3_AUDIO_VAE}},
+        "shift": {"class_type": "MiniMaxH3SigmaShift", "inputs": {
+            "model": ["6", 0], "shift_video": 12.0, "shift_audio": 3.0}},
+        "104": {"class_type": "MiniMaxH3ReferenceToVideo", "inputs": {
+            "clip": ["13", 0], "vae": ["11", 0], "audio_vae": ["24", 0],
+            "prompt": prompt, "width": width, "height": height, "length": length,
+            "ref_image_size": "match"}},
+        "15": {"class_type": "RandomNoise", "inputs": {"noise_seed": seed}},
+        "17": {"class_type": "KSamplerSelect", "inputs": {"sampler_name": "res_multistep"}},
+        "9": {"class_type": "BasicScheduler", "inputs": {
+            "model": ["shift", 0], "scheduler": "simple", "steps": VIDEO_STEPS, "denoise": 1.0}},
+        "16": {"class_type": "BasicGuider", "inputs": {
+            "model": ["shift", 0], "conditioning": ["104", 0]}},
+        "14": {"class_type": "SamplerCustomAdvanced", "inputs": {
+            "noise": ["15", 0], "guider": ["16", 0], "sampler": ["17", 0],
+            "sigmas": ["9", 0], "latent_image": ["104", 1]}},
+        "10": {"class_type": "VAEDecode", "inputs": {"samples": ["14", 0], "vae": ["11", 0]}},
+        "23": {"class_type": "VAEDecodeAudio", "inputs": {"samples": ["14", 0], "vae": ["24", 0]}},
+        "91": {"class_type": "CreateVideo", "inputs": {
+            "images": ["10", 0], "audio": ["23", 0], "fps": float(VIDEO_FPS), "bit_depth": 8}},
+        "92": {"class_type": "SaveVideo", "inputs": {
+            "video": ["91", 0], "filename_prefix": filename_prefix,
+            "format": "mp4", "codec": "h264"}},
+    }
+    for i, fn in enumerate(ref_filenames):
+        nid = f"56r{i}"
+        g[nid] = {"class_type": "LoadImage", "inputs": {"image": fn}}
+        g["104"]["inputs"][f"ref_images.ref_image_{i}"] = [nid, 0]
+    return g, "92"
+
+
+def build_pose_drive_h3(prompt, image_filename, motion_filename, width=768, height=768,
+                        seed=None, duration=2.0, control_type="pose",
+                        filename_prefix="pose_drive"):
+    """pose_drive 的 h3 實作:同一顆 Ref2VA,角色靜幀當 ref_image_0,動作片抽幀後走 pose/canny/depth 當 ref_video_0。
+    ComfyUI 0.34.0 沒有 MiniMaxH3FunControlNetApply(PR #15860 還沒進),所以不是真正的 ControlNet Union;
+    預處理動作片是為了不要把動作片裡那個人的臉漏進輸出。身份鎖比 wan Fun Control 穩,但仍不是像素鎖臉。
+    負向詞這顆沒入口,呼叫端給了也忽略。"""
+    seed = seed_or_random(seed)
+    length = h3_frame_count(duration)
+    prompt = h3_pose_drive_prompt(prompt)
+    g = {
+        "6": {"class_type": "UNETLoader", "inputs": {
+            "unet_name": VIDEO_H3_REF_UNET, "weight_dtype": "default"}},
+        "13": {"class_type": "CLIPLoader", "inputs": {
+            "clip_name": VIDEO_H3_CLIP, "type": "minimax", "device": "default"}},
+        "11": {"class_type": "VAELoader", "inputs": {"vae_name": VIDEO_H3_VAE}},
+        "24": {"class_type": "VAELoader", "inputs": {"vae_name": VIDEO_H3_AUDIO_VAE}},
+        "shift": {"class_type": "MiniMaxH3SigmaShift", "inputs": {
+            "model": ["6", 0], "shift_video": 12.0, "shift_audio": 3.0}},
+        "56": {"class_type": "LoadImage", "inputs": {"image": image_filename}},
+        "80": {"class_type": "LoadVideo", "inputs": {"file": motion_filename}},
+        "81": {"class_type": "GetVideoComponents", "inputs": {"video": ["80", 0]}},
+        "82": build_control_preprocessor(control_type, "81"),
+        "104": {"class_type": "MiniMaxH3ReferenceToVideo", "inputs": {
+            "clip": ["13", 0], "vae": ["11", 0], "audio_vae": ["24", 0],
+            "prompt": prompt, "width": width, "height": height, "length": length,
+            "ref_image_size": "match",
+            "ref_images.ref_image_0": ["56", 0],
+            "ref_videos.ref_video_0": ["82", 0]}},
+        "15": {"class_type": "RandomNoise", "inputs": {"noise_seed": seed}},
+        "17": {"class_type": "KSamplerSelect", "inputs": {"sampler_name": "res_multistep"}},
+        "9": {"class_type": "BasicScheduler", "inputs": {
+            "model": ["shift", 0], "scheduler": "simple", "steps": VIDEO_STEPS, "denoise": 1.0}},
+        "16": {"class_type": "BasicGuider", "inputs": {
+            "model": ["shift", 0], "conditioning": ["104", 0]}},
+        "14": {"class_type": "SamplerCustomAdvanced", "inputs": {
+            "noise": ["15", 0], "guider": ["16", 0], "sampler": ["17", 0],
+            "sigmas": ["9", 0], "latent_image": ["104", 1]}},
+        "10": {"class_type": "VAEDecode", "inputs": {"samples": ["14", 0], "vae": ["11", 0]}},
+        "23": {"class_type": "VAEDecodeAudio", "inputs": {"samples": ["14", 0], "vae": ["24", 0]}},
+        "91": {"class_type": "CreateVideo", "inputs": {
+            "images": ["10", 0], "audio": ["23", 0], "fps": float(VIDEO_FPS), "bit_depth": 8}},
+        "92": {"class_type": "SaveVideo", "inputs": {
+            "video": ["91", 0], "filename_prefix": filename_prefix,
+            "format": "mp4", "codec": "h264"}},
+    }
+    return g, "92"
+
+
 def attach_bg_removal(prompt, image_node_id):
     """在既有 graph 後面接上去背,回傳新增節點後的 SaveImage 節點 id(RGBA)。
 
@@ -1043,12 +1623,14 @@ def _add_runtime_arguments(parser):
     )
     parser.add_argument(
         "--timeout", type=float, default=argparse.SUPPRESS,
-        help=f"prompt 送達後輪詢生成結果的秒數上限，預設 {DEFAULT_TIMEOUT:g}。",
+        help=(f"prompt 送達後輪詢生成結果的秒數上限；圖片預設 {DEFAULT_TIMEOUT:g}，"
+              f"影片預設 {DEFAULT_VIDEO_TIMEOUT:g}。"),
     )
 
 
 def _validate_cli_args(args):
-    args.timeout = getattr(args, "timeout", DEFAULT_TIMEOUT)
+    default_timeout = DEFAULT_VIDEO_TIMEOUT if args.task in VIDEO_TASK_CAPS else DEFAULT_TIMEOUT
+    args.timeout = getattr(args, "timeout", default_timeout)
     validate_timeout(args.timeout)
     if args.task in {"concept", "icon_asset", "character_action", "pose_only", "style_lock"}:
         validate_batch(args.batch)
@@ -1068,6 +1650,8 @@ def _validate_cli_args(args):
     if args.task == "guided_inpaint":
         validate_unit_interval(args.control_strength, "control_strength")
         validate_unit_interval(args.appearance_weight, "appearance_weight")
+    if args.task in VIDEO_TASK_CAPS and args.width is not None and args.height is not None:
+        validate_dimensions(args.width, args.height)
 
 
 def _validate_task_capabilities(args):
@@ -1218,6 +1802,135 @@ def main(argv=None):
     p_layer.add_argument("--mask", required=True, help="這一層的遮罩圖路徑(同 inpaint 慣例,需帶 alpha 通道,要保留進這一層的區域 alpha=0)")
     p_layer.add_argument("--layer-name", required=True, help="這一層的名稱,用來組輸出檔名前綴(例如 border、center_hub)")
 
+    video_common = argparse.ArgumentParser(add_help=False, parents=[common])
+    video_common.add_argument(
+        "--backend", choices=list(VIDEO_BACKENDS), default=DEFAULT_VIDEO_BACKEND,
+        help="影片實作後端。不給用這台機器的預設。某個 task 若還沒接這個 backend,會直接報錯,不要改 task 名。",
+    )
+
+    p_vid = sub.add_parser(
+        "img2video",
+        help="讓已過關的靜幀動起來(短片)。跟圖片產線的 --style / ControlNet / IPAdapter 不相容。",
+        parents=[video_common],
+    )
+    p_vid.add_argument("--prompt", required=True, help="這段要怎麼動(鏡頭鎖定/運鏡/動作),英文較穩")
+    p_vid.add_argument("--image", required=True, help="已過關的靜幀路徑,不要用文生影片賭第一幀")
+    p_vid.add_argument("--duration", type=float, default=2.0,
+                        help="秒數,鎖在 2~6(預設 2)。更長要拆鏡,不要一次生整部片")
+    p_vid.add_argument("--width", type=int, help="輸出寬,不給就跟來源圖比例走,最長邊上限 768")
+    p_vid.add_argument("--height", type=int, help="輸出高,不給就跟來源圖比例走,最長邊上限 768")
+    p_vid.add_argument("--negative", help="負向詞;用不到的 backend 會忽略")
+    p_vid.add_argument("--seed", type=int)
+    p_vid.add_argument("--extract-frames", action="store_true", help="順便抽 png 序列到 <mp4 檔名>_frames/")
+
+    p_fx = sub.add_parser(
+        "fx_loop",
+        help="鏡頭鎖定的循環特效/環境元素(火、法陣、旗幟)。要能接首尾幀的 backend。預設抽幀交引擎。",
+        parents=[video_common],
+    )
+    p_fx.add_argument("--prompt", required=True, help="循環怎麼動,會自動補上 seamless loop 約束")
+    p_fx.add_argument("--image", required=True, help="特效/元件的靜幀")
+    p_fx.add_argument("--duration", type=float, default=2.0, help="秒數,鎖在 2~6,預設 2")
+    p_fx.add_argument("--width", type=int)
+    p_fx.add_argument("--height", type=int)
+    p_fx.add_argument("--seed", type=int)
+    p_fx.add_argument("--no-extract-frames", dest="extract_frames", action="store_false",
+                      help="不要抽 png 序列(預設會抽)")
+    p_fx.set_defaults(extract_frames=True)
+
+    p_tr = sub.add_parser(
+        "transition",
+        help="內容轉場:已知 A、已知 B,模型只負責中間。要能接首尾幀的 backend。傳統硬切/疊化不要用這個。",
+        parents=[video_common],
+    )
+    p_tr.add_argument("--prompt", required=True, help="中間發生什麼")
+    p_tr.add_argument("--start", required=True, help="起始靜幀")
+    p_tr.add_argument("--end", required=True, help="結束靜幀")
+    p_tr.add_argument("--duration", type=float, default=2.0)
+    p_tr.add_argument("--width", type=int)
+    p_tr.add_argument("--height", type=int)
+    p_tr.add_argument("--seed", type=int)
+    p_tr.add_argument("--extract-frames", action="store_true")
+
+    p_ext = sub.add_parser(
+        "clip_extend",
+        help="同一場下一鏡:吃上一支 mp4 的最後一幀(或一張靜幀)再往後生成。長片連戲用這個,不要拉長單次 duration。",
+        parents=[video_common],
+    )
+    p_ext.add_argument("--prompt", required=True, help="接下來發生什麼")
+    p_ext.add_argument("--video", help="上一支 mp4,會抽最後一幀當本鏡靜幀")
+    p_ext.add_argument("--image", help="若已有上一鏡尾幀靜幀,跟 --video 二選一")
+    p_ext.add_argument("--duration", type=float, default=2.0)
+    p_ext.add_argument("--width", type=int)
+    p_ext.add_argument("--height", type=int)
+    p_ext.add_argument("--negative", help="負向詞;用不到的 backend 會忽略")
+    p_ext.add_argument("--seed", type=int)
+    p_ext.add_argument("--extract-frames", action="store_true")
+
+    p_cat = sub.add_parser(
+        "video_concat",
+        help="把多支已生成的短片接成一支(外部組裝,不是剪接台)。解析度跟第一支對齊。每支都有音軌才接立體聲。",
+        parents=[common],
+    )
+    p_cat.add_argument("--video", action="append", required=True, help="可重複給多次,順序就是播放順序")
+    p_cat.add_argument("--name", default="video_concat", help="輸出檔名前綴,預設 video_concat")
+
+    p_cam = sub.add_parser(
+        "camera_move",
+        help="攝影組運鏡:主體盡量靜止,只有攝影機在動。--camera 是鎖死枚舉。",
+        parents=[video_common],
+    )
+    p_cam.add_argument("--image", required=True, help="已過關的靜幀")
+    p_cam.add_argument(
+        "--camera", required=True, choices=list(CAMERA_MOVES),
+        help="運鏡:static/pan_up/pan_down/pan_left/pan_right/zoom_in/zoom_out/orbit_cw/orbit_ccw",
+    )
+    p_cam.add_argument(
+        "--prompt", default="",
+        help="選填場景描述。不給就當主體完全靜止;運鏡以 --camera 為準,不要在這裡另寫一種運鏡",
+    )
+    p_cam.add_argument("--duration", type=float, default=2.0)
+    p_cam.add_argument("--width", type=int)
+    p_cam.add_argument("--height", type=int)
+    p_cam.add_argument("--negative", help="負向詞;用不到的 backend 會忽略")
+    p_cam.add_argument("--seed", type=int)
+    p_cam.add_argument("--extract-frames", action="store_true")
+
+    p_cv = sub.add_parser(
+        "character_video",
+        help="角色參考生影片:參考圖鎖身份,第一幀不必是那張定稿圖。對應靜態 style_lock,不是 img2video。",
+        parents=[video_common],
+    )
+    p_cv.add_argument("--prompt", required=True, help="新鏡頭裡這個角色在做什麼(英文較穩)")
+    p_cv.add_argument(
+        "--character-ref", action="append", required=True,
+        help="角色參考圖,可重複給最多 9 張(多角度/特寫較穩)。第一張同時決定預設畫布比例",
+    )
+    p_cv.add_argument("--duration", type=float, default=2.0, help="秒數,鎖在 2~6,預設 2")
+    p_cv.add_argument("--width", type=int)
+    p_cv.add_argument("--height", type=int)
+    p_cv.add_argument("--seed", type=int)
+    p_cv.add_argument("--extract-frames", action="store_true")
+
+    p_pd = sub.add_parser(
+        "pose_drive",
+        help="表演驅動:角色靜幀 + 動作參考影片。對應靜態 character_action,姿勢來源是影片不是一張 pose 圖。",
+        parents=[video_common],
+    )
+    p_pd.add_argument("--prompt", required=True, help="這段鏡頭裡角色在做什麼(英文較穩)")
+    p_pd.add_argument("--image", required=True, help="角色參考靜幀(這是誰)")
+    p_pd.add_argument("--motion-ref", required=True, help="動作參考影片(這段怎麼動)")
+    p_pd.add_argument(
+        "--control-type", choices=["canny", "pose", "depth"], default="pose",
+        help="動作怎麼抽:pose=骨架(預設,表演/肢體),canny=邊緣,depth=前後景",
+    )
+    p_pd.add_argument("--duration", type=float, default=2.0, help="秒數,鎖在 2~6,預設 2。長過參考影片的部分控制會變弱")
+    p_pd.add_argument("--width", type=int)
+    p_pd.add_argument("--height", type=int)
+    p_pd.add_argument("--negative", help="負向詞;用不到的 backend 會忽略")
+    p_pd.add_argument("--seed", type=int)
+    p_pd.add_argument("--extract-frames", action="store_true")
+
     args = ap.parse_args(argv)
     try:
         _validate_cli_args(args)
@@ -1318,6 +2031,120 @@ def main(argv=None):
         img_fn = upload(args.image)
         mask_fn = upload(args.mask)
         prompt, out_id = build_layer_split(img_fn, mask_fn, args.layer_name)
+    elif args.task == "img2video":
+        backend = require_video_backend(args.task, args.backend)
+        duration = _require_video_duration(args.duration)
+        _require_wh_pair(args)
+        width, height = video_canvas(args.image, args.width, args.height)
+        img_fn = upload(args.image)
+        prompt, out_id = run_i2v(
+            backend, args.prompt, img_fn, width, height, args.seed, duration,
+            filename_prefix="img2video", negative=args.negative,
+        )
+    elif args.task == "fx_loop":
+        backend = require_video_backend(args.task, args.backend)
+        duration = _require_video_duration(args.duration)
+        _require_wh_pair(args)
+        width, height = video_canvas(args.image, args.width, args.height)
+        img_fn = upload(args.image)
+        loop_prompt = args.prompt if "loop" in args.prompt.lower() else f"{args.prompt}, {VIDEO_LOOP_SUFFIX}"
+        prompt, out_id = run_i2v(
+            backend, loop_prompt, img_fn, width, height, args.seed, duration,
+            last_image_filename=img_fn, filename_prefix="fx_loop",
+        )
+    elif args.task == "transition":
+        backend = require_video_backend(args.task, args.backend)
+        duration = _require_video_duration(args.duration)
+        if (args.width is None) ^ (args.height is None):
+            raise SystemExit("--width 跟 --height 要一起給,或兩個都不給。")
+        width, height = video_canvas(args.start, args.width, args.height)
+        start_fn = upload(args.start)
+        end_fn = upload(args.end)
+        prompt, out_id = run_i2v(
+            backend, args.prompt, start_fn, width, height, args.seed, duration,
+            last_image_filename=end_fn, filename_prefix="transition",
+        )
+    elif args.task == "clip_extend":
+        if bool(args.video) == bool(args.image):
+            raise SystemExit("clip_extend 要 --video 上一支 mp4,或 --image 上一鏡尾幀,只能給一個。")
+        backend = require_video_backend(args.task, args.backend)
+        duration = _require_video_duration(args.duration)
+        _require_wh_pair(args)
+        still = args.image
+        if args.video:
+            out_dir = getattr(args, "output_dir", None) or OUTPUT_DIR
+            os.makedirs(out_dir, exist_ok=True)
+            still = os.path.join(out_dir, "_clip_extend_last.png")
+            extract_last_frame(args.video, still)
+            print(f"[連戲] 上一鏡尾幀 -> {still}")
+        width, height = video_canvas(still, args.width, args.height)
+        img_fn = upload(still)
+        prompt, out_id = run_i2v(
+            backend, args.prompt, img_fn, width, height, args.seed, duration,
+            filename_prefix="clip_extend", negative=args.negative,
+        )
+    elif args.task == "video_concat":
+        out_dir = getattr(args, "output_dir", None) or OUTPUT_DIR
+        os.makedirs(out_dir, exist_ok=True)
+        dest = os.path.join(out_dir, f"{args.name}.mp4")
+        concat_videos(args.video, dest)
+        print(f"[完成] {dest}")
+        return
+    elif args.task == "character_video":
+        backend = require_video_backend(args.task, args.backend)
+        refs = args.character_ref
+        if len(refs) > CHARACTER_REF_MAX:
+            raise SystemExit(
+                f"--character-ref 最多 {CHARACTER_REF_MAX} 張,目前 {len(refs)}"
+            )
+        duration = _require_video_duration(args.duration)
+        _require_wh_pair(args)
+        width, height = video_canvas(refs[0], args.width, args.height)
+        ref_fns = [upload(p) for p in refs]
+        prompt, out_id = run_character_video(
+            backend, args.prompt, ref_fns, width, height, args.seed, duration,
+            filename_prefix="character_video",
+        )
+    elif args.task == "camera_move":
+        backend = require_video_backend(args.task, args.backend)
+        duration = _require_video_duration(args.duration)
+        _require_wh_pair(args)
+        width, height = video_canvas(args.image, args.width, args.height)
+        img_fn = upload(args.image)
+        cam_prompt = camera_move_prompt(args.camera, args.prompt)
+        last_fn = None
+        if backend_has(backend, "last_frame"):
+            if args.camera == "static":
+                last_fn = img_fn
+            elif args.camera not in ("orbit_cw", "orbit_ccw"):
+                out_dir = getattr(args, "output_dir", None) or OUTPUT_DIR
+                os.makedirs(out_dir, exist_ok=True)
+                end_path = os.path.join(out_dir, "_camera_end.png")
+                build_camera_end_still(args.image, args.camera, width, height, end_path)
+                print(f"[運鏡] 終點靜幀 -> {end_path}")
+                last_fn = upload(end_path)
+        prompt, out_id = run_i2v(
+            backend, cam_prompt, img_fn, width, height, args.seed, duration,
+            last_image_filename=last_fn, filename_prefix="camera_move",
+            negative=args.negative,
+        )
+    elif args.task == "pose_drive":
+        backend = require_video_backend(args.task, args.backend)
+        duration = _require_video_duration(args.duration)
+        _require_wh_pair(args)
+        print(
+            "[提醒] pose_drive 的角色靜幀姿勢/朝向要接近動作片第一幀;"
+            "對不上(例如站姿去套走路)會雙人/重影。",
+            file=sys.stderr,
+        )
+        width, height = video_canvas(args.image, args.width, args.height)
+        img_fn = upload(args.image)
+        motion_fn = upload(args.motion_ref)
+        prompt, out_id = run_pose_drive(
+            backend, args.prompt, img_fn, motion_fn, width, height, args.seed, duration,
+            control_type=args.control_type, filename_prefix="pose_drive",
+            negative=args.negative,
+        )
     else:
         raise SystemExit(f"未知 task: {args.task}")
 
@@ -1336,6 +2163,8 @@ def main(argv=None):
     )
     for p in paths:
         print(f"[完成] {p}")
+        if getattr(args, "extract_frames", False) and p.lower().endswith(".mp4"):
+            extract_video_frames(p, getattr(args, "output_dir", None))
 
 
 if __name__ == "__main__":
