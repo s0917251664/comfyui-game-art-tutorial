@@ -110,6 +110,14 @@ class GenerateTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.generate.build_inpaint("x", "image.png", "mask.png", denoise=-0.1)
 
+    def test_generate_facade_reexports_moved_symbols(self):
+        self.assertTrue(callable(self.generate.build_concept))
+        self.assertTrue(callable(self.generate.build_control_preprocessor))
+        self.assertTrue(callable(self.generate.build_layer_split))
+        self.assertEqual("blurry, low quality, extra fingers, deformed, watermark", self.generate.DEFAULT_NEGATIVE)
+        self.assertIn("wan", self.generate.VIDEO_BACKEND_SPECS)
+        self.assertIn("static", self.generate.CAMERA_MOVES)
+
     def test_sd15_controlnet_and_ipadapter_features_fail_fast(self):
         self.generate.DEVICE["tier"] = "sd15"
         with self.assertRaisesRegex(RuntimeError, "sd15"):
@@ -577,6 +585,30 @@ class GenerateTests(unittest.TestCase):
             self.assertTrue(config["backends"]["h3"]["available"])
             self.assertTrue(config["backends"]["wan"]["available"])
             self.assertIn("i2v", config["backends"]["h3"]["capabilities"])
+
+    def test_detector_catalog_loads_without_generate_py(self):
+        repo_root = os.path.dirname(os.path.dirname(__file__))
+        with tempfile.TemporaryDirectory() as tmp:
+            package_dir = os.path.join(tmp, "comfyui_pipeline")
+            os.makedirs(package_dir, exist_ok=True)
+            with open(os.path.join(repo_root, "tools_src", "comfyui_pipeline", "__init__.py"), encoding="utf-8") as source, \
+                    open(os.path.join(package_dir, "__init__.py"), "w", encoding="utf-8") as target:
+                target.write(source.read())
+            with open(os.path.join(repo_root, "tools_src", "comfyui_pipeline", "video_catalog.py"), encoding="utf-8") as source, \
+                    open(os.path.join(package_dir, "video_catalog.py"), "w", encoding="utf-8") as target:
+                target.write(source.read())
+            saved_modules = {
+                name: sys.modules.pop(name)
+                for name in list(sys.modules)
+                if name == "comfyui_pipeline" or name.startswith("comfyui_pipeline.")
+            }
+            try:
+                with mock.patch.object(sys, "path", [tmp] + list(sys.path)):
+                    catalog = self.detector._load_generate_catalog()
+            finally:
+                sys.modules.update(saved_modules)
+        self.assertIn("wan", catalog.VIDEO_BACKEND_SPECS)
+        self.assertFalse(os.path.exists(os.path.join(tmp, "generate.py")))
 
     def test_concat_rejects_mismatched_fps_before_creating_output(self):
         def fake_open(path, mode="r"):

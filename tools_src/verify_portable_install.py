@@ -21,10 +21,9 @@ from urllib.parse import urlparse
 SYNC_SOURCE_FILES = (
     ("generate.py", Path("tools_src/generate.py"), Path("tools/generate.py")),
     ("detect_device.py", Path("tools_src/detect_device.py"), Path("tools/detect_device.py")),
-)
-
-SYNC_SOURCE_FILES_VIDEO = (
-    ("detect_video_capabilities.py", Path("tools_src/detect_video_capabilities.py"), Path("tools/detect_video_capabilities.py")),
+    ("comfyui_pipeline/__init__.py", Path("tools_src/comfyui_pipeline/__init__.py"), Path("tools/comfyui_pipeline/__init__.py")),
+    ("comfyui_pipeline/image_graphs.py", Path("tools_src/comfyui_pipeline/image_graphs.py"), Path("tools/comfyui_pipeline/image_graphs.py")),
+    ("comfyui_pipeline/video_catalog.py", Path("tools_src/comfyui_pipeline/video_catalog.py"), Path("tools/comfyui_pipeline/video_catalog.py")),
 )
 
 
@@ -179,21 +178,19 @@ def _check_source_sync(repo_root, comfyui_path, results, require_video=False):
             )
 
     if require_video:
-        for label, repo_relative, deployed_relative in SYNC_SOURCE_FILES_VIDEO:
-            repo_file = repo_root / repo_relative
-            deployed_file = comfyui_path / deployed_relative
-            if not repo_file.is_file():
-                results.append(("fail", f"{label} source sync", "repo source 不存在"))
-                continue
-            if not deployed_file.is_file():
-                results.append(("fail", f"{label} source sync", "部署副本不存在"))
-                continue
-            if _normalize_source_text(repo_file) == _normalize_source_text(deployed_file):
-                results.append(("pass", f"{label} source sync", "repo 與部署副本一致"))
-            else:
-                results.append(
-                    ("fail", f"{label} source sync", "repo 與部署副本內容不同；請重新同步部署副本")
-                )
+        repo_file = repo_root / "tools_src" / "detect_video_capabilities.py"
+        deployed_file = comfyui_path / "tools" / "detect_video_capabilities.py"
+        label = "detect_video_capabilities.py"
+        if not repo_file.is_file():
+            results.append(("fail", f"{label} source sync", "repo source 不存在"))
+        elif not deployed_file.is_file():
+            results.append(("fail", f"{label} source sync", "部署副本不存在"))
+        elif _normalize_source_text(repo_file) == _normalize_source_text(deployed_file):
+            results.append(("pass", f"{label} source sync", "repo 與部署副本一致"))
+        else:
+            results.append(
+                ("fail", f"{label} source sync", "repo 與部署副本內容不同；請重新同步部署副本")
+            )
 
 
 def _resolve_local_config_paths(local_config, config_dir):

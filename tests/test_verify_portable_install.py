@@ -13,6 +13,7 @@ VERIFY_PATH = ROOT / "tools_src" / "verify_portable_install.py"
 GENERATE_PATH = ROOT / "tools_src" / "generate.py"
 DETECT_DEVICE_PATH = ROOT / "tools_src" / "detect_device.py"
 DETECT_VIDEO_PATH = ROOT / "tools_src" / "detect_video_capabilities.py"
+PIPELINE_PKG = ROOT / "tools_src" / "comfyui_pipeline"
 
 
 def load_module(path, name):
@@ -33,6 +34,9 @@ class VerifyPortableInstallTests(unittest.TestCase):
         cls.generate_bytes = GENERATE_PATH.read_bytes()
         cls.detect_device_bytes = DETECT_DEVICE_PATH.read_bytes()
         cls.detect_video_bytes = DETECT_VIDEO_PATH.read_bytes()
+        cls.pipeline_init_bytes = (PIPELINE_PKG / "__init__.py").read_bytes()
+        cls.pipeline_image_bytes = (PIPELINE_PKG / "image_graphs.py").read_bytes()
+        cls.pipeline_video_bytes = (PIPELINE_PKG / "video_catalog.py").read_bytes()
 
     def _write_json(self, path, payload):
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -54,6 +58,9 @@ class VerifyPortableInstallTests(unittest.TestCase):
 
         self._copy_source(tools_dir / "generate.py", self.generate_bytes)
         self._copy_source(tools_dir / "detect_device.py", self.detect_device_bytes)
+        self._copy_source(tools_dir / "comfyui_pipeline" / "__init__.py", self.pipeline_init_bytes)
+        self._copy_source(tools_dir / "comfyui_pipeline" / "image_graphs.py", self.pipeline_image_bytes)
+        self._copy_source(tools_dir / "comfyui_pipeline" / "video_catalog.py", self.pipeline_video_bytes)
         if include_video:
             self._copy_source(tools_dir / "detect_video_capabilities.py", self.detect_video_bytes)
 
@@ -191,9 +198,14 @@ class VerifyPortableInstallTests(unittest.TestCase):
             _, tools_dir, _, _, config_path = self._base_install(temp_root, live)
             for name, source in (
                     ("generate.py", self.generate_bytes),
-                    ("detect_device.py", self.detect_device_bytes)):
+                    ("detect_device.py", self.detect_device_bytes),
+                    ("comfyui_pipeline/__init__.py", self.pipeline_init_bytes),
+                    ("comfyui_pipeline/image_graphs.py", self.pipeline_image_bytes),
+                    ("comfyui_pipeline/video_catalog.py", self.pipeline_video_bytes)):
                 text = source.decode("utf-8").replace("\r\n", "\n").replace("\n", "\r\n")
-                (tools_dir / name).write_text(text, encoding="utf-8", newline="")
+                target = tools_dir / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(text, encoding="utf-8", newline="")
             out = io.StringIO()
             with contextlib.redirect_stdout(out):
                 code = self.verify.main(

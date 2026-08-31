@@ -41,16 +41,13 @@ MODEL_DIRECTORIES = {
 
 def _load_generate_catalog():
     """Load the canonical implementation catalog beside this script."""
-    generate_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "generate.py")
-    if not os.path.isfile(generate_path):
-        raise RuntimeError(f"找不到同目錄的 generate.py，無法取得影片 graph catalog: {generate_path}")
-    module_name = "_video_generate_catalog"
-    module_spec = importlib.util.spec_from_file_location(module_name, generate_path)
-    if module_spec is None or module_spec.loader is None:
-        raise RuntimeError(f"無法載入影片 graph catalog: {generate_path}")
-    module = importlib.util.module_from_spec(module_spec)
-    module_spec.loader.exec_module(module)
-    return module
+    try:
+        from comfyui_pipeline import video_catalog as catalog
+    except ImportError as exc:
+        raise RuntimeError(
+            "找不到 comfyui_pipeline.video_catalog；無法取得影片 graph catalog。"
+        ) from exc
+    return catalog
 
 
 def _default_python(comfyui_path):

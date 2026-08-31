@@ -56,6 +56,10 @@
 
 ## 進階(選配):LoRA 訓練工具
 
+### 產線模組部署補充
+
+`tools_src/generate.py` 是維持既有 CLI/API 相容性的 facade；圖片 graph 與影片 catalog 位於 `tools_src/comfyui_pipeline/`。部署時必須把整個資料夾同步到 `<ComfyUI 安裝路徑>/tools/comfyui_pipeline/`，不能只複製 `generate.py`。離線部署驗證會同時核對這三個模組檔案，確保換設備後仍由該機器自己的 `device_config.json` 動態選擇圖片模型與解析度。
+
 **只有使用者明確要準備訓練角色/風格 LoRA 時才裝,不是每台機器的基本配備。** 跟 ComfyUI 完全獨立的另一套工具(`kohya_ss`),裝法跟已知的編碼/踩坑細節見 `reference/lora-training.md`。
 
 ## 進階(選配):風格底模(`--style`)
