@@ -31,6 +31,7 @@ AI agent 會依照 [`skills/comfyui-art-gen/SKILL.md`](skills/comfyui-art-gen/SK
 - 放大精修（`upscale`）：放大圖片並補充細節
 - 批次生成（batch）與固定 seed，方便探索與重複產出
 - 去背（`--remove-bg`），輸出透明背景素材
+- 影片生成：讓靜圖動起來、只運鏡不動主體、角色動作影片、動作驅動、循環特效、轉場、接續前一鏡、多支短片拼接（需另外偵測機器影片能力，見下方「產影片任務選擇」）
 
 ## 快速開始
 
@@ -119,6 +120,27 @@ python tools_src/verify_portable_install.py --repo-root . --config local_config.
 
 目前 SD1.5 tier 只可使用不依賴 SDXL add-on 的基礎路徑（例如 `concept`、`refine`、一般 `inpaint`、`upscale`，以及不帶額外參考圖的 `icon_asset`）。`pose_only`、`style_lock`、`character_action`，以及使用 `structure-ref`/`appearance-ref` 或 ControlNet/IPAdapter 的 `icon_asset`、`guided_inpaint` 仍需要 SDXL 家族模型；腳本會在上傳或排隊前拒絕這些組合。`--style` 的三個風格 checkpoint 也只支援 SDXL tier。這不是 SD1.5 模型已完成相容性驗證；若要擴充，必須另找對應的 SD1.5 ControlNet/IPAdapter/CLIP Vision 並完成實機驗證。
 
+## 產影片任務選擇
+
+影片 task 需要先執行 `tools_src/detect_video_capabilities.py`，產生這台機器的 `video_capabilities.json`，`generate.py` 才知道要用 H3 還是 Wan backend、有沒有裝對應模型；沒有這份設定或機器裝不起對應 backend 時會在上傳前直接拒絕，不會猜測或降級硬跑。
+
+| 使用情境 | task（任務） | 必要輸入 |
+|---|---|---|
+| 讓一張靜圖動起來 | `img2video` | prompt、來源圖 |
+| 只運鏡，主體保持不動 | `camera_move` | 來源圖、`--camera` 運鏡枚舉 |
+| 角色去做別的動作／換場景（第一幀不必是定稿圖） | `character_video` | prompt、角色參考圖（1~9 張） |
+| 用一段動作／影片驅動角色表演 | `pose_drive` | prompt、角色靜幀、動作參考影片 |
+| 循環特效（火、法陣、旗幟這類進引擎的素材） | `fx_loop` | prompt、來源圖 |
+| 兩個畫面之間的轉場 | `transition` | prompt、起始幀、結束幀 |
+| 接續前一鏡繼續 | `clip_extend` | prompt，加上前一段影片或最後一幀圖片（擇一） |
+| 把多支短片接成一支 | `video_concat` | 多個影片檔（可重複 `--video`），純本機處理不需要 ComfyUI |
+
+```bash
+<python_exe> <generate_script> img2video --prompt "camera locked, idle motion" --image still.png --backend h3 --duration 2 --comfy-url "<comfyui_url>" --timeout 1800 --output-dir "<repo>/output"
+```
+
+需要選擇哪個 task、鏡頭如何串接、H3/Wan 各自能力邊界時，請看 [`skills/comfyui-video-gen/SKILL.md`](skills/comfyui-video-gen/SKILL.md) 與 [影片能力與 backend](skills/comfyui-video-gen/reference/backends.md)。H3、Wan 兩個 backend 支援的能力不同（例如 last_frame、character_ref、audio 只有 H3 有），也都是重量級模型，目前沒有針對低 VRAM 機器的輕量版本；機器裝不起時如實告知，不要硬送。
+
 ### 本機檢查與測試
 
 不需要 GPU 或 ComfyUI 服務即可在 repository 根目錄執行：
@@ -174,6 +196,7 @@ python -m unittest discover -s tests -p 'test_*.py' -v
 
 - [完整教學](教學.md)：從名詞、安裝、模型到各種產圖情境
 - [產圖流程](skills/comfyui-art-gen/SKILL.md)：決策順序(任務覆蓋／機器 tier 撐不撐得起／MCP／新增任務)、如何把需求分類並呼叫正確 task
+- [產影片流程](skills/comfyui-video-gen/SKILL.md)：任務判斷、鏡頭串接、H3/Wan backend 選擇
 - [安裝流程](skills/comfyui-install/SKILL.md)：新機器的環境與模型準備
 - [模型清單](skills/comfyui-install/reference/models.md)：模型基準與硬碟空間估算（可重現版本以 manifest 為準）
 - [影片能力與 backend](skills/comfyui-video-gen/reference/backends.md)：machine-specific capability config、task/backend 邊界與 fail-fast 規則
