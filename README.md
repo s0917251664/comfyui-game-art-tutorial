@@ -173,7 +173,7 @@ python -m unittest discover -s tests -p 'test_*.py' -v
 ## 文件導覽
 
 - [完整教學](教學.md)：從名詞、安裝、模型到各種產圖情境
-- [產圖流程](skills/comfyui-art-gen/SKILL.md)：決策順序(任務覆蓋／機器 tier 能不能跑／MCP／新增任務)、如何把需求分類並呼叫正確 task
+- [產圖流程](skills/comfyui-art-gen/SKILL.md)：決策順序(任務覆蓋／機器 tier 撐不撐得起／MCP／新增任務)、如何把需求分類並呼叫正確 task
 - [安裝流程](skills/comfyui-install/SKILL.md)：新機器的環境與模型準備
 - [模型清單](skills/comfyui-install/reference/models.md)：模型基準與硬碟空間估算（可重現版本以 manifest 為準）
 - [影片能力與 backend](skills/comfyui-video-gen/reference/backends.md)：machine-specific capability config、task/backend 邊界與 fail-fast 規則
