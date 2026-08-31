@@ -261,10 +261,12 @@ class GenerateTests(unittest.TestCase):
             "report_video_output": mock.patch.object(
                 self.generate, "report_video_output", return_value={"frames": 49}
             ),
+            "write_video_sidecar": mock.patch.object(self.generate, "write_video_sidecar"),
         }
         with common_patches["configure_video_capability"], common_patches["video_canvas"], common_patches["upload_image"], \
                 common_patches["run_i2v"], common_patches["download_outputs"], \
-                common_patches["submit_and_wait"] as submit, common_patches["report_video_output"]:
+                common_patches["submit_and_wait"] as submit, common_patches["report_video_output"], \
+                common_patches["write_video_sidecar"]:
             self.generate.main([
                 "img2video", "--comfy-url", "http://server:8188",
                 "--image", "still.png", "--prompt", "idle",
@@ -354,7 +356,8 @@ class GenerateTests(unittest.TestCase):
                     mock.patch.object(self.generate, "run_i2v", return_value=({}, "1")), \
                     mock.patch.object(self.generate, "submit_and_wait", return_value={"outputs": {}}), \
                     mock.patch.object(self.generate, "download_outputs", return_value=["out.mp4"]), \
-                    mock.patch.object(self.generate, "report_video_output", return_value={"frames": 49}):
+                    mock.patch.object(self.generate, "report_video_output", return_value={"frames": 49}), \
+                    mock.patch.object(self.generate, "write_video_sidecar"):
                 self.generate.main([
                     "clip_extend", "--comfy-url", "http://server:8188", "--video", "previous.mp4",
                     "--prompt", "continue", "--output-dir", output_dir,
