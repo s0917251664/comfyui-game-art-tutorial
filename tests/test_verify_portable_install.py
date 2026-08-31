@@ -37,6 +37,7 @@ class VerifyPortableInstallTests(unittest.TestCase):
         cls.pipeline_init_bytes = (PIPELINE_PKG / "__init__.py").read_bytes()
         cls.pipeline_image_bytes = (PIPELINE_PKG / "image_graphs.py").read_bytes()
         cls.pipeline_video_bytes = (PIPELINE_PKG / "video_catalog.py").read_bytes()
+        cls.pipeline_video_graphs_bytes = (PIPELINE_PKG / "video_graphs.py").read_bytes()
 
     def _write_json(self, path, payload):
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -61,6 +62,7 @@ class VerifyPortableInstallTests(unittest.TestCase):
         self._copy_source(tools_dir / "comfyui_pipeline" / "__init__.py", self.pipeline_init_bytes)
         self._copy_source(tools_dir / "comfyui_pipeline" / "image_graphs.py", self.pipeline_image_bytes)
         self._copy_source(tools_dir / "comfyui_pipeline" / "video_catalog.py", self.pipeline_video_bytes)
+        self._copy_source(tools_dir / "comfyui_pipeline" / "video_graphs.py", self.pipeline_video_graphs_bytes)
         if include_video:
             self._copy_source(tools_dir / "detect_video_capabilities.py", self.detect_video_bytes)
 
@@ -201,7 +203,8 @@ class VerifyPortableInstallTests(unittest.TestCase):
                     ("detect_device.py", self.detect_device_bytes),
                     ("comfyui_pipeline/__init__.py", self.pipeline_init_bytes),
                     ("comfyui_pipeline/image_graphs.py", self.pipeline_image_bytes),
-                    ("comfyui_pipeline/video_catalog.py", self.pipeline_video_bytes)):
+                    ("comfyui_pipeline/video_catalog.py", self.pipeline_video_bytes),
+                    ("comfyui_pipeline/video_graphs.py", self.pipeline_video_graphs_bytes)):
                 text = source.decode("utf-8").replace("\r\n", "\n").replace("\n", "\r\n")
                 target = tools_dir / name
                 target.parent.mkdir(parents=True, exist_ok=True)

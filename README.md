@@ -139,10 +139,11 @@ python -m unittest discover -s tests -p 'test_*.py' -v
 │   ├── detect_device.py                 # 偵測 GPU／VRAM／作業系統能力
 │   ├── detect_video_capabilities.py     # 偵測影片模型／runtime／ComfyUI nodes
 │   ├── verify_portable_install.py       # 換機後離線驗證動態設定與部署同步
-│   ├── generate.py                      # CLI facade 與影片產線原始碼
-│   └── comfyui_pipeline/                # 可移植的圖片 graph 與影片 catalog 模組
-│       ├── image_graphs.py
-│       └── video_catalog.py
+│   ├── generate.py                      # CLI facade、影片 orchestration 與 capability 驗證
+│   └── comfyui_pipeline/                # 可移植的圖片/影片 graph 與影片 catalog 模組
+│       ├── image_graphs.py              # 圖片 task 的 ComfyUI graph builder
+│       ├── video_catalog.py             # 影片模型/task/backend 常數表(純資料)
+│       └── video_graphs.py              # 不吃 runtime 狀態的影片 helper(frame count、camera 靜幀、h3 prompt tag)
 ├── skills/
 │   ├── comfyui-art-gen/                 # AI agent 的需求判斷與產圖流程
 │   │   └── reference/                   # 遮罩、結構範本、參數與已知限制

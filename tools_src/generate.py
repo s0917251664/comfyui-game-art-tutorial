@@ -56,6 +56,7 @@ DEFAULT_POLL_INTERVAL = 1.0
 DEFAULT_POLL_RETRIES = 3
 from comfyui_pipeline import image_graphs as _image_graphs
 from comfyui_pipeline import video_catalog as _video_catalog
+from comfyui_pipeline import video_graphs as _video_graphs
 
 OUTPUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "generated")
 DEFAULT_NEGATIVE = _image_graphs.DEFAULT_NEGATIVE
@@ -151,6 +152,13 @@ VIDEO_TASK_EXTRA_CAPS = _video_catalog.VIDEO_TASK_EXTRA_CAPS
 VIDEO_CONTROL_NODES = _video_catalog.VIDEO_CONTROL_NODES
 VIDEO_TASKS = _video_catalog.VIDEO_TASKS
 DEFAULT_VIDEO_BACKEND = _video_catalog.DEFAULT_VIDEO_BACKEND
+
+wan_frame_count = _video_graphs.wan_frame_count
+h3_frame_count = _video_graphs.h3_frame_count
+camera_move_prompt = _video_graphs.camera_move_prompt
+build_camera_end_still = _video_graphs.build_camera_end_still
+h3_ref_prompt = _video_graphs.h3_ref_prompt
+h3_pose_drive_prompt = _video_graphs.h3_pose_drive_prompt
 
 def _normalise_comfy_url(url):
     """Validate and normalise a ComfyUI base URL without inventing a default."""
@@ -1081,19 +1089,6 @@ def validate_transition_images(start_path, end_path):
             "避免尾幀被錯誤拉伸後才送進模型。"
         )
     return (start_width, start_height), (end_width, end_height)
-
-
-def wan_frame_count(duration_sec):
-    """Wan22ImageToVideoLatent 的 length 是 4k+1(預設 49)。"""
-    target = int(round(duration_sec * VIDEO_FPS))
-    k = max(2, int(round((target - 1) / 4.0)))
-    return k * 4 + 1
-
-
-def h3_frame_count(duration_sec):
-    """MiniMaxH3ImageToVideo 的 length 要落在 17k+5(官方 Math Expression)。"""
-    x = max(5, int(round(duration_sec * VIDEO_FPS)))
-    return x + (5 - (x % 17)) % 17
 
 
 def _make_temp_image_path(output_dir, prefix):
@@ -2080,90 +2075,6 @@ def build_img2video_h3(prompt, image_filename, width=768, height=768, seed=None,
         g["56b"] = {"class_type": "LoadImage", "inputs": {"image": last_image_filename}}
         g["104"]["inputs"]["last_frame"] = ["56b", 0]
     return g, "92"
-
-
-def camera_move_prompt(camera, prompt=None):
-    """把 --camera 枚舉收成鎖死的 I2V prompt。使用者文字只補場景,運鏡句以枚舉為準。"""
-    if camera not in CAMERA_MOVES:
-        raise ValueError(f"未知 --camera: {camera}(可用: {', '.join(CAMERA_MOVES)})")
-    scene = (prompt or "").strip() or "the subject stays completely still"
-    return f"{scene}. {CAMERA_MOVES[camera]}. {CAMERA_STILL_SUFFIX}."
-
-
-def build_camera_end_still(image_path, camera, width, height, dest_path):
-    """給有 last_frame 能力的 backend 用的終點靜幀。zoom/pan 是對來源圖做幾何裁切/縮放。
-    靜幀裡沒有畫面外的像素,所以 pan/zoom_out 會看起來像 Ken Burns(裁近或縮小置中),
-    不能真的揭示原圖外面的東西。orbit 回傳 None。"""
-    _require_pillow()
-    if camera not in CAMERA_MOVES:
-        raise ValueError(f"未知 --camera: {camera}")
-    if camera in ("orbit_cw", "orbit_ccw"):
-        return None
-    src = PILImage.open(image_path).convert("RGB")
-    canvas = src.resize((width, height), PILImage.Resampling.LANCZOS)
-    if camera == "static":
-        out = canvas
-    elif camera == "zoom_in":
-        cw = max(32, int(width / CAMERA_ZOOM) // 2 * 2)
-        ch = max(32, int(height / CAMERA_ZOOM) // 2 * 2)
-        x, y = (width - cw) // 2, (height - ch) // 2
-        out = canvas.crop((x, y, x + cw, y + ch)).resize(
-            (width, height), PILImage.Resampling.LANCZOS
-        )
-    elif camera == "zoom_out":
-        sw = max(32, int(width / CAMERA_ZOOM))
-        sh = max(32, int(height / CAMERA_ZOOM))
-        small = canvas.resize((sw, sh), PILImage.Resampling.LANCZOS)
-        out = canvas.filter(ImageFilter.GaussianBlur(radius=16))
-        out.paste(small, ((width - sw) // 2, (height - sh) // 2))
-    else:
-        keep_w = max(32, int(width * CAMERA_PAN_CROP) // 2 * 2)
-        keep_h = max(32, int(height * CAMERA_PAN_CROP) // 2 * 2)
-        if camera == "pan_left":
-            box = (0, (height - keep_h) // 2, keep_w, (height - keep_h) // 2 + keep_h)
-        elif camera == "pan_right":
-            box = (width - keep_w, (height - keep_h) // 2, width, (height - keep_h) // 2 + keep_h)
-        elif camera == "pan_up":
-            box = ((width - keep_w) // 2, 0, (width - keep_w) // 2 + keep_w, keep_h)
-        elif camera == "pan_down":
-            box = ((width - keep_w) // 2, height - keep_h, (width - keep_w) // 2 + keep_w, height)
-        else:
-            raise ValueError(f"未知 --camera: {camera}")
-        out = canvas.crop(box).resize((width, height), PILImage.Resampling.LANCZOS)
-    os.makedirs(os.path.dirname(os.path.abspath(dest_path)) or ".", exist_ok=True)
-    out.save(dest_path)
-    return dest_path
-
-
-def h3_ref_prompt(prompt, n_refs):
-    """h3 backend 私有:Ref2VA 要用 1-based <Picture i>。不要把這組 tag 寫進 CLI/SKILL 契約。
-    使用者沒寫 tag 就自動補;寫了就原樣送。"""
-    if "<Picture" in prompt:
-        return prompt
-    if n_refs == 1:
-        prefix = (
-            "<Picture 1> is the character identity reference. "
-            "The video shows this same character in a new shot, not a copy of that still."
-        )
-    else:
-        tags = ", ".join(f"<Picture {i}>" for i in range(1, n_refs + 1))
-        prefix = (
-            f"{tags} are identity references of the same character. "
-            "The video shows this same character in a new shot, not a copy of those stills."
-        )
-    return f"{prefix} {prompt}"
-
-
-def h3_pose_drive_prompt(prompt):
-    """h3 backend 私有:身份走 <Picture 1>、動作走 <Video 1>。不要把這組 tag 寫進 CLI/SKILL。"""
-    if "<Picture" in prompt or "<Video" in prompt:
-        return prompt
-    prefix = (
-        "<Picture 1> is the character identity reference. "
-        "<Video 1> is the motion to follow (pose skeleton, edges, or depth — not a second person). "
-        "The output shows this same character performing that motion."
-    )
-    return f"{prefix} {prompt}"
 
 
 def build_character_video_h3(prompt, ref_filenames, width=768, height=768, seed=None, duration=2.0,
