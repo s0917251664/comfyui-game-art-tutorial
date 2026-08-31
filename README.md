@@ -15,7 +15,7 @@
 - 「把這張圖的武器換掉，但手部握姿不要變。」
 - 「把定稿的 UI 合成圖拆出外框與中心鈕兩個透明圖層。」
 
-AI agent 會依照 [`skills/comfyui-art-gen/SKILL.md`](skills/comfyui-art-gen/SKILL.md) 選擇 `concept`、`icon_asset`、`refine`、`guided_inpaint` 或 `layer_split` 等任務，向使用者索取必要的參考圖／遮罩，然後呼叫 [`tools_src/generate.py`](tools_src/generate.py)。產圖邏輯集中在固定腳本中，讓結果可重複、可追蹤，也避免每次由 AI 臨時拼接不同的 ComfyUI 節點圖。
+AI agent 會依照 [`skills/comfyui-art-gen/SKILL.md`](skills/comfyui-art-gen/SKILL.md) 的決策順序:先確認有沒有現成任務(`concept`、`icon_asset`、`refine`、`guided_inpaint`、`layer_split` 等)覆蓋這個需求、再確認這台機器的 tier/capability 撐不撐得起,才向使用者索取必要的參考圖／遮罩並呼叫 [`tools_src/generate.py`](tools_src/generate.py)。機器撐不起時會在上傳前 fail-fast 拒絕並如實告知,不會硬跑出爛結果。產圖邏輯集中在固定腳本中,讓結果可重複、可追蹤,也避免每次由 AI 臨時拼接不同的 ComfyUI 節點圖。
 
 ## 可以做什麼
 
@@ -173,7 +173,7 @@ python -m unittest discover -s tests -p 'test_*.py' -v
 ## 文件導覽
 
 - [完整教學](教學.md)：從名詞、安裝、模型到各種產圖情境
-- [產圖流程](skills/comfyui-art-gen/SKILL.md)：如何把需求分類並呼叫正確 task
+- [產圖流程](skills/comfyui-art-gen/SKILL.md)：決策順序(任務覆蓋／機器 tier 能不能跑／MCP／新增任務)、如何把需求分類並呼叫正確 task
 - [安裝流程](skills/comfyui-install/SKILL.md)：新機器的環境與模型準備
 - [模型清單](skills/comfyui-install/reference/models.md)：模型基準與硬碟空間估算（可重現版本以 manifest 為準）
 - [影片能力與 backend](skills/comfyui-video-gen/reference/backends.md)：machine-specific capability config、task/backend 邊界與 fail-fast 規則
