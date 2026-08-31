@@ -50,6 +50,15 @@
 
 `device_config.json` 的 tier 是能力契約，不只是解析度建議。SDXL 家族(`sdxl_high`、`sdxl`、`sdxl_light`)目前是 ControlNet/IPAdapter/風格底模的實測路線；`sd15` 只能走不依賴 SDXL add-on 的基礎路徑。`pose_only`、`style_lock`、`character_action` 永遠需要 SDXL；`icon_asset` 只有不帶 `--structure-ref`/`--appearance-ref` 時可走基礎路徑；`guided_inpaint` 只有不帶 ControlNet 與外觀參考圖時可走一般 inpaint。`--style` 的 `realistic`/`illustration`/`anime` 以及任何 SDXL ControlNet/IPAdapter 參數在 `sd15` 上會在上傳前被拒絕。這些不是替 SD1.5 選一套模型就會自動修好，必須另行匹配並實機驗證。
 
+## 決策順序(這個需求該不該走這條管線)
+
+在對照下面「任務判斷」表挑 task 之前,先照這個順序確認要不要用 `generate.py`:
+
+1. **有沒有現成 task 覆蓋這個需求?** 對照下面「任務判斷」表跟 `reference/full-params.md`。有覆蓋就用它,不要因為「MCP 比較彈性」或「自己組 graph 比較快」就繞過去——這條產線存在的目的就是要比臨場組圖穩定、可重現,能用鎖死 task 就不要繞道。
+2. **這台機器的 tier 撐不撐得起這個 task?** 對照上面「目前支援的 tier」小節,確認 `device_config.json` 的 `tier` 真的支援。撐不起(例如 `sd15` 機器要 `pose_only`/`style_lock`/`character_action`)就不要硬送——`generate.py` 會在上傳前 fail-fast 拒絕,不會產出爛結果,但也不會自動找替代方案或自動降級。這種情況要如實告訴使用者「這台機器裝不了這個 task」,選項是換一台已裝對應模型的機器(`--comfy-url` 指過去)、或先不做;**不要因為 task 存在就假設任何機器都能跑**。影片是同一套邏輯,查 `video_capabilities.json` 有沒有可用 backend,見 `skills/comfyui-video-gen/SKILL.md`。
+3. **沒有現成 task 覆蓋,而且是一次性/探索性需求**(使用者在旁邊看效果、不是要排程量產、不是要當最終交付物)→ 可以改用 ComfyUI MCP 直接操作,但要跟使用者明講這次輸出沒有走鎖死管線,沒有 output contract/capability 驗證/resume 保障,品質自負,不要悄悄把 MCP 產出當成跟 `generate.py` 同等可靠。*(這條目前是預留規則——這個 repo 還沒接 ComfyUI MCP,接上之前這條不適用,遇到這種需求要如實說「目前沒有對應工具」。)*
+4. **沒有現成 task 覆蓋,而且這個需求會重複用到**(使用者說「以後常常要這樣」、或這其實要上生產線)→ 不要一直停在 MCP 或手動操作,照 `skills/comfyui-new-tool-checklist/SKILL.md` 把它轉正成真正的 task。
+
 ## 任務判斷(先分類,再決定要問什麼)
 
 | 使用者說的像... | task | 判斷依據 |

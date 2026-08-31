@@ -14,6 +14,8 @@
 
 **不要自動用系統播放器打開成品。** 只回報路徑。
 
+**這個需求該不該走這條管線(有現成 task 覆蓋、機器 tier/backend 撐不撐得起、還是該用 MCP/轉正成新 task)照 `skills/comfyui-art-gen/SKILL.md` 的「決策順序」小節,圖片/影片是同一套邏輯,不重複寫一次。**
+
 ## 環境
 
 先讀 `local_config.json`。影片另外需要已安裝機器的 `video_capabilities.json`：若不存在或模型/runtime/nodes 有變，先依 `skills/comfyui-install/SKILL.md` 執行 `tools_src/detect_video_capabilities.py`；偵測器只掃描既有內容，不下載模型或套件。ComfyUI 要在 `<comfyui_url>` 跑著；每個需要送工作給 ComfyUI 的 CLI 範例都要明確帶 `--comfy-url <URL>` 或 `--config <local_config.json>`，必要時再帶 `--video-config <video_capabilities.json>`，不要假設腳本會自動搜尋 repository 設定檔。影片生成等待上限建議帶 `--timeout 1800`（秒）；這是輪詢 ComfyUI 生成結果的上限，不是 server port。純本地的 `video_concat` 不需要 URL 或 timeout。
