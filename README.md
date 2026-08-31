@@ -53,6 +53,19 @@ cd comfyui-game-art-tutorial
 
 完整的硬體、模型、啟動方式與操作教學請看 [`教學.md`](教學.md)。
 
+### 跨設備移植原則
+
+這條產線移動到另一台設備時，搬的是固定工具、版本基線與 task 契約，不是來源機的硬體快照。目標機必須重新執行 `detect_device.py`，讓圖片 checkpoint family、tier 與預設解析度依該機 GPU／VRAM／統一記憶體動態調整；若要產影片，也必須重新執行 `detect_video_capabilities.py`，由該機實際存在的模型、Python runtime 與 ComfyUI nodes 決定 H3／Wan backend 及可用 task。`local_config.json`、`device_config.json`、`video_capabilities.json` 都是 machine-specific，不可從舊設備直接複製。
+
+安裝完成後可先做離線驗收，不需要啟動 ComfyUI：
+
+```bash
+python tools_src/verify_portable_install.py --repo-root . --config local_config.json
+python tools_src/verify_portable_install.py --repo-root . --config local_config.json --require-video
+```
+
+驗證器會重新偵測目前硬體、核對三支部署工具是否與 repository 原始碼一致，並檢查圖片設定；第二個指令還會交叉檢查影片 capability、runtime 與實際模型路徑。它通過只代表部署結構與動態選型沒有漂移；真正可重現性仍要依 [`docs/tested-versions.md`](docs/tested-versions.md) 核對目標 tier 使用的 commit／模型 SHA-256，最後完成圖片與影片 smoke test。不同 GPU/backend 不保證生成結果逐位元相同。
+
 ### 3. 啟動 ComfyUI
 
 使用 `local_config.json` 中的 `start_script` 啟動 ComfyUI，並確認 `comfyui_url` 對應的服務正在執行。不同電腦的安裝路徑與 port（連接埠）可能不同，不要直接照抄其他機器的路徑。產圖腳本不會猜測或自動搜尋 `local_config.json`；執行時要明確傳入 `--comfy-url`，或用 `--config local_config.json`、`COMFY_URL`/`COMFYUI_URL` 指定服務位置。
@@ -125,6 +138,7 @@ python -m unittest discover -s tests -p 'test_*.py' -v
 ├── tools_src/
 │   ├── detect_device.py                 # 偵測 GPU／VRAM／作業系統能力
 │   ├── detect_video_capabilities.py     # 偵測影片模型／runtime／ComfyUI nodes
+│   ├── verify_portable_install.py       # 換機後離線驗證動態設定與部署同步
 │   └── generate.py                      # 穩定產圖腳本的原始碼
 ├── skills/
 │   ├── comfyui-art-gen/                 # AI agent 的需求判斷與產圖流程
@@ -143,6 +157,7 @@ python -m unittest discover -s tests -p 'test_*.py' -v
 ## 重要檔案與版本管理規則
 
 - `tools_src/generate.py` 是產圖腳本的唯一原始碼；不要直接修改 ComfyUI 安裝目錄裡的部署副本。
+- `tools_src/verify_portable_install.py` 是跨設備部署的離線 preflight；它不下載模型、不啟動 ComfyUI，也不取代最後的實機 smoke test。
 - `local_config.json` 包含每台機器的實際路徑，已排除在 Git 版本控制之外；請在 CLI 明確傳入 `--comfy-url` 或 `--config`，不要依賴部署副本自行猜路徑。
 - 影片 task 另外使用每台機器的 `video_capabilities.json`；可由 `tools_src/detect_video_capabilities.py` 掃描既有模型、runtime 與 `/object_info` 產生。它不會下載資產，`generate.py` 會在 upload/queue 前重新驗證；沒有明確 default 時要傳 `--backend`，不會靜默改用 H3/Wan。
 - `workflows/` 是本機 ComfyUI workflow 參考檔，刻意不進 Git；新 clone 不會帶這些 JSON，換機器時需從已安裝機器匯出/複製，或直接依 CLI 流程操作。

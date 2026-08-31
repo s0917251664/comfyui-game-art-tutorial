@@ -50,6 +50,9 @@
     }
     ```
     執行 task 時要把這個 URL 明確傳給 `generate.py`：可用 `--comfy-url <URL>`，或 `--config <此檔案>`；也可在執行環境設定 `COMFY_URL`/`COMFYUI_URL`。等待上限用 `--timeout <秒數>` 覆寫，必須是有限正數；它不是 ComfyUI server 的 port，也不會改變模型本身的生成步數。
+13. **離線部署驗證**:在 repo 根目錄執行 `python tools_src/verify_portable_install.py --repo-root . --config local_config.json`；有安裝影片能力時再加 `--require-video`。這支工具不下載、不覆寫設定，也不要求來源機與目標機使用同一個 GPU/tier；它會用目前設備重新執行硬體偵測，確認 `device_config.json` 是針對這台機器產生，並核對 repo／ComfyUI 內的 `generate.py`、`detect_device.py`（影片模式再加 `detect_video_capabilities.py`）沒有版本漂移。影片模式也會交叉檢查 capability config 內嵌的設備資料、ComfyUI/Python 路徑、可用 backend 與實際模型檔。任何 FAIL 都要先修正再做 smoke test。
+
+    離線驗證通過只代表「部署內容與動態選型規則一致」，不代表不同 GPU 的生成結果逐位元相同，也不取代版本／模型 hash 與實際輸出的驗收。之後仍須依 `docs/tested-versions.md` 核對目標 tier 的 commit、模型 SHA-256，並完成至少一次圖片與影片 smoke test。
 
 ## 進階(選配):LoRA 訓練工具
 
@@ -73,7 +76,7 @@
 ## 執行原則
 
 - **冪等**:每一步先檢查是否已經成立,成立就跳過,不要盲目重跑或覆蓋使用者已經調整過的東西(`generate.py` 除外——它永遠要跟 repo 同步)
-- **換機器/換顯卡**:至少重跑步驟 4(設備偵測)、步驟 9(影片 capability 若有使用)跟步驟 12(重寫 `local_config.json`),不要假設 checkpoint 或路徑沒變；若 tier 變成 `sd15`，先看 `skills/comfyui-art-gen/SKILL.md` 的能力矩陣，ControlNet/IPAdapter/CLIP Vision 不可沿用 SDXL 版本。
+- **換機器/換顯卡**:至少重跑步驟 4(設備偵測)、步驟 9(影片 capability 若有使用)、步驟 12(重寫 `local_config.json`)與步驟 13(離線部署驗證),不要假設 checkpoint、tier、預設解析度、backend 或路徑沒變；若 tier 變成 `sd15`，先看 `skills/comfyui-art-gen/SKILL.md` 的能力矩陣，ControlNet/IPAdapter/CLIP Vision 不可沿用 SDXL 版本。
 - **下載失敗/網路受限**:如實回報,不要用假路徑頂替或假裝下載成功
 - **版本收尾**:完成安裝後擷取 ComfyUI/custom node commit、Python/PyTorch/Pillow 版本、實際模型 SHA-256，再記錄至少一次實機 smoke test 的日期、指令與輸出；在這些資料齊全前，manifest 保持 `pending_on_installed_machine`。
 - **收尾**:全部完成後,把最終的 `local_config.json` 內容念給使用者確認一次,並提醒他下一步可以直接用自然語言要求產圖(見 `skills/comfyui-art-gen/SKILL.md`)。若這台機器沒有可用的 ComfyUI/模型，就只能完成文件與離線檢查，必須明確回報尚未 deploy/smoke test。

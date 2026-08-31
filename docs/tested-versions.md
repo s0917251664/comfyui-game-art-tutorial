@@ -6,6 +6,16 @@
 
 偵測器在 2026-08-31T02:34:30.150519+00:00 重新產生本機 capability config，加入 node schema fingerprint；之後在 2026-08-31 完成圖片 smoke、H3 全部影片 task、video_concat 與 Wan 的 i2v/control smoke，並完成 contract/sidecar/resume 與 concat policy smoke。偵測器只掃描既有檔案與 runtime，不下載模型；本文件的 SHA-256 是另外對實際檔案計算的結果。
 
+## 跨設備重建的定義
+
+「精準移植」是重建同一套**偵測規則、版本基線與 task 契約**，不是把來源機的硬體快照硬套到目標機，也不承諾不同 GPU/backend 的輸出逐位元相同：
+
+- 會隨 repository 一起移動並鎖定的是 `tools_src/` 原始碼、ComfyUI/custom node commit、模型家族與對應 SHA-256，以及圖片／影片 task 的 CLI 契約。
+- 每台目標機都必須重新執行 `detect_device.py`；圖片 checkpoint family、tier 與預設解析度由該機的 backend、VRAM／統一記憶體動態決定。不得複製來源機的 `device_config.json`。
+- 要使用影片時，每台目標機都必須重新執行 `detect_video_capabilities.py`；可用 backend 與 task capability 由該機現有模型、Python runtime 與 ComfyUI node schema 動態決定。不得複製來源機的 `video_capabilities.json`。
+- `local_config.json` 只記錄目標機的絕對路徑與 URL，也必須在目標機重建。`workflows/` 是不進版控的維護用視覺化參考；正式 task 由 `generate.py` 依上述 machine-specific config 組 graph，不靠人工逐台修改 workflow JSON。
+- 本頁的 XU-Nano-PC hash 是已驗證的 SDXL／影片基線。若目標硬體偵測到另一個 tier，只能使用該 tier 已明確支援並完成 smoke 的模型組；例如目前 `sd15` 的 SDXL add-on 路徑尚未實機驗證，不能為了追求「相同」而強制載入 SDXL 模型造成 OOM 或架構不相容。
+
 ## 擷取規則
 
 在另一台已安裝機器上，先以 tools_src/detect_device.py 產生圖片的 device_config.json，再以 tools_src/detect_video_capabilities.py 掃描既有影片模型、runtime 與 /object_info。兩者都不負責下載模型。完成至少一次最小圖片與影片 smoke、並驗收輸出容器後，才可把該台機器的 capture_status 改為 verified。
@@ -74,6 +84,86 @@ Windows PowerShell 的基本擷取指令如下（把路徑換成該機器的實�
         sha256: 31E35C80FC4829D14F90153F4C74CD59C90B779F6AFE05A74CD6120B893F7E5B
         source: https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors
         captured_from: 'C:\Users\XU\ComfyUI\models\checkpoints\sd_xl_base_1.0.safetensors'
+      - kind: image
+        directory: checkpoints
+        file: juggernautXL_ragnarok.safetensors
+        family: Juggernaut XL Ragnarok
+        bytes: 7105350162
+        sha256: DD08FA32F98D05A2443CA1419E46DF1575A0811F6E3B246D9DD47FF20F5EB66A
+        source: https://civitai.com/models/133005/juggernaut-xl
+        captured_from: 'C:\Users\XU\ComfyUI\models\checkpoints\juggernautXL_ragnarok.safetensors'
+      - kind: image
+        directory: checkpoints
+        file: Illustrious-XL-v1.1.safetensors
+        family: Illustrious XL v1.1
+        bytes: 6938040728
+        sha256: 536863E9F0C13B0CE834E2F8A19ADA425EE4F722C0AD3D0051EC7E6ADAA8156C
+        source: https://huggingface.co/OnomaAIResearch/Illustrious-XL-v1.1/tree/main
+        captured_from: 'C:\Users\XU\ComfyUI\models\checkpoints\Illustrious-XL-v1.1.safetensors'
+      - kind: image
+        directory: checkpoints
+        file: ponyDiffusionV6XL_v6StartWithThisOne.safetensors
+        family: Pony Diffusion V6 XL
+        bytes: 6938041050
+        sha256: 67AB2FD8EC439A89B3FEDB15CC65F54336AF163C7EB5E4F2ACC98F090A29B0B3
+        source: https://civitai.com/models/257749/pony-diffusion-v6-xl
+        captured_from: 'C:\Users\XU\ComfyUI\models\checkpoints\ponyDiffusionV6XL_v6StartWithThisOne.safetensors'
+      - kind: image
+        directory: controlnet
+        file: controlnet-canny-sdxl-1.0.safetensors
+        family: SDXL ControlNet Canny
+        bytes: 2502139104
+        sha256: 80664D80E3F233371CB6921110D0A6B7A40C01571905463F9DDE5637E7894ED3
+        source: https://huggingface.co/lllyasviel/sd_control_collection/resolve/main/diffusers_xl_canny_full.safetensors
+        captured_from: 'C:\Users\XU\ComfyUI\models\controlnet\controlnet-canny-sdxl-1.0.safetensors'
+      - kind: image
+        directory: controlnet
+        file: controlnet-depth-sdxl-1.0.safetensors
+        family: SDXL ControlNet Depth
+        bytes: 2502139104
+        sha256: 8BA4DFAA1958F1F68E5DC7F9839F9EF4E153AEF0D330291E5CF966C925F97477
+        source: https://huggingface.co/lllyasviel/sd_control_collection/resolve/main/diffusers_xl_depth_full.safetensors
+        captured_from: 'C:\Users\XU\ComfyUI\models\controlnet\controlnet-depth-sdxl-1.0.safetensors'
+      - kind: image
+        directory: controlnet
+        file: controlnet-openpose-sdxl-1.0.safetensors
+        family: SDXL ControlNet OpenPose
+        bytes: 5004167829
+        sha256: 5A4B928CB1E93748217900CB66D4135BF70D932D2924232F925910FAD9E43A92
+        source: https://huggingface.co/thibaud/controlnet-openpose-sdxl-1.0/resolve/main/OpenPoseXL2.safetensors
+        captured_from: 'C:\Users\XU\ComfyUI\models\controlnet\controlnet-openpose-sdxl-1.0.safetensors'
+      - kind: image
+        directory: ipadapter
+        file: ip-adapter-plus_sdxl_vit-h.safetensors
+        family: IPAdapter Plus SDXL ViT-H
+        bytes: 847517512
+        sha256: 3F5062B8400C94B7159665B21BA5C62ACDCD7682262743D7F2AEFEDEF00E6581
+        source: https://huggingface.co/h94/IP-Adapter/resolve/main/sdxl_models/ip-adapter-plus_sdxl_vit-h.safetensors
+        captured_from: 'C:\Users\XU\ComfyUI\models\ipadapter\ip-adapter-plus_sdxl_vit-h.safetensors'
+      - kind: image
+        directory: clip_vision
+        file: CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors
+        family: CLIP Vision ViT-H for IPAdapter
+        bytes: 2528373448
+        sha256: 6CA9667DA1CA9E0B0F75E46BB030F7E011F44F86CBFB8D5A36590FCD7507B030
+        source: https://huggingface.co/h94/IP-Adapter/resolve/main/models/image_encoder/model.safetensors
+        captured_from: 'C:\Users\XU\ComfyUI\models\clip_vision\CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors'
+      - kind: image
+        directory: background_removal
+        file: birefnet.safetensors
+        family: BiRefNet background removal
+        bytes: 444473596
+        sha256: 9AB37426BF4DE0567AF6B5D21B16151357149139362E6E8992021B8CE356A154
+        source: https://huggingface.co/Comfy-Org/BiRefNet/resolve/main/background_removal/birefnet.safetensors
+        captured_from: 'C:\Users\XU\ComfyUI\models\background_removal\birefnet.safetensors'
+      - kind: image
+        directory: upscale_models
+        file: 4x-UltraSharp.pth
+        family: 4x-UltraSharp upscaler
+        bytes: 66961958
+        sha256: A5812231FC936B42AF08A5EDBA784195495D303D5B3248C24489EF0C4021FE01
+        source: https://huggingface.co/lokCX/4x-Ultrasharp/resolve/main/4x-UltraSharp.pth
+        captured_from: 'C:\Users\XU\ComfyUI\models\upscale_models\4x-UltraSharp.pth'
       - kind: video
         directory: diffusion_models
         file: wan2.2_ti2v_5B_fp16.safetensors
