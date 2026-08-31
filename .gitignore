@@ -5,3 +5,7 @@ local_config.json
 /workflows/
 __pycache__/
 *.py[cod]
+
+# Machine-specific hardware and video capability snapshots
+device_config.json
+video_capabilities.json
