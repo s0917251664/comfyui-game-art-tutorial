@@ -4,7 +4,7 @@
 
 目前狀態：**已驗證（verified）**，capture machine 為 XU-Nano-PC，完成日期為 2026-08-31。這筆資料直接取自 C:\Users\XU\ComfyUI 的實際安裝、模型檔與本機 ComfyUI API；repo 本身仍不提交 local_config.json、device_config.json 或 video_capabilities.json。
 
-偵測器在 2026-08-30T17:26:26.595899+00:00 產生本機 capability config，之後在 2026-08-31 完成圖片 smoke、H3 全部影片 task、video_concat 與 Wan 的 i2v/control smoke。偵測器只掃描既有檔案與 runtime，不下載模型；本文件的 SHA-256 是另外對實際檔案計算的結果。
+偵測器在 2026-08-31T02:34:30.150519+00:00 重新產生本機 capability config，加入 node schema fingerprint；之後在 2026-08-31 完成圖片 smoke、H3 全部影片 task、video_concat 與 Wan 的 i2v/control smoke，並完成 contract/sidecar/resume 與 concat policy smoke。偵測器只掃描既有檔案與 runtime，不下載模型；本文件的 SHA-256 是另外對實際檔案計算的結果。
 
 ## 擷取規則
 
@@ -30,7 +30,7 @@ Windows PowerShell 的基本擷取指令如下（把路徑換成該機器的實�
     capture_status: verified
     captured_at: '2026-08-31'
     machine: XU-Nano-PC
-    capability_config_captured_at: '2026-08-30T17:26:26.595899+00:00'
+    capability_config_captured_at: '2026-08-31T02:34:30.150519+00:00'
     device_config:
       os: Windows
       backend: cuda
@@ -160,6 +160,43 @@ Windows PowerShell 的基本擷取指令如下（把路徑換成該機器的實�
       capability_config: 'C:\Users\XU\ComfyUI\tools\video_capabilities.json'
       node_check: available
       output_policy: no automatic playback; all outputs inspected with PyAV
+      contract_sidecar_smoke:
+        status: passed
+        date: '2026-08-31'
+        command: >-
+          generate.py img2video --config C:\Users\XU\tools\comfyui-game-art-tutorial\local_config.json
+          --video-config C:\Users\XU\ComfyUI\tools\video_capabilities.json
+          --comfy-url http://127.0.0.1:8188 --backend h3 --timeout 1800
+          --image C:\Users\XU\.codex\worktrees\5bdf\comfyui-game-art-tutorial\第一張測試圖.png
+          --prompt "subtle idle motion, cloth and hair move gently, camera locked"
+          --negative "blurry, low quality, text, watermark" --duration 2 --seed 20260831
+          --shot-id smoke01 --output-dir C:\Users\XU\tools\comfyui-game-art-tutorial\output\smoke_contract_20260831
+        output: 'C:\Users\XU\tools\comfyui-game-art-tutorial\output\smoke_contract_20260831\shot_smoke01_img2video_00001_.mp4'
+        sidecar: 'C:\Users\XU\tools\comfyui-game-art-tutorial\output\smoke_contract_20260831\shot_smoke01_img2video_00001_.mp4.json'
+        prompt_id: '96d7667c-e64b-4933-b2e7-08e9476c211a'
+        capability_schema_fingerprint: '35de8f3b2312c3086bfc94939994dc8fb2f32951233dcd3c23019a01a10c9c82'
+        seed: 20260831
+        contract: {width: 768, height: 768, fps: 24, frames: 56, audio: true}
+        actual: {width: 768, height: 768, fps: 24.0, frames: 56, duration_seconds: 2.333333, codec: h264, pixel_format: yuv420p, audio_codec: aac, audio_sample_rate: 32000, audio_channels: 2}
+        sidecar_bytes: 2744
+        elapsed_seconds: 93.497
+      contract_resume_smoke:
+        status: passed
+        date: '2026-08-31'
+        command: same contract_sidecar_smoke command with --resume
+        evidence: sidecar and PyAV contract revalidated; no new ComfyUI queue/GPU job submitted
+      concat_policy_smoke:
+        status: passed
+        date: '2026-08-31'
+        command: >-
+          generate.py video_concat --video C:\Users\XU\tools\comfyui-game-art-tutorial\output\bakeoff_h3_playable.mp4
+          --video C:\Users\XU\tools\comfyui-game-art-tutorial\output\bakeoff_wan22.mp4
+          --name concat_drop --audio-policy drop --resize-mode strict
+          --output-dir C:\Users\XU\tools\comfyui-game-art-tutorial\output\smoke_contract_20260831
+        output: 'C:\Users\XU\tools\comfyui-game-art-tutorial\output\smoke_contract_20260831\concat_drop.mp4'
+        sidecar: 'C:\Users\XU\tools\comfyui-game-art-tutorial\output\smoke_contract_20260831\concat_drop.mp4.json'
+        actual: {width: 832, height: 480, fps: 24.0, frames: 105, duration_seconds: 4.375, audio: false}
+        negative_cases: mixed_audio_default_rejected; mismatched_dimensions_default_rejected; transactional_frame_failure_preserved_previous_set
       tasks:
         - task: img2video
           backend: h3

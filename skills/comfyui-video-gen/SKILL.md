@@ -91,6 +91,22 @@
 
 全部生成完用 `video_concat --video a.mp4 --video b.mp4 ...` 接起來。配樂字幕仍在 ComfyUI 外面。
 
+每支影片都會產生同名 `.mp4.json` sidecar，記錄 task/backend、只 resolve 一次的 seed、prompt、輸入檔絕對路徑與 SHA-256、capability/config digest、模型檔案 metadata、Comfy `prompt_id`、要求/實際輸出契約與 warning。尺寸、FPS、影格數、時長或音訊不符合要求會 fail；連續性指標目前是 warning-only，仍需人工檢查。`--resume` 只有在 sidecar 的 task/backend/seed/input/config/contract 全部完全相符且影片重新通過契約檢查時才會跳過。
+
+### 4~6 鏡最小案例（鏡頭表 → 逐鏡 → concat）
+
+例如「角色走進法陣、法陣循環、鏡頭推近、場景變成夜景」可先列：
+
+| 鏡號 | task / 輸入 | 時長 | 接法 |
+|---|---|---:|---|
+| A01 | `img2video` + `hero_day.png`，角色向前一步 | 2s | 第一鏡 |
+| A02 | `clip_extend` + A01 mp4，角色停下 | 2s | 尾幀延續 |
+| A03 | `fx_loop` + `magic_circle.png`，法陣循環 | 2s | 獨立元素 |
+| A04 | `camera_move` + A02 尾幀，`--camera zoom_in` | 2s | 尾幀延續 |
+| A05 | `transition` + A04 尾幀 / `night_scene.png`，傳送門展開 | 2s | 首尾幀 |
+
+每鏡用對應 CLI、帶 `--shot-id A01`…`A05`，確認 mp4 與 sidecar 都通過，再執行 `video_concat --name scene_A --video A01.mp4 ...`。這只是基本順序串接，不包含剪接節奏、字幕、配樂、對白或混音；完整成片仍交給外部剪接工具。
+
 ## 執行
 
 ```
@@ -107,7 +123,7 @@ clip_extend:
   <python_exe> <generate_script> clip_extend --config <local_config.json> [--video-config <video_capabilities.json>] --timeout 1800 --video <prev.mp4> --prompt "..." [--backend h3|wan] [--duration 2] [--extract-frames] [--overwrite] --output-dir <output_dir>
 
 video_concat:
-  <python_exe> <generate_script> video_concat --video <a.mp4> --video <b.mp4> --output-dir <output_dir> [--overwrite]
+  <python_exe> <generate_script> video_concat --video <a.mp4> --video <b.mp4> --name scene_A --output-dir <output_dir> [--resize-mode strict|fit|fill|stretch] [--audio-policy require-consistent|drop|silence-missing] [--resume|--overwrite]
 
 character_video:
   <python_exe> <generate_script> character_video --config <local_config.json> [--video-config <video_capabilities.json>] --timeout 1800 --character-ref <path> [--character-ref <path2>] --prompt "..." [--backend h3|wan] [--duration 2] [--extract-frames] [--overwrite] --output-dir <output_dir>
@@ -130,5 +146,10 @@ pose_drive:
 - `pose_drive` 要角色靜幀 + 動作影片,而且**靜幀姿勢要接近動作片第一幀**;對不上會雙人/重影,不要拿兩張不相干的素材硬綁。歷史上 H3 臉比 Wan 穩，實際選擇以 capability config 為準；只要快才在確認 capability 後明確給 `--backend wan`
 - 每支影片輸出都會在 CLI 回報 task/backend、尺寸、FPS、幀數、音訊、耗時與輸出路徑；同名輸出預設拒絕覆寫，只有明確給 `--overwrite` 才會更新
 - 各 backend 能力表 / machine-specific config 規則,見 `reference/backends.md`
+- 每支輸出都會有同名 `.mp4.json` sidecar：包含 task/backend、單次 resolve 的 seed、prompt/negative、輸入絕對路徑與 SHA-256、capability/config digest、模型檔名與 config 中的 hash/size、Comfy `prompt_id`、要求/實際 PyAV 契約、warnings、耗時與輸出路徑。尺寸、FPS、影格數、時長或音訊不符合契約會 fail；連續性指標目前 warning-only。
+- `video_concat` 預設 `--resize-mode strict`，尺寸/長寬比不同會 fail；要處理時明確選 `fit`(加黑邊)、`fill`(裁切) 或 `stretch`。預設 `--audio-policy require-consistent`，混合有聲/無聲會 fail；`drop` 丟掉全部音軌，`silence-missing` 為缺音鏡補靜音，並檢查音畫 duration drift。
+- `extract_video_frames` 先寫 staging，確認完整解碼且至少一幀後才換入固定輸出目錄；失敗會保留上一版影格。`--shot-id`/`--name` 產生安全、可追溯前綴；`--resume` 只有 sidecar 的 task/backend/seed/input/config/contract 全相符且輸出重新驗證通過時才跳過。
+- 連續性指標檢查 `fx_loop` 首尾 seam、`transition` 首/尾對 start/end、`img2video`/`camera_move`/`clip_extend` 來源到輸出首幀；閾值未跨題材校準，不用它判定 character/pose 身份品質。
+- timeout 會持久記錄 prompt_id 與精確 queue/running ownership；只有確認仍是該 prompt_id 的 pending queue item 時，才嘗試精確刪除，絕不呼叫全域 `/interrupt`，也不對 running/未知狀態自動重送工作。
 
 細節見 `DESIGN.md`。

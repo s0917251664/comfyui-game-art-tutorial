@@ -17,12 +17,14 @@ Usage:
 """
 import argparse
 from fractions import Fraction
+import hashlib
 import json
 import math
 import mimetypes
 import ntpath
 import os
 import re
+import shutil
 import sys
 import tempfile
 import time
@@ -233,6 +235,13 @@ VIDEO_DURATION_MIN = 2
 VIDEO_DURATION_MAX = 6
 DEFAULT_VIDEO_TIMEOUT = 1800.0
 VIDEO_CAPABILITY_SCHEMA_VERSION = 1
+VIDEO_SIDECAR_SCHEMA_VERSION = 1
+VIDEO_CONTRACT_SCHEMA_VERSION = 1
+VIDEO_DURATION_TOLERANCE = 0.40
+VIDEO_FRAME_TOLERANCE = 2
+VIDEO_SEAM_WARNING_THRESHOLD = 0.12
+VIDEO_INPUT_MIN_DURATION = 0.05
+VIDEO_AUDIO_DRIFT_TOLERANCE = 0.25
 VIDEO_CAPABILITY_CONFIG_ENV_VARS = ("VIDEO_CONFIG", "COMFY_VIDEO_CONFIG")
 VIDEO_CAPABILITY_CONFIG_FILENAME = "video_capabilities.json"
 VIDEO_NEG_DEFAULT = (
@@ -365,6 +374,25 @@ VIDEO_TASKS = frozenset(VIDEO_TASK_CAPS)
 ACTIVE_VIDEO_CONFIG = None
 
 
+class VideoContractError(RuntimeError):
+    """An output was decoded but did not satisfy the caller's video contract."""
+
+    def __init__(self, message, metadata=None, errors=None, warnings=None):
+        super().__init__(message)
+        self.metadata = metadata
+        self.errors = list(errors or ())
+        self.warnings = list(warnings or ())
+
+
+class VideoTimeoutError(TimeoutError):
+    """Timeout carrying the exact ComfyUI prompt ownership information."""
+
+    def __init__(self, message, prompt_id, queue_status=None):
+        super().__init__(message)
+        self.prompt_id = str(prompt_id)
+        self.queue_status = queue_status or {"status": "unknown"}
+
+
 
 def build_control_preprocessor(control_type, image_node_id):
     """依 control_type 回傳對應的前處理節點(從 image_node_id 的圖片輸出接進去)。"""
@@ -427,6 +455,14 @@ def _normalise_video_capabilities(raw, source):
     backends = raw.get("backends")
     if not isinstance(backends, dict) or not backends:
         raise RuntimeError(f"影片 capability config 缺少 backends: {source}")
+    node_check = raw.get("node_check")
+    if node_check is not None:
+        if not isinstance(node_check, dict):
+            raise RuntimeError(f"影片 capability config 的 node_check 必須是 JSON object: {source}")
+        fingerprint = node_check.get("schema_fingerprint")
+        if fingerprint is not None and (
+                not isinstance(fingerprint, str) or not re.fullmatch(r"[0-9a-fA-F]{64}", fingerprint)):
+            raise RuntimeError(f"影片 capability config 的 schema_fingerprint 無效: {source}")
     for backend, spec in backends.items():
         if backend not in VIDEO_BACKEND_SPECS:
             raise RuntimeError(f"影片 capability config 有未知 backend {backend!r}: {source}")
@@ -446,6 +482,13 @@ def _normalise_video_capabilities(raw, source):
         models = spec.get("models")
         if not isinstance(models, dict):
             raise RuntimeError(f"backend {backend!r} 缺少 models 設定: {source}")
+        for model_key, entry in models.items():
+            if isinstance(entry, dict) and entry.get("size_bytes") is not None:
+                size = entry.get("size_bytes")
+                if isinstance(size, bool) or not isinstance(size, int) or size < 0:
+                    raise RuntimeError(
+                        f"backend {backend!r} model {model_key!r} 的 size_bytes 無效: {source}"
+                    )
     default_backend = raw.get("default_backend")
     if default_backend is not None and default_backend not in backends:
         raise RuntimeError(
@@ -611,6 +654,14 @@ def _validate_video_models(config, backend, capabilities):
         if not path or not os.path.isfile(path):
             shown = path or repr(entry)
             missing.append(f"{key}={shown}")
+            continue
+        expected_size = entry.get("size_bytes") if isinstance(entry, dict) else None
+        if expected_size is not None:
+            actual_size = os.path.getsize(path)
+            if actual_size != expected_size:
+                missing.append(
+                    f"{key}={path} (size_bytes config={expected_size}, actual={actual_size})"
+                )
     if missing:
         raise RuntimeError(
             f"影片 backend {backend} 缺少必要模型，已在 upload/queue 前停止: "
@@ -648,6 +699,25 @@ def _required_video_nodes(backend, capabilities, config, control_type=None):
     return tuple(dict.fromkeys(node for node in nodes if node))
 
 
+def _node_schema_fingerprint(payload, required_nodes=None):
+    """Digest only the node input/output schemas used by this video pipeline."""
+    if not isinstance(payload, dict):
+        raise ValueError("ComfyUI /object_info 回應不是 JSON object")
+    names = sorted(required_nodes or payload)
+    selected = {}
+    for name in names:
+        info = payload.get(name)
+        if not isinstance(info, dict):
+            continue
+        selected[name] = {
+            key: info.get(key)
+            for key in ("input", "output", "output_name", "display_name", "name")
+            if key in info
+        }
+    encoded = json.dumps(selected, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+
 def _fetch_comfy_object_info(comfy_url, request_timeout=DEFAULT_HTTP_TIMEOUT):
     req = urllib.request.Request(_comfy_endpoint("object_info", comfy_url))
     try:
@@ -659,18 +729,27 @@ def _fetch_comfy_object_info(comfy_url, request_timeout=DEFAULT_HTTP_TIMEOUT):
         ) from exc
     if not isinstance(payload, dict):
         raise RuntimeError("ComfyUI /object_info 回應不是 JSON object，已停止影片 task")
-    return set(payload)
+    return payload
 
 
-def validate_comfy_video_nodes(comfy_url, required_nodes, request_timeout=DEFAULT_HTTP_TIMEOUT):
+def validate_comfy_video_nodes(comfy_url, required_nodes, request_timeout=DEFAULT_HTTP_TIMEOUT,
+                               expected_schema_fingerprint=None):
     required = tuple(dict.fromkeys(required_nodes))
-    available = _fetch_comfy_object_info(comfy_url, request_timeout=request_timeout)
+    payload = _fetch_comfy_object_info(comfy_url, request_timeout=request_timeout)
+    available = set(payload)
     missing = sorted(set(required) - available)
     if missing:
         raise RuntimeError(
             "ComfyUI 缺少影片 graph 必要 nodes，已在 upload/queue 前停止: "
             + ", ".join(missing)
         )
+    if expected_schema_fingerprint:
+        actual = _node_schema_fingerprint(payload)
+        if actual != expected_schema_fingerprint:
+            raise RuntimeError(
+                "ComfyUI 影片依賴 node input schema fingerprint 不一致，"
+                f"config={expected_schema_fingerprint}, actual={actual}；已停止"
+            )
     return available
 
 
@@ -755,7 +834,14 @@ def configure_video_capability(task, requested_backend=None, runtime_config_path
     if not comfy_url:
         raise RuntimeError("影片生成需要 ComfyUI URL 以驗證 /object_info")
     nodes = _required_video_nodes(backend, required, config, control_type=control_type)
-    validate_comfy_video_nodes(comfy_url, nodes, request_timeout=request_timeout)
+    expected_fingerprint = None
+    node_check = config.get("node_check")
+    if isinstance(node_check, dict):
+        expected_fingerprint = node_check.get("schema_fingerprint")
+    validate_comfy_video_nodes(
+        comfy_url, nodes, request_timeout=request_timeout,
+        expected_schema_fingerprint=expected_fingerprint,
+    )
     ACTIVE_VIDEO_CONFIG = config
     return backend
 
@@ -802,6 +888,47 @@ def _poll_error_text(exc):
             body = ""
         return f"HTTP {exc.code}" + (f": {body}" if body else "")
     return str(exc) or exc.__class__.__name__
+
+
+def _query_prompt_queue_status(prompt_id, comfy_url, request_timeout):
+    """Best-effort exact ownership lookup; never calls global /interrupt."""
+    try:
+        req = urllib.request.Request(_comfy_endpoint("queue", comfy_url))
+        with urllib.request.urlopen(req, timeout=request_timeout) as response:
+            payload = json.loads(response.read().decode())
+        if not isinstance(payload, dict):
+            return {"status": "unknown", "reason": "queue response was not an object"}
+        for status_name in ("queue_pending", "queue_running"):
+            entries = payload.get(status_name) or []
+            for entry in entries:
+                if isinstance(entry, (list, tuple)) and len(entry) >= 2:
+                    candidate = entry[1] if isinstance(entry[1], str) else entry[0]
+                elif isinstance(entry, dict):
+                    candidate = entry.get("prompt_id")
+                else:
+                    candidate = None
+                if str(candidate) == str(prompt_id):
+                    return {"status": "pending" if status_name == "queue_pending" else "running"}
+        return {"status": "not-owned-or-finished"}
+    except Exception as exc:
+        return {"status": "unknown", "reason": _poll_error_text(exc)}
+
+
+def _cancel_exact_pending_prompt(prompt_id, comfy_url, request_timeout, queue_status):
+    """Use ComfyUI's exact queue deletion only after confirming pending ownership."""
+    if not isinstance(queue_status, dict) or queue_status.get("status") != "pending":
+        return queue_status
+    payload = json.dumps({"delete": [str(prompt_id)]}).encode("utf-8")
+    req = urllib.request.Request(
+        _comfy_endpoint("queue", comfy_url), data=payload,
+        headers={"Content-Type": "application/json"}, method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=request_timeout) as response:
+            response.read()
+        return {**queue_status, "cancel_attempted": True, "cancelled_prompt_id": str(prompt_id)}
+    except Exception as exc:
+        return {**queue_status, "cancel_attempted": True, "cancel_error": _poll_error_text(exc)}
 
 
 def submit_and_wait(prompt, timeout=DEFAULT_TIMEOUT, comfy_url=None,
@@ -873,11 +1000,21 @@ def submit_and_wait(prompt, timeout=DEFAULT_TIMEOUT, comfy_url=None,
             if status.get("status_str") == "error":
                 raise RuntimeError(f"生成失敗: {json.dumps(status, ensure_ascii=False)}, prompt_id={prompt_id}")
             if status.get("completed"):
-                return entry
+                returned = dict(entry)
+                returned["_prompt_id"] = str(prompt_id)
+                returned["_queue_status"] = "completed"
+                return returned
         remaining = float(timeout) - (time.monotonic() - start)
         if remaining > 0:
             time.sleep(min(float(poll_interval), remaining))
-    raise TimeoutError(f"等待生成逾時({timeout}s), prompt_id={prompt_id}")
+    queue_status = _query_prompt_queue_status(prompt_id, comfy_url, DEFAULT_HTTP_TIMEOUT)
+    queue_status = _cancel_exact_pending_prompt(
+        prompt_id, comfy_url, DEFAULT_HTTP_TIMEOUT, queue_status,
+    )
+    raise VideoTimeoutError(
+        f"等待生成逾時({timeout}s), prompt_id={prompt_id}, queue_status={queue_status['status']}",
+        prompt_id, queue_status,
+    )
 
 
 def _safe_output_path(output_dir, filename):
@@ -1812,6 +1949,230 @@ def validate_motion_reference_fps(video_path):
     return fps
 
 
+def validate_video_input(video_path, label="影片輸入", min_duration=VIDEO_INPUT_MIN_DURATION,
+                         require_fps=None):
+    """Decode an input before upload/queue; never let a corrupt/empty video reach ComfyUI."""
+    try:
+        import av
+    except ImportError as exc:
+        raise RuntimeError(f"{label} 需要 PyAV 才能驗證可解碼性") from exc
+    path = os.path.abspath(os.fspath(video_path))
+    if not os.path.isfile(path):
+        raise ValueError(f"{label} 不存在: {path}")
+    try:
+        container = av.open(path)
+    except Exception as exc:
+        raise ValueError(f"{label} 無法解碼: {path}: {exc}") from exc
+    try:
+        stream = _video_streams(container)[0]
+        fps_fraction = _fps_fraction(getattr(stream, "average_rate", None))
+        if fps_fraction is None or fps_fraction <= 0:
+            raise ValueError(f"{label} 缺少有效 FPS: {path}")
+        frames = 0
+        for _ in container.decode(video=0):
+            frames += 1
+        if frames < 1:
+            raise ValueError(f"{label} 沒有影格: {path}")
+        duration = frames / float(fps_fraction)
+        if duration < float(min_duration):
+            raise ValueError(
+                f"{label} 時長不足: {duration:.3f}s < {float(min_duration):.3f}s: {path}"
+            )
+        fps = float(fps_fraction)
+        if require_fps is not None and not math.isclose(
+                fps, float(require_fps), rel_tol=0.0, abs_tol=VIDEO_FPS_TOLERANCE):
+            raise ValueError(
+                f"{label} 必須接近 {require_fps} FPS，目前是 {fps:g} FPS: {path}"
+            )
+        return {
+            "path": path, "width": int(stream.width), "height": int(stream.height),
+            "fps": fps, "frames": frames, "duration_seconds": round(duration, 6),
+            "audio": bool(getattr(container.streams, "audio", ()) or ()),
+        }
+    except (ValueError, RuntimeError):
+        raise
+    except Exception as exc:
+        raise ValueError(f"{label} 解碼失敗: {path}: {exc}") from exc
+    finally:
+        container.close()
+
+
+def _sha256_file(path):
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        while chunk := handle.read(1024 * 1024):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _safe_identifier(value, label):
+    if value is None:
+        return None
+    value = str(value).strip()
+    if not value or len(value) > 96 or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]*", value):
+        raise ValueError(
+            f"{label} 只能包含英數字、.、_、-，且長度 1~96；不接受路徑或空白: {value!r}"
+        )
+    return value
+
+
+def video_filename_prefix(task, shot_id=None, name=None):
+    name = _safe_identifier(name, "--name")
+    shot_id = _safe_identifier(shot_id, "--shot-id")
+    if name:
+        return name
+    if shot_id:
+        return f"shot_{shot_id}_{task}"
+    return task
+
+
+def _video_expected_frames(backend, duration):
+    if backend == "wan":
+        return wan_frame_count(duration)
+    if backend == "h3":
+        return h3_frame_count(duration)
+    return None
+
+
+def make_video_contract(task, backend, width, height, duration=None, audio_expected=None,
+                        expected_frames=None, frame_tolerance=VIDEO_FRAME_TOLERANCE,
+                        input_metadata=None):
+    if expected_frames is None and duration is not None and backend in ("h3", "wan"):
+        expected_frames = _video_expected_frames(backend, duration)
+    expected_duration = (
+        expected_frames / float(VIDEO_FPS) if expected_frames is not None else duration
+    )
+    contract = {
+        "schema_version": VIDEO_CONTRACT_SCHEMA_VERSION,
+        "task": task,
+        "backend": backend,
+        "width": int(width) if width is not None else None,
+        "height": int(height) if height is not None else None,
+        "fps": VIDEO_FPS,
+        "fps_tolerance": VIDEO_FPS_TOLERANCE,
+        "requested_duration_seconds": float(duration) if duration is not None else None,
+        "expected_duration_seconds": round(expected_duration, 6) if expected_duration is not None else None,
+        "duration_tolerance_seconds": VIDEO_DURATION_TOLERANCE,
+        "expected_frames": expected_frames,
+        "frame_tolerance": int(frame_tolerance),
+        "audio_expected": audio_expected,
+    }
+    if input_metadata is not None:
+        contract["input_metadata"] = input_metadata
+    return contract
+
+
+def _digest_json(value):
+    encoded = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+
+def _config_digest(config):
+    if not isinstance(config, dict):
+        return None
+    clean = {key: value for key, value in config.items() if key != "_source"}
+    return _digest_json(clean)
+
+
+def _video_model_records(config, backend):
+    if not isinstance(config, dict) or backend not in config.get("backends", {}):
+        return []
+    records = []
+    for key, entry in config["backends"][backend].get("models", {}).items():
+        if isinstance(entry, str):
+            record = {"key": key, "file": entry, "size_bytes": None, "sha256": None}
+        elif isinstance(entry, dict):
+            record = {
+                "key": key,
+                "file": entry.get("file") or entry.get("name"),
+                "size_bytes": entry.get("size_bytes"),
+                "sha256": entry.get("sha256"),
+            }
+        else:
+            continue
+        records.append(record)
+    return records
+
+
+def _input_records(paths):
+    records = []
+    for path in paths or ():
+        absolute = os.path.abspath(os.fspath(path))
+        if not os.path.isfile(absolute):
+            # The normal CLI validates every input before upload.  Keeping a
+            # null record here makes mocked/embedder calls diagnosable without
+            # fabricating a digest; such a record can never satisfy --resume.
+            records.append({"path": absolute, "sha256": None, "size_bytes": None})
+            continue
+        records.append({
+            "path": absolute,
+            "sha256": _sha256_file(absolute),
+            "size_bytes": os.path.getsize(absolute),
+        })
+    return records
+
+
+def _continuity_metric(image_a, image_b):
+    _require_pillow()
+    a = image_a.convert("RGB").resize((64, 64), PILImage.Resampling.BILINEAR)
+    b = image_b.convert("RGB").resize((64, 64), PILImage.Resampling.BILINEAR)
+    total = 0
+    for y in range(64):
+        for x in range(64):
+            left, right = a.getpixel((x, y)), b.getpixel((x, y))
+            total += sum(abs(int(one) - int(other)) for one, other in zip(left, right)) / (255.0 * 3.0)
+    return total / (64 * 64)
+
+
+def _first_last_video_images(video_path):
+    import av
+    container = av.open(video_path)
+    first = last = None
+    try:
+        for frame in container.decode(video=0):
+            image = frame.to_image().convert("RGB")
+            if first is None:
+                first = image.copy()
+            last = image.copy()
+    finally:
+        container.close()
+    if first is None or last is None:
+        raise RuntimeError(f"影片沒有畫面，無法計算連續性: {video_path}")
+    return first, last
+
+
+def _continuity_warnings(video_path, task, references=None):
+    """Warning-only pixel continuity diagnostics; never judge character identity."""
+    if task == "pose_drive" or task == "character_video":
+        return []
+    first, last = _first_last_video_images(video_path)
+    refs = references or {}
+    pairs = []
+    if task == "fx_loop":
+        pairs.append(("seam", first, last))
+    if refs.get("start") is not None:
+        with PILImage.open(refs["start"]) as image:
+            pairs.append(("start", image.copy(), first))
+    if refs.get("end") is not None:
+        with PILImage.open(refs["end"]) as image:
+            pairs.append(("end", last, image.copy()))
+    if refs.get("source") is not None:
+        with PILImage.open(refs["source"]) as image:
+            pairs.append(("source", image.copy(), first))
+    warnings = []
+    for label, left, right in pairs:
+        score = _continuity_metric(left, right)
+        if score > VIDEO_SEAM_WARNING_THRESHOLD:
+            warnings.append({
+                "kind": "continuity",
+                "label": label,
+                "score": round(score, 6),
+                "threshold": VIDEO_SEAM_WARNING_THRESHOLD,
+                "message": "連續性指標超過 warning 閾值；僅供人工檢查，不代表身份失敗",
+            })
+    return warnings
+
+
 def build_img2video_wan(prompt, image_filename, negative=None, width=832, height=480,
                         seed=None, duration=2.0, filename_prefix="img2video"):
     seed = seed_or_random(seed)
@@ -1882,7 +2243,7 @@ def build_pose_drive_wan(prompt, image_filename, motion_filename, width=768, hei
 
 
 def extract_video_frames(video_path, output_dir=None):
-    """把 mp4 抽成 png 序列,給遊戲引擎用。依賴 ComfyUI 環境裡的 av。"""
+    """Transactional mp4 -> png extraction; a failed run keeps the previous set."""
     import av
     output_dir = output_dir or os.path.dirname(os.path.abspath(video_path))
     # SaveVideo 常吐 foo_00001_.mp4,直接加 _frames 會變成 foo_00001__frames。
@@ -1890,26 +2251,58 @@ def extract_video_frames(video_path, output_dir=None):
     frame_dir = os.path.join(output_dir, stem + "_frames")
     if os.path.islink(frame_dir):
         raise RuntimeError(f"抽幀目錄是 symlink，拒絕清理: {frame_dir}")
-    os.makedirs(frame_dir, exist_ok=True)
-    # 這個目錄是腳本的固定抽幀輸出位置；只清掉本腳本產生的數字 PNG，
-    # 避免重跑時上一次較長影片留下的尾幀混入本次結果，也不碰其他檔案。
-    for entry in os.scandir(frame_dir):
-        if not re.fullmatch(r"\d+\.png", entry.name):
-            continue
-        if entry.is_symlink():
-            raise RuntimeError(f"抽幀輸出檔是 symlink，拒絕覆寫: {entry.path}")
-        if not entry.is_file(follow_symlinks=False):
-            raise RuntimeError(f"抽幀輸出檔不是一般檔案: {entry.path}")
-        os.unlink(entry.path)
-    container = av.open(video_path)
+    parent = os.path.dirname(frame_dir) or "."
+    os.makedirs(parent, exist_ok=True)
+    if os.path.islink(frame_dir):
+        raise RuntimeError(f"抽幀目錄是 symlink，拒絕清理: {frame_dir}")
+    staging = tempfile.mkdtemp(prefix=f".{os.path.basename(frame_dir)}.", dir=parent)
     paths = []
     try:
-        for i, frame in enumerate(container.decode(video=0)):
-            p = os.path.join(frame_dir, f"{i:03d}.png")
-            frame.to_image().save(p)
-            paths.append(p)
-    finally:
-        container.close()
+        # Preserve user-owned non-frame files from the previous directory, but
+        # never follow links or copy an unexpected directory into the staging set.
+        if os.path.isdir(frame_dir):
+            for entry in os.scandir(frame_dir):
+                if re.fullmatch(r"\d+\.png", entry.name):
+                    if entry.is_symlink() or not entry.is_file(follow_symlinks=False):
+                        raise RuntimeError(f"抽幀輸出檔不是安全的一般檔案: {entry.path}")
+                    continue
+                if entry.is_symlink():
+                    raise RuntimeError(f"抽幀保留項目是 symlink，拒絕複製: {entry.path}")
+                destination = os.path.join(staging, entry.name)
+                if entry.is_file(follow_symlinks=False):
+                    shutil.copy2(entry.path, destination)
+                elif entry.is_dir(follow_symlinks=False):
+                    shutil.copytree(entry.path, destination, symlinks=False)
+                else:
+                    raise RuntimeError(f"抽幀保留項目不是一般檔案或目錄: {entry.path}")
+        container = av.open(video_path)
+        try:
+            for i, frame in enumerate(container.decode(video=0)):
+                p = os.path.join(staging, f"{i:03d}.png")
+                frame.to_image().save(p)
+                paths.append(p)
+        finally:
+            container.close()
+        if not paths:
+            raise RuntimeError(f"影片沒有影格，未更新既有抽幀目錄: {video_path}")
+        old_dir = None
+        if os.path.lexists(frame_dir):
+            old_dir = tempfile.mkdtemp(prefix=f".{os.path.basename(frame_dir)}.old.", dir=parent)
+            os.rmdir(old_dir)
+            os.replace(frame_dir, old_dir)
+        try:
+            os.replace(staging, frame_dir)
+        except Exception:
+            if old_dir is not None and not os.path.lexists(frame_dir):
+                os.replace(old_dir, frame_dir)
+            raise
+        if old_dir is not None:
+            shutil.rmtree(old_dir)
+        paths = [os.path.join(frame_dir, os.path.basename(path)) for path in paths]
+    except Exception:
+        if os.path.isdir(staging):
+            shutil.rmtree(staging, ignore_errors=True)
+        raise
     print(f"[抽幀] {len(paths)} 張 -> {frame_dir}")
     return paths, frame_dir
 
@@ -1931,12 +2324,37 @@ def extract_last_frame(video_path, dest_path):
     return dest_path
 
 
-def concat_videos(video_paths, dest_path, allow_overwrite=False):
-    """外部組裝短過場。解析度/fps 跟第一支對齊,必要時重編碼。不是剪接台。
-    每支都有音軌才把立體聲接上去;有任何一支無聲就整段當無聲,
-    不要一半有聲一半靜音造成時間軸錯位。"""
+def _resize_video_image(image, width, height, mode):
+    if image.size == (width, height):
+        return image
+    if mode == "stretch":
+        return image.resize((width, height), PILImage.Resampling.LANCZOS)
+    source_ratio = image.width / float(image.height)
+    target_ratio = width / float(height)
+    if mode == "fit":
+        scale = min(width / image.width, height / image.height)
+        resized = image.resize((max(1, round(image.width * scale)), max(1, round(image.height * scale))), PILImage.Resampling.LANCZOS)
+        canvas = PILImage.new("RGB", (width, height), (0, 0, 0))
+        canvas.paste(resized, ((width - resized.width) // 2, (height - resized.height) // 2))
+        return canvas
+    if mode == "fill":
+        scale = max(width / image.width, height / image.height)
+        resized = image.resize((max(1, round(image.width * scale)), max(1, round(image.height * scale))), PILImage.Resampling.LANCZOS)
+        left = max(0, (resized.width - width) // 2)
+        top = max(0, (resized.height - height) // 2)
+        return resized.crop((left, top, left + width, top + height))
+    raise ValueError(f"未知 resize_mode: {mode!r}")
+
+
+def concat_videos(video_paths, dest_path, allow_overwrite=False, resize_mode="strict",
+                  audio_policy="require-consistent"):
+    """Basic local concatenation with explicit geometry/audio policies."""
     if len(video_paths) < 2:
         raise RuntimeError("video_concat 至少要兩支影片")
+    if resize_mode not in ("strict", "fit", "fill", "stretch"):
+        raise ValueError("resize_mode 必須是 strict/fit/fill/stretch")
+    if audio_policy not in ("require-consistent", "drop", "silence-missing"):
+        raise ValueError("audio_policy 必須是 require-consistent/drop/silence-missing")
     dest_path = os.fspath(dest_path)
     dest_canonical = os.path.normcase(os.path.realpath(os.path.abspath(dest_path)))
     for source in video_paths:
@@ -1952,8 +2370,13 @@ def concat_videos(video_paths, dest_path, allow_overwrite=False):
     import av
 
     stream_specs = []
+    audio_present = []
+    input_durations = []
     for source in video_paths:
-        inp = av.open(source)
+        try:
+            inp = av.open(source)
+        except Exception as exc:
+            raise ValueError(f"video_concat 無法解碼輸入影片 {source!r}: {exc}") from exc
         try:
             vs = _video_streams(inp)[0]
             # 保留原本無 average_rate 時採 24 FPS 的行為；有明確 rate 時則用
@@ -1964,6 +2387,11 @@ def concat_videos(video_paths, dest_path, allow_overwrite=False):
             elif fps <= 0:
                 raise ValueError(f"影片 FPS 必須大於 0: {source!r}")
             stream_specs.append((vs.width, vs.height, fps))
+            audio_present.append(bool(getattr(inp.streams, "audio", ()) or ()))
+            decoder = getattr(inp, "decode", None)
+            input_durations.append(
+                sum(1 for _ in decoder(video=0)) / float(fps) if decoder is not None else None
+            )
         finally:
             inp.close()
 
@@ -1985,17 +2413,48 @@ def concat_videos(video_paths, dest_path, allow_overwrite=False):
         )
 
     width, height = stream_specs[0][0], stream_specs[0][1]
+    mismatched_dimensions = [
+        (source, spec[0], spec[1])
+        for source, spec in zip(video_paths, stream_specs)
+        if (spec[0], spec[1]) != (width, height)
+    ]
+    if mismatched_dimensions and resize_mode == "strict":
+        details = ", ".join(f"{source!r}={w}x{h}" for source, w, h in mismatched_dimensions)
+        raise ValueError(
+            "video_concat 輸入影片尺寸不同，預設拒絕以免默默 stretch；"
+            f"第一支={width}x{height}，{details}。請明確給 --resize-mode fit/fill/stretch"
+        )
     fps = expected_fps
-    keep_audio = True
-    for src in video_paths:
-        inp = av.open(src)
-        try:
-            if not getattr(inp.streams, "audio", ()):
-                keep_audio = False
-        finally:
-            inp.close()
-        if not keep_audio:
-            break
+    all_audio = all(audio_present)
+    any_audio = any(audio_present)
+    if audio_policy == "require-consistent" and any_audio and not all_audio:
+        raise ValueError(
+            "video_concat 輸入音訊不一致；預設拒絕混合有聲/無聲。"
+            "請明確給 --audio-policy drop 或 silence-missing"
+        )
+    keep_audio = all_audio if audio_policy == "require-consistent" else (
+        any_audio if audio_policy == "silence-missing" else False
+    )
+    if keep_audio:
+        for src, has_audio, video_duration in zip(video_paths, audio_present, input_durations):
+            if not has_audio:
+                continue
+            if video_duration is None:
+                continue
+            inp = av.open(src)
+            try:
+                audio_stream = list(getattr(inp.streams, "audio", ()) or ())[0]
+                a_duration = getattr(audio_stream, "duration", None)
+                a_base = getattr(audio_stream, "time_base", None)
+                if a_duration is not None and a_base is not None:
+                    actual = float(a_duration * a_base)
+                    if abs(actual - video_duration) > VIDEO_AUDIO_DRIFT_TOLERANCE:
+                        raise ValueError(
+                            f"video_concat 音畫 duration drift 超過 {VIDEO_AUDIO_DRIFT_TOLERANCE}s: "
+                            f"{src!r} video={video_duration:.3f}s audio={actual:.3f}s"
+                        )
+            finally:
+                inp.close()
     dest_dir = os.path.dirname(os.path.abspath(dest_path)) or "."
     os.makedirs(dest_dir, exist_ok=True)
     fd, temp_dest = tempfile.mkstemp(
@@ -2017,7 +2476,7 @@ def concat_videos(video_paths, dest_path, allow_overwrite=False):
                 for frame in inp.decode(video=0):
                     img = frame.to_image()
                     if img.size != (width, height):
-                        img = img.resize((width, height), PILImage.Resampling.LANCZOS)
+                        img = _resize_video_image(img, width, height, resize_mode)
                     of = av.VideoFrame.from_image(img)
                     for packet in out_v.encode(of):
                         out.mux(packet)
@@ -2028,12 +2487,20 @@ def concat_videos(video_paths, dest_path, allow_overwrite=False):
         if out_a:
             resampler = av.AudioResampler(format="fltp", layout="stereo", rate=32000)
             sample_i = 0
-            for src in video_paths:
+            sample_rate = 32000
+            for src, has_audio, video_duration in zip(video_paths, audio_present, input_durations):
                 ain = av.open(src)
                 try:
-                    frames_in = list(ain.decode(audio=0))
+                    frames_in = list(ain.decode(audio=0)) if has_audio else []
                 finally:
                     ain.close()
+                if not has_audio and audio_policy == "silence-missing" and video_duration is not None:
+                    silence_samples = max(1, round(video_duration * sample_rate))
+                    silence = av.AudioFrame(format="fltp", layout="stereo", samples=silence_samples)
+                    silence.sample_rate = sample_rate
+                    for plane in silence.planes:
+                        plane.update(bytes(plane.buffer_size))
+                    frames_in = [silence]
                 frames_in.append(None)
                 for frame in frames_in:
                     resampled = resampler.resample(frame) or []
@@ -2068,7 +2535,7 @@ def concat_videos(video_paths, dest_path, allow_overwrite=False):
 
 
 def inspect_video_output(video_path, task=None, backend=None, elapsed_seconds=None):
-    """Read the delivered mp4 itself so a filename alone never counts as a pass."""
+    """Read the delivered mp4 itself; a filename alone never counts as a pass."""
     import av
 
     video_path = os.fspath(video_path)
@@ -2081,30 +2548,57 @@ def inspect_video_output(video_path, task=None, backend=None, elapsed_seconds=No
         if fps_fraction is None or fps_fraction <= 0:
             raise RuntimeError(f"影片輸出缺少有效 FPS: {video_path}")
         frame_count = sum(1 for _ in container.decode(video=0))
-        audio_streams = list(getattr(container.streams, "audio", ()) or ())
+        video_duration = None
+        stream_duration = getattr(video_stream, "duration", None)
+        time_base = getattr(video_stream, "time_base", None)
+        if stream_duration is not None and time_base is not None:
+            try:
+                video_duration = float(stream_duration * time_base)
+            except (TypeError, ValueError):
+                video_duration = None
+        if not video_duration or video_duration <= 0:
+            video_duration = frame_count / float(fps_fraction)
+        codec_context = getattr(video_stream, "codec_context", None)
+        pixel_format = getattr(getattr(codec_context, "format", None), "name", None)
         audio = []
-        for stream in audio_streams:
-            codec_context = getattr(stream, "codec_context", None)
+        for stream in list(getattr(container.streams, "audio", ()) or ()):
+            audio_codec = getattr(stream, "codec_context", None)
             layout = getattr(stream, "layout", None)
+            audio_duration = None
+            a_duration = getattr(stream, "duration", None)
+            a_time_base = getattr(stream, "time_base", None)
+            if a_duration is not None and a_time_base is not None:
+                try:
+                    audio_duration = float(a_duration * a_time_base)
+                except (TypeError, ValueError):
+                    audio_duration = None
             audio.append({
-                "codec": getattr(codec_context, "name", None),
-                "channels": getattr(codec_context, "channels", None),
+                "codec": getattr(audio_codec, "name", None),
+                "channels": getattr(audio_codec, "channels", None),
                 "layout": getattr(layout, "name", None) or (str(layout) if layout else None),
-                "sample_rate": getattr(codec_context, "sample_rate", None),
+                "sample_rate": getattr(audio_codec, "sample_rate", None),
+                "duration_seconds": round(audio_duration, 6) if audio_duration is not None else None,
             })
         metadata = {
             "task": task,
             "backend": backend,
             "path": os.path.abspath(video_path),
             "size_bytes": os.path.getsize(video_path),
-            "width": video_stream.width,
-            "height": video_stream.height,
+            "container": getattr(getattr(container, "format", None), "name", None),
+            "codec": getattr(codec_context, "name", None),
+            "pixel_format": pixel_format,
+            "width": int(video_stream.width),
+            "height": int(video_stream.height),
             "fps": float(fps_fraction),
             "frames": frame_count,
-            "duration_seconds": round(frame_count / float(fps_fraction), 6),
+            "duration_seconds": round(video_duration, 6),
             "audio": bool(audio),
             "audio_streams": audio,
         }
+    except (RuntimeError, ValueError):
+        raise
+    except Exception as exc:
+        raise RuntimeError(f"影片輸出解碼/檢查失敗: {video_path}: {exc}") from exc
     finally:
         container.close()
     if elapsed_seconds is not None:
@@ -2112,18 +2606,204 @@ def inspect_video_output(video_path, task=None, backend=None, elapsed_seconds=No
     return metadata
 
 
-def report_video_output(video_path, task, backend, elapsed_seconds=None):
+def _validate_video_contract(metadata, contract):
+    errors = []
+    if contract is None:
+        contract = make_video_contract(
+            metadata.get("task"), metadata.get("backend"), metadata.get("width"),
+            metadata.get("height"), audio_expected=None, expected_frames=None,
+        )
+    for key in ("width", "height"):
+        expected = contract.get(key)
+        if expected is not None and metadata.get(key) != expected:
+            errors.append(f"{key} mismatch: expected={expected}, actual={metadata.get(key)}")
+    expected_fps = contract.get("fps", VIDEO_FPS)
+    fps_tolerance = float(contract.get("fps_tolerance", VIDEO_FPS_TOLERANCE))
+    if expected_fps is not None and not math.isclose(
+            metadata["fps"], float(expected_fps), rel_tol=0.0, abs_tol=fps_tolerance):
+        errors.append(f"fps mismatch: expected={expected_fps}, actual={metadata['fps']:g}")
+    if metadata.get("frames", 0) < 1:
+        errors.append("影片輸出沒有影格")
+    expected_frames = contract.get("expected_frames")
+    if expected_frames is not None:
+        tolerance = int(contract.get("frame_tolerance", VIDEO_FRAME_TOLERANCE))
+        if abs(int(metadata["frames"]) - int(expected_frames)) > tolerance:
+            errors.append(
+                f"frame count mismatch: expected={expected_frames}±{tolerance}, actual={metadata['frames']}"
+            )
+    expected_duration = contract.get("expected_duration_seconds")
+    if expected_duration is None:
+        expected_duration = contract.get("requested_duration_seconds")
+    if expected_duration is not None and abs(
+            float(metadata["duration_seconds"]) - float(expected_duration)
+    ) > float(contract.get("duration_tolerance_seconds", VIDEO_DURATION_TOLERANCE)):
+        errors.append(
+            f"duration mismatch: expected={float(expected_duration):.3f}s, "
+            f"actual={float(metadata['duration_seconds']):.3f}s"
+        )
+    audio_expected = contract.get("audio_expected")
+    if audio_expected is not None and bool(metadata.get("audio")) != bool(audio_expected):
+        errors.append(
+            f"audio mismatch: expected={'present' if audio_expected else 'absent'}, "
+            f"actual={'present' if metadata.get('audio') else 'absent'}"
+        )
+    return errors
+
+
+def report_video_output(video_path, task, backend, elapsed_seconds=None, expected_contract=None,
+                        continuity_refs=None):
     metadata = inspect_video_output(
         video_path, task=task, backend=backend, elapsed_seconds=elapsed_seconds
     )
-    if not math.isclose(metadata["fps"], float(VIDEO_FPS), rel_tol=0.0, abs_tol=VIDEO_FPS_TOLERANCE):
-        raise RuntimeError(
-            f"影片輸出 FPS 不符合產線契約: {metadata['fps']:g}，需要接近 {VIDEO_FPS}: {video_path}"
+    errors = _validate_video_contract(metadata, expected_contract)
+    warnings = _continuity_warnings(video_path, task, continuity_refs) if not errors else []
+    metadata["validation"] = {
+        "status": "fail" if errors else ("warning" if warnings else "pass"),
+        "errors": errors,
+        "warnings": warnings,
+    }
+    if errors:
+        raise VideoContractError(
+            f"影片輸出不符合契約: {video_path}: {'; '.join(errors)}",
+            metadata=metadata, errors=errors, warnings=warnings,
         )
-    if metadata["frames"] < 1:
-        raise RuntimeError(f"影片輸出沒有影格: {video_path}")
     print("[影片驗證] " + json.dumps(metadata, ensure_ascii=False, sort_keys=True))
     return metadata
+
+
+def _sidecar_path(video_path):
+    return os.fspath(video_path) + ".json"
+
+
+def _write_json_atomic(path, payload, allow_overwrite=True):
+    path = os.path.abspath(os.fspath(path))
+    if os.path.lexists(path) and not allow_overwrite:
+        raise RuntimeError(f"拒絕覆寫既有 JSON sidecar: {path}")
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    fd, temporary = tempfile.mkstemp(prefix=f".{os.path.basename(path)}.", suffix=".tmp", dir=os.path.dirname(path) or ".")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
+            json.dump(_json_safe(payload), handle, ensure_ascii=False, indent=2, sort_keys=True)
+            handle.write("\n")
+        os.replace(temporary, path)
+    except Exception:
+        try:
+            os.unlink(temporary)
+        except FileNotFoundError:
+            pass
+        raise
+    return path
+
+
+def _json_safe(value):
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    if isinstance(value, dict):
+        return {str(key): _json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple, set)):
+        return [_json_safe(item) for item in value]
+    return repr(value)
+
+
+def write_video_sidecar(video_path, task, backend, seed, prompt, negative, input_paths,
+                        capability_config, contract, actual_metadata, prompt_id=None,
+                        elapsed_seconds=None, warnings=None, allow_overwrite=True):
+    """Write trace metadata without embedding runtime credentials or raw config."""
+    config_digest = _config_digest(capability_config)
+    payload = {
+        "schema_version": VIDEO_SIDECAR_SCHEMA_VERSION,
+        "task": task,
+        "backend": backend,
+        "resolved_seed": int(seed) if seed is not None else None,
+        "prompt": prompt or "",
+        "negative": negative or "",
+        "inputs": _input_records(input_paths),
+        "capability_config_digest": config_digest,
+        "model_records": _video_model_records(capability_config, backend),
+        "prompt_id": str(prompt_id) if prompt_id is not None else None,
+        "requested_contract": contract,
+        "actual_pyav_metadata": actual_metadata,
+        "warnings": list(warnings or actual_metadata.get("validation", {}).get("warnings", [])),
+        "elapsed_seconds": round(float(elapsed_seconds), 3) if elapsed_seconds is not None else None,
+        "output_path": os.path.abspath(os.fspath(video_path)),
+    }
+    return _write_json_atomic(_sidecar_path(video_path), payload, allow_overwrite=allow_overwrite)
+
+
+def _resume_signature(sidecar):
+    return {
+        "task": sidecar.get("task"),
+        "backend": sidecar.get("backend"),
+        "resolved_seed": sidecar.get("resolved_seed"),
+        "inputs_digest": _digest_json(sidecar.get("inputs", [])),
+        "capability_config_digest": sidecar.get("capability_config_digest"),
+        "contract_digest": _digest_json(sidecar.get("requested_contract")),
+    }
+
+
+def resume_video_output(video_path, expected_task, expected_backend, expected_seed,
+                        input_paths, capability_config, contract):
+    """Return a verified output only when every reproducibility field matches exactly."""
+    video_path = os.path.abspath(os.fspath(video_path))
+    sidecar = _sidecar_path(video_path)
+    if not os.path.isfile(video_path) or not os.path.isfile(sidecar):
+        raise RuntimeError(f"--resume 找不到完整影片 + sidecar: {video_path}")
+    try:
+        with open(sidecar, encoding="utf-8") as handle:
+            payload = json.load(handle)
+    except (OSError, json.JSONDecodeError) as exc:
+        raise RuntimeError(f"--resume sidecar 無法讀取，拒絕猜測: {sidecar}") from exc
+    expected = {
+        "task": expected_task,
+        "backend": expected_backend,
+        "resolved_seed": expected_seed,
+        "inputs_digest": _digest_json(_input_records(input_paths)),
+        "capability_config_digest": _config_digest(capability_config),
+        "contract_digest": _digest_json(contract),
+    }
+    if _resume_signature(payload) != expected:
+        raise RuntimeError(f"--resume sidecar 契約/輸入/config 不完全相符，拒絕跳過: {sidecar}")
+    metadata = report_video_output(
+        video_path, task=expected_task, backend=expected_backend,
+        expected_contract=contract,
+    )
+    return metadata
+
+
+def _find_named_video_output(output_dir, prefix):
+    output_dir = os.path.abspath(os.fspath(output_dir))
+    candidates = []
+    if not os.path.isdir(output_dir):
+        return None
+    for entry in os.scandir(output_dir):
+        if not entry.is_file(follow_symlinks=False) or not entry.name.lower().endswith(".mp4"):
+            continue
+        if os.path.splitext(entry.name)[0].startswith(prefix):
+            candidates.append(entry.path)
+    if len(candidates) != 1:
+        return None
+    return candidates[0]
+
+
+def write_video_timeout_record(output_dir, prefix, task, backend, seed, prompt, negative,
+                              input_paths, capability_config, contract, exc):
+    path = os.path.join(os.path.abspath(os.fspath(output_dir)), f"{prefix}.timeout.json")
+    payload = {
+        "schema_version": VIDEO_SIDECAR_SCHEMA_VERSION,
+        "status": "timeout",
+        "task": task,
+        "backend": backend,
+        "resolved_seed": seed,
+        "prompt": prompt or "",
+        "negative": negative or "",
+        "inputs": _input_records(input_paths),
+        "capability_config_digest": _config_digest(capability_config),
+        "requested_contract": contract,
+        "prompt_id": getattr(exc, "prompt_id", None),
+        "queue_status": getattr(exc, "queue_status", {"status": "unknown"}),
+        "message": str(exc),
+    }
+    return _write_json_atomic(path, payload)
 
 
 def build_img2video_h3(prompt, image_filename, width=768, height=768, seed=None, duration=2.0,
@@ -2417,6 +3097,15 @@ def _validate_cli_args(args):
         validate_unit_interval(args.appearance_weight, "appearance_weight")
     if args.task in VIDEO_TASK_CAPS and args.width is not None and args.height is not None:
         validate_dimensions(args.width, args.height)
+    if args.task in VIDEO_TASKS:
+        _safe_identifier(getattr(args, "shot_id", None), "--shot-id")
+        _safe_identifier(getattr(args, "name", None), "--name")
+        if getattr(args, "resume", False) and args.task != "video_concat" and not (
+                getattr(args, "shot_id", None) or getattr(args, "name", None)):
+            raise ValueError("--resume 需要 --name 或 --shot-id 才能精確定位輸出")
+    if args.task == "video_concat":
+        _safe_identifier(args.name, "--name")
+        _safe_identifier(getattr(args, "shot_id", None), "--shot-id")
 
 
 def _validate_task_capabilities(args):
@@ -2581,6 +3270,16 @@ def main(argv=None):
         "--overwrite", action="store_true",
         help="明確允許覆寫同名影片輸出；預設拒絕以免重跑破壞既有素材。",
     )
+    video_common.add_argument(
+        "--shot-id", help="安全鏡號；用於可追溯的輸出檔名前綴，例如 A01。",
+    )
+    video_common.add_argument(
+        "--name", help="安全輸出檔名前綴；指定後優先於 --shot-id。",
+    )
+    video_common.add_argument(
+        "--resume", action="store_true",
+        help="只在同名影片 sidecar 的 task/backend/seed/input/config/contract 全相符且重新驗證通過時跳過",
+    )
 
     p_vid = sub.add_parser(
         "img2video",
@@ -2653,6 +3352,17 @@ def main(argv=None):
         "--overwrite", action="store_true",
         help="明確允許覆寫既有輸出；預設拒絕以免重跑破壞既有素材。",
     )
+    p_cat.add_argument(
+        "--resize-mode", choices=["strict", "fit", "fill", "stretch"], default="strict",
+        help="尺寸不一致時的明確處理；預設 strict 拒絕，fit 加黑邊，fill 裁切，stretch 拉伸。",
+    )
+    p_cat.add_argument(
+        "--audio-policy", choices=["require-consistent", "drop", "silence-missing"],
+        default="require-consistent",
+        help="混合有聲/無聲的處理；預設拒絕，drop 丟掉全部音訊，silence-missing 補靜音。",
+    )
+    p_cat.add_argument("--shot-id", help="安全鏡號，供 concat sidecar 追溯。")
+    p_cat.add_argument("--resume", action="store_true", help="驗證既有 concat sidecar 後才跳過。")
 
     p_cam = sub.add_parser(
         "camera_move",
@@ -2757,7 +3467,19 @@ def main(argv=None):
         except (RuntimeError, ValueError) as exc:
             raise SystemExit(str(exc)) from exc
 
+    # Resolve randomness exactly once before any video graph is built. Every
+    # builder receives this integer, and the same value is persisted in the
+    # output sidecar for reproducibility/resume checks.
+    if args.task in VIDEO_TASKS:
+        args.seed = seed_or_random(getattr(args, "seed", None))
+
     video_started = time.monotonic() if args.task in VIDEO_TASKS or args.task == "video_concat" else None
+    video_contract = None
+    video_inputs = []
+    continuity_refs = {}
+    video_prompt = getattr(args, "prompt", "")
+    video_negative = getattr(args, "negative", None)
+    video_prefix = None
 
     def upload(path):
         return upload_image(path, comfy_url=comfy_url, request_timeout=request_timeout)
@@ -2836,10 +3558,15 @@ def main(argv=None):
         _require_wh_pair(args)
         width, height = video_canvas(args.image, args.width, args.height)
         img_fn = upload(args.image)
+        video_inputs = [args.image]
+        continuity_refs = {"source": args.image}
+        video_prefix = video_filename_prefix(args.task, args.shot_id, args.name)
         prompt, out_id = run_i2v(
             backend, args.prompt, img_fn, width, height, args.seed, duration,
-            filename_prefix="img2video", negative=args.negative,
+            filename_prefix=video_prefix, negative=args.negative,
         )
+        video_contract = make_video_contract(args.task, backend, width, height, duration,
+                                             audio_expected=(backend == "h3"))
     elif args.task == "fx_loop":
         backend = require_video_backend(args.task, args.backend, ACTIVE_VIDEO_CONFIG)
         duration = _require_video_duration(args.duration)
@@ -2847,10 +3574,16 @@ def main(argv=None):
         width, height = video_canvas(args.image, args.width, args.height)
         img_fn = upload(args.image)
         loop_prompt = args.prompt if "loop" in args.prompt.lower() else f"{args.prompt}, {VIDEO_LOOP_SUFFIX}"
+        video_prompt = loop_prompt
+        video_inputs = [args.image]
+        continuity_refs = {"source": args.image}
+        video_prefix = video_filename_prefix(args.task, args.shot_id, args.name)
         prompt, out_id = run_i2v(
             backend, loop_prompt, img_fn, width, height, args.seed, duration,
-            last_image_filename=img_fn, filename_prefix="fx_loop", negative=args.negative,
+            last_image_filename=img_fn, filename_prefix=video_prefix, negative=args.negative,
         )
+        video_contract = make_video_contract(args.task, backend, width, height, duration,
+                                             audio_expected=(backend == "h3"))
     elif args.task == "transition":
         backend = require_video_backend(args.task, args.backend, ACTIVE_VIDEO_CONFIG)
         duration = _require_video_duration(args.duration)
@@ -2863,10 +3596,15 @@ def main(argv=None):
         width, height = video_canvas(args.start, args.width, args.height)
         start_fn = upload(args.start)
         end_fn = upload(args.end)
+        video_inputs = [args.start, args.end]
+        continuity_refs = {"start": args.start, "end": args.end}
+        video_prefix = video_filename_prefix(args.task, args.shot_id, args.name)
         prompt, out_id = run_i2v(
             backend, args.prompt, start_fn, width, height, args.seed, duration,
-            last_image_filename=end_fn, filename_prefix="transition",
+            last_image_filename=end_fn, filename_prefix=video_prefix,
         )
+        video_contract = make_video_contract(args.task, backend, width, height, duration,
+                                             audio_expected=(backend == "h3"))
     elif args.task == "clip_extend":
         if bool(args.video) == bool(args.image):
             raise SystemExit("clip_extend 要 --video 上一支 mp4,或 --image 上一鏡尾幀,只能給一個。")
@@ -2876,6 +3614,11 @@ def main(argv=None):
         still = args.image
         temp_still = None
         if args.video:
+            if os.path.isfile(os.path.abspath(os.fspath(args.video))):
+                try:
+                    validate_video_input(args.video, label="clip_extend --video", min_duration=VIDEO_INPUT_MIN_DURATION)
+                except (RuntimeError, ValueError) as exc:
+                    raise SystemExit(str(exc)) from exc
             out_dir = getattr(args, "output_dir", None) or OUTPUT_DIR
             temp_still = _make_temp_image_path(out_dir, "_clip_extend_last_")
             try:
@@ -2889,22 +3632,86 @@ def main(argv=None):
         else:
             width, height = video_canvas(still, args.width, args.height)
             img_fn = upload(still)
+        video_inputs = [args.video] if args.video else [args.image]
+        continuity_refs = {"source": still} if args.image else {}
+        video_prefix = video_filename_prefix(args.task, args.shot_id, args.name)
         prompt, out_id = run_i2v(
             backend, args.prompt, img_fn, width, height, args.seed, duration,
-            filename_prefix="clip_extend", negative=args.negative,
+            filename_prefix=video_prefix, negative=args.negative,
         )
+        video_contract = make_video_contract(args.task, backend, width, height, duration,
+                                             audio_expected=(backend == "h3"))
     elif args.task == "video_concat":
         out_dir = getattr(args, "output_dir", None) or OUTPUT_DIR
         try:
-            dest = _safe_output_path(out_dir, f"{args.name}.mp4")
+            if all(os.path.isfile(os.path.abspath(os.fspath(path))) for path in args.video):
+                input_metadata = [
+                    validate_video_input(path, label=f"video_concat input[{index}]")
+                    for index, path in enumerate(args.video)
+                ]
+            else:
+                # concat_videos performs the authoritative open/decode check;
+                # this fallback only keeps mocked local callers from needing
+                # real media while still failing safely in production.
+                input_metadata = [{
+                    "path": os.path.abspath(os.fspath(path)), "width": 0, "height": 0,
+                    "fps": VIDEO_FPS, "frames": 0, "duration_seconds": 0.0, "audio": False,
+                } for path in args.video]
+        except (RuntimeError, ValueError) as exc:
+            raise SystemExit(str(exc)) from exc
+        if args.audio_policy == "require-consistent":
+            audio_flags = [bool(item["audio"]) for item in input_metadata]
+            if any(audio_flags) and not all(audio_flags):
+                raise SystemExit(
+                    "video_concat 輸入音訊不一致；預設拒絕混合有聲/無聲。"
+                    "請明確給 --audio-policy drop 或 silence-missing"
+                )
+        expected_audio = (
+            False if args.audio_policy == "drop" else
+            any(item["audio"] for item in input_metadata)
+        )
+        video_inputs = list(args.video)
+        video_prefix = video_filename_prefix(args.task, args.shot_id, args.name)
+        total_frames = sum(item["frames"] for item in input_metadata)
+        total_duration = sum(item["duration_seconds"] for item in input_metadata)
+        video_contract = make_video_contract(
+            args.task, "local", input_metadata[0]["width"], input_metadata[0]["height"],
+            duration=total_duration, audio_expected=expected_audio,
+            expected_frames=total_frames, frame_tolerance=VIDEO_FRAME_TOLERANCE,
+            input_metadata=input_metadata,
+        )
+        video_contract["resize_mode"] = args.resize_mode
+        video_contract["audio_policy"] = args.audio_policy
+        try:
+            dest = _safe_output_path(out_dir, f"{video_prefix}.mp4")
         except (TypeError, ValueError) as exc:
             raise SystemExit(str(exc)) from exc
         os.makedirs(out_dir, exist_ok=True)
-        concat_videos(args.video, dest, allow_overwrite=args.overwrite)
+        if args.resume:
+            try:
+                metadata = resume_video_output(
+                    dest, args.task, "local", None, video_inputs, None, video_contract,
+                )
+            except (RuntimeError, VideoContractError) as exc:
+                raise SystemExit(str(exc)) from exc
+            print(f"[恢復] {dest}")
+            return
+        concat_kwargs = {"allow_overwrite": args.overwrite}
+        if args.resize_mode != "strict":
+            concat_kwargs["resize_mode"] = args.resize_mode
+        if args.audio_policy != "require-consistent":
+            concat_kwargs["audio_policy"] = args.audio_policy
+        concat_videos(args.video, dest, **concat_kwargs)
         print(f"[完成] {dest}")
-        report_video_output(
-            dest, task="video_concat", backend="local",
-            elapsed_seconds=time.monotonic() - video_started if video_started else None,
+        elapsed = time.monotonic() - video_started if video_started else None
+        report_contract = None if any(item["width"] == 0 for item in input_metadata) else video_contract
+        metadata = report_video_output(
+            dest, task="video_concat", backend="local", elapsed_seconds=elapsed,
+            **({"expected_contract": report_contract} if report_contract is not None else {}),
+        )
+        write_video_sidecar(
+            dest, args.task, "local", None, "", "", video_inputs, None,
+            video_contract, metadata, elapsed_seconds=elapsed,
         )
         return
     elif args.task == "character_video":
@@ -2918,16 +3725,23 @@ def main(argv=None):
         _require_wh_pair(args)
         width, height = video_canvas(refs[0], args.width, args.height)
         ref_fns = [upload(p) for p in refs]
+        video_inputs = list(refs)
+        video_prefix = video_filename_prefix(args.task, args.shot_id, args.name)
         prompt, out_id = run_character_video(
             backend, args.prompt, ref_fns, width, height, args.seed, duration,
-            filename_prefix="character_video",
+            filename_prefix=video_prefix,
         )
+        video_contract = make_video_contract(args.task, backend, width, height, duration,
+                                             audio_expected=(backend == "h3"))
     elif args.task == "camera_move":
         backend = require_video_backend(args.task, args.backend, ACTIVE_VIDEO_CONFIG)
         duration = _require_video_duration(args.duration)
         _require_wh_pair(args)
         width, height = video_canvas(args.image, args.width, args.height)
         img_fn = upload(args.image)
+        video_inputs = [args.image]
+        continuity_refs = {"source": args.image}
+        video_prefix = video_filename_prefix(args.task, args.shot_id, args.name)
         cam_prompt = camera_move_prompt(args.camera, args.prompt)
         last_fn = None
         end_path = None
@@ -2943,11 +3757,13 @@ def main(argv=None):
                     last_fn = upload(end_path)
             prompt, out_id = run_i2v(
                 backend, cam_prompt, img_fn, width, height, args.seed, duration,
-                last_image_filename=last_fn, filename_prefix="camera_move",
+                last_image_filename=last_fn, filename_prefix=video_prefix,
                 negative=args.negative,
             )
         finally:
             _remove_temp_file(end_path)
+        video_contract = make_video_contract(args.task, backend, width, height, duration,
+                                             audio_expected=(backend == "h3"))
     elif args.task == "pose_drive":
         backend = require_video_backend(args.task, args.backend, ACTIVE_VIDEO_CONFIG)
         duration = _require_video_duration(args.duration)
@@ -2958,26 +3774,68 @@ def main(argv=None):
             file=sys.stderr,
         )
         try:
+            # Keep the cheap FPS-specific diagnostic first; the full decode
+            # preflight follows and catches empty/truncated references.
             validate_motion_reference_fps(args.motion_ref)
+            validate_video_input(
+                args.motion_ref, label="pose_drive --motion-ref",
+                min_duration=duration, require_fps=VIDEO_FPS,
+            )
         except (RuntimeError, ValueError) as exc:
             raise SystemExit(str(exc)) from exc
         width, height = video_canvas(args.image, args.width, args.height)
         img_fn = upload(args.image)
         motion_fn = upload(args.motion_ref)
+        video_inputs = [args.image, args.motion_ref]
+        video_prefix = video_filename_prefix(args.task, args.shot_id, args.name)
         prompt, out_id = run_pose_drive(
             backend, args.prompt, img_fn, motion_fn, width, height, args.seed, duration,
-            control_type=args.control_type, filename_prefix="pose_drive",
+            control_type=args.control_type, filename_prefix=video_prefix,
             negative=args.negative,
         )
+        video_contract = make_video_contract(args.task, backend, width, height, duration,
+                                             audio_expected=(backend == "h3"))
     else:
         raise SystemExit(f"未知 task: {args.task}")
+
+    if args.task in VIDEO_TASKS:
+        if video_contract is None or video_prefix is None:
+            raise RuntimeError(f"影片 task {args.task} 沒有建立輸出契約或安全命名")
+        if args.resume:
+            out_dir = getattr(args, "output_dir", None) or OUTPUT_DIR
+            candidate = _find_named_video_output(out_dir, video_prefix)
+            if candidate is None:
+                raise SystemExit(
+                    f"--resume 找不到唯一的 {video_prefix!r} mp4 + sidecar；"
+                    "不確定狀態不會猜測或重新送出工作"
+                )
+            try:
+                metadata = resume_video_output(
+                    candidate, args.task, args.backend, args.seed, video_inputs,
+                    ACTIVE_VIDEO_CONFIG, video_contract,
+                )
+            except (RuntimeError, VideoContractError) as exc:
+                raise SystemExit(str(exc)) from exc
+            print(f"[恢復] {candidate}")
+            return
 
     target_output_id = None
     if args.task == "icon_asset" or getattr(args, "remove_bg", False):
         target_output_id = attach_bg_removal(prompt, out_id)
 
     print(f"[送出] task={args.task}")
-    history = submit_and_wait(prompt, timeout=args.timeout, comfy_url=comfy_url)
+    try:
+        history = submit_and_wait(prompt, timeout=args.timeout, comfy_url=comfy_url)
+    except VideoTimeoutError as exc:
+        if args.task in VIDEO_TASKS:
+            out_dir = getattr(args, "output_dir", None) or OUTPUT_DIR
+            prefix = video_prefix or video_filename_prefix(args.task)
+            write_video_timeout_record(
+                out_dir, prefix, args.task, getattr(args, "backend", None),
+                getattr(args, "seed", None), video_prompt, video_negative,
+                video_inputs, ACTIVE_VIDEO_CONFIG, video_contract, exc,
+            )
+        raise
     paths = download_outputs(
         history,
         output_dir=getattr(args, "output_dir", None),
@@ -2995,9 +3853,29 @@ def main(argv=None):
     for p in paths:
         print(f"[完成] {p}")
         if p.lower().endswith(".mp4") and args.task in VIDEO_TASKS:
-            metadata = report_video_output(
-                p, task=args.task, backend=args.backend,
-                elapsed_seconds=time.monotonic() - video_started if video_started else None,
+            elapsed = time.monotonic() - video_started if video_started else None
+            try:
+                metadata = report_video_output(
+                    p, task=args.task, backend=args.backend,
+                    elapsed_seconds=elapsed, expected_contract=video_contract,
+                    continuity_refs=continuity_refs,
+                )
+            except VideoContractError as exc:
+                # Persist the decoded evidence even for a failed contract so
+                # operators can diagnose a bad render without treating it as success.
+                write_video_sidecar(
+                    p, args.task, args.backend, args.seed, video_prompt, video_negative,
+                    video_inputs, ACTIVE_VIDEO_CONFIG, video_contract,
+                    exc.metadata or {"validation": {"status": "fail", "errors": exc.errors}},
+                    prompt_id=history.get("_prompt_id") if isinstance(history, dict) else None,
+                    elapsed_seconds=elapsed, warnings=exc.warnings,
+                )
+                raise
+            write_video_sidecar(
+                p, args.task, args.backend, args.seed, video_prompt, video_negative,
+                video_inputs, ACTIVE_VIDEO_CONFIG, video_contract, metadata,
+                prompt_id=history.get("_prompt_id") if isinstance(history, dict) else None,
+                elapsed_seconds=elapsed,
             )
             if getattr(args, "extract_frames", False):
                 frame_paths, frame_dir = extract_video_frames(

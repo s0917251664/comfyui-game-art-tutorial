@@ -8,6 +8,7 @@ packages or downloads models.
 
 import argparse
 from datetime import datetime, timezone
+import hashlib
 import importlib.util
 import json
 import os
@@ -168,6 +169,21 @@ def _normalise_url(value):
     return value
 
 
+def _schema_fingerprint(payload, classes):
+    selected = {}
+    for name in sorted(classes):
+        info = payload.get(name)
+        if not isinstance(info, dict):
+            continue
+        selected[name] = {
+            key: info.get(key)
+            for key in ("input", "output", "output_name", "display_name", "name")
+            if key in info
+        }
+    encoded = json.dumps(selected, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+
 def _query_object_info(comfy_url, timeout):
     if not comfy_url:
         return {
@@ -194,15 +210,25 @@ def _query_object_info(comfy_url, timeout):
             "classes": [],
             "error": "ComfyUI /object_info 回應不是 JSON object",
         }
+    classes = sorted(str(name) for name in payload)
     return {
         "status": "available",
         "url": url,
-        "classes": sorted(str(name) for name in payload),
+        "classes": classes,
+        "schema_fingerprint": _schema_fingerprint(payload, classes),
         "error": None,
     }
 
 
-def _model_entry(backend, key, filename, model_roots):
+def _sha256_file(path):
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        while chunk := handle.read(1024 * 1024):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _model_entry(backend, key, filename, model_roots, include_hash=False):
     directory = MODEL_DIRECTORIES[backend][key]
     candidates = [os.path.abspath(os.path.join(root, directory, filename)) for root in model_roots]
     present_path = next((path for path in candidates if os.path.isfile(path)), None)
@@ -213,7 +239,9 @@ def _model_entry(backend, key, filename, model_roots):
         "path": path,
         "present": bool(present_path),
         "size_bytes": os.path.getsize(present_path) if present_path else None,
-        "sha256": None,
+        # Large model hashes can take minutes; only calculate when the
+        # operator explicitly requests --hash-models.
+        "sha256": _sha256_file(present_path) if present_path and include_hash else None,
     }
 
 
@@ -254,7 +282,10 @@ def detect(args):
     backends = {}
     for backend, implementation in catalog.VIDEO_BACKEND_SPECS.items():
         models = {
-            key: _model_entry(backend, key, filename, model_roots)
+            key: _model_entry(
+                backend, key, filename, model_roots,
+                include_hash=bool(getattr(args, "hash_models", False)),
+            )
             for key, filename in implementation["models"].items()
         }
         capabilities = []
@@ -359,6 +390,10 @@ def build_parser():
     parser.add_argument(
         "--overwrite", action="store_true",
         help="明確允許更新既有 capability config",
+    )
+    parser.add_argument(
+        "--hash-models", action="store_true",
+        help="明確要求計算已存在模型 SHA-256；大型模型可能耗時，預設只記錄 size_bytes",
     )
     return parser
 

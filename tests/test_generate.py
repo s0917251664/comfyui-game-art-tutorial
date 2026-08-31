@@ -168,6 +168,19 @@ class GenerateTests(unittest.TestCase):
                     {"1": {}}, timeout=0.5, comfy_url="http://server:8188", poll_interval=0,
                 )
 
+    def test_timeout_only_attempts_exact_pending_queue_deletion(self):
+        opener = mock.Mock(return_value=Response("{}"))
+        with mock.patch.object(self.generate.urllib.request, "urlopen", opener):
+            status = self.generate._cancel_exact_pending_prompt(
+                "prompt-exact", "http://server:8188", 3,
+                {"status": "pending"},
+            )
+        self.assertTrue(status["cancel_attempted"])
+        request = opener.call_args.args[0]
+        self.assertEqual("http://server:8188/queue", request.full_url)
+        self.assertNotIn("interrupt", request.full_url)
+        self.assertEqual({"delete": ["prompt-exact"]}, json.loads(request.data.decode()))
+
     def test_submit_rejects_malformed_queue_and_history_shapes(self):
         with mock.patch.object(self.generate.urllib.request, "urlopen", return_value=Response("[]")):
             with self.assertRaisesRegex(RuntimeError, "JSON object"):
@@ -645,6 +658,160 @@ class GenerateTests(unittest.TestCase):
                     mock.patch.object(fake_av, "open", side_effect=AssertionError("must reject first")):
                 with self.assertRaisesRegex(ValueError, "輸入影片不可與輸出路徑相同"):
                     self.generate.concat_videos([source_a, source_b], source_a)
+
+    def test_video_contract_fails_on_geometry_and_audio_mismatch(self):
+        metadata = {
+            "width": 128, "height": 64, "fps": 24.0, "frames": 49,
+            "duration_seconds": 2.041667, "audio": False,
+        }
+        contract = self.generate.make_video_contract(
+            "img2video", "h3", 64, 64, duration=2.0, audio_expected=True,
+        )
+        errors = self.generate._validate_video_contract(metadata, contract)
+        self.assertTrue(any("width mismatch" in item for item in errors))
+        self.assertTrue(any("audio mismatch" in item for item in errors))
+
+    def test_sidecar_is_atomic_traceable_and_does_not_copy_runtime_secret(self):
+        with tempfile.TemporaryDirectory() as work:
+            source = os.path.join(work, "still.png")
+            output = os.path.join(work, "shot_A01.mp4")
+            with open(source, "wb") as handle:
+                handle.write(b"source")
+            with open(output, "wb") as handle:
+                handle.write(b"video")
+            config = {
+                "schema_version": 1,
+                "_source": os.path.join(work, "video_capabilities.json"),
+                "comfyui_url": "http://user:super-secret-token@server:8188",
+                "backends": {"h3": {"models": {
+                    "i2v_unet": {"file": "h3.safetensors", "size_bytes": 123, "sha256": "abc"},
+                }}},
+            }
+            contract = self.generate.make_video_contract("img2video", "h3", 64, 64, 2.0, True)
+            actual = {"width": 64, "height": 64, "fps": 24.0, "frames": 56,
+                      "duration_seconds": 2.333333, "audio": True,
+                      "validation": {"status": "warning", "warnings": [{"kind": "continuity"}]}}
+            path = self.generate.write_video_sidecar(
+                output, "img2video", "h3", 42, "idle", "bad", [source], config,
+                contract, actual, prompt_id="prompt-42", elapsed_seconds=1.25,
+            )
+            self.assertEqual(output + ".json", path)
+            with open(path, encoding="utf-8") as handle:
+                sidecar = json.load(handle)
+            encoded = json.dumps(sidecar, ensure_ascii=False)
+            self.assertNotIn("super-secret-token", encoded)
+            self.assertEqual(42, sidecar["resolved_seed"])
+            self.assertEqual("prompt-42", sidecar["prompt_id"])
+            self.assertEqual(os.path.abspath(source), sidecar["inputs"][0]["path"])
+            self.assertEqual(64, sidecar["requested_contract"]["width"])
+            self.assertEqual("warning", sidecar["actual_pyav_metadata"]["validation"]["status"])
+
+    def test_extract_video_frames_failure_keeps_previous_successful_set(self):
+        class FakeImage:
+            def save(self, path):
+                with open(path, "wb") as output:
+                    output.write(b"new")
+
+        class FakeFrame:
+            def to_image(self):
+                return FakeImage()
+
+        def decode(**kwargs):
+            yield FakeFrame()
+            raise RuntimeError("decode broke")
+
+        old_container = SimpleNamespace(decode=decode, close=mock.Mock())
+        fake_av = SimpleNamespace(open=mock.Mock(return_value=old_container))
+        with tempfile.TemporaryDirectory() as output_dir:
+            frame_dir = os.path.join(output_dir, "clip_frames")
+            os.makedirs(frame_dir)
+            old = os.path.join(frame_dir, "000.png")
+            with open(old, "wb") as output:
+                output.write(b"old-success")
+            with mock.patch.dict(sys.modules, {"av": fake_av}):
+                with self.assertRaisesRegex(RuntimeError, "decode broke"):
+                    self.generate.extract_video_frames(os.path.join(output_dir, "clip.mp4"), output_dir)
+            with open(old, "rb") as output:
+                self.assertEqual(b"old-success", output.read())
+            self.assertFalse(any(name.startswith(".clip_frames.") for name in os.listdir(output_dir)))
+
+    def test_video_concat_default_rejects_mixed_audio_policy(self):
+        class FakeInput:
+            def __init__(self, has_audio):
+                self.streams = SimpleNamespace(
+                    video=[SimpleNamespace(width=64, height=64, average_rate=Fraction(24, 1))],
+                    audio=[SimpleNamespace()] if has_audio else [],
+                )
+            def decode(self, **kwargs):
+                return iter([object()])
+            def close(self):
+                pass
+
+        fake_av = SimpleNamespace(open=lambda path, mode="r": FakeInput(path == "a.mp4"))
+        with tempfile.TemporaryDirectory() as output_dir:
+            dest = os.path.join(output_dir, "joined.mp4")
+            with mock.patch.object(self.generate, "_require_pillow"), \
+                    mock.patch.dict(sys.modules, {"av": fake_av}):
+                with self.assertRaisesRegex(ValueError, "音訊不一致"):
+                    self.generate.concat_videos(["a.mp4", "b.mp4"], dest)
+            self.assertFalse(os.path.exists(dest))
+
+    def test_input_preflight_rejects_empty_video_before_upload(self):
+        container = SimpleNamespace(
+            streams=SimpleNamespace(video=[SimpleNamespace(width=64, height=64, average_rate=Fraction(24, 1))], audio=[]),
+            decode=lambda **kwargs: iter(()), close=mock.Mock(),
+        )
+        fake_av = SimpleNamespace(open=mock.Mock(return_value=container))
+        with tempfile.NamedTemporaryFile(suffix=".mp4") as source, \
+                mock.patch.dict(sys.modules, {"av": fake_av}):
+            with self.assertRaisesRegex(ValueError, "沒有影格"):
+                self.generate.validate_video_input(source.name, label="motion-ref")
+
+    def test_model_size_preflight_rejects_stale_capability_config(self):
+        with tempfile.TemporaryDirectory() as model_dir:
+            path = os.path.join(model_dir, "model.safetensors")
+            with open(path, "wb") as model:
+                model.write(b"actual")
+            config = {"backends": {"wan": {"available": True, "models": {
+                "i2v_unet": {"file": "model.safetensors", "path": path, "size_bytes": 999},
+            }}}}
+            with self.assertRaisesRegex(RuntimeError, "size_bytes"):
+                self.generate._validate_video_models(config, "wan", ["i2v"])
+
+    def test_resume_requires_exact_sidecar_signature_and_revalidates_output(self):
+        with tempfile.TemporaryDirectory() as work:
+            source = os.path.join(work, "still.png")
+            output = os.path.join(work, "shot_A01.mp4")
+            for path, data in ((source, b"source"), (output, b"video")):
+                with open(path, "wb") as handle:
+                    handle.write(data)
+            contract = self.generate.make_video_contract("img2video", "wan", 64, 64, 2.0, False)
+            config = {"backends": {"wan": {"models": {}}}}
+            actual = {"width": 64, "height": 64, "fps": 24.0, "frames": 49,
+                      "duration_seconds": 2.041667, "audio": False,
+                      "validation": {"status": "pass", "warnings": []}}
+            self.generate.write_video_sidecar(output, "img2video", "wan", 7, "idle", "", [source],
+                                              config, contract, actual)
+            with mock.patch.object(self.generate, "report_video_output", return_value=actual) as report:
+                result = self.generate.resume_video_output(
+                    output, "img2video", "wan", 7, [source], config, contract,
+                )
+            self.assertIs(actual, result)
+            report.assert_called_once()
+            with self.assertRaisesRegex(RuntimeError, "不完全相符"):
+                self.generate.resume_video_output(output, "img2video", "wan", 8, [source], config, contract)
+
+    def test_continuity_metric_is_warning_only(self):
+        with tempfile.TemporaryDirectory() as work:
+            source = os.path.join(work, "source.png")
+            self.generate.PILImage.new("RGB", (64, 64), (0, 0, 0)).save(source)
+            black = self.generate.PILImage.new("RGB", (64, 64), (0, 0, 0))
+            white = self.generate.PILImage.new("RGB", (64, 64), (255, 255, 255))
+            with mock.patch.object(self.generate, "_first_last_video_images", return_value=(black, white)):
+                warnings = self.generate._continuity_warnings("unused.mp4", "fx_loop")
+            self.assertEqual("continuity", warnings[0]["kind"])
+            self.assertEqual("seam", warnings[0]["label"])
+            self.assertIn("warning", warnings[0]["message"])
 
 
 if __name__ == "__main__":
