@@ -34,6 +34,7 @@
 | 「從 A 畫面變成 B」「內容轉場、傳送門」 | `transition`(要兩張靜幀) |
 | 「接下去下一鏡」「同一場繼續」 | `clip_extend` |
 | 「把這幾支短片接成一支」 | `video_concat` |
+| 「把綠幕特效疊到背景上」「合成/疊圖成一支」 | `video_composite`(chroma key,純本機不經 ComfyUI,細節見下方「video_composite(綠幕合成)」) |
 | 「做一部有劇情的片子 / 15 秒過場」 | **先出鏡頭表**,再逐鏡呼叫上面的 task,最後 `video_concat`。不准收成一個超長 prompt |
 
 `--backend` 只有在 capability config 明確寫了 `default_backend` 時才可以省略；若 config 是 `null`，必須問清楚或要求使用者明確指定。不要因模型缺失、node 缺失或 task 不支援而自動換 H3/Wan。哪個 task 接了哪個 backend,見 `reference/backends.md`;沒接上的組合腳本會在 upload/queue 前報錯,不要因此改 task 名。
@@ -79,6 +80,13 @@
 3. **靜幀姿勢/朝向必須接近動作片第一幀**(跟靜態 `character_action` 一樣)。站姿持槍去套走路片會雙人/重影,不要硬跑——沒有接近的靜幀時,先抽動作片第一幀當角色圖,或先走圖片產線 `character_action` 擺成那個起點姿勢
 4. 這段在做什麼(英文 prompt)
 5. 時長(預設 2)。`--control-type` 預設 pose;細節見 `reference/pose-drive.md`
+
+### video_composite(綠幕合成)
+1. 前景 mp4(`--foreground`,必須是這條產線輸出的綠幕素材——純綠 `#00FF00` 背景,不是任意影片)
+2. 背景(`--background`,mp4 或靜態圖都可以;背景比前景短就循環,比前景長就截斷)
+3. 前景色碼跟去背素材本身綠幕的實際色碼是否一致(預設 `00FF00`,通常不用問,除非使用者自己調過綠幕色)
+
+這個 task **純本機用 PyAV+numpy 逐幀 chroma key**,不呼叫 ComfyUI、不經過任何生成模型,所以不需要 `--comfy-url`/`--config`/`--timeout`。摳像品質看前景綠幕乾不乾淨——如果邊緣有色邊/沒摳乾淨,調 `--tolerance`(門檻,預設 60,調高摳更乾淨但邊緣更容易吃色)或 `--softness`(羽化寬度,預設 40,調小邊緣更銳利但更容易鋸齒)。背景尺寸跟前景不同時預設 `--resize-mode fill`(裁切填滿),要黑邊或拉伸才需要明確換成 `fit`/`stretch`。目前不支援 `--resume`。
 
 ### 有劇情的短片(鏡頭表,必做)
 
@@ -127,6 +135,9 @@ clip_extend:
 video_concat:
   <python_exe> <generate_script> video_concat --video <a.mp4> --video <b.mp4> --name scene_A --output-dir <output_dir> [--resize-mode strict|fit|fill|stretch] [--audio-policy require-consistent|drop|silence-missing] [--resume|--overwrite]
 
+video_composite:
+  <python_exe> <generate_script> video_composite --foreground <greenscreen.mp4> --background <bg.mp4|bg.png> [--chroma-color 00FF00] [--tolerance 60] [--softness 40] [--resize-mode fill|strict|fit|stretch] [--overwrite] --output-dir <output_dir>
+
 character_video:
   <python_exe> <generate_script> character_video --config <local_config.json> [--video-config <video_capabilities.json>] --timeout 1800 --character-ref <path> [--character-ref <path2>] --prompt "..." [--backend h3|wan] [--duration 2] [--extract-frames] [--overwrite] --output-dir <output_dir>
 
@@ -142,7 +153,7 @@ pose_drive:
 - 一次 2~6 秒。長片 = 多鏡頭 + `clip_extend` + `video_concat`
 - `character_video` 鎖身份、不鎖構圖;要構圖不動用 `img2video`
 - `fx_loop` 首尾幀實測平均像素差可以很低,不保證任意題材都完美閉環
-- 沒有影片去背
+- 沒有「AI 自動判斷主體邊界」的影片去背/合成(沒有語意分割模型)——`video_composite` 是 chroma key,只吃乾淨綠幕素材,對任意實拍影片/雜亂背景不適用；效果好壞取決於前景綠幕乾不乾淨跟 `--tolerance`/`--softness` 調得準不準,不保證任意素材都摳得乾淨
 - `camera_move` 的 `--camera` 是枚舉;有 last_frame 的 backend 會再餵幾何終點靜幀(見 `reference/camera-move.md`)。`orbit_*` 只靠 prompt
 - `video_concat` 每支都有音軌才接立體聲;有任何一支無聲,整段當無聲(不要半段有聲)
 - `pose_drive` 要角色靜幀 + 動作影片,而且**靜幀姿勢要接近動作片第一幀**;對不上會雙人/重影,不要拿兩張不相干的素材硬綁。歷史上 H3 臉比 Wan 穩，實際選擇以 capability config 為準；只要快才在確認 capability 後明確給 `--backend wan`

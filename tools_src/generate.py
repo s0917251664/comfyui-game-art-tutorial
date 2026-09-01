@@ -1765,6 +1765,170 @@ def concat_videos(video_paths, dest_path, allow_overwrite=False, resize_mode="st
     return dest_path
 
 
+VIDEO_COMPOSITE_BACKGROUND_EXTS = (".mp4", ".mov", ".mkv", ".webm", ".m4v")
+
+
+def composite_videos(foreground_path, background_path, dest_path, chroma_color="00FF00",
+                     tolerance=60.0, softness=40.0, resize_mode="fill", allow_overwrite=False):
+    """Chroma-key 前景疊到背景(影片或靜態圖)上，純本機 PyAV+numpy 逐幀合成，不經 ComfyUI。
+
+    只吃前景本身的音軌(背景音軌一律丟棄)——這條產線目前只有一個會有音軌的來源
+    (h3 backend 生成的前景)，混兩條音軌的取捨留給外部剪接軟體，不在這裡猜。
+    """
+    if resize_mode not in ("strict", "fit", "fill", "stretch"):
+        raise ValueError("resize_mode 必須是 strict/fit/fill/stretch")
+    if not (0.0 <= tolerance <= 255.0):
+        raise ValueError(f"--tolerance 必須介於 0..255: {tolerance!r}")
+    if not (0.0 < softness <= 255.0):
+        raise ValueError(f"--softness 必須介於 0(不含)..255: {softness!r}")
+    chroma_color = str(chroma_color).strip().lstrip("#")
+    if not re.fullmatch(r"[0-9a-fA-F]{6}", chroma_color or ""):
+        raise ValueError(f"--chroma-color 必須是 6 碼十六進位色碼(例如 00FF00): {chroma_color!r}")
+    chroma_rgb = tuple(int(chroma_color[i:i + 2], 16) for i in (0, 2, 4))
+
+    dest_path = os.fspath(dest_path)
+    dest_canonical = os.path.normcase(os.path.realpath(os.path.abspath(dest_path)))
+    for source in (foreground_path, background_path):
+        source_canonical = os.path.normcase(os.path.realpath(os.path.abspath(os.fspath(source))))
+        if source_canonical == dest_canonical:
+            raise ValueError(f"video_composite 輸入不可與輸出路徑相同: {source!r}")
+    if os.path.lexists(dest_path) and not allow_overwrite:
+        raise RuntimeError(
+            f"拒絕覆寫既有 video_composite 輸出: {dest_path!r}；"
+            "請換 --name，或明確使用 --overwrite"
+        )
+    _require_pillow()
+    import numpy as np
+    import av
+
+    try:
+        fg_in = av.open(foreground_path)
+    except Exception as exc:
+        raise ValueError(f"video_composite 無法解碼 --foreground {foreground_path!r}: {exc}") from exc
+    try:
+        fg_vs = _video_streams(fg_in)[0]
+        fps = _fps_fraction(getattr(fg_vs, "average_rate", None)) or Fraction(VIDEO_FPS, 1)
+        if fps != Fraction(VIDEO_FPS, 1):
+            raise ValueError(
+                f"video_composite --foreground 只接受產線 {VIDEO_FPS} FPS 影片，"
+                f"目前是 {float(fps):g} FPS"
+            )
+        width, height = fg_vs.width, fg_vs.height
+        fg_frames = [frame.to_image().convert("RGB") for frame in fg_in.decode(video=0)]
+        fg_audio_present = bool(getattr(fg_in.streams, "audio", ()) or ())
+    finally:
+        fg_in.close()
+    if not fg_frames:
+        raise ValueError(f"video_composite --foreground 沒有畫面: {foreground_path}")
+
+    background_is_video = os.path.splitext(background_path)[1].lower() in VIDEO_COMPOSITE_BACKGROUND_EXTS
+    if background_is_video:
+        try:
+            bg_in = av.open(background_path)
+        except Exception as exc:
+            raise ValueError(f"video_composite 無法解碼 --background {background_path!r}: {exc}") from exc
+        try:
+            bg_vs = _video_streams(bg_in)[0]
+            bg_fps = _fps_fraction(getattr(bg_vs, "average_rate", None)) or Fraction(VIDEO_FPS, 1)
+            if bg_fps != Fraction(VIDEO_FPS, 1):
+                raise ValueError(
+                    f"video_composite --background 只接受產線 {VIDEO_FPS} FPS 影片，"
+                    f"目前是 {float(bg_fps):g} FPS"
+                )
+            bg_raw_frames = [frame.to_image().convert("RGB") for frame in bg_in.decode(video=0)]
+        finally:
+            bg_in.close()
+        if not bg_raw_frames:
+            raise ValueError(f"video_composite --background 沒有畫面: {background_path}")
+    else:
+        try:
+            with PILImage.open(background_path) as im:
+                bg_raw_frames = [im.convert("RGB")]
+        except Exception as exc:
+            raise ValueError(f"video_composite 無法讀取 --background 圖片 {background_path!r}: {exc}") from exc
+
+    if resize_mode == "strict" and bg_raw_frames[0].size != (width, height):
+        raise ValueError(
+            "video_composite 背景尺寸跟前景不同，預設 strict 拒絕以免默默縮放；"
+            f"前景={width}x{height}，背景={bg_raw_frames[0].size}。"
+            "請明確給 --resize-mode fit/fill/stretch"
+        )
+    bg_frames = [_resize_video_image(im, width, height, resize_mode) for im in bg_raw_frames]
+
+    total = len(fg_frames)
+    if len(bg_frames) < total:
+        reps = (total + len(bg_frames) - 1) // len(bg_frames)
+        bg_frames = (bg_frames * reps)[:total]
+    else:
+        bg_frames = bg_frames[:total]
+
+    key_rgb = np.array(chroma_rgb, dtype=np.int16)
+    dest_dir = os.path.dirname(os.path.abspath(dest_path)) or "."
+    os.makedirs(dest_dir, exist_ok=True)
+    fd, temp_dest = tempfile.mkstemp(
+        prefix=f".{os.path.basename(dest_path)}.", suffix=".mp4", dir=dest_dir
+    )
+    os.close(fd)
+    out = None
+    try:
+        out = av.open(temp_dest, "w")
+        out_v = out.add_stream("libx264", rate=fps)
+        out_v.width = width
+        out_v.height = height
+        out_v.pix_fmt = "yuv420p"
+        out_a = out.add_stream("aac", rate=32000) if fg_audio_present else None
+        for fg_im, bg_im in zip(fg_frames, bg_frames):
+            fg_arr = np.asarray(fg_im, dtype=np.int16)
+            bg_arr = np.asarray(bg_im, dtype=np.uint8).astype(np.float32)
+            dist = np.abs(fg_arr - key_rgb).max(axis=2).astype(np.float32)
+            alpha = np.clip((dist - tolerance) / softness, 0.0, 1.0)[:, :, None]
+            composited = fg_arr.astype(np.float32) * alpha + bg_arr * (1.0 - alpha)
+            of = av.VideoFrame.from_ndarray(np.clip(composited, 0, 255).astype(np.uint8), format="rgb24")
+            for packet in out_v.encode(of):
+                out.mux(packet)
+        for packet in out_v.encode():
+            out.mux(packet)
+        if out_a:
+            ain = av.open(foreground_path)
+            try:
+                resampler = av.AudioResampler(format="fltp", layout="stereo", rate=32000)
+                sample_i = 0
+                frames_in = list(ain.decode(audio=0))
+                frames_in.append(None)
+                for frame in frames_in:
+                    resampled = resampler.resample(frame) or []
+                    if not isinstance(resampled, (list, tuple)):
+                        resampled = [resampled]
+                    for rf in resampled:
+                        if rf is None:
+                            continue
+                        rf.pts = sample_i
+                        sample_i += rf.samples
+                        for packet in out_a.encode(rf) or []:
+                            out.mux(packet)
+            finally:
+                ain.close()
+            for packet in out_a.encode(None) or []:
+                out.mux(packet)
+        out.close()
+        out = None
+        os.replace(temp_dest, dest_path)
+    except Exception:
+        if out is not None:
+            try:
+                out.close()
+            except Exception:
+                pass
+        try:
+            os.unlink(temp_dest)
+        except FileNotFoundError:
+            pass
+        raise
+    note = "含前景音軌" if fg_audio_present else "無聲"
+    print(f"[合成] {foreground_path} + {background_path} -> {dest_path} ({note})")
+    return dest_path
+
+
 def inspect_video_output(video_path, task=None, backend=None, elapsed_seconds=None):
     """Read the delivered mp4 itself; a filename alone never counts as a pass."""
     import av
@@ -2227,7 +2391,7 @@ def _validate_cli_args(args):
         if getattr(args, "resume", False) and args.task != "video_concat" and not (
                 getattr(args, "shot_id", None) or getattr(args, "name", None)):
             raise ValueError("--resume 需要 --name 或 --shot-id 才能精確定位輸出")
-    if args.task == "video_concat":
+    if args.task in ("video_concat", "video_composite"):
         _safe_identifier(args.name, "--name")
         _safe_identifier(getattr(args, "shot_id", None), "--shot-id")
 
@@ -2488,6 +2652,41 @@ def main(argv=None):
     p_cat.add_argument("--shot-id", help="安全鏡號，供 concat sidecar 追溯。")
     p_cat.add_argument("--resume", action="store_true", help="驗證既有 concat sidecar 後才跳過。")
 
+    p_comp = sub.add_parser(
+        "video_composite",
+        help=(
+            "把綠幕前景疊到背景(影片或靜態圖)上——chroma key，純本機 PyAV+numpy 逐幀合成，"
+            "不經 ComfyUI、不呼叫任何生成模型。前景必須是本產線輸出的綠幕素材(見"
+            "comfyui-video-gen skill)。目前不支援 --resume。"
+        ),
+        parents=[common],
+    )
+    p_comp.add_argument("--foreground", required=True, help="綠幕前景 mp4(產線輸出，24fps)")
+    p_comp.add_argument("--background", required=True, help="背景 mp4(24fps)或靜態圖片")
+    p_comp.add_argument(
+        "--chroma-color", default="00FF00",
+        help="去背色碼,6 碼十六進位,預設純綠 00FF00(跟這條產線的綠幕素材慣例一致)",
+    )
+    p_comp.add_argument(
+        "--tolerance", type=float, default=60.0,
+        help="判定為背景色的色距門檻,0..255,預設 60；數值越大摳得越乾淨但邊緣越容易吃色",
+    )
+    p_comp.add_argument(
+        "--softness", type=float, default=40.0,
+        help="邊緣羽化寬度,0(不含)..255,預設 40；數值越小邊緣越銳利但越容易有鋸齒/色邊",
+    )
+    p_comp.add_argument(
+        "--resize-mode", choices=["strict", "fit", "fill", "stretch"], default="fill",
+        help="背景尺寸跟前景不同時的處理；預設 fill 裁切填滿(背景本來就少有跟前景同尺寸的情況)，"
+             "strict 拒絕，fit 加黑邊，stretch 拉伸。",
+    )
+    p_comp.add_argument("--name", default="video_composite", help="輸出檔名前綴,預設 video_composite")
+    p_comp.add_argument(
+        "--overwrite", action="store_true",
+        help="明確允許覆寫既有輸出；預設拒絕以免重跑破壞既有素材。",
+    )
+    p_comp.add_argument("--shot-id", help="安全鏡號，供 sidecar 追溯。")
+
     p_cam = sub.add_parser(
         "camera_move",
         help="攝影組運鏡:主體盡量靜止,只有攝影機在動。--camera 是鎖死枚舉。",
@@ -2570,10 +2769,10 @@ def main(argv=None):
         args.prompt = f"{RATING_TAGS[args.style][args.rating]}, {args.prompt}"
 
     _validate_task_capabilities(args)
-    # video_concat 只在本機用 PyAV 組裝既有影片，不會上傳、排程或下載
-    # ComfyUI output；因此不能因為共用 parser 就強迫它先解析 ComfyUI URL。
+    # video_concat/video_composite 只在本機用 PyAV(+numpy)組裝既有影片，不會上傳、排程或
+    # 下載 ComfyUI output；因此不能因為共用 parser 就強迫它們先解析 ComfyUI URL。
     comfy_url = None
-    if args.task != "video_concat":
+    if args.task not in ("video_concat", "video_composite"):
         comfy_url = resolve_comfy_url(getattr(args, "comfy_url", None), getattr(args, "config_path", None))
     request_timeout = min(DEFAULT_HTTP_TIMEOUT, float(args.timeout))
 
@@ -2597,7 +2796,11 @@ def main(argv=None):
     if args.task in VIDEO_TASKS:
         args.seed = seed_or_random(getattr(args, "seed", None))
 
-    video_started = time.monotonic() if args.task in VIDEO_TASKS or args.task == "video_concat" else None
+    video_started = (
+        time.monotonic()
+        if args.task in VIDEO_TASKS or args.task in ("video_concat", "video_composite")
+        else None
+    )
     video_contract = None
     video_inputs = []
     continuity_refs = {}
@@ -2831,6 +3034,63 @@ def main(argv=None):
         report_contract = None if any(item["width"] == 0 for item in input_metadata) else video_contract
         metadata = report_video_output(
             dest, task="video_concat", backend="local", elapsed_seconds=elapsed,
+            **({"expected_contract": report_contract} if report_contract is not None else {}),
+        )
+        write_video_sidecar(
+            dest, args.task, "local", None, "", "", video_inputs, None,
+            video_contract, metadata, elapsed_seconds=elapsed,
+        )
+        return
+    elif args.task == "video_composite":
+        out_dir = getattr(args, "output_dir", None) or OUTPUT_DIR
+        background_is_video = (
+            os.path.splitext(args.background)[1].lower() in VIDEO_COMPOSITE_BACKGROUND_EXTS
+        )
+        try:
+            if os.path.isfile(os.path.abspath(os.fspath(args.foreground))):
+                fg_metadata = validate_video_input(args.foreground, label="video_composite --foreground")
+            else:
+                # composite_videos performs the authoritative open/decode check;
+                # this fallback only keeps mocked local callers from needing
+                # real media while still failing safely in production.
+                fg_metadata = {
+                    "path": os.path.abspath(os.fspath(args.foreground)), "width": 0, "height": 0,
+                    "fps": VIDEO_FPS, "frames": 0, "duration_seconds": 0.0, "audio": False,
+                }
+            if background_is_video and os.path.isfile(os.path.abspath(os.fspath(args.background))):
+                validate_video_input(args.background, label="video_composite --background")
+        except (RuntimeError, ValueError) as exc:
+            raise SystemExit(str(exc)) from exc
+        video_inputs = [args.foreground, args.background]
+        video_prefix = video_filename_prefix(args.task, args.shot_id, args.name)
+        video_contract = make_video_contract(
+            args.task, "local", fg_metadata["width"], fg_metadata["height"],
+            duration=fg_metadata["duration_seconds"], audio_expected=fg_metadata["audio"],
+            expected_frames=fg_metadata["frames"], frame_tolerance=VIDEO_FRAME_TOLERANCE,
+            input_metadata=[fg_metadata],
+        )
+        video_contract["resize_mode"] = args.resize_mode
+        video_contract["chroma_color"] = args.chroma_color
+        video_contract["tolerance"] = args.tolerance
+        video_contract["softness"] = args.softness
+        try:
+            dest = _safe_output_path(out_dir, f"{video_prefix}.mp4")
+        except (TypeError, ValueError) as exc:
+            raise SystemExit(str(exc)) from exc
+        os.makedirs(out_dir, exist_ok=True)
+        try:
+            composite_videos(
+                args.foreground, args.background, dest,
+                chroma_color=args.chroma_color, tolerance=args.tolerance, softness=args.softness,
+                resize_mode=args.resize_mode, allow_overwrite=args.overwrite,
+            )
+        except (RuntimeError, ValueError) as exc:
+            raise SystemExit(str(exc)) from exc
+        print(f"[完成] {dest}")
+        elapsed = time.monotonic() - video_started if video_started else None
+        report_contract = None if fg_metadata["width"] == 0 else video_contract
+        metadata = report_video_output(
+            dest, task="video_composite", backend="local", elapsed_seconds=elapsed,
             **({"expected_contract": report_contract} if report_contract is not None else {}),
         )
         write_video_sidecar(
