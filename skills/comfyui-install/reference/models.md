@@ -16,12 +16,28 @@
 | ControlNet Canny (SDXL) | `controlnet` | `controlnet-canny-sdxl-1.0.safetensors` | `https://huggingface.co/lllyasviel/sd_control_collection/resolve/main/diffusers_xl_canny_full.safetensors` | ~2.5GB | 第 7 章,`generate.py --control-type canny`(預設) | 2026-07-29 |
 | ControlNet Depth (SDXL) | `controlnet` | `controlnet-depth-sdxl-1.0.safetensors` | `https://huggingface.co/lllyasviel/sd_control_collection/resolve/main/diffusers_xl_depth_full.safetensors` | ~2.5GB | 第 7 章,`generate.py --control-type depth` | 2026-08-17 |
 | ControlNet OpenPose (SDXL) | `controlnet` | `controlnet-openpose-sdxl-1.0.safetensors` | `https://huggingface.co/thibaud/controlnet-openpose-sdxl-1.0/resolve/main/OpenPoseXL2.safetensors` | ~4.7GB(fp32,檔案偏大是正常的) | 第 7 章,`generate.py --control-type pose` | 2026-08-17 |
+| ControlNet Union SDXL ProMax（實驗） | `controlnet` | `xinsir-controlnet-union-sdxl-1.0-promax.safetensors` | `https://huggingface.co/xinsir/controlnet-union-sdxl-1.0/resolve/main/diffusion_pytorch_model_promax.safetensors` | 2,513,342,408 bytes | 只供 `pose_only --control-backend union` A/B；需 ComfyUI Core `SetUnionControlNetType` | 2026-09-01 |
 | IPAdapter Plus (SDXL) | `ipadapter` | `ip-adapter-plus_sdxl_vit-h.safetensors` | `https://huggingface.co/h94/IP-Adapter/resolve/main/sdxl_models/ip-adapter-plus_sdxl_vit-h.safetensors` | ~0.85GB | 第 8 章 | 2026-07-29 |
 | CLIP Vision (ViT-H) | `clip_vision` | `CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors` | `https://huggingface.co/h94/IP-Adapter/resolve/main/models/image_encoder/model.safetensors` | ~2.5GB | 第 8 章。**注意路徑是 `models/image_encoder`,不是 `sdxl_models/image_encoder`——後者是 bigG 版,維度不同,裝錯會在 `IPAdapterAdvanced` 執行期噴 shape mismatch** | 2026-07-29 |
 | BiRefNet 去背 | `background_removal` | `birefnet.safetensors` | `https://huggingface.co/Comfy-Org/BiRefNet/resolve/main/background_removal/birefnet.safetensors` | ~0.9GB | `generate.py --remove-bg` 用,跟底模架構無關,任何 tier 都用這個 | 2026-07-29 |
 | 4x-UltraSharp 放大模型 | `upscale_models` | `4x-UltraSharp.pth` | `https://huggingface.co/lokCX/4x-Ultrasharp/resolve/main/4x-UltraSharp.pth` | ~67MB | `generate.py upscale` 用,跟底模架構無關,任何 tier 都用這個 | 2026-08-17 |
 
 VRAM 較緊張時(`sdxl_light` tier),Depth/OpenPose 這兩個 ControlNet 檔案較大(共約 7GB),可以先跳過,等使用者真的需要姿勢/深度控制再補裝。
+
+Union 是額外的實驗權重，**不會取代**上面三顆正式模型。ProMax 權重的官方 SHA-256 為 `9fae2e50cb431bfcbe05822b59ec2228df545ef27f711dea8949e9f4ed9f7cdc`；安裝或更新後，必須先在 `/object_info` 確認 `ControlNetLoader` 看得到檔名與 `SetUnionControlNetType` 節點，再允許上傳參考圖。若要擴大到 `character_action`、`guided_inpaint` 或 `icon_asset`，需另做各 task 的實機回歸，不能只因 `pose_only` smoke 成功而開通。
+
+### 選用 BiRefNet A/B benchmark 權重
+
+只有明確要重新評估去背模型時才裝，不是正式產線必需品。四個 Hugging Face repository 各自下載完整 snapshot 到 `<ComfyUI>/models/background_removal_variants/<repo 名>/`；每顆 `model.safetensors` 都是 444,473,596 bytes。它們與 SDXL／FLUX 架構無關，但官方 Transformers 路徑需要 `timm`。2026-09-01 的已驗證環境鎖定 `timm==1.0.29`；官方 requirements 同時列出 `numpy<2`，現行 ComfyUI 是 NumPy 2.4.4，雖然本輪推論成功，正式接線前仍需視為相容性風險。
+
+| 變體 | Repository | 原生 benchmark 尺寸 | 用途 | 最後確認日期 |
+|---|---|---:|---|---|
+| general baseline | `ZhengPeng7/BiRefNet` | 1024 | 與現行 general 比較 | 2026-09-01 |
+| HR | `ZhengPeng7/BiRefNet_HR` | 2048 | 高解析一般前景分割 | 2026-09-01 |
+| HR-matting | `ZhengPeng7/BiRefNet_HR-matting` | 2048 | 高解析柔邊／半透明 matting | 2026-09-01 |
+| dynamic | `ZhengPeng7/BiRefNet_dynamic` | 不固定；本 benchmark 上限 2304 | 多解析度輸入 | 2026-09-01 |
+
+目前 ComfyUI v0.34.0 的 Core `LoadBackgroundRemovalModel` 會把所有背景移除權重固定前處理成 1024×1024，因此不能只把 HR 檔案丟進 `background_removal/` 就宣稱完成 2048 推論。本專案以 `tools_src/benchmark_birefnet.py` 走官方本機 Transformers 載入做 A/B；benchmark 通過前不修改正式 `--remove-bg`。
 
 ## 選用風格底模(`generate.py` 的 `--style`,選配)
 
@@ -54,6 +70,19 @@ VRAM 較緊張時(`sdxl_light` tier),Depth/OpenPose 這兩個 ControlNet 檔案�
 | **合計(含 LoRA 訓練工具、含風格底模 3 顆全裝)** | **約 51~64GB** | — |
 
 **這是概估值,不是精確保證**——實際檔案大小以下載當下來源網站顯示的為準,Python 依賴套件版本更新也會讓虛擬環境大小浮動。裝機前把這個範圍念給使用者聽,提醒**硬碟至少要留 30GB 以上可用空間**比較保險,不要裝到一半才發現空間不夠中斷——那樣通常需要手動清理已下載一半的檔案才能重來,比事前確認空間麻煩很多。
+
+## 選用 FLUX.2 Klein 4B PoC（`flux2_concept` / `flux2_edit`）
+
+**這是跟 SDXL 平行的實驗性圖片 backend，不是 checkpoint 替換。** 只有使用者明確核准 FLUX.2 PoC 才安裝；它不受 `device_config.json` 的 SDXL tier 自動選擇，也不能共用 SDXL ControlNet、IPAdapter、LoRA、`--style` checkpoint 或 negative prompt 契約。本機路線以 12GB+ VRAM 為實驗門檻，仍須逐台實測峰值 VRAM；未通過 smoke 前不可宣稱可用。
+
+| 用途 | 子資料夾 | 檔名 | 官方下載來源 | 實際大小（2026-09-01 HEAD） | 授權／用途 | 最後確認日期 |
+|---|---|---|---|---:|---|---|
+| FLUX.2 Klein 4B distilled FP8 | `diffusion_models` | `flux-2-klein-4b-fp8.safetensors` | `https://huggingface.co/black-forest-labs/FLUX.2-klein-4b-fp8/resolve/main/flux-2-klein-4b-fp8.safetensors` | 4,070,624,520 bytes | Apache 2.0；`flux2_concept` 固定 4 steps | 2026-09-01 |
+| FLUX.2 Klein 4B base FP8 | `diffusion_models` | `flux-2-klein-base-4b-fp8.safetensors` | `https://huggingface.co/black-forest-labs/FLUX.2-klein-base-4b-fp8/resolve/main/flux-2-klein-base-4b-fp8.safetensors` | 4,089,498,488 bytes | Apache 2.0；`flux2_edit` 固定 20 steps | 2026-09-01 |
+| Qwen3 4B text encoder | `text_encoders` | `qwen_3_4b.safetensors` | `https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/text_encoders/qwen_3_4b.safetensors` | 8,044,982,048 bytes | 兩個 FLUX.2 task 共用；`CLIPLoader type=flux2` | 2026-09-01 |
+| FLUX.2 VAE | `vae` | `flux2-vae.safetensors` | `https://huggingface.co/Comfy-Org/flux2-dev/resolve/main/split_files/vae/flux2-vae.safetensors` | 336,213,556 bytes | 兩個 FLUX.2 task 共用 | 2026-09-01 |
+
+四個檔案合計 16,541,318,612 bytes（約 15.4 GiB）。下載前先確認剩餘空間；下載到暫存 `.part`，檔案大小與 SHA-256 驗證後才改成正式檔名。需要 ComfyUI Core 提供 `EmptyFlux2LatentImage`、`Flux2Scheduler` 與 `ReferenceLatent`；不需額外 custom node。精確 ComfyUI commit、模型 SHA-256 與 smoke 證據以 `docs/tested-versions.md` 為準。
 
 ## 選用影片模型(`generate.py img2video` / `character_video`,選配)
 

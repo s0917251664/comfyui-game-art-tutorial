@@ -64,6 +64,8 @@
 | 使用者說的像... | task | 判斷依據 |
 |---|---|---|
 | 「畫一個...」「幫我生一張概念圖/場景/道具」,沒有提到任何參考圖 | `concept` | 沒有輸入圖 |
+| 「用 FLUX.2 試畫一張概念圖」「想比較新 backend 的文字／細節能力」 | `flux2_concept`（實驗性） | 明確指定 FLUX.2；純文字、沒有輸入圖。未指定 FLUX.2 時仍用穩定的 SDXL `concept` |
+| 「用 FLUX.2 把這張圖改成……」「用文字語意修改整張參考圖」 | `flux2_edit`（實驗性） | 明確指定 FLUX.2；一張來源圖 + 修改指令。不是局部 mask 修補，也不是 SDXL `refine` 的 denoise 變體 |
 | 「幫我做一個XX的圖示/symbol/按鈕圖案」「單一遊戲小物件,要疊加到別的畫面上用」 | `icon_asset` | 訴求是單一、獨立、預期會疊到其他畫面上的小型元素,不是完整場景/整個 UI 畫面版面 |
 | 「照這個姿勢/線稿畫」,但沒有指定要哪個角色(全新角色、或角色不重要) | `pose_only` | 只有姿勢/線稿參考圖,不需要角色一致性 |
 | 「這個角色/風格套到新場景」「姿勢隨意,但要是這個角色」 | `style_lock`(靜態圖)。若要的是影片、第一幀不必是那張定稿圖 → `skills/comfyui-video-gen/SKILL.md` 的 `character_video` | 只有角色/風格參考圖,不需要指定姿勢 |
@@ -87,6 +89,16 @@
 2. 有沒有想避開的東西(負向詞,沒有就用預設 `blurry, low quality, extra fingers, deformed, watermark`)
 3. 需不需要透明背景(去背)
 4. 尺寸/比例有沒有要求(見上面提示)
+
+### flux2_concept（實驗性 FLUX.2 文字生圖）
+1. 想畫什麼（轉成英文 prompt；若要測文字渲染，需保留希望畫面出現的精確字串）
+2. 尺寸/比例有沒有要求；預設 1024x1024，寬高必須是 16 的倍數
+3. 不主動問 negative、batch、LoRA、`--style`、steps、CFG 或 sampler——這些在 FLUX.2 PoC 沒有開放
+
+### flux2_edit（實驗性 FLUX.2 單參考圖語意編輯）
+1. 來源／參考圖路徑
+2. 想把整張圖如何修改（例如替換材質、色彩、物件或風格；轉成英文 prompt）
+3. 輸出會把來源圖等比例正規化到約 1MP；目前不開放 mask、denoise、多參考圖或自訂尺寸。只想局部修補時仍用 `inpaint` / `guided_inpaint`
 
 ### icon_asset(單一小型圖示/物件素材)
 1. 想畫的圖示/物件內容(轉成英文 prompt)——不用特別強調「單一置中、無背景」,`icon_asset` 已經固定在 prompt 尾端加這段引導詞,加了反而是重複
@@ -191,11 +203,17 @@
 concept:
   <python_exe> <generate_script> concept --prompt "..." [--negative "..."] [--width W --height H] [--batch 3] [--lora <檔名> --lora-strength 0.8] [--style realistic|illustration|anime] [--remove-bg] --comfy-url <comfyui_url> --timeout 180 --output-dir <output_dir>
 
+flux2_concept（實驗性）:
+  <python_exe> <generate_script> flux2_concept --prompt "..." [--width W --height H] [--seed N] --comfy-url <comfyui_url> --timeout 180 --output-dir <output_dir>
+
+flux2_edit（實驗性）:
+  <python_exe> <generate_script> flux2_edit --prompt "..." --image <path> [--seed N] --comfy-url <comfyui_url> --timeout 300 --output-dir <output_dir>
+
 icon_asset:
   <python_exe> <generate_script> icon_asset --prompt "..." [--negative "..."] [--width W --height H] [--batch 3] [--lora <檔名> --lora-strength 0.8] [--structure-ref <範本圖路徑>] [--appearance-ref <路徑> --appearance-weight 0.8] [--style realistic|illustration|anime] --comfy-url <comfyui_url> --timeout 180 --output-dir <output_dir>
 
 pose_only:
-  <python_exe> <generate_script> pose_only --prompt "..." --pose-ref <path> [--pose-strength 1.0] [--control-type canny|pose|depth] [--width W --height H] [--batch 3] [--lora <檔名> --lora-strength 0.8] [--style realistic|illustration|anime] [--remove-bg] --comfy-url <comfyui_url> --timeout 180 --output-dir <output_dir>
+  <python_exe> <generate_script> pose_only --prompt "..." --pose-ref <path> [--pose-strength 1.0] [--control-type canny|pose|depth] [--control-backend verified|union] [--width W --height H] [--batch 3] [--lora <檔名> --lora-strength 0.8] [--style realistic|illustration|anime] [--remove-bg] --comfy-url <comfyui_url> --timeout 180 --output-dir <output_dir>
 
 style_lock:
   <python_exe> <generate_script> style_lock --prompt "..." --character-ref <path> [--ip-weight 0.8] [--width W --height H] [--batch 3] [--lora <檔名> --lora-strength 0.8] [--style realistic|illustration|anime] [--remove-bg] --comfy-url <comfyui_url> --timeout 180 --output-dir <output_dir>

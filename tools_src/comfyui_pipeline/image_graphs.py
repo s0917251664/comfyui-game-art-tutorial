@@ -99,6 +99,141 @@ RATING_TAGS = {
     "illustration": {"safe": "rating:general", "questionable": "rating:questionable", "explicit": "rating:explicit"},
 }
 
+# Experimental A/B only.  ProMax is deliberately pinned to one explicit file;
+# the existing per-control models remain the production default.
+CONTROLNET_UNION_MODEL = "xinsir-controlnet-union-sdxl-1.0-promax.safetensors"
+CONTROLNET_UNION_TYPES = {
+    "canny": "canny/lineart/anime_lineart/mlsd",
+    "pose": "openpose",
+    "depth": "depth",
+}
+
+
+def add_controlnet_loader(graph, node_id, control_type, control_backend="verified"):
+    """Add the verified loader or the isolated Union A/B loader to ``graph``."""
+    if control_type not in CONTROLNET_MODELS:
+        raise ValueError(f"未知 control_type: {control_type}(可用: canny/pose/depth)")
+    if control_backend == "verified":
+        graph[node_id] = {
+            "class_type": "ControlNetLoader",
+            "inputs": {"control_net_name": CONTROLNET_MODELS[control_type]},
+        }
+        return [node_id, 0]
+    if control_backend == "union":
+        graph[node_id] = {
+            "class_type": "ControlNetLoader",
+            "inputs": {"control_net_name": CONTROLNET_UNION_MODEL},
+        }
+        union_node_id = f"{node_id}u"
+        graph[union_node_id] = {
+            "class_type": "SetUnionControlNetType",
+            "inputs": {
+                "control_net": [node_id, 0],
+                "type": CONTROLNET_UNION_TYPES[control_type],
+            },
+        }
+        return [union_node_id, 0]
+    raise ValueError(
+        f"未知 control_backend: {control_backend}(可用: verified/union)"
+    )
+
+# FLUX.2 Klein is a separate image backend, not an SDXL checkpoint.  Keep the
+# official ComfyUI FP8 filenames here so the experimental tasks cannot silently
+# pick up another precision, model generation, or similarly named file.
+FLUX2_DISTILLED_UNET = "flux-2-klein-4b-fp8.safetensors"
+FLUX2_BASE_UNET = "flux-2-klein-base-4b-fp8.safetensors"
+FLUX2_CLIP = "qwen_3_4b.safetensors"
+FLUX2_VAE = "flux2-vae.safetensors"
+
+
+def validate_flux2_dimensions(width, height):
+    """FLUX.2 Core latent nodes require dimensions aligned to 16 pixels."""
+    validate_dimensions(width, height)
+    if width % 16 or height % 16:
+        raise ValueError(
+            f"FLUX.2 的 width/height 必須是 16 的倍數，目前是 {width}x{height}"
+        )
+    return width, height
+
+
+def build_flux2_concept(prompt, width=1024, height=1024, seed=None):
+    """Build the locked 4-step FLUX.2 Klein distilled text-to-image PoC graph."""
+    validate_flux2_dimensions(width, height)
+    graph = {
+        "1": {"class_type": "UNETLoader", "inputs": {
+            "unet_name": FLUX2_DISTILLED_UNET, "weight_dtype": "default"}},
+        "2": {"class_type": "CLIPLoader", "inputs": {
+            "clip_name": FLUX2_CLIP, "type": "flux2", "device": "default"}},
+        "3": {"class_type": "VAELoader", "inputs": {"vae_name": FLUX2_VAE}},
+        "4": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": ["2", 0]}},
+        "5": {"class_type": "CLIPTextEncode", "inputs": {"text": "", "clip": ["2", 0]}},
+        "6": {"class_type": "EmptyFlux2LatentImage", "inputs": {
+            "width": width, "height": height, "batch_size": 1}},
+        "7": {"class_type": "RandomNoise", "inputs": {"noise_seed": seed_or_random(seed)}},
+        # The distilled official model card uses four inference steps and
+        # guidance_scale=1.0.  These remain intentionally locked for the PoC.
+        "8": {"class_type": "CFGGuider", "inputs": {
+            "model": ["1", 0], "positive": ["4", 0], "negative": ["5", 0], "cfg": 1.0}},
+        "9": {"class_type": "KSamplerSelect", "inputs": {"sampler_name": "euler"}},
+        "10": {"class_type": "Flux2Scheduler", "inputs": {
+            "steps": 4, "width": width, "height": height}},
+        "11": {"class_type": "SamplerCustomAdvanced", "inputs": {
+            "noise": ["7", 0], "guider": ["8", 0], "sampler": ["9", 0],
+            "sigmas": ["10", 0], "latent_image": ["6", 0]}},
+        "12": {"class_type": "VAEDecode", "inputs": {
+            "samples": ["11", 0], "vae": ["3", 0]}},
+        "13": {"class_type": "SaveImage", "inputs": {
+            "images": ["12", 0], "filename_prefix": "flux2_concept"}},
+    }
+    return graph, "12"
+
+
+def build_flux2_edit(prompt, image_filename, seed=None):
+    """Build a one-reference FLUX.2 Klein base image-edit graph.
+
+    This is a flattened, API-format version of ComfyUI's official
+    ``Image Edit (Flux.2 Klein 4B)`` blueprint.  The reference is normalized to
+    one megapixel, and its resulting dimensions drive both the latent canvas
+    and scheduler so the task has a stable, inspectable contract.
+    """
+    graph = {
+        "1": {"class_type": "UNETLoader", "inputs": {
+            "unet_name": FLUX2_BASE_UNET, "weight_dtype": "default"}},
+        "2": {"class_type": "CLIPLoader", "inputs": {
+            "clip_name": FLUX2_CLIP, "type": "flux2", "device": "default"}},
+        "3": {"class_type": "VAELoader", "inputs": {"vae_name": FLUX2_VAE}},
+        "4": {"class_type": "LoadImage", "inputs": {"image": image_filename}},
+        "5": {"class_type": "ImageScaleToTotalPixels", "inputs": {
+            "image": ["4", 0], "upscale_method": "nearest-exact",
+            "megapixels": 1.0, "resolution_steps": 1}},
+        "6": {"class_type": "GetImageSize", "inputs": {"image": ["5", 0]}},
+        "7": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": ["2", 0]}},
+        "8": {"class_type": "CLIPTextEncode", "inputs": {"text": "", "clip": ["2", 0]}},
+        "9": {"class_type": "VAEEncode", "inputs": {"pixels": ["5", 0], "vae": ["3", 0]}},
+        "10": {"class_type": "ReferenceLatent", "inputs": {
+            "conditioning": ["7", 0], "latent": ["9", 0]}},
+        "11": {"class_type": "ReferenceLatent", "inputs": {
+            "conditioning": ["8", 0], "latent": ["9", 0]}},
+        "12": {"class_type": "EmptyFlux2LatentImage", "inputs": {
+            "width": ["6", 0], "height": ["6", 1], "batch_size": 1}},
+        "13": {"class_type": "RandomNoise", "inputs": {"noise_seed": seed_or_random(seed)}},
+        # Base image editing follows the official ComfyUI blueprint: Euler,
+        # 20 steps and CFG 5.  They stay locked until the PoC is evaluated.
+        "14": {"class_type": "CFGGuider", "inputs": {
+            "model": ["1", 0], "positive": ["10", 0], "negative": ["11", 0], "cfg": 5.0}},
+        "15": {"class_type": "KSamplerSelect", "inputs": {"sampler_name": "euler"}},
+        "16": {"class_type": "Flux2Scheduler", "inputs": {
+            "steps": 20, "width": ["6", 0], "height": ["6", 1]}},
+        "17": {"class_type": "SamplerCustomAdvanced", "inputs": {
+            "noise": ["13", 0], "guider": ["14", 0], "sampler": ["15", 0],
+            "sigmas": ["16", 0], "latent_image": ["12", 0]}},
+        "18": {"class_type": "VAEDecode", "inputs": {
+            "samples": ["17", 0], "vae": ["3", 0]}},
+        "19": {"class_type": "SaveImage", "inputs": {
+            "images": ["18", 0], "filename_prefix": "flux2_edit"}},
+    }
+    return graph, "18"
+
 def build_control_preprocessor(control_type, image_node_id):
     """依 control_type 回傳對應的前處理節點(從 image_node_id 的圖片輸出接進去)。"""
     if control_type == "canny":
@@ -539,7 +674,8 @@ def build_guided_inpaint(prompt, image_filename, mask_filename, negative=None,
 # ---------- task: pose_only(Ch7:單獨 ControlNet,不鎖角色)----------
 def build_pose_only(prompt, pose_ref_filename, negative=None, width=None, height=None,
                      seed=None, steps=25, cfg=7.0, pose_strength=1.0, batch_size=1,
-                     control_type="canny", lora_name=None, lora_strength=0.8, checkpoint=None):
+                     control_type="canny", lora_name=None, lora_strength=0.8, checkpoint=None,
+                     control_backend="verified"):
     require_sdxl_capability("pose_only (ControlNet)")
     width = DEVICE["default_width"] if width is None else width
     height = DEVICE["default_height"] if height is None else height
@@ -555,11 +691,13 @@ def build_pose_only(prompt, pose_ref_filename, negative=None, width=None, height
         "3": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": clip_ref}},
         "4": {"class_type": "LoadImage", "inputs": {"image": pose_ref_filename}},
         "5": build_control_preprocessor(control_type, "4"),
-        "6": {"class_type": "ControlNetLoader", "inputs": {"control_net_name": CONTROLNET_MODELS[control_type]}},
+    })
+    control_ref = add_controlnet_loader(graph, "6", control_type, control_backend)
+    graph.update({
         "7": {
             "class_type": "ControlNetApplyAdvanced",
             "inputs": {
-                "positive": ["2", 0], "negative": ["3", 0], "control_net": ["6", 0], "image": ["5", 0],
+                "positive": ["2", 0], "negative": ["3", 0], "control_net": control_ref, "image": ["5", 0],
                 "strength": pose_strength, "start_percent": 0.0, "end_percent": 1.0,
             },
         },

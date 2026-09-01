@@ -20,6 +20,7 @@ AI agent 會依照 [`skills/comfyui-art-gen/SKILL.md`](skills/comfyui-art-gen/SK
 ## 可以做什麼
 
 - 文生圖（`concept`）：從文字產生概念圖
+- FLUX.2 實驗路線（`flux2_concept` / `flux2_edit`）：比較快速文字生圖與單參考圖語意編輯；獨立於 SDXL，不會自動取代主線
 - 圖示素材（`icon_asset`）：產生單一、置中、透明背景的 UI 圖示或小型物件
 - 圖生圖（`refine`）：將草稿精緻化，或製作材質／顏色變體
 - 局部重繪（`inpaint`）：只修改指定區域
@@ -31,6 +32,7 @@ AI agent 會依照 [`skills/comfyui-art-gen/SKILL.md`](skills/comfyui-art-gen/SK
 - 放大精修（`upscale`）：放大圖片並補充細節
 - 批次生成（batch）與固定 seed，方便探索與重複產出
 - 去背（`--remove-bg`），輸出透明背景素材
+- 去背模型回歸工具（`tools_src/benchmark_birefnet.py`）：以固定 RGBA 素材比較 BiRefNet general／HR／HR-matting／dynamic；不會自動更換正式 `--remove-bg`
 - 影片生成：讓靜圖動起來、只運鏡不動主體、角色動作影片、動作驅動、循環特效、轉場、接續前一鏡、多支短片拼接（需另外偵測機器影片能力，見下方「產影片任務選擇」）
 
 ## 快速開始
@@ -96,6 +98,8 @@ python tools_src/verify_portable_install.py --repo-root . --config local_config.
 | 使用情境 | task（任務） | 必要輸入 |
 |---|---|---|
 | 從文字發想新圖 | `concept` | prompt |
+| 明確用 FLUX.2 比較文字遵從／細節 | `flux2_concept`（實驗性） | prompt；可選 16 像素對齊的寬高 |
+| 用 FLUX.2 語意修改整張參考圖 | `flux2_edit`（實驗性） | prompt、單張來源圖；輸出正規化到約 1MP |
 | 產生單一 UI 圖示或小型物件 | `icon_asset` | prompt；可選結構／外觀參考圖；永遠透明背景 |
 | 照姿勢或線稿產圖 | `pose_only` | prompt、姿勢／線稿參考圖 |
 | 保持角色或風格一致，姿勢自由 | `style_lock` | prompt、角色／風格參考圖 |
@@ -108,13 +112,13 @@ python tools_src/verify_portable_install.py --repo-root . --config local_config.
 
 需要選擇哪個 task、遮罩格式、參數界線以及 URL/timeout 設定時，請看 [`skills/comfyui-art-gen/SKILL.md`](skills/comfyui-art-gen/SKILL.md) 與 [`完整參數規格`](skills/comfyui-art-gen/reference/full-params.md)。
 
-除 `layer_split` 外，各產圖任務都可以視需要使用 `--style realistic|illustration|anime` 切換風格底模；`--rating safe|questionable|explicit` 只適用於 `anime` 與 `illustration`，而且是模型提示標籤，不是內容審核機制。對應模型必須先依安裝文件準備好。
+SDXL 圖片任務可以視需要使用 `--style realistic|illustration|anime` 切換風格底模；`--rating safe|questionable|explicit` 只適用於 `anime` 與 `illustration`，而且是模型提示標籤，不是內容審核機制。`flux2_concept` / `flux2_edit` 是獨立 backend，不接受 SDXL 的 `--style`、LoRA、ControlNet 或 negative prompt 旗標；對應 FLUX.2 diffusion model、Qwen encoder 與 VAE 必須先依安裝文件準備好。
 
 ### CLI 設定來源與參數界線
 
 `--comfy-url URL`、`--config PATH`、`--timeout SEC` 是執行環境設定。URL 優先順序是 CLI → `COMFY_URL`/`COMFYUI_URL` → 明確指定的 runtime config（`--config` 或 `COMFY_CONFIG`/`COMFYUI_CONFIG`/`COMFY_CONFIG_PATH`）；沒有任何來源時直接報錯。runtime config 至少要有 `comfyui_url`（`comfy_url` 也可相容），不會因為部署副本位於 ComfyUI 目錄就自動讀 repository 的 `local_config.json`。
 
-產圖參數會在送出前檢查：尺寸必須是正整數且為 8 的倍數；`batch` 必須 ≥1；`denoise`、`ip-weight`、`pose-strength`、`control-strength`、`appearance-weight`、`lora-strength` 必須落在 0..1；`scale` 必須大於 0 且不超過 4；`timeout` 必須是有限正數。超出界線會立即拒絕，不會先上傳參考圖或建立 ComfyUI 佇列。
+產圖參數會在送出前檢查：一般圖片尺寸必須是正整數且為 8 的倍數，`flux2_concept` 必須為 16 的倍數；`batch` 必須 ≥1；`denoise`、`ip-weight`、`pose-strength`、`control-strength`、`appearance-weight`、`lora-strength` 必須落在 0..1；`scale` 必須大於 0 且不超過 4；`timeout` 必須是有限正數。FLUX.2 task 另會查 `/object_info` 的必要 Core nodes 與模型清單。超出界線或缺依賴會立即拒絕，不會先上傳參考圖或建立 ComfyUI 佇列。
 
 ### SD1.5 能力範圍
 

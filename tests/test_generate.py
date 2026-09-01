@@ -112,11 +112,70 @@ class GenerateTests(unittest.TestCase):
 
     def test_generate_facade_reexports_moved_symbols(self):
         self.assertTrue(callable(self.generate.build_concept))
+        self.assertTrue(callable(self.generate.build_flux2_concept))
+        self.assertTrue(callable(self.generate.build_flux2_edit))
         self.assertTrue(callable(self.generate.build_control_preprocessor))
         self.assertTrue(callable(self.generate.build_layer_split))
         self.assertEqual("blurry, low quality, extra fingers, deformed, watermark", self.generate.DEFAULT_NEGATIVE)
         self.assertIn("wan", self.generate.VIDEO_BACKEND_SPECS)
         self.assertIn("static", self.generate.CAMERA_MOVES)
+
+    def test_flux2_concept_is_locked_to_official_distilled_contract(self):
+        graph, output_id = self.generate.build_flux2_concept(
+            "a game prop with a readable sign", width=1024, height=1024, seed=42,
+        )
+        self.assertEqual("12", output_id)
+        self.assertEqual("flux-2-klein-4b-fp8.safetensors", graph["1"]["inputs"]["unet_name"])
+        self.assertEqual("flux2", graph["2"]["inputs"]["type"])
+        self.assertEqual(4, graph["10"]["inputs"]["steps"])
+        self.assertEqual(1.0, graph["8"]["inputs"]["cfg"])
+        self.assertEqual("euler", graph["9"]["inputs"]["sampler_name"])
+        self.assertEqual(42, graph["7"]["inputs"]["noise_seed"])
+
+    def test_flux2_concept_rejects_non_aligned_dimensions_before_submit(self):
+        with self.assertRaisesRegex(ValueError, "16"):
+            self.generate.build_flux2_concept("x", width=1000, height=1024)
+
+    def test_flux2_edit_matches_official_one_reference_contract(self):
+        graph, output_id = self.generate.build_flux2_edit("make it silver", "uploaded.png", seed=7)
+        self.assertEqual("18", output_id)
+        self.assertEqual("flux-2-klein-base-4b-fp8.safetensors", graph["1"]["inputs"]["unet_name"])
+        self.assertEqual(["9", 0], graph["10"]["inputs"]["latent"])
+        self.assertEqual(["9", 0], graph["11"]["inputs"]["latent"])
+        self.assertEqual(["6", 0], graph["12"]["inputs"]["width"])
+        self.assertEqual(["6", 1], graph["12"]["inputs"]["height"])
+        self.assertEqual(20, graph["16"]["inputs"]["steps"])
+        self.assertEqual(5.0, graph["14"]["inputs"]["cfg"])
+
+    def test_flux2_cli_does_not_expose_sdxl_style_or_lora(self):
+        with self.assertRaises(SystemExit):
+            self.generate.main([
+                "flux2_concept", "--comfy-url", "http://server:8188",
+                "--prompt", "x", "--style", "realistic",
+            ])
+
+    def test_flux2_preflight_rejects_missing_model_before_upload(self):
+        node_names = set(self.generate.FLUX2_REQUIRED_NODES) | set(
+            self.generate.FLUX2_EDIT_REQUIRED_NODES
+        )
+        payload = {name: {"input": {"required": {}}} for name in node_names}
+        payload["UNETLoader"]["input"]["required"]["unet_name"] = [[
+            "flux-2-klein-base-4b-fp8.safetensors"
+        ]]
+        payload["CLIPLoader"]["input"]["required"]["clip_name"] = [[
+            "qwen_3_4b.safetensors"
+        ]]
+        payload["VAELoader"]["input"]["required"]["vae_name"] = [[
+            "some-other-vae.safetensors"
+        ]]
+        with mock.patch.object(self.generate, "_fetch_comfy_object_info", return_value=payload), \
+                mock.patch.object(self.generate, "upload_image") as upload:
+            with self.assertRaisesRegex(SystemExit, "flux2-vae"):
+                self.generate.main([
+                    "flux2_edit", "--comfy-url", "http://server:8188",
+                    "--prompt", "make it silver", "--image", "source.png",
+                ])
+        upload.assert_not_called()
 
     def test_sd15_controlnet_and_ipadapter_features_fail_fast(self):
         self.generate.DEVICE["tier"] = "sd15"
@@ -129,6 +188,55 @@ class GenerateTests(unittest.TestCase):
         # A plain icon does not use either SDXL-only add-on and remains available.
         graph, _ = self.generate.build_icon_asset("x")
         self.assertEqual("CheckpointLoaderSimple", graph["1"]["class_type"])
+
+    def test_pose_only_verified_controlnet_remains_default(self):
+        graph, _ = self.generate.build_pose_only(
+            "x", "pose.png", control_type="depth", seed=7,
+        )
+        self.assertEqual("ControlNetLoader", graph["6"]["class_type"])
+        self.assertEqual(
+            self.generate.CONTROLNET_MODELS["depth"],
+            graph["6"]["inputs"]["control_net_name"],
+        )
+        self.assertNotIn("6u", graph)
+        self.assertEqual(["6", 0], graph["7"]["inputs"]["control_net"])
+
+    def test_pose_only_union_inserts_explicit_control_type_node(self):
+        expected = {
+            "canny": "canny/lineart/anime_lineart/mlsd",
+            "pose": "openpose",
+            "depth": "depth",
+        }
+        for control_type, union_type in expected.items():
+            with self.subTest(control_type=control_type):
+                graph, _ = self.generate.build_pose_only(
+                    "x", "pose.png", control_type=control_type,
+                    control_backend="union", seed=7,
+                )
+                self.assertEqual(
+                    "xinsir-controlnet-union-sdxl-1.0-promax.safetensors",
+                    graph["6"]["inputs"]["control_net_name"],
+                )
+                self.assertEqual("SetUnionControlNetType", graph["6u"]["class_type"])
+                self.assertEqual(union_type, graph["6u"]["inputs"]["type"])
+                self.assertEqual(["6u", 0], graph["7"]["inputs"]["control_net"])
+
+    def test_union_preflight_rejects_missing_model_before_upload(self):
+        payload = {
+            "ControlNetLoader": {"input": {"required": {
+                "control_net_name": [["controlnet-canny-sdxl-1.0.safetensors"]],
+            }}},
+            "SetUnionControlNetType": {"input": {"required": {}}},
+        }
+        with mock.patch.object(self.generate, "_fetch_comfy_object_info", return_value=payload), \
+                mock.patch.object(self.generate, "upload_image") as upload:
+            with self.assertRaisesRegex(SystemExit, "xinsir-controlnet-union"):
+                self.generate.main([
+                    "pose_only", "--comfy-url", "http://server:8188",
+                    "--prompt", "x", "--pose-ref", "pose.png",
+                    "--control-backend", "union",
+                ])
+        upload.assert_not_called()
 
     def test_submit_and_wait_uses_same_injected_url_and_keeps_prompt_id_on_retry(self):
         opener = mock.Mock(side_effect=[

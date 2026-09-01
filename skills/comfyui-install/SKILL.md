@@ -77,6 +77,14 @@
 
 **只有使用者明確要產短片才裝,不是每台機器的基本配備。** 跟 SDXL 完全不同的一組模型,清單/大小見 `reference/models.md`「選用影片模型」。該段的日期與大小是歷史安裝/實測紀錄，不等於已捕捉的可重現版本；實際 ComfyUI、PyAV、模型 SHA-256 與影片 smoke test 要填回 [`docs/tested-versions.md`](../../docs/tested-versions.md)，在 `pending_on_installed_machine` 期間不可捏造或宣稱已鎖定。動手下載前先講空間(Wan + H3 FL2VA 約 56GB;若要 `character_video` / h3 的 `pose_drive` 再加 H3 Ref2VA ~19.5GB,合計約 76GB)。不要把影片 checkpoint 寫進 `device_config.json` 的圖片 `CKPT` 欄位。h3 的角色參考跟動作驅動都用 Ref2VA UNET(跟 I2V 那顆 FL2VA 不同),對照表見 `skills/comfyui-video-gen/reference/backends.md`。
 
+## 進階（選配）：FLUX.2 Klein 4B PoC
+
+只有使用者明確核准 `flux2_concept` / `flux2_edit` 實驗路線才安裝。它是跟 SDXL 平行的 diffusion model + Qwen text encoder + FLUX.2 VAE 組合，不是 `device_config.json` 的 checkpoint，也不能沿用 SDXL ControlNet/IPAdapter/LoRA/`--style`。四個模型合計約 15.4 GiB，精確檔名、來源、bytes 與架構邊界見 `reference/models.md`「選用 FLUX.2 Klein 4B PoC」。安裝前確認空間，安裝後確認 ComfyUI `/object_info` 有 `EmptyFlux2LatentImage`、`Flux2Scheduler`、`ReferenceLatent` 等 Core 節點，再部署完整 `tools/` 模組並各跑一次 text-to-image 與 image-edit smoke；兩個都通過前保持實驗狀態。
+
+## 進階（選配）：BiRefNet 變體 benchmark
+
+只有使用者明確核准重新評估去背模型時才下載 general／HR／HR-matting／dynamic 四份官方 Hugging Face snapshot，並安裝 manifest 鎖定的 `timm`。模型位置、原生推論尺寸、Core loader 固定 1024 的限制與指令見 `reference/models.md`「選用 BiRefNet A/B benchmark 權重」。這是維護 benchmark，不是新的美術 task；先用固定資料集跑 `tools_src/benchmark_birefnet.py`，有穩定勝者才另開正式整合，不直接覆蓋 `birefnet.safetensors`。
+
 ## 執行原則
 
 - **冪等**:每一步先檢查是否已經成立,成立就跳過,不要盲目重跑或覆蓋使用者已經調整過的東西(`generate.py` 除外——它永遠要跟 repo 同步)
