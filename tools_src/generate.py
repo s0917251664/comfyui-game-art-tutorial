@@ -8,6 +8,8 @@
 
 Usage:
     python generate.py --config local_config.json concept --prompt "a female game character concept art, fantasy armor" [--negative ...] [--seed N] [--width 1024] [--height 1024] [--remove-bg]
+    python generate.py --config local_config.json flux2_concept --prompt "a readable game item concept" [--seed N] [--width 1024] [--height 1024]
+    python generate.py --config local_config.json flux2_edit --prompt "turn the armor silver" --image path.png [--seed N]
     python generate.py --comfy-url http://127.0.0.1:8188 character_action --prompt "..." --character-ref path.png --pose-ref path.png [--pose-strength 1.0] [--remove-bg]
     python generate.py --config local_config.json inpaint --prompt "..." --image path.png --mask path.png [--denoise 1.0]
     python generate.py --config local_config.json img2video --image still.png --prompt "camera locked, idle motion" [--backend h3|wan] [--duration 2] [--timeout 1800]
@@ -68,6 +70,7 @@ validate_dimensions = _image_graphs.validate_dimensions
 validate_unit_interval = _image_graphs.validate_unit_interval
 validate_lora_strength = _image_graphs.validate_lora_strength
 validate_scale = _image_graphs.validate_scale
+validate_flux2_dimensions = _image_graphs.validate_flux2_dimensions
 CONTROLNET_MODELS = _image_graphs.CONTROLNET_MODELS
 STYLE_CHECKPOINTS = _image_graphs.STYLE_CHECKPOINTS
 RATING_TAGS = _image_graphs.RATING_TAGS
@@ -110,6 +113,8 @@ build_refine = _image_builder("build_refine")
 build_upscale = _image_builder("build_upscale")
 build_layer_split = _image_builder("build_layer_split")
 attach_bg_removal = _image_builder("attach_bg_removal")
+build_flux2_concept = _image_builder("build_flux2_concept")
+build_flux2_edit = _image_builder("build_flux2_edit")
 
 CHARACTER_REF_MAX = _video_catalog.CHARACTER_REF_MAX
 VIDEO_WAN_UNET = _video_catalog.VIDEO_WAN_UNET
@@ -557,6 +562,84 @@ def _fetch_comfy_object_info(comfy_url, request_timeout=DEFAULT_HTTP_TIMEOUT):
     if not isinstance(payload, dict):
         raise RuntimeError("ComfyUI /object_info 回應不是 JSON object，已停止影片 task")
     return payload
+
+
+FLUX2_REQUIRED_NODES = (
+    "UNETLoader", "CLIPLoader", "VAELoader", "CLIPTextEncode",
+    "EmptyFlux2LatentImage", "RandomNoise", "CFGGuider", "KSamplerSelect",
+    "Flux2Scheduler", "SamplerCustomAdvanced", "VAEDecode", "SaveImage",
+)
+FLUX2_EDIT_REQUIRED_NODES = (
+    "LoadImage", "ImageScaleToTotalPixels", "GetImageSize", "VAEEncode", "ReferenceLatent",
+)
+
+
+def _node_combo_values(payload, node_name, input_name):
+    try:
+        spec = payload[node_name]["input"]["required"][input_name]
+        values = spec[0]
+    except (KeyError, IndexError, TypeError) as exc:
+        raise RuntimeError(
+            f"ComfyUI node schema 缺少 {node_name}.{input_name}，已停止 FLUX.2 task"
+        ) from exc
+    if not isinstance(values, list):
+        raise RuntimeError(
+            f"ComfyUI node schema 的 {node_name}.{input_name} 不是 model combo，已停止 FLUX.2 task"
+        )
+    return values
+
+
+def validate_flux2_capability(task, comfy_url, request_timeout=DEFAULT_HTTP_TIMEOUT):
+    """Fail before image upload/queue when FLUX.2 nodes or models are absent."""
+    required = list(FLUX2_REQUIRED_NODES)
+    if task == "flux2_edit":
+        required.extend(FLUX2_EDIT_REQUIRED_NODES)
+    payload = _fetch_comfy_object_info(comfy_url, request_timeout=request_timeout)
+    missing_nodes = sorted(set(required) - set(payload))
+    if missing_nodes:
+        raise RuntimeError(
+            "ComfyUI 缺少 FLUX.2 graph 必要 nodes，已在 upload/queue 前停止: "
+            + ", ".join(missing_nodes)
+        )
+    required_unet = (
+        _image_graphs.FLUX2_BASE_UNET if task == "flux2_edit"
+        else _image_graphs.FLUX2_DISTILLED_UNET
+    )
+    checks = (
+        ("UNETLoader", "unet_name", required_unet),
+        ("CLIPLoader", "clip_name", _image_graphs.FLUX2_CLIP),
+        ("VAELoader", "vae_name", _image_graphs.FLUX2_VAE),
+    )
+    missing_models = [
+        filename
+        for node_name, input_name, filename in checks
+        if filename not in _node_combo_values(payload, node_name, input_name)
+    ]
+    if missing_models:
+        raise RuntimeError(
+            "ComfyUI 缺少 FLUX.2 模型，已在 upload/queue 前停止: "
+            + ", ".join(missing_models)
+        )
+    return True
+
+
+def validate_controlnet_union_capability(comfy_url, request_timeout=DEFAULT_HTTP_TIMEOUT):
+    """Fail before reference upload when the experimental Union path is absent."""
+    payload = _fetch_comfy_object_info(comfy_url, request_timeout=request_timeout)
+    required_nodes = {"ControlNetLoader", "SetUnionControlNetType"}
+    missing_nodes = sorted(required_nodes - set(payload))
+    if missing_nodes:
+        raise RuntimeError(
+            "ComfyUI 缺少 ControlNet Union 必要 nodes，已在 upload/queue 前停止: "
+            + ", ".join(missing_nodes)
+        )
+    models = _node_combo_values(payload, "ControlNetLoader", "control_net_name")
+    if _image_graphs.CONTROLNET_UNION_MODEL not in models:
+        raise RuntimeError(
+            "ComfyUI 缺少 ControlNet Union 模型，已在 upload/queue 前停止: "
+            + _image_graphs.CONTROLNET_UNION_MODEL
+        )
+    return True
 
 
 def validate_comfy_video_nodes(comfy_url, required_nodes, request_timeout=DEFAULT_HTTP_TIMEOUT,
@@ -2206,6 +2289,8 @@ def _validate_cli_args(args):
         validate_lora_strength(args.lora_strength)
     if args.task in {"concept", "character_action", "pose_only", "style_lock", "icon_asset"}:
         validate_dimensions(args.width, args.height)
+    if args.task == "flux2_concept":
+        validate_flux2_dimensions(args.width, args.height)
     if args.task in {"inpaint", "guided_inpaint", "refine", "upscale"}:
         validate_unit_interval(args.denoise, "denoise")
     if args.task == "upscale":
@@ -2303,6 +2388,28 @@ def main(argv=None):
     p_concept.add_argument("--height", type=int, default=DEVICE["default_height"])
     p_concept.add_argument("--remove-bg", action="store_true")
 
+    # Experimental FLUX.2 tasks are deliberately separate from model_common:
+    # --style/--rating/SDXL LoRA and negative prompts are not compatible with
+    # this backend and must not appear to be supported by parser inheritance.
+    p_flux2_concept = sub.add_parser(
+        "flux2_concept",
+        help="實驗性 FLUX.2 Klein 4B 蒸餾版概念圖(4 steps；不取代 SDXL concept)",
+        parents=[common],
+    )
+    p_flux2_concept.add_argument("--prompt", required=True)
+    p_flux2_concept.add_argument("--width", type=int, default=1024)
+    p_flux2_concept.add_argument("--height", type=int, default=1024)
+    p_flux2_concept.add_argument("--seed", type=int)
+
+    p_flux2_edit = sub.add_parser(
+        "flux2_edit",
+        help="實驗性 FLUX.2 Klein 4B base 單參考圖語意編輯(輸出約一百萬像素)",
+        parents=[common],
+    )
+    p_flux2_edit.add_argument("--prompt", required=True, help="要如何修改來源圖")
+    p_flux2_edit.add_argument("--image", required=True, help="來源／參考圖路徑")
+    p_flux2_edit.add_argument("--seed", type=int)
+
     p_icon = sub.add_parser("icon_asset", help="單一小型 UI 圖示/物件素材(不是整個 UI 畫面),永遠去背輸出透明背景", parents=[batch_lora_common])
     p_icon.add_argument("--prompt", required=True)
     p_icon.add_argument("--width", type=int, default=1024)
@@ -2351,6 +2458,10 @@ def main(argv=None):
     p_pose.add_argument("--pose-strength", type=float, default=1.0)
     p_pose.add_argument("--control-type", choices=["canny", "pose", "depth"], default="canny",
                          help="構圖控制來源:canny=線稿邊緣(預設),pose=骨架姿勢,depth=深度圖")
+    p_pose.add_argument(
+        "--control-backend", choices=["verified", "union"], default="verified",
+        help="ControlNet 後端；verified=既有三顆正式模型(預設)，union=實驗性 xinsir ProMax A/B",
+    )
     p_pose.add_argument("--width", type=int, default=DEVICE["default_width"])
     p_pose.add_argument("--height", type=int, default=DEVICE["default_height"])
     p_pose.add_argument("--remove-bg", action="store_true")
@@ -2577,6 +2688,20 @@ def main(argv=None):
         comfy_url = resolve_comfy_url(getattr(args, "comfy_url", None), getattr(args, "config_path", None))
     request_timeout = min(DEFAULT_HTTP_TIMEOUT, float(args.timeout))
 
+    if args.task in {"flux2_concept", "flux2_edit"}:
+        try:
+            validate_flux2_capability(args.task, comfy_url, request_timeout=request_timeout)
+        except RuntimeError as exc:
+            raise SystemExit(str(exc)) from exc
+
+    if args.task == "pose_only" and args.control_backend == "union":
+        try:
+            validate_controlnet_union_capability(
+                comfy_url, request_timeout=request_timeout,
+            )
+        except RuntimeError as exc:
+            raise SystemExit(str(exc)) from exc
+
     if args.task in VIDEO_TASKS:
         try:
             args.backend = configure_video_capability(
@@ -2612,6 +2737,13 @@ def main(argv=None):
         prompt, out_id = build_concept(args.prompt, args.negative, args.width, args.height, args.seed,
                                         batch_size=args.batch, lora_name=args.lora, lora_strength=args.lora_strength,
                                         checkpoint=style_checkpoint)
+    elif args.task == "flux2_concept":
+        prompt, out_id = build_flux2_concept(
+            args.prompt, width=args.width, height=args.height, seed=args.seed,
+        )
+    elif args.task == "flux2_edit":
+        img_fn = upload(args.image)
+        prompt, out_id = build_flux2_edit(args.prompt, img_fn, seed=args.seed)
     elif args.task == "icon_asset":
         structure_fn = upload(args.structure_ref) if args.structure_ref else None
         appearance_fn = upload(args.appearance_ref) if args.appearance_ref else None
@@ -2654,7 +2786,8 @@ def main(argv=None):
                                           seed=args.seed, pose_strength=args.pose_strength,
                                           batch_size=args.batch, control_type=args.control_type,
                                           lora_name=args.lora, lora_strength=args.lora_strength,
-                                          checkpoint=style_checkpoint)
+                                          checkpoint=style_checkpoint,
+                                          control_backend=args.control_backend)
     elif args.task == "style_lock":
         char_fn = upload(args.character_ref)
         prompt, out_id = build_style_lock(args.prompt, char_fn, args.negative,
