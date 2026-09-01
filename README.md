@@ -31,7 +31,7 @@ AI agent 會依照 [`skills/comfyui-art-gen/SKILL.md`](skills/comfyui-art-gen/SK
 - 放大精修（`upscale`）：放大圖片並補充細節
 - 批次生成（batch）與固定 seed，方便探索與重複產出
 - 去背（`--remove-bg`），輸出透明背景素材
-- 影片生成：讓靜圖動起來、只運鏡不動主體、角色動作影片、動作驅動、循環特效、轉場、接續前一鏡、多支短片拼接（需另外偵測機器影片能力，見下方「產影片任務選擇」）
+- 影片生成：讓靜圖動起來、只運鏡不動主體、角色動作影片、動作驅動、循環特效、轉場、接續前一鏡、多支短片拼接、綠幕前景合成到背景（需另外偵測機器影片能力，見下方「產影片任務選擇」）
 
 ## 快速開始
 
@@ -134,6 +134,7 @@ python tools_src/verify_portable_install.py --repo-root . --config local_config.
 | 兩個畫面之間的轉場 | `transition` | prompt、起始幀、結束幀 |
 | 接續前一鏡繼續 | `clip_extend` | prompt，加上前一段影片或最後一幀圖片（擇一） |
 | 把多支短片接成一支 | `video_concat` | 多個影片檔（可重複 `--video`），純本機處理不需要 ComfyUI |
+| 把綠幕前景疊到背景上（合成） | `video_composite` | 綠幕前景影片、背景影片或圖片，純本機 chroma key 處理不需要 ComfyUI |
 
 ```bash
 <python_exe> <generate_script> img2video --prompt "camera locked, idle motion" --image still.png --backend h3 --duration 2 --comfy-url "<comfyui_url>" --timeout 1800 --output-dir "<repo>/output"
