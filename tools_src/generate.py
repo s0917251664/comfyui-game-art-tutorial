@@ -1814,18 +1814,19 @@ def composite_videos(foreground_path, background_path, dest_path, chroma_color="
                 f"目前是 {float(fps):g} FPS"
             )
         width, height = fg_vs.width, fg_vs.height
-        fg_frames = [frame.to_image().convert("RGB") for frame in fg_in.decode(video=0)]
         fg_audio_present = bool(getattr(fg_in.streams, "audio", ()) or ())
-    finally:
+    except Exception:
         fg_in.close()
-    if not fg_frames:
-        raise ValueError(f"video_composite --foreground 沒有畫面: {foreground_path}")
+        raise
 
     background_is_video = os.path.splitext(background_path)[1].lower() in VIDEO_COMPOSITE_BACKGROUND_EXTS
+    bg_in = None
+    bg_image = None
     if background_is_video:
         try:
             bg_in = av.open(background_path)
         except Exception as exc:
+            fg_in.close()
             raise ValueError(f"video_composite 無法解碼 --background {background_path!r}: {exc}") from exc
         try:
             bg_vs = _video_streams(bg_in)[0]
@@ -1835,32 +1836,29 @@ def composite_videos(foreground_path, background_path, dest_path, chroma_color="
                     f"video_composite --background 只接受產線 {VIDEO_FPS} FPS 影片，"
                     f"目前是 {float(bg_fps):g} FPS"
                 )
-            bg_raw_frames = [frame.to_image().convert("RGB") for frame in bg_in.decode(video=0)]
-        finally:
+            bg_size = (bg_vs.width, bg_vs.height)
+        except Exception:
             bg_in.close()
-        if not bg_raw_frames:
-            raise ValueError(f"video_composite --background 沒有畫面: {background_path}")
+            fg_in.close()
+            raise
     else:
         try:
             with PILImage.open(background_path) as im:
-                bg_raw_frames = [im.convert("RGB")]
+                bg_image = im.convert("RGB")
+                bg_size = bg_image.size
         except Exception as exc:
+            fg_in.close()
             raise ValueError(f"video_composite 無法讀取 --background 圖片 {background_path!r}: {exc}") from exc
 
-    if resize_mode == "strict" and bg_raw_frames[0].size != (width, height):
+    if resize_mode == "strict" and bg_size != (width, height):
+        fg_in.close()
+        if bg_in is not None:
+            bg_in.close()
         raise ValueError(
-            "video_composite 背景尺寸跟前景不同，預設 strict 拒絕以免默默縮放；"
-            f"前景={width}x{height}，背景={bg_raw_frames[0].size}。"
+            "video_composite 背景尺寸跟前景不同，--resize-mode strict 拒絕縮放；"
+            f"前景={width}x{height}，背景={bg_size}。"
             "請明確給 --resize-mode fit/fill/stretch"
         )
-    bg_frames = [_resize_video_image(im, width, height, resize_mode) for im in bg_raw_frames]
-
-    total = len(fg_frames)
-    if len(bg_frames) < total:
-        reps = (total + len(bg_frames) - 1) // len(bg_frames)
-        bg_frames = (bg_frames * reps)[:total]
-    else:
-        bg_frames = bg_frames[:total]
 
     key_rgb = np.array(chroma_rgb, dtype=np.int16)
     dest_dir = os.path.dirname(os.path.abspath(dest_path)) or "."
@@ -1877,7 +1875,30 @@ def composite_videos(foreground_path, background_path, dest_path, chroma_color="
         out_v.height = height
         out_v.pix_fmt = "yuv420p"
         out_a = out.add_stream("aac", rate=32000) if fg_audio_present else None
-        for fg_im, bg_im in zip(fg_frames, bg_frames):
+        bg_decoder = bg_in.decode(video=0) if bg_in is not None else None
+        frame_count = 0
+        for fg_frame in fg_in.decode(video=0):
+            fg_im = fg_frame.to_image().convert("RGB")
+            if bg_in is None:
+                bg_im = bg_image
+            else:
+                try:
+                    bg_frame = next(bg_decoder)
+                except StopIteration:
+                    # PyAV/FFmpeg seek behavior varies by container. Reopening is slower than
+                    # seek but deterministic, and keeps memory constant while looping a short
+                    # background underneath a longer foreground.
+                    bg_in.close()
+                    bg_in = av.open(background_path)
+                    bg_decoder = bg_in.decode(video=0)
+                    try:
+                        bg_frame = next(bg_decoder)
+                    except StopIteration as exc:
+                        raise ValueError(
+                            f"video_composite --background 沒有畫面: {background_path}"
+                        ) from exc
+                bg_im = bg_frame.to_image().convert("RGB")
+            bg_im = _resize_video_image(bg_im, width, height, resize_mode)
             fg_arr = np.asarray(fg_im, dtype=np.int16)
             bg_arr = np.asarray(bg_im, dtype=np.uint8).astype(np.float32)
             dist = np.abs(fg_arr - key_rgb).max(axis=2).astype(np.float32)
@@ -1886,6 +1907,9 @@ def composite_videos(foreground_path, background_path, dest_path, chroma_color="
             of = av.VideoFrame.from_ndarray(np.clip(composited, 0, 255).astype(np.uint8), format="rgb24")
             for packet in out_v.encode(of):
                 out.mux(packet)
+            frame_count += 1
+        if not frame_count:
+            raise ValueError(f"video_composite --foreground 沒有畫面: {foreground_path}")
         for packet in out_v.encode():
             out.mux(packet)
         if out_a:
@@ -1893,9 +1917,7 @@ def composite_videos(foreground_path, background_path, dest_path, chroma_color="
             try:
                 resampler = av.AudioResampler(format="fltp", layout="stereo", rate=32000)
                 sample_i = 0
-                frames_in = list(ain.decode(audio=0))
-                frames_in.append(None)
-                for frame in frames_in:
+                for frame in ain.decode(audio=0):
                     resampled = resampler.resample(frame) or []
                     if not isinstance(resampled, (list, tuple)):
                         resampled = [resampled]
@@ -1906,6 +1928,11 @@ def composite_videos(foreground_path, background_path, dest_path, chroma_color="
                         sample_i += rf.samples
                         for packet in out_a.encode(rf) or []:
                             out.mux(packet)
+                for rf in resampler.resample(None) or []:
+                    rf.pts = sample_i
+                    sample_i += rf.samples
+                    for packet in out_a.encode(rf) or []:
+                        out.mux(packet)
             finally:
                 ain.close()
             for packet in out_a.encode(None) or []:
@@ -1924,6 +1951,10 @@ def composite_videos(foreground_path, background_path, dest_path, chroma_color="
         except FileNotFoundError:
             pass
         raise
+    finally:
+        fg_in.close()
+        if bg_in is not None:
+            bg_in.close()
     note = "含前景音軌" if fg_audio_present else "無聲"
     print(f"[合成] {foreground_path} + {background_path} -> {dest_path} ({note})")
     return dest_path

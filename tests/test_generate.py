@@ -16,6 +16,7 @@ MODULE_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "tools_sr
 DETECTOR_PATH = os.path.join(
     os.path.dirname(os.path.dirname(__file__)), "tools_src", "detect_video_capabilities.py"
 )
+PYAV_AVAILABLE = importlib.util.find_spec("av") is not None
 
 
 def load_generate_module():
@@ -693,6 +694,87 @@ class GenerateTests(unittest.TestCase):
                     mock.patch.object(fake_av, "open", side_effect=AssertionError("must reject first")):
                 with self.assertRaisesRegex(ValueError, "輸入影片不可與輸出路徑相同"):
                     self.generate.concat_videos([source_a, source_b], source_a)
+
+    @unittest.skipUnless(PYAV_AVAILABLE, "video_composite integration test requires PyAV")
+    def test_video_composite_replaces_green_and_preserves_foreground(self):
+        import av
+        import numpy as np
+
+        def write_video(path, arrays):
+            output = av.open(path, "w")
+            try:
+                stream = output.add_stream("libx264", rate=24)
+                stream.width = arrays[0].shape[1]
+                stream.height = arrays[0].shape[0]
+                stream.pix_fmt = "yuv420p"
+                for array in arrays:
+                    frame = av.VideoFrame.from_ndarray(array, format="rgb24")
+                    for packet in stream.encode(frame):
+                        output.mux(packet)
+                for packet in stream.encode():
+                    output.mux(packet)
+            finally:
+                output.close()
+
+        with tempfile.TemporaryDirectory() as work:
+            foreground = os.path.join(work, "foreground.mp4")
+            background = os.path.join(work, "background.mp4")
+            result = os.path.join(work, "result.mp4")
+            green = np.zeros((16, 16, 3), dtype=np.uint8)
+            green[:, :] = (0, 255, 0)
+            green[4:12, 4:12] = (255, 0, 0)
+            blue = np.zeros((16, 16, 3), dtype=np.uint8)
+            blue[:, :] = (0, 0, 255)
+            # A one-frame background exercises deterministic reopen/loop behavior.
+            write_video(foreground, [green, green, green])
+            write_video(background, [blue])
+
+            self.generate.composite_videos(foreground, background, result)
+
+            container = av.open(result)
+            try:
+                frames = [frame.to_ndarray(format="rgb24") for frame in container.decode(video=0)]
+            finally:
+                container.close()
+            self.assertEqual(3, len(frames))
+            for frame in frames:
+                corner = frame[1, 1]
+                center = frame[8, 8]
+                self.assertGreater(int(corner[2]), int(corner[0]) + 100)
+                self.assertGreater(int(center[0]), int(center[2]) + 100)
+
+    @unittest.skipUnless(PYAV_AVAILABLE, "video_composite integration test requires PyAV")
+    def test_video_composite_rejects_strict_size_mismatch_without_output(self):
+        import av
+        import numpy as np
+        from PIL import Image
+
+        with tempfile.TemporaryDirectory() as work:
+            foreground = os.path.join(work, "foreground.mp4")
+            background = os.path.join(work, "background.png")
+            result = os.path.join(work, "result.mp4")
+            output = av.open(foreground, "w")
+            try:
+                stream = output.add_stream("libx264", rate=24)
+                stream.width = 16
+                stream.height = 16
+                stream.pix_fmt = "yuv420p"
+                frame = av.VideoFrame.from_ndarray(
+                    np.full((16, 16, 3), (0, 255, 0), dtype=np.uint8), format="rgb24",
+                )
+                for packet in stream.encode(frame):
+                    output.mux(packet)
+                for packet in stream.encode():
+                    output.mux(packet)
+            finally:
+                output.close()
+            Image.new("RGB", (32, 16), (0, 0, 255)).save(background)
+
+            with self.assertRaisesRegex(ValueError, "--resize-mode strict"):
+                self.generate.composite_videos(
+                    foreground, background, result, resize_mode="strict",
+                )
+            self.assertFalse(os.path.exists(result))
 
     def test_video_contract_fails_on_geometry_and_audio_mismatch(self):
         metadata = {

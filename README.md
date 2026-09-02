@@ -134,7 +134,7 @@ python tools_src/verify_portable_install.py --repo-root . --config local_config.
 | 兩個畫面之間的轉場 | `transition` | prompt、起始幀、結束幀 |
 | 接續前一鏡繼續 | `clip_extend` | prompt，加上前一段影片或最後一幀圖片（擇一） |
 | 把多支短片接成一支 | `video_concat` | 多個影片檔（可重複 `--video`），純本機處理不需要 ComfyUI |
-| 把綠幕前景疊到背景上（合成） | `video_composite` | 綠幕前景影片、背景影片或圖片，純本機 chroma key 處理不需要 ComfyUI |
+| 把綠幕前景疊到背景上（合成） | `video_composite` | 綠幕前景影片、背景影片或圖片，純本機串流 chroma key；只保留前景音軌，不需要 ComfyUI |
 
 ```bash
 <python_exe> <generate_script> img2video --prompt "camera locked, idle motion" --image still.png --backend h3 --duration 2 --comfy-url "<comfyui_url>" --timeout 1800 --output-dir "<repo>/output"

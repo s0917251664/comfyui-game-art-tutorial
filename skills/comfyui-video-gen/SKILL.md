@@ -34,7 +34,7 @@
 | 「從 A 畫面變成 B」「內容轉場、傳送門」 | `transition`(要兩張靜幀) |
 | 「接下去下一鏡」「同一場繼續」 | `clip_extend` |
 | 「把這幾支短片接成一支」 | `video_concat` |
-| 「把綠幕特效疊到背景上」「合成/疊圖成一支」 | `video_composite`(chroma key,純本機不經 ComfyUI,細節見下方「video_composite(綠幕合成)」) |
+| 「把綠幕特效疊到背景上」「合成/疊圖成一支」 | `video_composite`(chroma key,純本機不經 ComfyUI,細節見下方與 `reference/video-composite.md`) |
 | 「做一部有劇情的片子 / 15 秒過場」 | **先出鏡頭表**,再逐鏡呼叫上面的 task,最後 `video_concat`。不准收成一個超長 prompt |
 
 `--backend` 只有在 capability config 明確寫了 `default_backend` 時才可以省略；若 config 是 `null`，必須問清楚或要求使用者明確指定。不要因模型缺失、node 缺失或 task 不支援而自動換 H3/Wan。哪個 task 接了哪個 backend,見 `reference/backends.md`;沒接上的組合腳本會在 upload/queue 前報錯,不要因此改 task 名。
@@ -86,7 +86,7 @@
 2. 背景(`--background`,mp4 或靜態圖都可以;背景比前景短就循環,比前景長就截斷)
 3. 前景色碼跟去背素材本身綠幕的實際色碼是否一致(預設 `00FF00`,通常不用問,除非使用者自己調過綠幕色)
 
-這個 task **純本機用 PyAV+numpy 逐幀 chroma key**,不呼叫 ComfyUI、不經過任何生成模型,所以不需要 `--comfy-url`/`--config`/`--timeout`。摳像品質看前景綠幕乾不乾淨——如果邊緣有色邊/沒摳乾淨,調 `--tolerance`(門檻,預設 60,調高摳更乾淨但邊緣更容易吃色)或 `--softness`(羽化寬度,預設 40,調小邊緣更銳利但更容易鋸齒)。背景尺寸跟前景不同時預設 `--resize-mode fill`(裁切填滿),要黑邊或拉伸才需要明確換成 `fit`/`stretch`。目前不支援 `--resume`。
+這個 task **純本機用 PyAV+numpy 串流逐幀 chroma key**,不呼叫 ComfyUI、不經過任何生成模型,所以不需要 `--comfy-url`/`--config`/`--timeout`。音訊只保留前景；背景有聲、前景無聲時，輸出仍為無聲。背景尺寸不同時預設 `--resize-mode fill`；目前不支援 `--resume`。調整去背邊緣與完整限制見 `reference/video-composite.md`。
 
 ### 有劇情的短片(鏡頭表,必做)
 
@@ -154,6 +154,7 @@ pose_drive:
 - `character_video` 鎖身份、不鎖構圖;要構圖不動用 `img2video`
 - `fx_loop` 首尾幀實測平均像素差可以很低,不保證任意題材都完美閉環
 - 沒有「AI 自動判斷主體邊界」的影片去背/合成(沒有語意分割模型)——`video_composite` 是 chroma key,只吃乾淨綠幕素材,對任意實拍影片/雜亂背景不適用；效果好壞取決於前景綠幕乾不乾淨跟 `--tolerance`/`--softness` 調得準不準,不保證任意素材都摳得乾淨
+- `video_composite` 只保留前景音軌並丟棄背景音軌；需要背景聲、配樂或混音時交給外部剪接工具
 - `camera_move` 的 `--camera` 是枚舉;有 last_frame 的 backend 會再餵幾何終點靜幀(見 `reference/camera-move.md`)。`orbit_*` 只靠 prompt
 - `video_concat` 每支都有音軌才接立體聲;有任何一支無聲,整段當無聲(不要半段有聲)
 - `pose_drive` 要角色靜幀 + 動作影片,而且**靜幀姿勢要接近動作片第一幀**;對不上會雙人/重影,不要拿兩張不相干的素材硬綁。歷史上 H3 臉比 Wan 穩，實際選擇以 capability config 為準；只要快才在確認 capability 後明確給 `--backend wan`
