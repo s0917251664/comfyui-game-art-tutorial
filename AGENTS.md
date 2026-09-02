@@ -8,6 +8,7 @@
 - `skills/comfyui-pipeline-review/SKILL.md` —— **只有使用者明確要求「評估/盤點產線有沒有新技術可以升級」時才讀這份文件**,平常不要主動觸發。負責盤點現有模型清單 + 查現況 + 給建議,不負責自己動手換模型
 - `skills/comfyui-new-tool-checklist/SKILL.md` —— **要幫這條產線新增任何新工具/新技術/新 task(不管改動看起來多小)時,讀這份文件並照它的檢查清單走完整輪**,涵蓋安裝、程式碼、實測、文件、workflows/ 同步五個面向,不要漏步驟就說做完了
 - `skills/comfyui-video-gen/SKILL.md` —— **當使用者要讓靜幀動起來、產短片、角色參考生影片時讀這份並照它的流程操作**。設計背景/還沒做的 task 見同資料夾 `DESIGN.md`。**不要把 `comfyui-art-gen` 的圖片 task 假裝成會產影片,也不要自己臨場組 ComfyUI 影片節點冒充產線;不要自動用系統播放器打開成品**
+- `skills/comfyui-character-animation-workflow/SKILL.md` —— **當使用者要同一角色的一整組遊戲動作，或要求從定稿靜幀一路做到逐支驗收與抽幀交付時讀這份文件**。它只編排既有產圖／產影片 task 與人工驗收點，不新增模型參數，不把尚未接入的第三方 provider、APNG 或透明影片假裝成現有能力
 - `local_config.json` —— **這台機器的實際安裝路徑**(ComfyUI 裝在哪、python.exe 在哪),不進版控,每台機器內容都不一樣。不存在的話代表這台機器還沒裝好,照 `skills/comfyui-install/SKILL.md` 的流程走
 - `tools_src/generate.py` 與 `tools_src/comfyui_pipeline/` —— 實際執行產圖/產影片的原始碼(版本控管在這裡)。部署時要把 `generate.py` 與整個 `comfyui_pipeline/` 一起複製到 `<ComfyUI 安裝路徑>/tools/`；`generate.py` 是相容 facade，不可只部署單一檔案
 - `tools_src/detect_device.py` —— 設備能力偵測(GPU/VRAM/OS),輸出 `device_config.json` 給 `generate.py` 讀取,決定用哪個 checkpoint/解析度

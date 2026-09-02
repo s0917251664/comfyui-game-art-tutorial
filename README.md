@@ -140,6 +140,8 @@ SDXL 圖片任務可以視需要使用 `--style realistic|illustration|anime` �
 | 把多支短片接成一支 | `video_concat` | 多個影片檔（可重複 `--video`），純本機處理不需要 ComfyUI |
 | 把綠幕前景疊到背景上（合成） | `video_composite` | 綠幕前景影片、背景影片或圖片，純本機串流 chroma key；只保留前景音軌，不需要 ComfyUI |
 
+同一角色要製作 Idle、Win、Fail 等一整組遊戲動作時，不要把每支影片當成互不相關的臨時呼叫。先依 [`skills/comfyui-character-animation-workflow/SKILL.md`](skills/comfyui-character-animation-workflow/SKILL.md) 建立動作表，鎖定代表動作，再逐支走既有 task 的技術契約與人工驗收；動作接受後才抽幀或合成。這個流程不新增生成 backend，也不代表目前已支援 APNG、透明影片或第三方付費 provider。
+
 ```bash
 <python_exe> <generate_script> img2video --prompt "camera locked, idle motion" --image still.png --backend h3 --duration 2 --comfy-url "<comfyui_url>" --timeout 1800 --output-dir "<repo>/output"
 ```
@@ -174,9 +176,11 @@ python -m unittest discover -s tests -p 'test_*.py' -v
 ├── skills/
 │   ├── comfyui-art-gen/                 # AI agent 的需求判斷與產圖流程
 │   │   └── reference/                   # 遮罩、結構範本、參數與已知限制
+│   ├── comfyui-character-animation-workflow/ # 單角色多動作的分階段製作與驗收
 │   ├── comfyui-install/                 # 新機器安裝檢查清單
 │   ├── comfyui-new-tool-checklist/      # 新增工具或技術時的檢查清單
-│   └── comfyui-pipeline-review/         # 明確要求升級盤點時使用
+│   ├── comfyui-pipeline-review/         # 明確要求升級盤點時使用
+│   └── comfyui-video-gen/               # 短片 task、backend 與輸出驗收
 ├── docs/
 │   └── tested-versions.md                # 已驗證版本與模型 hash 的紀錄格式
 ├── .github/workflows/ci.yml              # compileall + stdlib unittest
@@ -202,6 +206,7 @@ python -m unittest discover -s tests -p 'test_*.py' -v
 - [完整教學](教學.md)：從名詞、安裝、模型到各種產圖情境
 - [產圖流程](skills/comfyui-art-gen/SKILL.md)：決策順序(任務覆蓋／機器 tier 撐不撐得起／MCP／新增任務)、如何把需求分類並呼叫正確 task
 - [產影片流程](skills/comfyui-video-gen/SKILL.md)：任務判斷、鏡頭串接、H3/Wan backend 選擇
+- [單角色動畫工作流程](skills/comfyui-character-animation-workflow/SKILL.md)：動作表、代表動作、逐支技術／人工驗收與接受後抽幀
 - [安裝流程](skills/comfyui-install/SKILL.md)：新機器的環境與模型準備
 - [模型清單](skills/comfyui-install/reference/models.md)：模型基準與硬碟空間估算（可重現版本以 manifest 為準）
 - [影片能力與 backend](skills/comfyui-video-gen/reference/backends.md)：machine-specific capability config、task/backend 邊界與 fail-fast 規則
