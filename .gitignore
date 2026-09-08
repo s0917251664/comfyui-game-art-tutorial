@@ -3,6 +3,8 @@ output/*
 !output/.gitkeep
 local_config.json
 /workflows/
+/.github/workflows/
+/.codegraph/
 __pycache__/
 *.py[cod]
 
