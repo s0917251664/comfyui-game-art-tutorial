@@ -16,4 +16,4 @@
 
 ## 為什麼不做「AI 自動判斷圖層邊界」
 
-目前這條產線沒有裝任何語意分割模型(例如 SAM 這類「畫面裡有哪些物件、各自的邊界在哪」的模型),`layer_split` 完全依賴使用者用 MaskEditor 手動畫好的遮罩。如果之後真的需要「不用手動畫遮罩,AI 自己判斷邊界」,那是要另外裝新模型/新 custom node 的工程,照 `skills/comfyui-new-tool-checklist/SKILL.md` 走完整輪再評估,不在這次範圍內,也不要跟使用者假裝現在做得到。
+2026-09-05 起可先用獨立 `sam_segment.py` 產生 SAM 2.1 候選遮罩，再把人工驗收通過的 `mask_comfy.png` 交給 `layer_split`。SAM 候選沒有語意名稱，也不會自動補畫交疊部位；無合適候選時仍要用 Simple Mask Tool 手動畫。完整證據與限制見 `reference/sam-segmentation.md`。

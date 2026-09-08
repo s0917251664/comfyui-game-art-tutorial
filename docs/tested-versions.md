@@ -2,7 +2,11 @@
 
 這份文件記錄「曾在同一台已安裝機器上實際跑通」的工具、custom node（自訂節點）、Python 套件與模型版本。它不是目前最新版推薦，也不應把可變的 main/master 分支當成版本。安裝流程先依這份清單的已驗證版本重現；要升級時，另做一次完整 smoke test（冒煙測試）並更新紀錄。
 
-目前狀態：**已驗證（verified）**，capture machine 為 XU-Nano-PC，最後補驗日期為 2026-09-01。這筆資料直接取自 C:\Users\XU\ComfyUI 的實際安裝、模型檔與本機 ComfyUI API；repo 本身仍不提交 local_config.json、device_config.json 或 video_capabilities.json。
+目前狀態：**已驗證（verified）**，capture machine 為 XU-Nano-PC，最後補驗日期為 2026-09-05。這筆資料直接取自 C:\Users\XU\ComfyUI 的實際安裝、模型檔與本機 ComfyUI API；repo 本身仍不提交 local_config.json、device_config.json 或 video_capabilities.json。
+
+2026-09-05 另部署 repository 內建 `comfyui-simple-mask-tool`（非外部 Git custom node、無模型），於 ComfyUI 0.34.0／Frontend 1.49.6 實測 Session create/save/fetch 與既有 `layer_split` 串接。832×1232 測試遮罩輸出 RGBA，Alpha extrema `(0,255)`，透明像素 1,009,014、不透明像素 16,010。
+
+2026-09-05 新增獨立 `sam_segment.py`，使用官方 `facebook/sam2.1-hiera-small`（約 184 MB safetensors），在 RTX 4080 16 GB、PyTorch 2.13.0+cu130、Transformers 5.15.0 上實測。角色母圖產生 23 個原始候選並輸出 12 個精選候選；尾巴候選與既有 `layer_split` 串接成功，輸出 832×1232 RGBA，Alpha extrema `(0,255)`，透明像素 1,005,859、不透明像素 19,165、半透明像素 0。`float16` 因 TorchVision NMS dtype mismatch 不可用，工具鎖定 `float32`。安裝驗證器已把 `sam_segment.py` 納入 source sync，離線完整測試 82 項通過。SAM 與 Simple Mask Tool 維持獨立，只共用標準遮罩交換格式。
 
 偵測器在 2026-08-31T02:34:30.150519+00:00 重新產生本機 capability config，加入 node schema fingerprint；之後在 2026-08-31 完成圖片 smoke、H3 全部影片 task、video_concat 與 Wan 的 i2v/control smoke，並完成 contract/sidecar/resume 與 concat policy smoke。2026-09-01 另完成 FLUX.2 Klein 4B distilled 文字生圖、base 單圖編輯與 stock SDXL 對照。偵測器只掃描既有檔案與 runtime，不下載模型；本文件的 SHA-256 是另外對實際檔案計算的結果。
 

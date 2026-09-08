@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>局部修改範圍</title>
+  <style>
+    :root{font-family:system-ui,"Microsoft JhengHei",sans-serif;color:#eef3fb;background:#111722}
+    *{box-sizing:border-box} body{margin:0;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+    header{padding:12px 18px;background:#192231;border-bottom:1px solid #344154;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+    h1{font-size:18px;margin:0}.hint{color:#b8c6d9;font-size:14px;flex:1}.tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    button{border:1px solid #52627a;background:#243247;color:#fff;border-radius:7px;padding:8px 12px;cursor:pointer}button.active{background:#1689a7;border-color:#67d9ed}button.primary{background:#1c9b65;border-color:#5ed79e;font-weight:700}button:disabled{opacity:.5;cursor:not-allowed}
+    input[type=range]{width:130px}.stage{position:relative;flex:1;overflow:hidden;background:#0a0f17;touch-action:none}.stage canvas{position:absolute;left:0;top:0;transform-origin:0 0}.status{padding:8px 16px;background:#192231;color:#c9d5e6;font-size:13px;display:flex;justify-content:space-between}.error{color:#ff9b9b}.success{color:#75e5ad}
+  </style>
+</head>
+<body>
+  <header>
+    <div><h1>局部修改範圍</h1><div class="hint" id="purpose">請塗紅希望 AI 重新處理的地方</div></div>
+    <div class="tools">
+      <button id="brush" class="active">畫筆 B</button><button id="eraser">橡皮擦 E</button>
+      <label>大小 <input id="size" type="range" min="2" max="180" value="36"></label>
+      <button id="undo">復原</button><button id="redo">重做</button><button id="clear">清除</button>
+      <button id="fit">適合視窗</button><button id="save" class="primary">完成並送出</button>
+    </div>
+  </header>
+  <main class="stage" id="stage"><canvas id="image"></canvas><canvas id="mask"></canvas></main>
+  <footer class="status"><span id="message">紅色區域會被重新生成；其餘區域會盡量保留。</span><span>滾輪縮放・空白鍵或中鍵拖曳・[ ] 調筆刷</span></footer>
+  <script>
+  (()=>{
+    const token=location.pathname.split('/').filter(Boolean).pop(), stage=document.querySelector('#stage');
+    const imageCanvas=document.querySelector('#image'), maskCanvas=document.querySelector('#mask');
+    const ictx=imageCanvas.getContext('2d'), mctx=maskCanvas.getContext('2d',{willReadFrequently:true});
+    const message=document.querySelector('#message'), size=document.querySelector('#size');
+    let source=new Image(), mode='brush', scale=1, tx=0, ty=0, drawing=false, panning=false, space=false, last=null, panStart=null, history=[], future=[];
+    const setMessage=(text,kind='')=>{message.textContent=text;message.className=kind};
+    const transform=()=>{const t=`translate(${tx}px,${ty}px) scale(${scale})`;imageCanvas.style.transform=t;maskCanvas.style.transform=t};
+    const fit=()=>{if(!source.width)return;scale=Math.min(stage.clientWidth/source.width,stage.clientHeight/source.height)*.94;tx=(stage.clientWidth-source.width*scale)/2;ty=(stage.clientHeight-source.height*scale)/2;transform()};
+    const snapshot=()=>{history.push(mctx.getImageData(0,0,maskCanvas.width,maskCanvas.height));if(history.length>40)history.shift();future=[]};
+    const restore=img=>mctx.putImageData(img,0,0);
+    const pos=e=>{const r=stage.getBoundingClientRect();return{x:(e.clientX-r.left-tx)/scale,y:(e.clientY-r.top-ty)/scale}};
+    const stroke=(a,b)=>{mctx.save();mctx.lineCap='round';mctx.lineJoin='round';mctx.lineWidth=Number(size.value)/scale*scale;mctx.globalCompositeOperation=mode==='brush'?'source-over':'destination-out';mctx.strokeStyle='rgba(255,45,45,.62)';mctx.beginPath();mctx.moveTo(a.x,a.y);mctx.lineTo(b.x,b.y);mctx.stroke();mctx.restore()};
+    fetch(`/simple-mask/api/sessions/${token}`).then(r=>r.json()).then(meta=>{document.querySelector('#purpose').textContent=meta.purpose||'請塗紅希望 AI 重新處理的地方';source.src=`/simple-mask/api/sessions/${token}/source`;});
+    source.onload=()=>{imageCanvas.width=maskCanvas.width=source.width;imageCanvas.height=maskCanvas.height=source.height;ictx.drawImage(source,0,0);fit()};
+    stage.addEventListener('pointerdown',e=>{if(e.button===1||space){panning=true;panStart={x:e.clientX-tx,y:e.clientY-ty};stage.setPointerCapture(e.pointerId);return}if(e.button!==0)return;snapshot();drawing=true;last=pos(e);stroke(last,{x:last.x+.01,y:last.y+.01});stage.setPointerCapture(e.pointerId)});
+    stage.addEventListener('pointermove',e=>{if(panning){tx=e.clientX-panStart.x;ty=e.clientY-panStart.y;transform();return}if(!drawing)return;const now=pos(e);stroke(last,now);last=now});
+    stage.addEventListener('pointerup',()=>{drawing=false;panning=false});stage.addEventListener('pointercancel',()=>{drawing=false;panning=false});
+    stage.addEventListener('wheel',e=>{e.preventDefault();const old=scale,factor=e.deltaY<0?1.12:.89;scale=Math.max(.08,Math.min(12,scale*factor));const r=stage.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;tx=x-(x-tx)*scale/old;ty=y-(y-ty)*scale/old;transform()},{passive:false});
+    const setMode=m=>{mode=m;document.querySelector('#brush').classList.toggle('active',m==='brush');document.querySelector('#eraser').classList.toggle('active',m==='eraser')};
+    document.querySelector('#brush').onclick=()=>setMode('brush');document.querySelector('#eraser').onclick=()=>setMode('eraser');document.querySelector('#fit').onclick=fit;
+    document.querySelector('#clear').onclick=()=>{snapshot();mctx.clearRect(0,0,maskCanvas.width,maskCanvas.height)};
+    document.querySelector('#undo').onclick=()=>{if(!history.length)return;future.push(mctx.getImageData(0,0,maskCanvas.width,maskCanvas.height));restore(history.pop())};
+    document.querySelector('#redo').onclick=()=>{if(!future.length)return;history.push(mctx.getImageData(0,0,maskCanvas.width,maskCanvas.height));restore(future.pop())};
+    addEventListener('keydown',e=>{if(e.code==='Space'){space=true;e.preventDefault()}if(e.key.toLowerCase()==='b')setMode('brush');if(e.key.toLowerCase()==='e')setMode('eraser');if(e.key==='[')size.value=Math.max(2,Number(size.value)-4);if(e.key===']')size.value=Math.min(180,Number(size.value)+4);if(e.ctrlKey&&e.key.toLowerCase()==='z'){e.preventDefault();document.querySelector('#undo').click()}if(e.ctrlKey&&e.key.toLowerCase()==='y'){e.preventDefault();document.querySelector('#redo').click()}});addEventListener('keyup',e=>{if(e.code==='Space')space=false});
+    const exportMask=()=>{const out=document.createElement('canvas');out.width=maskCanvas.width;out.height=maskCanvas.height;const o=out.getContext('2d');o.fillStyle='black';o.fillRect(0,0,out.width,out.height);o.drawImage(maskCanvas,0,0);const data=o.getImageData(0,0,out.width,out.height);for(let i=0;i<data.data.length;i+=4){const selected=data.data[i+3]>0?255:0;data.data[i]=data.data[i+1]=data.data[i+2]=selected;data.data[i+3]=255}o.putImageData(data,0,0);return out.toDataURL('image/png')};
+    const submit=async confirmNearFull=>{const btn=document.querySelector('#save');btn.disabled=true;setMessage('正在儲存遮罩…');try{const r=await fetch(`/simple-mask/api/sessions/${token}/save`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mask_png:exportMask(),confirm_near_full:confirmNearFull})});const data=await r.json().catch(async()=>({message:await r.text()}));if(r.status===409&&data.error==='near_full'){if(confirm(`目前選取 ${(data.selected_ratio*100).toFixed(1)}% 的畫面，可能會重畫整張圖。仍要送出嗎？`))return submit(true);throw new Error('已取消送出，請縮小遮罩範圍。')}if(!r.ok)throw new Error(data.message||data.error||'儲存失敗');setMessage('完成！遮罩已安全存回本機，可以關閉這個頁面。','success');btn.textContent='已完成'}catch(err){setMessage(err.message||String(err),'error');btn.disabled=false}};
+    document.querySelector('#save').onclick=()=>submit(false);addEventListener('resize',fit);
+  })();
+  </script>
+</body>
+</html>

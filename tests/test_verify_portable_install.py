@@ -13,6 +13,7 @@ VERIFY_PATH = ROOT / "tools_src" / "verify_portable_install.py"
 GENERATE_PATH = ROOT / "tools_src" / "generate.py"
 DETECT_DEVICE_PATH = ROOT / "tools_src" / "detect_device.py"
 DETECT_VIDEO_PATH = ROOT / "tools_src" / "detect_video_capabilities.py"
+SAM_SEGMENT_PATH = ROOT / "tools_src" / "sam_segment.py"
 PIPELINE_PKG = ROOT / "tools_src" / "comfyui_pipeline"
 
 
@@ -34,6 +35,7 @@ class VerifyPortableInstallTests(unittest.TestCase):
         cls.generate_bytes = GENERATE_PATH.read_bytes()
         cls.detect_device_bytes = DETECT_DEVICE_PATH.read_bytes()
         cls.detect_video_bytes = DETECT_VIDEO_PATH.read_bytes()
+        cls.sam_segment_bytes = SAM_SEGMENT_PATH.read_bytes()
         cls.pipeline_init_bytes = (PIPELINE_PKG / "__init__.py").read_bytes()
         cls.pipeline_image_bytes = (PIPELINE_PKG / "image_graphs.py").read_bytes()
         cls.pipeline_video_bytes = (PIPELINE_PKG / "video_catalog.py").read_bytes()
@@ -59,6 +61,7 @@ class VerifyPortableInstallTests(unittest.TestCase):
 
         self._copy_source(tools_dir / "generate.py", self.generate_bytes)
         self._copy_source(tools_dir / "detect_device.py", self.detect_device_bytes)
+        self._copy_source(tools_dir / "sam_segment.py", self.sam_segment_bytes)
         self._copy_source(tools_dir / "comfyui_pipeline" / "__init__.py", self.pipeline_init_bytes)
         self._copy_source(tools_dir / "comfyui_pipeline" / "image_graphs.py", self.pipeline_image_bytes)
         self._copy_source(tools_dir / "comfyui_pipeline" / "video_catalog.py", self.pipeline_video_bytes)
@@ -187,6 +190,25 @@ class VerifyPortableInstallTests(unittest.TestCase):
         text = out.getvalue()
         self.assertIn("[FAIL] detect_device.py source sync", text)
 
+    def test_missing_sam_segment_fails_source_sync(self):
+        live = {
+            "os": "Windows", "machine": "amd64", "backend": "cuda",
+            "tier": "sdxl", "checkpoint": "sd_xl_base_1.0.safetensors",
+            "default_width": 1024, "default_height": 1024,
+            "gpu_name": "Test GPU", "vram_mb": 24576,
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            temp_root = pathlib.Path(tmp)
+            _, tools_dir, _, _, config_path = self._base_install(temp_root, live)
+            (tools_dir / "sam_segment.py").unlink()
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                code = self.verify.main(
+                    ["--config", str(config_path), "--repo-root", str(ROOT)], detector=lambda: live
+                )
+        self.assertEqual(1, code)
+        self.assertIn("[FAIL] sam_segment.py source sync", out.getvalue())
+
     def test_source_sync_accepts_only_newline_differences(self):
         live = {
             "os": "Windows", "machine": "amd64", "backend": "cuda",
@@ -201,6 +223,7 @@ class VerifyPortableInstallTests(unittest.TestCase):
             for name, source in (
                     ("generate.py", self.generate_bytes),
                     ("detect_device.py", self.detect_device_bytes),
+                    ("sam_segment.py", self.sam_segment_bytes),
                     ("comfyui_pipeline/__init__.py", self.pipeline_init_bytes),
                     ("comfyui_pipeline/image_graphs.py", self.pipeline_image_bytes),
                     ("comfyui_pipeline/video_catalog.py", self.pipeline_video_bytes),
