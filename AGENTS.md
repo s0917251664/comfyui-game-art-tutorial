@@ -10,6 +10,8 @@
 - `skills/comfyui-video-gen/SKILL.md` —— **當使用者要讓靜幀動起來、產短片、角色參考生影片時讀這份並照它的流程操作**。設計背景/還沒做的 task 見同資料夾 `DESIGN.md`。**不要把 `comfyui-art-gen` 的圖片 task 假裝成會產影片,也不要自己臨場組 ComfyUI 影片節點冒充產線;不要自動用系統播放器打開成品**
 - `local_config.json` —— **這台機器的實際安裝路徑**(ComfyUI 裝在哪、python.exe 在哪),不進版控,每台機器內容都不一樣。不存在的話代表這台機器還沒裝好,照 `skills/comfyui-install/SKILL.md` 的流程走
 - `tools_src/generate.py` 與 `tools_src/comfyui_pipeline/` —— 實際執行產圖/產影片的原始碼(版本控管在這裡)。部署時要把 `generate.py` 與整個 `comfyui_pipeline/` 一起複製到 `<ComfyUI 安裝路徑>/tools/`；`generate.py` 是相容 facade，不可只部署單一檔案
+- `tools_src/mask_session.py` 與 `tools_src/simple_mask_tool/` —— 給不知道 ComfyUI 的使用者畫局部修改範圍；由本機 ComfyUI 提供極簡網址，部署時 client 要同步到 `<ComfyUI>/tools/`，同一套 package 也要同步到 `<ComfyUI>/custom_nodes/comfyui-simple-mask-tool/`。這是獨立的純手動畫遮罩工具，不含也不依賴 SAM。SAM 自動分割若後續新增，必須作為另一個獨立工具／能力開發；兩者只能透過標準遮罩檔案選配串接
+- `tools_src/sam_segment.py` —— SAM 2.1 自動候選遮罩工具；固定使用官方 `facebook/sam2.1-hiera-small`，輸出 contact sheet、預覽、cutout 與符合既有 Alpha 契約的 `mask_comfy.png`。候選必須人工驗收後才能交給 `layer_split`／局部重繪。
 - `tools_src/detect_device.py` —— 設備能力偵測(GPU/VRAM/OS),輸出 `device_config.json` 給 `generate.py` 讀取,決定用哪個 checkpoint/解析度
 - `tools_src/detect_video_capabilities.py` —— 影片能力偵測(既有模型、影片 runtime、可選的 ComfyUI nodes),輸出 machine-specific `video_capabilities.json`;只掃描已安裝內容,不下載模型或套件
 - `workflows/` —— **不進版控**(見 `.gitignore`)。ComfyUI workflow JSON 檔案,是 `generate.py` 背後鎖死的產圖流程定義,給維護這條產線的人(不是美術)在 ComfyUI 網頁介面手動開、除錯、開發新能力時視覺化參考用,屬於本機個人產物,跟 `教學.md` 第 9 章「自己存一份到 `~/ComfyUI/user/default/workflows/`」是同一件事。不強制每個 `generate.py` 新能力都要補對應檔案——有空、真的會用到再補,不用當成義務性的同步負擔

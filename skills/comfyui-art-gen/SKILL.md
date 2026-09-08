@@ -72,6 +72,8 @@
 | 「這個角色換個姿勢/動作」「照這個線稿套進這個角色」 | `character_action` | 需要角色參考圖 **+** 姿勢/線稿參考圖(兩者都要) |
 | 「幫我把這張草稿上色/精緻化」「同一個造型換材質/換顏色」 | `refine` | 有來源圖,想保留大致構圖但改細節/材質/顏色 |
 | 「這裡崩壞了幫我修」「只改這個區域」「局部調整」 | `inpaint` | 有來源圖 + 需要指定修改區域,而且改動不涉及「結構要保持、外觀要換」這種衝突需求 |
+| 「我不知道 ComfyUI，給我一個簡單頁面塗要修改的地方」「幫我開遮罩連結」 | `mask_session.py create/fetch` | 只建立／取回本機手動畫遮罩工作階段，不產圖；完成的 `mask_comfy.png` 再交給 `inpaint` / `guided_inpaint` / `layer_split` |
+| 「自動找物件邊界」「先用 SAM 幫我拆角色／配件」 | `sam_segment.py` | 產生多個自動候選遮罩與總覽；人工驗收選中 `candidate_*_mask_comfy.png` 後，再交給 `layer_split`／局部重繪 |
 | 「換武器/道具但要保持握姿」「換材質紋路但造型不能變」「這個部位要換,但骨架/輪廓不能崩」 | `guided_inpaint` | 有來源圖 + 修改區域,而且該區域有「結構(關節/輪廓)要鎖住、外觀要自由換」的衝突需求——純 `inpaint` 對這類需求容易讓模型同時賭結構跟外觀,失敗率高 |
 | 「這張圖放大」「解析度不夠」「細節加銳利一點」「要交件/要印出來所以要更高解析度」 | `upscale` | 已經有確定要用的成品圖,想要更高解析度 + 補細節,不是想重新構圖 |
 | 「這張已經定稿的合成圖,幫我拆出外框/中心鈕這幾塊各自的圖層」 | `layer_split` | 已經有一張定稿的完成圖,想事後切出幾個大塊區域各自疊放/調色,不是重新生成內容;拆幾層呼叫幾次,細節/使用限制見「複合元件的圖層」小節 |
@@ -121,7 +123,7 @@
 - **結構相異的大塊**(外框、中心鈕、指針這類長相彼此不同、只有一個的構件):各自用 `icon_asset` 呼叫一次獨立生成。想讓幾次呼叫的色調/材質風格盡量一致,prompt 裡重複寫同一組風格關鍵字(例如都寫 "gold ornate fantasy style, teal gemstone accents"),但**不保證完全一致**,仍需要美術後製微調——AI 獨立生成之間本來就沒有像素級一致性保證
 - **高度重複的元素**(例如轉盤的每個分區隔板,肉眼看起來該長一樣的那種):**不要**逐一各自生成,也**不要**事後用 `layer_split` 從一張合成圖裡切割相鄰的相似色塊——兩種做法都不可靠(前者色差/比例不一致,後者邊界抓不準)。看使用者要的是「一片樣板自己去複製組裝」還是「一張結構已經對的完整成品圖」:前者用 `icon_asset` 生一片分區樣板,交給使用者在自己的工具(Figma/遊戲引擎)裡旋轉複製組成整圈;後者用 `icon_asset` 的 `--structure-ref`(見 `reference/structure-ref.md`)在單次生成裡把整個放射狀結構跟顏色配置一次鎖住,不用使用者自己組裝,但代價是精細裝飾細節會被結構鎖一定程度壓掉
 - **已經有一張定稿合成圖,想事後切出幾個大塊區域**:用 `layer_split`,見上面固定問題
-- **目前沒有「AI 自動判斷圖層邊界、不用手動畫遮罩」的能力**(沒有裝語意分割模型),如實告知使用者這塊做不到,不要假裝可以,細節見 `reference/known-limitations.md`
+- **可先用 `sam_segment.py` 自動產生候選遮罩**，適合完整角色、尾巴、靴子、耳朵、口袋等邊界明確區域；候選不帶語意名稱，眼睛、手指與交疊瀏海等小部位可能不會自動成為候選。必須查看 contact sheet／preview 後才可交給 `layer_split`，細節見 `reference/sam-segmentation.md`。
 
 > 判斷理由/背景說明見 `reference/layered-assets.md`,平常照上面判斷就好,不用每次都讀。
 
@@ -155,11 +157,28 @@
 
 ### inpaint(局部調整)
 1. 來源圖路徑
-2. **一定要請使用者提供遮罩圖**,最簡單的方式是明確說「請用 ComfyUI 介面的 MaskEditor 塗好存成一張圖給我」(MaskEditor 存出來的格式一定對,不用管底層細節)——不要自己用文字描述去猜測要修改的區域,座標/範圍必須來自使用者提供的實際遮罩檔案
+2. **一定要請使用者提供遮罩圖**。一般使用者不知道 ComfyUI 時，優先用下方 Simple Mask Session 建立本機連結，指導只需「塗紅要修改的地方，按完成」；維護者才需要直接使用 ComfyUI MaskEditor。不要自己用文字描述猜測修改區域，座標／範圍必須來自使用者實際繪製並確認的遮罩。
 3. 想要新內容的描述
 4. 保留原圖程度(denoise,預設 1.0 = 完全重畫遮罩區域,想保留更多原圖細節可以問要不要調低)
 
 > **遮罩檔案格式是個真實陷阱,已實測踩過一次**(alpha 通道語意、沒生效卻不報錯的坑)**,遇到「遮罩好像沒生效」「局部修圖結果變差」時讀 `reference/masking.md`。** 不規則遮罩(多邊形等)的預覽驗證流程、以及貼合度/羽化範圍/`--denoise` 三者的搭配原則也在同一份文件裡。
+
+### Simple Mask Session（一般使用者手動畫遮罩）
+
+1. 先確認來源圖片與「希望局部修改什麼」，這段文字只顯示為頁面提示，不會自動送出生成。
+2. 執行 `mask_session.py create` 建立工作階段；把印出的 `EDITOR_URL` 給使用者。頁面只顯示來源圖、畫筆、橡皮擦、筆刷大小、復原／重做、清除、適合視窗與完成按鈕。
+3. 指導使用者：「紅色區域會重新生成；沒塗紅的地方盡量保留。塗完按完成。」不必介紹節點、Alpha、Sampler 或 ComfyUI Workflow。
+4. 使用者完成後先執行 `status`；狀態為 `completed` 才執行 `fetch`。取回 `mask_editor.png`、`mask_comfy.png`、`preview.png`；必須先實際查看 `preview.png`，確認範圍正確後才能送 `inpaint`／`guided_inpaint`。
+5. 空遮罩會被拒絕；選取超過 98% 會要求二次確認。每個工作階段以不可猜測 Token 隔離，來源與結果暫存在本機 ComfyUI temp，fetch 後保存回指定 output。
+6. 這是獨立的純手動畫遮罩工具，不含也不依賴 SAM。SAM 候選可以供它選配匯入／複核，但兩者只透過標準遮罩交換。
+
+### SAM 2.1 自動候選遮罩
+
+1. 需要來源圖片與獨立的新輸出資料夾；輸出資料夾非空時工具會拒絕覆寫。
+2. 執行後先查看 `contact_sheet.png`，再查看準備採用候選的 `candidate_NN_preview.png`。
+3. 候選沒有「尾巴／眼睛／衣服」等語意名稱；必須依紅色預覽判斷，不可只看 score。
+4. 選中後，把對應的 `candidate_NN_mask_comfy.png` 傳給 `layer_split`、`inpaint` 或 `guided_inpaint`。邊界不完整時改用 Simple Mask Tool 人工修正。
+5. 大輪廓與獨立配件效果較好；極小、交疊或視覺相似部位不保證被分開。完整限制與實測見 `reference/sam-segmentation.md`。
 
 ### guided_inpaint(局部重繪 + 結構鎖定 / 外觀參考圖)
 1. 來源圖路徑
@@ -235,6 +254,14 @@ upscale:
 
 layer_split:
   <python_exe> <generate_script> layer_split --image <path> --mask <path> --layer-name <name> --comfy-url <comfyui_url> --timeout 180 --output-dir <output_dir>
+
+simple mask session（不產圖；client 在 `<ComfyUI>/tools/mask_session.py`）:
+  <python_exe> <ComfyUI>/tools/mask_session.py --comfy-url <comfyui_url> create --image <來源圖> --purpose "<給使用者看的修改目的>" --output-dir <output_dir>
+  <python_exe> <ComfyUI>/tools/mask_session.py --comfy-url <comfyui_url> status --session-id <SESSION_ID>
+  <python_exe> <ComfyUI>/tools/mask_session.py --comfy-url <comfyui_url> fetch --session-id <SESSION_ID> --output-dir <output_dir>
+
+SAM 2.1 自動候選遮罩（不經 ComfyUI queue；工具在 `<ComfyUI>/tools/sam_segment.py`）:
+  <python_exe> <ComfyUI>/tools/sam_segment.py --image <來源圖> --output-dir <新的空資料夾> [--max-candidates 12]
 ```
 
 (`<python_exe>`、`<generate_script>`、`<output_dir>` 都從 `local_config.json` 讀,不要寫死實際路徑)

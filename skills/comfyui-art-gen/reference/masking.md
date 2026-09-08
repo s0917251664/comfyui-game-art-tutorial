@@ -1,5 +1,11 @@
 # inpaint 遮罩細節
 
+## 一般使用者優先用 Simple Mask Session
+
+2026-09-05 已加入 repository 內建的極簡本機遮罩頁面。Agent 用 `mask_session.py create` 產生 `http://127.0.0.1:<port>/simple-mask/<token>`，使用者只需塗紅要修改的區域並按完成；再以 `fetch` 取回三份檔案：`mask_editor.png`（黑白人類可讀）、`mask_comfy.png`（本產線 RGBA Alpha 契約）與 `preview.png`（原圖＋紅色半透明覆蓋）。送局部產圖前一定要看 preview。
+
+此工具的底層輸出仍遵守本頁既有規則：選取區 `alpha=0`，保留區 `alpha=255`。使用者介面刻意隱藏這個反直覺細節。空遮罩會拒絕儲存，選取超過 98% 會要求二次確認。它是獨立的純手動工具，不含也不依賴 SAM。自動分割應另做成獨立工具；兩者若要合作，只透過標準遮罩輸入／輸出選配串接。
+
 `skills/comfyui-art-gen/SKILL.md` 的 `inpaint` 章節指向這裡——平常執行 `inpaint` 不用先讀這份,只有遇到「遮罩好像沒生效」「局部修圖結果變差/變爛」這類狀況時才查。
 
 ## 遮罩檔案格式(alpha 通道陷阱,已實測踩過一次)
