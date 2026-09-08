@@ -33,7 +33,17 @@ AI agent 會依照 [`skills/comfyui-art-gen/SKILL.md`](skills/comfyui-art-gen/SK
 - 批次生成（batch）與固定 seed，方便探索與重複產出
 - 去背（`--remove-bg`），輸出透明背景素材
 - 去背模型回歸工具（`tools_src/benchmark_birefnet.py`）：以固定 RGBA 素材比較 BiRefNet general／HR／HR-matting／dynamic；不會自動更換正式 `--remove-bg`
+- 手動畫局部遮罩（Simple Mask Tool）：提供瀏覽器畫布、筆刷／橡皮擦與復原重做，輸出可供 `inpaint`／`guided_inpaint`／`layer_split` 使用的標準遮罩；不需要使用者操作 ComfyUI 節點
+- SAM 2.1 自動候選分割（`tools_src/sam_segment.py`）：固定使用 `facebook/sam2.1-hiera-small` 產生候選遮罩、contact sheet、預覽與 cutout；候選一定要人工驗收，不能把自動候選直接當成正式圖層
 - 影片生成：讓靜圖動起來、只運鏡不動主體、角色動作影片、動作驅動、循環特效、轉場、接續前一鏡、多支短片拼接、綠幕前景合成到背景（需另外偵測機器影片能力，見下方「產影片任務選擇」）
+
+### 局部遮罩與自動分割
+
+兩種工具的責任不同，不能互相冒充。Simple Mask Tool 適合使用者明確知道要重畫哪一塊時，手動塗出選取範圍；SAM 2.1 則從整張圖產生多個「候選」物件遮罩，適合先探索角色、尾巴、靴子或道具等可能的圖層。兩者都輸出同一套 Alpha 遮罩契約，因此可以選配串接到 `layer_split` 或局部重繪。
+
+SAM 沒有可靠的語意命名，也不保證能正確分開眼睛、手指、頭髮交疊或被遮住的區域；請先查看 contact sheet／preview，再把通過人工驗收的候選交給後續 task。完整限制、指令與範例見 [`skills/comfyui-art-gen/reference/sam-segmentation.md`](skills/comfyui-art-gen/reference/sam-segmentation.md)。
+
+這些工具是獨立的 Python／瀏覽器能力，不是 ComfyUI workflow node；安裝或部署時要同步 `tools_src/sam_segment.py`、`tools_src/mask_session.py`、`tools_src/simple_mask_tool/` 及其對應的 ComfyUI plugin package。
 
 ## 快速開始
 
