@@ -5,6 +5,7 @@ local_config.json
 /workflows/
 /.github/workflows/
 /.codegraph/
+/.claude/
 __pycache__/
 *.py[cod]
 
