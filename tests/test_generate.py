@@ -531,6 +531,19 @@ class GenerateTests(unittest.TestCase):
                                         "--image-config", path])
             upload.assert_not_called()
 
+    def test_runtime_image_config_not_yet_generated_falls_back_to_tier(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            runtime = os.path.join(tmp, "local_config.json")
+            with open(runtime, "w", encoding="utf-8") as handle:
+                json.dump({"image_config": "image_capabilities.json"}, handle)
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                self.assertEqual((None, None), self.generate.load_image_capabilities(runtime))
+            self.assertIn("detect_image_capabilities.py", stderr.getvalue())
+            # An explicit --image-config is a user request, so a missing file still fails.
+            with self.assertRaisesRegex(RuntimeError, "找不到"):
+                self.generate.load_image_capabilities(runtime, os.path.join(tmp, "missing.json"))
+
     def test_profile_flag_is_rejected_for_non_profile_tasks(self):
         with self.assertRaisesRegex(SystemExit, "--profile"):
             self.generate.main(["--comfy-url", "http://server:8188", "flux2_concept", "--prompt", "x",

@@ -27,7 +27,7 @@
     </div>
   </header>
   <main class="stage" id="stage"><canvas id="image"></canvas><canvas id="mask"></canvas><canvas id="poly"></canvas><div class="brush-cursor" id="brushCursor"></div></main>
-  <footer class="status"><span id="message">紅色區域會被重新生成；其餘區域會盡量保留。</span><span id="ratio">已選取 0%</span><span>滑動平移・Ctrl/Cmd+滾動或雙指縮放手勢=縮放・空白鍵或中鍵拖曳=平移・[ ] 調筆刷・多邊形模式:點滑鼠加點,雙擊或 Enter 封閉,Esc 取消</span></footer>
+  <footer class="status"><span id="message">紅色區域會被重新生成；其餘區域會盡量保留。</span><span id="ratio">已選取 0%</span><span>滑鼠滾輪=縮放・觸控板雙指滑動=平移・Ctrl/Cmd+滾動或雙指縮放手勢=縮放・空白鍵或中鍵拖曳=平移・[ ] 調筆刷・多邊形模式:點滑鼠加點,雙擊或 Enter 封閉,Esc 取消</span></footer>
   <script>
   (()=>{
     const token=location.pathname.split('/').filter(Boolean).pop(), stage=document.querySelector('#stage');
@@ -56,19 +56,24 @@
     const closePolygon=()=>{if(polyPoints.length<3){cancelPolygon();return}snapshot();mctx.save();mctx.globalCompositeOperation='source-over';mctx.fillStyle='rgba(255,45,45,.62)';mctx.beginPath();mctx.moveTo(polyPoints[0].x,polyPoints[0].y);for(let i=1;i<polyPoints.length;i++)mctx.lineTo(polyPoints[i].x,polyPoints[i].y);mctx.closePath();mctx.fill();mctx.restore();updateRatio();cancelPolygon()};
     fetch(`/simple-mask/api/sessions/${token}`).then(r=>r.json()).then(meta=>{document.querySelector('#purpose').textContent=meta.purpose||'請塗紅希望 AI 重新處理的地方';source.src=`/simple-mask/api/sessions/${token}/source`;});
     source.onload=()=>{imageCanvas.width=maskCanvas.width=polyCanvas.width=source.width;imageCanvas.height=maskCanvas.height=polyCanvas.height=source.height;ictx.drawImage(source,0,0);fit()};
-    stage.addEventListener('pointerdown',e=>{if(e.button===1||space){panning=true;panStart={x:e.clientX-tx,y:e.clientY-ty};stage.setPointerCapture(e.pointerId);return}if(e.button!==0)return;if(mode==='polygon'){polyPoints.push(pos(e));drawPolyPreview(pos(e));return}snapshot();drawing=true;last=pos(e);stroke(last,{x:last.x+.01,y:last.y+.01});stage.setPointerCapture(e.pointerId)});
-    stage.addEventListener('pointermove',e=>{const r=stage.getBoundingClientRect();brushCursor.style.left=(e.clientX-r.left)+'px';brushCursor.style.top=(e.clientY-r.top)+'px';if(panning){tx=e.clientX-panStart.x;ty=e.clientY-panStart.y;transform();return}if(mode==='polygon'){if(polyPoints.length)drawPolyPreview(pos(e));return}if(!drawing)return;const now=pos(e);stroke(last,now);last=now;updateRatio()});
+    // A double-click delivers two pointerdowns before dblclick; skip the second (detail>=2)
+    // so closing the polygon doesn't leave a duplicate vertex.
+    stage.addEventListener('pointerdown',e=>{if(e.button===1||space){panning=true;panStart={x:e.clientX-tx,y:e.clientY-ty};stage.setPointerCapture(e.pointerId);return}if(e.button!==0)return;if(mode==='polygon'){if(e.detail<2){polyPoints.push(pos(e));drawPolyPreview(pos(e))}return}snapshot();drawing=true;last=pos(e);stroke(last,{x:last.x+.01,y:last.y+.01});stage.setPointerCapture(e.pointerId)});
+    stage.addEventListener('pointermove',e=>{const r=stage.getBoundingClientRect();brushCursor.style.left=(e.clientX-r.left)+'px';brushCursor.style.top=(e.clientY-r.top)+'px';if(panning){tx=e.clientX-panStart.x;ty=e.clientY-panStart.y;transform();return}if(mode==='polygon'){if(polyPoints.length)drawPolyPreview(pos(e));return}if(!drawing)return;const now=pos(e);stroke(last,now);last=now});
     stage.addEventListener('dblclick',e=>{if(mode==='polygon'){e.preventDefault();closePolygon()}});
     stage.addEventListener('pointerenter',()=>{if(!space)brushCursor.style.display='block'});
     stage.addEventListener('pointerleave',()=>{brushCursor.style.display='none'});
-    stage.addEventListener('pointerup',()=>{drawing=false;panning=false});stage.addEventListener('pointercancel',()=>{drawing=false;panning=false});
+    // The selected-ratio scan reads every mask pixel, so run it once per stroke, not per move.
+    const endPointer=()=>{if(drawing)updateRatio();drawing=false;panning=false};
+    stage.addEventListener('pointerup',endPointer);stage.addEventListener('pointercancel',endPointer);
     size.addEventListener('input',updateCursorSize);
     const zoomAt=(x,y,factor)=>{const old=scale;scale=Math.max(.08,Math.min(12,scale*factor));tx=x-(x-tx)*scale/old;ty=y-(y-ty)*scale/old;transform()};
-    // Plain two-finger scroll pans (trackpads report it as a wheel event with no
-    // ctrlKey); Ctrl/Cmd+scroll or a pinch gesture (browsers report pinch as
-    // wheel+ctrlKey) zooms around the cursor. Matches the Figma/Google-Maps convention
-    // instead of always zooming, which made a trackpad scroll feel like it couldn't pan.
-    stage.addEventListener('wheel',e=>{e.preventDefault();if(e.ctrlKey||e.metaKey){const r=stage.getBoundingClientRect();zoomAt(e.clientX-r.left,e.clientY-r.top,e.deltaY<0?1.12:.89)}else{tx-=e.deltaX;ty-=e.deltaY;transform()}},{passive:false});
+    // Trackpad two-finger scroll pans; Ctrl/Cmd+scroll or a pinch gesture (browsers report
+    // pinch as wheel+ctrlKey) zooms around the cursor. A classic mouse wheel (line-mode
+    // deltas, or large integer vertical-only steps) keeps zooming, so mouse users don't
+    // lose wheel zoom. The mouse/trackpad split is a heuristic; the zoom buttons always work.
+    const isMouseWheel=e=>e.deltaMode!==0||(e.deltaX===0&&Number.isInteger(e.deltaY)&&Math.abs(e.deltaY)>=50);
+    stage.addEventListener('wheel',e=>{e.preventDefault();if(e.ctrlKey||e.metaKey||isMouseWheel(e)){const r=stage.getBoundingClientRect();zoomAt(e.clientX-r.left,e.clientY-r.top,e.deltaY<0?1.12:.89)}else{tx-=e.deltaX;ty-=e.deltaY;transform()}},{passive:false});
     document.querySelector('#zoomIn').onclick=()=>zoomAt(stage.clientWidth/2,stage.clientHeight/2,1.25);
     document.querySelector('#zoomOut').onclick=()=>zoomAt(stage.clientWidth/2,stage.clientHeight/2,.8);
     const setMode=m=>{if(mode==='polygon'&&m!=='polygon')cancelPolygon();mode=m;document.querySelector('#brush').classList.toggle('active',m==='brush');document.querySelector('#eraser').classList.toggle('active',m==='eraser');document.querySelector('#polygon').classList.toggle('active',m==='polygon');brushCursor.classList.toggle('point',m==='polygon')};
@@ -76,7 +81,7 @@
     document.querySelector('#clear').onclick=()=>{snapshot();mctx.clearRect(0,0,maskCanvas.width,maskCanvas.height);updateRatio()};
     document.querySelector('#undo').onclick=()=>{if(!history.length)return;future.push(mctx.getImageData(0,0,maskCanvas.width,maskCanvas.height));restore(history.pop())};
     document.querySelector('#redo').onclick=()=>{if(!future.length)return;history.push(mctx.getImageData(0,0,maskCanvas.width,maskCanvas.height));restore(future.pop())};
-    addEventListener('keydown',e=>{if(e.code==='Space'){space=true;e.preventDefault()}if(e.key.toLowerCase()==='b')setMode('brush');if(e.key.toLowerCase()==='e')setMode('eraser');if(e.key.toLowerCase()==='g')setMode('polygon');if(e.key==='[')size.value=Math.max(2,Number(size.value)-4);if(e.key===']')size.value=Math.min(180,Number(size.value)+4);if(mode==='polygon'&&e.key==='Enter'){e.preventDefault();closePolygon()}if(mode==='polygon'&&e.key==='Escape'){e.preventDefault();cancelPolygon()}if(e.ctrlKey&&e.key.toLowerCase()==='z'){e.preventDefault();document.querySelector('#undo').click()}if(e.ctrlKey&&e.key.toLowerCase()==='y'){e.preventDefault();document.querySelector('#redo').click()}});addEventListener('keyup',e=>{if(e.code==='Space')space=false});
+    addEventListener('keydown',e=>{if(e.code==='Space'){space=true;e.preventDefault()}if(e.key.toLowerCase()==='b')setMode('brush');if(e.key.toLowerCase()==='e')setMode('eraser');if(e.key.toLowerCase()==='g')setMode('polygon');if(e.key==='[')size.value=Math.max(2,Number(size.value)-4);if(e.key===']')size.value=Math.min(180,Number(size.value)+4);if(mode==='polygon'&&e.key==='Enter'){e.preventDefault();closePolygon()}if(mode==='polygon'&&e.key==='Escape'){e.preventDefault();cancelPolygon()}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();document.querySelector('#undo').click()}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y'){e.preventDefault();document.querySelector('#redo').click()}});addEventListener('keyup',e=>{if(e.code==='Space')space=false});
     const exportMask=()=>{const out=document.createElement('canvas');out.width=maskCanvas.width;out.height=maskCanvas.height;const o=out.getContext('2d');const src=mctx.getImageData(0,0,maskCanvas.width,maskCanvas.height);const data=o.createImageData(out.width,out.height);for(let i=0;i<src.data.length;i+=4){const selected=src.data[i+3]>0?255:0;data.data[i]=data.data[i+1]=data.data[i+2]=selected;data.data[i+3]=255}o.putImageData(data,0,0);return out.toDataURL('image/png')};
     const submit=async confirmNearFull=>{const btn=document.querySelector('#save');btn.disabled=true;setMessage('正在儲存遮罩…');try{const r=await fetch(`/simple-mask/api/sessions/${token}/save`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mask_png:exportMask(),confirm_near_full:confirmNearFull})});const data=await r.json().catch(async()=>({message:await r.text()}));if(r.status===409&&data.error==='near_full'){if(confirm(`目前選取 ${(data.selected_ratio*100).toFixed(1)}% 的畫面，可能會重畫整張圖。仍要送出嗎？`))return submit(true);throw new Error('已取消送出，請縮小遮罩範圍。')}if(!r.ok)throw new Error(data.message||data.error||'儲存失敗');setMessage('完成！遮罩已安全存回本機，可以關閉這個頁面。','success');btn.textContent='已完成'}catch(err){setMessage(err.message||String(err),'error');btn.disabled=false}};
     document.querySelector('#save').onclick=()=>submit(false);addEventListener('resize',fit);

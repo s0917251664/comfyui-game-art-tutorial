@@ -835,8 +835,8 @@
      "class_type": "EmptyLatentImage",
      "inputs": {
       "batch_size": 1,
-      "height": 1024,
-      "width": 1024
+      "height": 512,
+      "width": 512
      }
     },
     "5": {
@@ -940,8 +940,8 @@
      "class_type": "EmptyLatentImage",
      "inputs": {
       "batch_size": 1,
-      "height": 1024,
-      "width": 1024
+      "height": 512,
+      "width": 512
      }
     },
     "5": {

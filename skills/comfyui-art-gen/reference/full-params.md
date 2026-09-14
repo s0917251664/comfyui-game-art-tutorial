@@ -11,7 +11,7 @@
 | `--seed N` | 除 `layer_split` 外全部 | 固定隨機種子(整數),不給的話每次隨機 | 使用者要「重現上次結果」或「鎖住構圖只改小地方」時才用,平常不用主動問 |
 | `--width` / `--height` | `flux2_concept` | 覆蓋 FLUX.2 預設 1024x1024，兩者須為 16 的倍數 | 只有前文與附件都沒有尺寸要求時才問；RTX 4080 PoC 先以約 1MP 為主，不要未實測就拉高 |
 | `--width` / `--height` | `concept`、`pose_only`、`style_lock`、`character_action` | 覆蓋預設解析度(預設值來自 `device_config.json`),數值須為 8 的倍數 | 前文與附件沒有尺寸／比例要求時才補問；有答案就沿用，不重問 |
-| `--width` / `--height` | `icon_asset` | 覆蓋預設解析度(**預設 1024x1024 正方形,固定值,不吃 `device_config.json`**) | 圖示類素材幾乎都是方形,**不用主動問**,只有使用者主動提出別的比例才用 |
+| `--width` / `--height` | `icon_asset` | 覆蓋預設解析度(**預設是模型設定檔的原生正方形畫布,固定值,不依記憶體縮小**:`sdxl_standard` 1024x1024、`sd15_light` 512x512) | 圖示類素材幾乎都是方形,**不用主動問**,只有使用者主動提出別的比例才用 |
 | `--width` / `--height` | `inpaint`、`guided_inpaint`、`refine`、`upscale`、`layer_split`、`flux2_edit` | **不開放**。inpaint 類與 `refine` 跟隨來源圖；`upscale` 用 `--scale`；`flux2_edit` 正規化到約 1MP | 使用者指定了不同輸出尺寸時說明限制，不要硬加旗標或改走未要求的 task |
 | `--layer-name` | `layer_split` | 這一層的名稱,組輸出檔名前綴 | 缺少且無法從需求或前文推定時才問 |
 | `--structure-ref <路徑>` | `icon_asset` | 結構/顏色配置已有明確答案時用的範本圖(img2img + Canny ControlNet 雙重鎖,denoise/strength 都鎖死 0.85,不開放調整),細節見 `reference/structure-ref.md` | 圖示的結構描述用文字講不清楚、或 AI 一直畫不準確定的數量/配置時才用,平常不用主動問 |

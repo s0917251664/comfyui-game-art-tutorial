@@ -481,11 +481,15 @@ def build_wheel_layer_masks(width=1024, height=1024, frame_ratio=0.86, hub_ratio
     return frame_mask, prize_mask, pointer_mask
 
 
-def build_icon_asset(prompt, negative=None, width=1024, height=1024, seed=None, steps=None, cfg=None,
+def build_icon_asset(prompt, negative=None, width=None, height=None, seed=None, steps=None, cfg=None,
                       batch_size=1, lora_name=None, lora_strength=0.8,
                       structure_ref_filename=None, control_strength=STRUCTURE_REF_CONTROL_STRENGTH,
                       structure_ref_denoise=STRUCTURE_REF_DENOISE, checkpoint=None,
                       appearance_ref_filename=None, appearance_weight=0.8):
+    # 圖示固定用設定檔的原生正方形畫布(SDXL 1024、SD1.5 512),不依可用記憶體縮小。
+    native_width, native_height = _active_profile()["resolution"]["native"]
+    width = native_width if width is None else width
+    height = native_height if height is None else height
     validate_dimensions(width, height)
     validate_batch(batch_size)
     validate_lora_strength(lora_strength)

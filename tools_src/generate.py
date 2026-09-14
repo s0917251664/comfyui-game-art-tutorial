@@ -661,6 +661,8 @@ def load_image_capabilities(runtime_config_path=None, image_config_path=None):
     這份檔案是選配:找不到時圖片 task 沿用 device_config.json 的 tier 對應。查找順序是
     --image-config → --config 的 image_config → --config 的 comfyui_path/tools 或 generate_script 同目錄
     → device_config.json 同目錄。不搜尋 repository,理由同 video capability config。
+    只有 --image-config 指向不存在的檔案才報錯;local_config.json 的 image_config 是安裝時預先寫好的
+    路徑,步驟 8b 還沒跑時檔案本來就不存在,只提醒、不阻擋。
     """
     if image_config_path:
         source = os.path.abspath(os.fspath(image_config_path))
@@ -672,7 +674,14 @@ def load_image_capabilities(runtime_config_path=None, image_config_path=None):
         runtime = _read_runtime_config(runtime_path)
         explicit = runtime.get("image_config")
         if explicit:
-            source = _relative_config_path(explicit, runtime_path)
+            source = os.path.abspath(_relative_config_path(explicit, runtime_path))
+            if not os.path.exists(source):
+                print(
+                    f"[提醒] {runtime_path} 的 image_config 指向的 {source} 還不存在,"
+                    "圖片 task 沿用 device_config.json 的 tier 對應;要啟用請執行 detect_image_capabilities.py。",
+                    file=sys.stderr,
+                )
+                return None, None
             return _read_runtime_config(source), source
         if runtime.get("comfyui_path"):
             candidates.append(os.path.join(os.fspath(runtime["comfyui_path"]), "tools", IMAGE_CAPABILITY_CONFIG_FILENAME))
@@ -2874,8 +2883,8 @@ def main(argv=None):
 
     p_icon = sub.add_parser("icon_asset", help="單一小型 UI 圖示/物件素材(不是整個 UI 畫面),永遠去背輸出透明背景", parents=[batch_lora_common])
     p_icon.add_argument("--prompt", required=True)
-    p_icon.add_argument("--width", type=int, default=1024)
-    p_icon.add_argument("--height", type=int, default=1024)
+    p_icon.add_argument("--width", type=int, default=None)
+    p_icon.add_argument("--height", type=int, default=None)
     p_icon.add_argument("--structure-ref", help="這個圖示的結構/色塊配置已經有明確答案、不該讓 AI 自己瞎猜時用(例如放射狀精準等分):給一張範本圖路徑,用 img2img + Canny ControlNet 把結構跟顏色配置都鎖住,SDXL 只負責疊材質/光澤;不給就跟以前一樣純靠文字描述。範本圖從哪來見 skills/comfyui-art-gen/reference/structure-ref.md")
     p_icon.add_argument("--appearance-ref", help="外觀參考圖路徑(選用,例如使用者提供的一張成品圖,想讓畫面材質/質感偏向那張圖)——用 IPAdapter,不給就純靠文字描述外觀,原則同 guided_inpaint 的 --appearance-ref")
     p_icon.add_argument("--appearance-weight", type=float, default=0.8, help="外觀參考圖的貼合強度,原則同 --ip-weight")

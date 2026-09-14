@@ -44,3 +44,18 @@
 | 其他平台（含 `macos-mps`、`linux-cuda`） | 沒有紀錄 → `unverified` | — | — |
 
 可用記憶體低於 16000 MB 的 `windows-cuda` 機器（例如 8–12GB 卡）也會降為 `unverified`，直到補上該級距的實測紀錄。補紀錄的流程見 `skills/comfyui-new-tool-checklist/SKILL.md`「情境 C」。
+
+## `macos-mps` 實測發現（尚未寫入 `validation`）
+
+2026-09-14 在 M3 Max 36GB（`usable_memory_mb` 18432、tier `sdxl`、ComfyUI 12d5279、PyTorch 2.13.0 MPS）smoke test，seed 20260914。版本與模型 SHA-256 還沒擷取進 `docs/tested-versions.md`，所以 JSON 的 `validation` 暫不補 `macos-mps`，該平台仍是 `unverified`；以下只是給使用者的預期管理。
+
+| task | 耗時 | 結果 |
+|---|---|---|
+| `concept`、`icon_asset`、`pose_only`（canny/pose/depth）、`guided_inpaint`（canny）、`character_action`（canny）、`layer_split` | 1–162s | 人工驗收通過 |
+| `style_lock` | 85s | 參考圖外觀有帶入，但 prompt 描述的場景被忽略（ip_weight 0.8、以物件當參考） |
+| `refine` | 62s | 構圖保留，但 prompt 要求的材質沒做到、對比過強 |
+| `inpaint` | 70s | 功能正確，接縫生硬 |
+| `upscale`（輸出 2048×2048） | 626s 後失敗 | VAEDecode 報 `MPSGraph does not support tensor dims larger than INT_MAX`，見 `../known-limitations.md` |
+
+- BiRefNet 去背在 MPS 上主體 alpha 是 254 而非 255，目視無影響。
+- Mac 單張 SDXL 1024 圖約 1.5–2.5 分鐘，比 RTX 4080 慢很多，批次產圖前先跟使用者講。

@@ -50,6 +50,14 @@ class ImageProfileTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "sd15_light"):
             self.ig.build_style_lock("p", "c.png", seed=1)
 
+    def test_icon_asset_defaults_to_profile_native_canvas(self):
+        for tier, profile_id, expected in (("sdxl_light", None, (1024, 1024)), ("sdxl_high", "sd15_light", (512, 512))):
+            with self.subTest(tier=tier, profile=profile_id):
+                self.ig.DEVICE = dict(golden_image_graphs.TIER_DEVICES[tier], usable_memory_mb=8192)
+                self.ig.ACTIVE_PROFILE_ID = profile_id
+                graph, _ = self.ig.build_icon_asset("p", seed=1)
+                self.assertEqual(expected, (graph["4"]["inputs"]["width"], graph["4"]["inputs"]["height"]))
+
     def test_active_sdxl_profile_picks_resolution_from_usable_memory(self):
         self.ig.ACTIVE_PROFILE_ID = "sdxl_standard"
         for usable, expected in ((24576, (1024, 1024)), (12000, (1024, 1024)), (10240, (768, 768))):
