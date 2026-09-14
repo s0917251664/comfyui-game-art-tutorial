@@ -10,48 +10,74 @@
     header{padding:12px 18px;background:#192231;border-bottom:1px solid #344154;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
     h1{font-size:18px;margin:0}.hint{color:#b8c6d9;font-size:14px;flex:1}.tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
     button{border:1px solid #52627a;background:#243247;color:#fff;border-radius:7px;padding:8px 12px;cursor:pointer}button.active{background:#1689a7;border-color:#67d9ed}button.primary{background:#1c9b65;border-color:#5ed79e;font-weight:700}button:disabled{opacity:.5;cursor:not-allowed}
-    input[type=range]{width:130px}.stage{position:relative;flex:1;overflow:hidden;background:#0a0f17;touch-action:none}.stage canvas{position:absolute;left:0;top:0;transform-origin:0 0}.status{padding:8px 16px;background:#192231;color:#c9d5e6;font-size:13px;display:flex;justify-content:space-between}.error{color:#ff9b9b}.success{color:#75e5ad}
+    input[type=range]{width:130px}.stage{position:relative;flex:1;overflow:hidden;background:#0a0f17;touch-action:none;cursor:none}.stage canvas{position:absolute;left:0;top:0;transform-origin:0 0}.stage canvas#poly{pointer-events:none}.status{padding:8px 16px;background:#192231;color:#c9d5e6;font-size:13px;display:flex;justify-content:space-between;gap:12px}.error{color:#ff9b9b}.success{color:#75e5ad}
+    .brush-cursor{position:absolute;border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.6);border-radius:50%;pointer-events:none;transform:translate(-50%,-50%);display:none;mix-blend-mode:difference}
+    .brush-cursor.point{width:10px!important;height:10px!important;border-width:2px}
+    #ratio{font-variant-numeric:tabular-nums}
   </style>
 </head>
 <body>
   <header>
     <div><h1>局部修改範圍</h1><div class="hint" id="purpose">請塗紅希望 AI 重新處理的地方</div></div>
     <div class="tools">
-      <button id="brush" class="active">畫筆 B</button><button id="eraser">橡皮擦 E</button>
+      <button id="brush" class="active">畫筆 B</button><button id="eraser">橡皮擦 E</button><button id="polygon">多邊形 G</button>
       <label>大小 <input id="size" type="range" min="2" max="180" value="36"></label>
       <button id="undo">復原</button><button id="redo">重做</button><button id="clear">清除</button>
-      <button id="fit">適合視窗</button><button id="save" class="primary">完成並送出</button>
+      <button id="zoomOut">縮小 −</button><button id="zoomIn">放大 ＋</button><button id="fit">適合視窗</button><button id="save" class="primary">完成並送出</button>
     </div>
   </header>
-  <main class="stage" id="stage"><canvas id="image"></canvas><canvas id="mask"></canvas></main>
-  <footer class="status"><span id="message">紅色區域會被重新生成；其餘區域會盡量保留。</span><span>滾輪縮放・空白鍵或中鍵拖曳・[ ] 調筆刷</span></footer>
+  <main class="stage" id="stage"><canvas id="image"></canvas><canvas id="mask"></canvas><canvas id="poly"></canvas><div class="brush-cursor" id="brushCursor"></div></main>
+  <footer class="status"><span id="message">紅色區域會被重新生成；其餘區域會盡量保留。</span><span id="ratio">已選取 0%</span><span>滑動平移・Ctrl/Cmd+滾動或雙指縮放手勢=縮放・空白鍵或中鍵拖曳=平移・[ ] 調筆刷・多邊形模式:點滑鼠加點,雙擊或 Enter 封閉,Esc 取消</span></footer>
   <script>
   (()=>{
     const token=location.pathname.split('/').filter(Boolean).pop(), stage=document.querySelector('#stage');
-    const imageCanvas=document.querySelector('#image'), maskCanvas=document.querySelector('#mask');
-    const ictx=imageCanvas.getContext('2d'), mctx=maskCanvas.getContext('2d',{willReadFrequently:true});
-    const message=document.querySelector('#message'), size=document.querySelector('#size');
-    let source=new Image(), mode='brush', scale=1, tx=0, ty=0, drawing=false, panning=false, space=false, last=null, panStart=null, history=[], future=[];
+    const imageCanvas=document.querySelector('#image'), maskCanvas=document.querySelector('#mask'), polyCanvas=document.querySelector('#poly');
+    const ictx=imageCanvas.getContext('2d'), mctx=maskCanvas.getContext('2d',{willReadFrequently:true}), pctx=polyCanvas.getContext('2d');
+    const message=document.querySelector('#message'), size=document.querySelector('#size'), ratioLabel=document.querySelector('#ratio'), brushCursor=document.querySelector('#brushCursor');
+    let source=new Image(), mode='brush', scale=1, tx=0, ty=0, drawing=false, panning=false, space=false, last=null, panStart=null, history=[], future=[], polyPoints=[];
     const setMessage=(text,kind='')=>{message.textContent=text;message.className=kind};
-    const transform=()=>{const t=`translate(${tx}px,${ty}px) scale(${scale})`;imageCanvas.style.transform=t;maskCanvas.style.transform=t};
-    const fit=()=>{if(!source.width)return;scale=Math.min(stage.clientWidth/source.width,stage.clientHeight/source.height)*.94;tx=(stage.clientWidth-source.width*scale)/2;ty=(stage.clientHeight-source.height*scale)/2;transform()};
+    const transform=()=>{const t=`translate(${tx}px,${ty}px) scale(${scale})`;imageCanvas.style.transform=t;maskCanvas.style.transform=t;polyCanvas.style.transform=t};
+    const fit=()=>{if(!source.width)return;scale=Math.min(stage.clientWidth/source.width,stage.clientHeight/source.height)*.94;tx=(stage.clientWidth-source.width*scale)/2;ty=(stage.clientHeight-source.height*scale)/2;transform();updateCursorSize()};
     const snapshot=()=>{history.push(mctx.getImageData(0,0,maskCanvas.width,maskCanvas.height));if(history.length>40)history.shift();future=[]};
-    const restore=img=>mctx.putImageData(img,0,0);
+    const restore=img=>{mctx.putImageData(img,0,0);updateRatio()};
     const pos=e=>{const r=stage.getBoundingClientRect();return{x:(e.clientX-r.left-tx)/scale,y:(e.clientY-r.top-ty)/scale}};
-    const stroke=(a,b)=>{mctx.save();mctx.lineCap='round';mctx.lineJoin='round';mctx.lineWidth=Number(size.value)/scale*scale;mctx.globalCompositeOperation=mode==='brush'?'source-over':'destination-out';mctx.strokeStyle='rgba(255,45,45,.62)';mctx.beginPath();mctx.moveTo(a.x,a.y);mctx.lineTo(b.x,b.y);mctx.stroke();mctx.restore()};
+    // Brush size (the "大小" slider) is kept constant in *screen* pixels regardless of
+    // zoom, matching what the on-screen cursor circle shows; divide by scale to get the
+    // canvas-space width that renders at that screen size after the CSS transform.
+    const stroke=(a,b)=>{mctx.save();mctx.lineCap='round';mctx.lineJoin='round';mctx.lineWidth=Number(size.value)/scale;mctx.globalCompositeOperation=mode==='brush'?'source-over':'destination-out';mctx.strokeStyle='rgba(255,45,45,.62)';mctx.beginPath();mctx.moveTo(a.x,a.y);mctx.lineTo(b.x,b.y);mctx.stroke();mctx.restore()};
+    const updateCursorSize=()=>{const d=Number(size.value);brushCursor.style.width=d+'px';brushCursor.style.height=d+'px'};
+    const updateRatio=()=>{const data=mctx.getImageData(0,0,maskCanvas.width,maskCanvas.height).data;let painted=0;for(let i=3;i<data.length;i+=4)if(data[i]>0)painted++;ratioLabel.textContent=`已選取 ${(painted/(maskCanvas.width*maskCanvas.height)*100).toFixed(1)}%`};
+    // Polygon lasso: click to add vertices, double-click/Enter closes and fills the
+    // shape into the mask (same red paint as the brush); Esc cancels the in-progress shape.
+    const drawPolyPreview=cursor=>{pctx.clearRect(0,0,polyCanvas.width,polyCanvas.height);if(!polyPoints.length)return;const r=2.5/scale;pctx.save();pctx.strokeStyle='#fff';pctx.fillStyle='#fff';pctx.lineWidth=1.5/scale;pctx.setLineDash([6/scale,4/scale]);pctx.beginPath();pctx.moveTo(polyPoints[0].x,polyPoints[0].y);for(let i=1;i<polyPoints.length;i++)pctx.lineTo(polyPoints[i].x,polyPoints[i].y);if(cursor)pctx.lineTo(cursor.x,cursor.y);pctx.stroke();for(const p of polyPoints){pctx.beginPath();pctx.arc(p.x,p.y,r,0,7);pctx.fill()}pctx.restore()};
+    const cancelPolygon=()=>{polyPoints=[];pctx.clearRect(0,0,polyCanvas.width,polyCanvas.height)};
+    // Polygon always adds to the selection (like the brush); to remove a shape from an
+    // already-painted area, switch to the eraser afterwards and brush over it.
+    const closePolygon=()=>{if(polyPoints.length<3){cancelPolygon();return}snapshot();mctx.save();mctx.globalCompositeOperation='source-over';mctx.fillStyle='rgba(255,45,45,.62)';mctx.beginPath();mctx.moveTo(polyPoints[0].x,polyPoints[0].y);for(let i=1;i<polyPoints.length;i++)mctx.lineTo(polyPoints[i].x,polyPoints[i].y);mctx.closePath();mctx.fill();mctx.restore();updateRatio();cancelPolygon()};
     fetch(`/simple-mask/api/sessions/${token}`).then(r=>r.json()).then(meta=>{document.querySelector('#purpose').textContent=meta.purpose||'請塗紅希望 AI 重新處理的地方';source.src=`/simple-mask/api/sessions/${token}/source`;});
-    source.onload=()=>{imageCanvas.width=maskCanvas.width=source.width;imageCanvas.height=maskCanvas.height=source.height;ictx.drawImage(source,0,0);fit()};
-    stage.addEventListener('pointerdown',e=>{if(e.button===1||space){panning=true;panStart={x:e.clientX-tx,y:e.clientY-ty};stage.setPointerCapture(e.pointerId);return}if(e.button!==0)return;snapshot();drawing=true;last=pos(e);stroke(last,{x:last.x+.01,y:last.y+.01});stage.setPointerCapture(e.pointerId)});
-    stage.addEventListener('pointermove',e=>{if(panning){tx=e.clientX-panStart.x;ty=e.clientY-panStart.y;transform();return}if(!drawing)return;const now=pos(e);stroke(last,now);last=now});
+    source.onload=()=>{imageCanvas.width=maskCanvas.width=polyCanvas.width=source.width;imageCanvas.height=maskCanvas.height=polyCanvas.height=source.height;ictx.drawImage(source,0,0);fit()};
+    stage.addEventListener('pointerdown',e=>{if(e.button===1||space){panning=true;panStart={x:e.clientX-tx,y:e.clientY-ty};stage.setPointerCapture(e.pointerId);return}if(e.button!==0)return;if(mode==='polygon'){polyPoints.push(pos(e));drawPolyPreview(pos(e));return}snapshot();drawing=true;last=pos(e);stroke(last,{x:last.x+.01,y:last.y+.01});stage.setPointerCapture(e.pointerId)});
+    stage.addEventListener('pointermove',e=>{const r=stage.getBoundingClientRect();brushCursor.style.left=(e.clientX-r.left)+'px';brushCursor.style.top=(e.clientY-r.top)+'px';if(panning){tx=e.clientX-panStart.x;ty=e.clientY-panStart.y;transform();return}if(mode==='polygon'){if(polyPoints.length)drawPolyPreview(pos(e));return}if(!drawing)return;const now=pos(e);stroke(last,now);last=now;updateRatio()});
+    stage.addEventListener('dblclick',e=>{if(mode==='polygon'){e.preventDefault();closePolygon()}});
+    stage.addEventListener('pointerenter',()=>{if(!space)brushCursor.style.display='block'});
+    stage.addEventListener('pointerleave',()=>{brushCursor.style.display='none'});
     stage.addEventListener('pointerup',()=>{drawing=false;panning=false});stage.addEventListener('pointercancel',()=>{drawing=false;panning=false});
-    stage.addEventListener('wheel',e=>{e.preventDefault();const old=scale,factor=e.deltaY<0?1.12:.89;scale=Math.max(.08,Math.min(12,scale*factor));const r=stage.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;tx=x-(x-tx)*scale/old;ty=y-(y-ty)*scale/old;transform()},{passive:false});
-    const setMode=m=>{mode=m;document.querySelector('#brush').classList.toggle('active',m==='brush');document.querySelector('#eraser').classList.toggle('active',m==='eraser')};
-    document.querySelector('#brush').onclick=()=>setMode('brush');document.querySelector('#eraser').onclick=()=>setMode('eraser');document.querySelector('#fit').onclick=fit;
-    document.querySelector('#clear').onclick=()=>{snapshot();mctx.clearRect(0,0,maskCanvas.width,maskCanvas.height)};
+    size.addEventListener('input',updateCursorSize);
+    const zoomAt=(x,y,factor)=>{const old=scale;scale=Math.max(.08,Math.min(12,scale*factor));tx=x-(x-tx)*scale/old;ty=y-(y-ty)*scale/old;transform()};
+    // Plain two-finger scroll pans (trackpads report it as a wheel event with no
+    // ctrlKey); Ctrl/Cmd+scroll or a pinch gesture (browsers report pinch as
+    // wheel+ctrlKey) zooms around the cursor. Matches the Figma/Google-Maps convention
+    // instead of always zooming, which made a trackpad scroll feel like it couldn't pan.
+    stage.addEventListener('wheel',e=>{e.preventDefault();if(e.ctrlKey||e.metaKey){const r=stage.getBoundingClientRect();zoomAt(e.clientX-r.left,e.clientY-r.top,e.deltaY<0?1.12:.89)}else{tx-=e.deltaX;ty-=e.deltaY;transform()}},{passive:false});
+    document.querySelector('#zoomIn').onclick=()=>zoomAt(stage.clientWidth/2,stage.clientHeight/2,1.25);
+    document.querySelector('#zoomOut').onclick=()=>zoomAt(stage.clientWidth/2,stage.clientHeight/2,.8);
+    const setMode=m=>{if(mode==='polygon'&&m!=='polygon')cancelPolygon();mode=m;document.querySelector('#brush').classList.toggle('active',m==='brush');document.querySelector('#eraser').classList.toggle('active',m==='eraser');document.querySelector('#polygon').classList.toggle('active',m==='polygon');brushCursor.classList.toggle('point',m==='polygon')};
+    document.querySelector('#brush').onclick=()=>setMode('brush');document.querySelector('#eraser').onclick=()=>setMode('eraser');document.querySelector('#polygon').onclick=()=>setMode('polygon');document.querySelector('#fit').onclick=fit;
+    document.querySelector('#clear').onclick=()=>{snapshot();mctx.clearRect(0,0,maskCanvas.width,maskCanvas.height);updateRatio()};
     document.querySelector('#undo').onclick=()=>{if(!history.length)return;future.push(mctx.getImageData(0,0,maskCanvas.width,maskCanvas.height));restore(history.pop())};
     document.querySelector('#redo').onclick=()=>{if(!future.length)return;history.push(mctx.getImageData(0,0,maskCanvas.width,maskCanvas.height));restore(future.pop())};
-    addEventListener('keydown',e=>{if(e.code==='Space'){space=true;e.preventDefault()}if(e.key.toLowerCase()==='b')setMode('brush');if(e.key.toLowerCase()==='e')setMode('eraser');if(e.key==='[')size.value=Math.max(2,Number(size.value)-4);if(e.key===']')size.value=Math.min(180,Number(size.value)+4);if(e.ctrlKey&&e.key.toLowerCase()==='z'){e.preventDefault();document.querySelector('#undo').click()}if(e.ctrlKey&&e.key.toLowerCase()==='y'){e.preventDefault();document.querySelector('#redo').click()}});addEventListener('keyup',e=>{if(e.code==='Space')space=false});
-    const exportMask=()=>{const out=document.createElement('canvas');out.width=maskCanvas.width;out.height=maskCanvas.height;const o=out.getContext('2d');o.fillStyle='black';o.fillRect(0,0,out.width,out.height);o.drawImage(maskCanvas,0,0);const data=o.getImageData(0,0,out.width,out.height);for(let i=0;i<data.data.length;i+=4){const selected=data.data[i+3]>0?255:0;data.data[i]=data.data[i+1]=data.data[i+2]=selected;data.data[i+3]=255}o.putImageData(data,0,0);return out.toDataURL('image/png')};
+    addEventListener('keydown',e=>{if(e.code==='Space'){space=true;e.preventDefault()}if(e.key.toLowerCase()==='b')setMode('brush');if(e.key.toLowerCase()==='e')setMode('eraser');if(e.key.toLowerCase()==='g')setMode('polygon');if(e.key==='[')size.value=Math.max(2,Number(size.value)-4);if(e.key===']')size.value=Math.min(180,Number(size.value)+4);if(mode==='polygon'&&e.key==='Enter'){e.preventDefault();closePolygon()}if(mode==='polygon'&&e.key==='Escape'){e.preventDefault();cancelPolygon()}if(e.ctrlKey&&e.key.toLowerCase()==='z'){e.preventDefault();document.querySelector('#undo').click()}if(e.ctrlKey&&e.key.toLowerCase()==='y'){e.preventDefault();document.querySelector('#redo').click()}});addEventListener('keyup',e=>{if(e.code==='Space')space=false});
+    const exportMask=()=>{const out=document.createElement('canvas');out.width=maskCanvas.width;out.height=maskCanvas.height;const o=out.getContext('2d');const src=mctx.getImageData(0,0,maskCanvas.width,maskCanvas.height);const data=o.createImageData(out.width,out.height);for(let i=0;i<src.data.length;i+=4){const selected=src.data[i+3]>0?255:0;data.data[i]=data.data[i+1]=data.data[i+2]=selected;data.data[i+3]=255}o.putImageData(data,0,0);return out.toDataURL('image/png')};
     const submit=async confirmNearFull=>{const btn=document.querySelector('#save');btn.disabled=true;setMessage('正在儲存遮罩…');try{const r=await fetch(`/simple-mask/api/sessions/${token}/save`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mask_png:exportMask(),confirm_near_full:confirmNearFull})});const data=await r.json().catch(async()=>({message:await r.text()}));if(r.status===409&&data.error==='near_full'){if(confirm(`目前選取 ${(data.selected_ratio*100).toFixed(1)}% 的畫面，可能會重畫整張圖。仍要送出嗎？`))return submit(true);throw new Error('已取消送出，請縮小遮罩範圍。')}if(!r.ok)throw new Error(data.message||data.error||'儲存失敗');setMessage('完成！遮罩已安全存回本機，可以關閉這個頁面。','success');btn.textContent='已完成'}catch(err){setMessage(err.message||String(err),'error');btn.disabled=false}};
     document.querySelector('#save').onclick=()=>submit(false);addEventListener('resize',fit);
   })();
