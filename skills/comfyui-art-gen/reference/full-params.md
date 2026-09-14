@@ -52,6 +52,15 @@
 
 tier 符合之後，`concept`、`icon_asset`、`character_action`、`inpaint`、`guided_inpaint`、`pose_only`、`style_lock`、`refine`、`upscale`、`layer_split` 還會做一次**安裝狀態 preflight**：用佔位檔名把這次實際要送出的 graph（含 `--remove-bg`／`icon_asset` 的去背節點）先組一次，逐節點比對 `/object_info`，缺任何 node class 或 loader 選單裡沒有對應模型檔（checkpoint、ControlNet、IPAdapter、CLIP Vision、BiRefNet、放大模型、LoRA）就在上傳前停止並列出缺什麼。模型檔名與取樣參數來自 `tools_src/comfyui_pipeline/profiles/*.json`。
 
+### 選用模型設定檔（`--profile`、`--image-config`）
+
+同一組 task 可以跑在不同的模型設定檔上（目前 `sdxl_standard`、`sd15_light`）。選用順序是 `--profile <id>` → `image_capabilities.json` 的 `default_profile`（`--image-config`、`--config` 的 `image_config`，或 `<ComfyUI>/tools/image_capabilities.json`）→ 都沒有時沿用 `device_config.json` 的 tier 對應。
+
+- 明確選用設定檔時，底模、預設解析度（依這台機器 `usable_memory_mb` 從設定檔挑）與可用 task 都由設定檔決定；`--width`/`--height` 明確給值時仍以使用者為準。
+- 以下情況在上傳前停止：設定檔不存在、不符合這台平台（加速後端／記憶體／精度）、設定檔不提供這個 task（例如 `sd15_light` 沒有 `style_lock`）、`--style` 不在設定檔的風格清單、`device_config.json` 是缺平台欄位的舊版、`image_capabilities.json` 的設備指紋已過期。
+- 驗證狀態不是 `verified` 時只在 stderr 印 `[提醒]`，不會阻擋；要把這個提醒轉告使用者。
+- `--profile` 只用於上面列出的 SDXL/SD1.5 task；FLUX.2 與影片 task 不接受。
+
 不符合 tier 的組合會在參考圖上傳或建立 ComfyUI 佇列前被拒絕，避免先產生一個必然 shape mismatch 的工作。若要支援 SD1.5 的 ControlNet/IPAdapter，必須另配同家族模型並完成實機驗證，不能只替換 checkpoint 檔名。
 
 ## 目前沒有開放的參數(刻意鎖死,不要嘗試加旗標繞過)

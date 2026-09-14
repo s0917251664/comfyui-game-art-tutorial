@@ -33,10 +33,31 @@ class ImageProfileTests(unittest.TestCase):
     def setUp(self):
         self._device = self.ig.DEVICE
         self._ckpt = self.ig.CKPT
+        self.ig.ACTIVE_PROFILE_ID = None
 
     def tearDown(self):
         self.ig.DEVICE = self._device
         self.ig.CKPT = self._ckpt
+        self.ig.ACTIVE_PROFILE_ID = None
+
+    def test_active_profile_overrides_tier_for_checkpoint_size_and_addons(self):
+        self.ig.DEVICE = dict(golden_image_graphs.TIER_DEVICES["sdxl_high"], usable_memory_mb=24576)
+        self.ig.CKPT = self.ig.DEVICE["checkpoint"]
+        self.ig.ACTIVE_PROFILE_ID = "sd15_light"
+        graph, _ = self.ig.build_concept("p", seed=1)
+        self.assertEqual("dreamshaper_8.safetensors", graph["1"]["inputs"]["ckpt_name"])
+        self.assertEqual((512, 512), (graph["4"]["inputs"]["width"], graph["4"]["inputs"]["height"]))
+        with self.assertRaisesRegex(RuntimeError, "sd15_light"):
+            self.ig.build_style_lock("p", "c.png", seed=1)
+
+    def test_active_sdxl_profile_picks_resolution_from_usable_memory(self):
+        self.ig.ACTIVE_PROFILE_ID = "sdxl_standard"
+        for usable, expected in ((24576, (1024, 1024)), (12000, (1024, 1024)), (10240, (768, 768))):
+            with self.subTest(usable=usable):
+                self.ig.DEVICE = dict(golden_image_graphs.TIER_DEVICES["sdxl"], usable_memory_mb=usable)
+                graph, _ = self.ig.build_concept("p", seed=1)
+                self.assertEqual(expected, (graph["4"]["inputs"]["width"], graph["4"]["inputs"]["height"]))
+                self.assertEqual("sd_xl_base_1.0.safetensors", graph["1"]["inputs"]["ckpt_name"])
 
     def test_graphs_match_pre_profile_golden_fixture(self):
         with open(golden_image_graphs.FIXTURE_PATH, encoding="utf-8") as handle:

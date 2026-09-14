@@ -60,6 +60,7 @@ class GenerateTests(unittest.TestCase):
     def setUp(self):
         self.generate.COMFY_URL = None
         self.generate.ACTIVE_VIDEO_CONFIG = None
+        self.generate.ACTIVE_IMAGE_PROFILE = None
         self.generate.DEVICE = {
             "tier": "sdxl",
             "checkpoint": "test.safetensors",
@@ -446,6 +447,94 @@ class GenerateTests(unittest.TestCase):
         self.assertEqual(["a.safetensors"], self.generate._object_info_options(legacy, "CheckpointLoaderSimple", "ckpt_name"))
         self.assertEqual(["b.safetensors"], self.generate._object_info_options(combo, "CheckpointLoaderSimple", "ckpt_name"))
         self.assertIsNone(self.generate._object_info_options({}, "CheckpointLoaderSimple", "ckpt_name"))
+
+    PLATFORM_FIELDS = {
+        "backend": "cuda", "platform_key": "windows-cuda", "gpu_name": "RTX 4080",
+        "usable_memory_mb": 16376, "precision_support": ["fp32", "fp16", "bf16", "fp8"],
+    }
+
+    def _run_concept_capturing_graph(self, argv):
+        captured = {}
+
+        def fake_submit(prompt, **_kwargs):
+            captured["graph"] = json.loads(json.dumps(prompt))
+            return {"outputs": {}}
+        with mock.patch.object(self.generate, "preflight_image_task", return_value=True), \
+                mock.patch.object(self.generate, "submit_and_wait", side_effect=fake_submit), \
+                mock.patch.object(self.generate, "download_outputs", return_value=[]):
+            self.generate.main(["--comfy-url", "http://server:8188"] + argv)
+        return captured["graph"]
+
+    def test_profile_flag_selects_smaller_profile_checkpoint_and_resolution(self):
+        self.generate.DEVICE.update(self.PLATFORM_FIELDS)
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr):
+            graph = self._run_concept_capturing_graph(["concept", "--prompt", "x", "--profile", "sd15_light"])
+        self.assertEqual("dreamshaper_8.safetensors", graph["1"]["inputs"]["ckpt_name"])
+        self.assertEqual((512, 512), (graph["4"]["inputs"]["width"], graph["4"]["inputs"]["height"]))
+        self.assertIn("unverified", stderr.getvalue())
+
+    def test_without_profile_keeps_tier_behaviour(self):
+        graph = self._run_concept_capturing_graph(["concept", "--prompt", "x"])
+        self.assertEqual("test.safetensors", graph["1"]["inputs"]["ckpt_name"])
+        self.assertEqual((1024, 1024), (graph["4"]["inputs"]["width"], graph["4"]["inputs"]["height"]))
+
+    def test_explicit_dimensions_still_override_profile_default(self):
+        self.generate.DEVICE.update(self.PLATFORM_FIELDS)
+        with contextlib.redirect_stderr(io.StringIO()):
+            graph = self._run_concept_capturing_graph(
+                ["concept", "--prompt", "x", "--profile", "sd15_light", "--width", "640", "--height", "768"])
+        self.assertEqual((640, 768), (graph["4"]["inputs"]["width"], graph["4"]["inputs"]["height"]))
+
+    def test_invalid_explicit_dimension_is_rejected(self):
+        with self.assertRaises(SystemExit):
+            self.generate.main(["--comfy-url", "http://server:8188", "concept", "--prompt", "x", "--height", "1001"])
+
+    def test_profile_rejections_happen_before_upload(self):
+        cases = [
+            (dict(self.PLATFORM_FIELDS, usable_memory_mb=4096),
+             ["style_lock", "--prompt", "x", "--character-ref", "c.png", "--profile", "sdxl_standard"], "不適用這台機器"),
+            (self.PLATFORM_FIELDS,
+             ["style_lock", "--prompt", "x", "--character-ref", "c.png", "--profile", "sd15_light"], "不提供 style_lock"),
+            (self.PLATFORM_FIELDS,
+             ["concept", "--prompt", "x", "--profile", "sd15_light", "--style", "anime"], "風格清單"),
+            ({}, ["concept", "--prompt", "x", "--profile", "sd15_light"], "detect_device.py"),
+            (self.PLATFORM_FIELDS, ["concept", "--prompt", "x", "--profile", "nope"], "找不到模型設定檔"),
+        ]
+        for device_fields, argv, message in cases:
+            with self.subTest(argv=argv):
+                self.setUp()
+                self.generate.DEVICE.update(device_fields)
+                with mock.patch.object(self.generate, "upload_image") as upload, \
+                        mock.patch.object(self.generate, "_fetch_comfy_object_info") as fetch:
+                    with self.assertRaisesRegex(SystemExit, message):
+                        self.generate.main(["--comfy-url", "http://server:8188"] + argv)
+                upload.assert_not_called()
+                fetch.assert_not_called()
+
+    def test_image_capabilities_default_profile_is_used_and_fingerprint_checked(self):
+        self.generate.DEVICE.update(self.PLATFORM_FIELDS)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "image_capabilities.json")
+            config = {"default_profile": "sd15_light",
+                      "device_fingerprint": self.generate._profiles.device_fingerprint(self.generate.DEVICE)}
+            with open(path, "w", encoding="utf-8") as handle:
+                json.dump(config, handle)
+            with contextlib.redirect_stderr(io.StringIO()):
+                graph = self._run_concept_capturing_graph(["concept", "--prompt", "x", "--image-config", path])
+            self.assertEqual("dreamshaper_8.safetensors", graph["1"]["inputs"]["ckpt_name"])
+
+            self.generate.DEVICE["usable_memory_mb"] = 8192
+            with mock.patch.object(self.generate, "upload_image") as upload:
+                with self.assertRaisesRegex(SystemExit, "detect_image_capabilities.py"):
+                    self.generate.main(["--comfy-url", "http://server:8188", "concept", "--prompt", "x",
+                                        "--image-config", path])
+            upload.assert_not_called()
+
+    def test_profile_flag_is_rejected_for_non_profile_tasks(self):
+        with self.assertRaisesRegex(SystemExit, "--profile"):
+            self.generate.main(["--comfy-url", "http://server:8188", "flux2_concept", "--prompt", "x",
+                                "--profile", "sdxl_standard"])
 
     def test_flux2_tasks_do_not_use_profile_preflight(self):
         self.assertNotIn("flux2_concept", self.generate.IMAGE_PROFILE_TASKS)

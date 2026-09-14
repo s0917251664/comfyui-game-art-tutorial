@@ -253,6 +253,63 @@ class VerifyPortableInstallTests(unittest.TestCase):
                 code = self.verify.main(["--config", str(config_path), "--repo-root", str(ROOT)], detector=lambda: live)
         self.assertEqual(0, code, out.getvalue())
 
+    IMAGE_LIVE = {
+        "os": "Windows", "machine": "amd64", "backend": "cuda",
+        "tier": "sdxl", "checkpoint": "sd_xl_base_1.0.safetensors",
+        "default_width": 1024, "default_height": 1024,
+        "gpu_name": "Test GPU", "vram_mb": 16376, "platform_key": "windows-cuda",
+        "usable_memory_mb": 16376, "memory_kind": "dedicated", "compute_capability": "8.9",
+        "precision_support": ["fp32", "fp16", "bf16", "fp8"],
+    }
+
+    def _run_image_verify(self, image_config_factory=None, extra_args=()):
+        profiles_mod = self.verify._load_profiles_module(ROOT)
+        with tempfile.TemporaryDirectory() as tmp:
+            _, tools_dir, models_dir, _, config_path = self._base_install(pathlib.Path(tmp), self.IMAGE_LIVE)
+            if image_config_factory is not None:
+                self._write_json(tools_dir / "image_capabilities.json",
+                                 image_config_factory(profiles_mod, models_dir))
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                code = self.verify.main(["--config", str(config_path), "--repo-root", str(ROOT), *extra_args],
+                                        detector=lambda: self.IMAGE_LIVE)
+        return code, out.getvalue()
+
+    def _image_config(self, profiles_mod, models_dir, default_profile="sdxl_standard", create_checkpoint=True,
+                      device=None):
+        checkpoint = models_dir / "checkpoints" / "sd_xl_base_1.0.safetensors"
+        if create_checkpoint:
+            self._copy_source(checkpoint, b"model")
+        return {
+            "device_fingerprint": profiles_mod.device_fingerprint(device or self.IMAGE_LIVE),
+            "default_profile": default_profile,
+            "profiles": {"sdxl_standard": {"models": {"checkpoint": {"path": str(checkpoint)}}}},
+        }
+
+    def test_missing_image_config_is_info_unless_required(self):
+        code, text = self._run_image_verify()
+        self.assertEqual(0, code, text)
+        self.assertIn("[INFO] 尚未產生 image_capabilities.json", text)
+        code, text = self._run_image_verify(extra_args=["--require-image"])
+        self.assertEqual(1, code)
+        self.assertIn("[FAIL] image_config", text)
+
+    def test_valid_image_config_passes_with_default_profile(self):
+        code, text = self._run_image_verify(lambda p, m: self._image_config(p, m))
+        self.assertEqual(0, code, text)
+        self.assertIn("[PASS] image_config: default_profile: sdxl_standard", text)
+
+    def test_stale_image_config_fingerprint_fails(self):
+        code, text = self._run_image_verify(
+            lambda p, m: self._image_config(p, m, device=dict(self.IMAGE_LIVE, usable_memory_mb=8192)))
+        self.assertEqual(1, code)
+        self.assertIn("detect_image_capabilities.py", text)
+
+    def test_image_config_default_profile_checkpoint_must_exist(self):
+        code, text = self._run_image_verify(lambda p, m: self._image_config(p, m, create_checkpoint=False))
+        self.assertEqual(1, code)
+        self.assertIn("底模檔案不存在", text)
+
     def _profile_sync_output(self, mutate_tools_dir):
         live = {
             "os": "Windows", "machine": "amd64", "backend": "cuda",

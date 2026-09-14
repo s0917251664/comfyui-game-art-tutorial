@@ -68,7 +68,7 @@ cd comfyui-game-art-tutorial
 
 ### 跨設備移植原則
 
-這條產線移動到另一台設備時，搬的是固定工具、版本基線與 task 契約，不是來源機的硬體快照。目標機必須重新執行 `detect_device.py`，讓圖片 checkpoint family、tier 與預設解析度依該機 GPU／VRAM／統一記憶體動態調整；若要產影片，也必須重新執行 `detect_video_capabilities.py`，由該機實際存在的模型、Python runtime 與 ComfyUI nodes 決定 H3／Wan backend 及可用 task。`local_config.json`、`device_config.json`、`video_capabilities.json` 都是 machine-specific，不可從舊設備直接複製。
+這條產線移動到另一台設備時，搬的是固定工具、版本基線與 task 契約，不是來源機的硬體快照。目標機必須重新執行 `detect_device.py`，讓圖片 checkpoint family、tier 與預設解析度依該機 GPU／VRAM／統一記憶體動態調整；若要產影片，也必須重新執行 `detect_video_capabilities.py`，由該機實際存在的模型、Python runtime 與 ComfyUI nodes 決定 H3／Wan backend 及可用 task。`local_config.json`、`device_config.json`、`image_capabilities.json`、`video_capabilities.json` 都是 machine-specific，不可從舊設備直接複製。
 
 安裝完成後可先做離線驗收，不需要啟動 ComfyUI：
 

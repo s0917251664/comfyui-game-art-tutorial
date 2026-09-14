@@ -6,8 +6,12 @@ differs per machine is only which profile its ``device_config.json`` tier maps
 to.  See ``docs/model-profiles-design.md``.
 """
 
+import hashlib
 import json
 import os
+
+# image_capabilities.json 記錄產生時的設備指紋;generate.py/驗證器用同一組欄位判斷快照是否過期。
+FINGERPRINT_FIELDS = ("platform_key", "backend", "tier", "gpu_name", "usable_memory_mb", "precision_support")
 
 PROFILES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "profiles")
 SCHEMA_VERSION = 1
@@ -188,6 +192,12 @@ def effective_validation(profile, platform_key, usable_memory_mb, task):
                 f"可用記憶體 {usable_memory_mb} MB 低於 {platform_key} 驗證時的 {minimum} MB"
             )
     return status, None
+
+
+def device_fingerprint(device):
+    selected = {field: device.get(field) for field in FINGERPRINT_FIELDS}
+    encoded = json.dumps(selected, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 
 def default_resolution(profile, usable_memory_mb):

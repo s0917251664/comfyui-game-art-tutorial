@@ -48,7 +48,7 @@ class DetectImageCapabilitiesTests(unittest.TestCase):
 
     def _args(self, **overrides):
         values = dict(comfyui_path=self.comfyui, model_root=None, device_config=None,
-                      comfy_url=None, http_timeout=5.0, out=None, overwrite=False)
+                      comfy_url=None, http_timeout=5.0, out=None, overwrite=False, default_profile=None)
         values.update(overrides)
         return SimpleNamespace(**values)
 
@@ -136,6 +136,22 @@ class DetectImageCapabilitiesTests(unittest.TestCase):
         self._device(CUDA_DEVICE)
         config = detector.detect(self._args(model_root=[shared]))
         self.assertTrue(config["profiles"]["sdxl_standard"]["installed"])
+
+    def test_explicit_default_profile_allows_smaller_profile_on_big_machine(self):
+        self._device(CUDA_DEVICE)
+        self._install_sdxl_base()
+        with self.assertRaisesRegex(RuntimeError, "dreamshaper_8"):
+            detector.detect(self._args(default_profile="sd15_light"))
+        self._model("checkpoints", "dreamshaper_8.safetensors")
+        self.assertEqual("sd15_light", detector.detect(self._args(default_profile="sd15_light"))["default_profile"])
+        with self.assertRaisesRegex(RuntimeError, "找不到模型設定檔"):
+            detector.detect(self._args(default_profile="missing"))
+
+    def test_explicit_default_profile_must_be_eligible(self):
+        self._device(dict(MPS_DEVICE, usable_memory_mb=4096))
+        self._install_sdxl_base()
+        with self.assertRaisesRegex(RuntimeError, "不適用這台機器"):
+            detector.detect(self._args(default_profile="sdxl_standard"))
 
     def test_fingerprint_changes_with_platform_fields(self):
         self.assertNotEqual(detector.device_fingerprint(CUDA_DEVICE),

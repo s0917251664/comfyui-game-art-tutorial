@@ -1,6 +1,6 @@
 # 模型設定檔（model profile）設計草案
 
-狀態：**第 1、2 階段已完成（離線驗證），第 3 階段起尚未實作**。分支 `feature/model-profiles`。實作時每個階段都要走 `skills/comfyui-new-tool-checklist/SKILL.md`。
+狀態：**第 1–3 階段已完成（離線驗證），第 4 階段起尚未實作**。分支 `feature/model-profiles`。實作時每個階段都要走 `skills/comfyui-new-tool-checklist/SKILL.md`。
 
 第 1 階段落地內容：`tools_src/comfyui_pipeline/profiles/{sdxl_standard,sd15_light}.json`、`profiles.py`（讀取與格式驗證）、`image_graphs.py` 改由設定檔取得 SDXL/SD1.5 模型檔名與取樣參數（FLUX.2 維持原樣）、`verify_portable_install.py` 核對部署端設定檔。`tests/fixtures/image_graphs_golden.json` 以重構前程式碼產生，鎖住 4 個 tier 共 99 組 graph 逐欄位不變。底模 checkpoint 與預設解析度仍讀 `device_config.json`，設定檔的 `resolution.by_memory` 目前只由測試確認與 `detect_device.py` 的 `TIERS` 一致，尚未取代它。
 
@@ -11,6 +11,13 @@
 - 新增 `detect_image_capabilities.py` → `image_capabilities.json`（schema 見第 5 節；`default_profile` 目前等於 tier 對應且已安裝的設定檔，第 3 階段才開放主動選擇）。
 - `generate.py` 的圖片 dispatch 抽成 `_build_image_task_graph()`；`preflight_image_task()` 以佔位檔名先組出同一份 graph，逐節點比對 `/object_info` 的 node 與 loader 模型選單，缺任何一項都在上傳前停止。刻意不另寫「task→模型」規則，避免與 builder 分歧。
 - 與第 5 節的差異：`verify_portable_install.py` 核對 `image_capabilities.json` 指紋延到第 3 階段。preflight 的 `/object_info` 格式判讀（舊式 `[[...]]` 與 `["COMBO", {"options": [...]}]`）只有離線測試，需在初始化時實機確認。
+
+第 3 階段落地內容：
+- `generate.py` 新增 `--profile`、`--image-config`；`resolve_image_profile()` 依 `--profile` → `image_capabilities.json` 的 `default_profile` → tier 對應決定設定檔，並在上傳前檢查設定檔存在、平台資格、task 是否提供、快照指紋是否過期；驗證狀態非 `verified` 只提醒。
+- `image_graphs.py` 新增 `ACTIVE_PROFILE_ID`：選了設定檔時底模、預設解析度（依 `usable_memory_mb`）與 SDXL add-on 閘門由設定檔決定；沒選時維持 tier 行為，golden fixture 不變。圖片 CLI 的 `--width`/`--height` 預設改為 `None`，由 builder 補值。
+- `--style` 在選了設定檔時改看設定檔的 `variants`。
+- `detect_image_capabilities.py --default-profile`：明確選用時必須符合平台且底模已裝，不自動退回。
+- `device_fingerprint` 移到 `profiles.py` 共用；`verify_portable_install.py` 核對 `image_capabilities.json`（指紋、default_profile 資格與底模檔案），新增 `--require-image`；`local_config.json` 可寫 `image_config`。
 
 ## 1. 要解決的問題
 

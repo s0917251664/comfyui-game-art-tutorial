@@ -57,6 +57,7 @@ DEFAULT_POLL_TIMEOUT = 15.0
 DEFAULT_POLL_INTERVAL = 1.0
 DEFAULT_POLL_RETRIES = 3
 from comfyui_pipeline import image_graphs as _image_graphs
+from comfyui_pipeline import profiles as _profiles
 from comfyui_pipeline import video_catalog as _video_catalog
 from comfyui_pipeline import video_graphs as _video_graphs
 
@@ -79,10 +80,15 @@ DEVICE = _image_graphs.DEVICE
 CKPT = _image_graphs.CKPT
 UPSCALE_MODEL = _image_graphs.UPSCALE_MODEL
 
+# 本次 main() 選用的圖片模型設定檔 id;None = 沿用 device_config.json 的 tier 對應。
+ACTIVE_IMAGE_PROFILE = None
+
+
 def _sync_image_runtime():
     """Keep legacy facade assignments visible to the extracted image module."""
     _image_graphs.DEVICE = DEVICE
     _image_graphs.CKPT = DEVICE.get("checkpoint", CKPT)
+    _image_graphs.ACTIVE_PROFILE_ID = ACTIVE_IMAGE_PROFILE
 
 
 def require_sdxl_capability(*args, **kwargs):
@@ -644,6 +650,84 @@ def check_image_graph_against_object_info(graph, payload):
         elif value not in options:
             missing_models.add(f"{value}（{class_type}）")
     return missing_nodes, sorted(missing_models)
+
+
+IMAGE_CAPABILITY_CONFIG_FILENAME = "image_capabilities.json"
+
+
+def load_image_capabilities(runtime_config_path=None, image_config_path=None):
+    """找 machine-specific image_capabilities.json,回傳 (config, source);找不到回傳 (None, None)。
+
+    這份檔案是選配:找不到時圖片 task 沿用 device_config.json 的 tier 對應。查找順序是
+    --image-config → --config 的 image_config → --config 的 comfyui_path/tools 或 generate_script 同目錄
+    → device_config.json 同目錄。不搜尋 repository,理由同 video capability config。
+    """
+    if image_config_path:
+        source = os.path.abspath(os.fspath(image_config_path))
+        return _read_runtime_config(source), source
+    candidates = []
+    runtime_path = _runtime_config_path_from_env(runtime_config_path)
+    if runtime_path:
+        runtime_path = os.path.abspath(os.fspath(runtime_path))
+        runtime = _read_runtime_config(runtime_path)
+        explicit = runtime.get("image_config")
+        if explicit:
+            source = _relative_config_path(explicit, runtime_path)
+            return _read_runtime_config(source), source
+        if runtime.get("comfyui_path"):
+            candidates.append(os.path.join(os.fspath(runtime["comfyui_path"]), "tools", IMAGE_CAPABILITY_CONFIG_FILENAME))
+        if runtime.get("generate_script"):
+            candidates.append(os.path.join(os.path.dirname(os.fspath(runtime["generate_script"])), IMAGE_CAPABILITY_CONFIG_FILENAME))
+    candidates.append(os.path.join(os.path.dirname(DEVICE_CONFIG_PATH), IMAGE_CAPABILITY_CONFIG_FILENAME))
+    existing = next((path for path in candidates if os.path.isfile(path)), None)
+    if existing is None:
+        return None, None
+    source = os.path.abspath(existing)
+    return _read_runtime_config(source), source
+
+
+def resolve_image_profile(task, cli_profile=None, capabilities=None, capabilities_source=None, device=None):
+    """決定這次圖片 task 用哪份模型設定檔;回傳 profile id,或 None 代表沿用 tier 對應。
+
+    來源優先序:--profile → image_capabilities.json 的 default_profile → 無(tier 對應)。
+    明確選用時一律檢查:設定檔存在、符合這台平台(後端/記憶體/精度)、提供這個 task;
+    來自 capability 快照時再確認快照的設備指紋沒有過期。驗證狀態不是 verified 時只提醒、不阻擋。
+    """
+    device = DEVICE if device is None else device
+    if task not in IMAGE_PROFILE_TASKS:
+        if cli_profile:
+            raise RuntimeError(f"--profile 只適用於使用圖片模型設定檔的 task；{task} 不使用設定檔")
+        return None
+    if cli_profile:
+        chosen, source = cli_profile, "--profile"
+    else:
+        chosen = (capabilities or {}).get("default_profile")
+        source = f"{capabilities_source} 的 default_profile"
+        if not chosen:
+            return None
+        if capabilities.get("device_fingerprint") != _profiles.device_fingerprint(device):
+            raise RuntimeError(
+                f"{capabilities_source} 與目前 device_config.json 的設備資料不一致（換過設備或重跑過 detect_device.py）；"
+                "請在這台機器重跑 detect_image_capabilities.py"
+            )
+    profile = _profiles.load_profile(chosen)
+    reasons = _profiles.platform_eligibility(profile, device)
+    if reasons:
+        raise RuntimeError(f"模型設定檔 {chosen!r}（來源：{source}）不適用這台機器：" + "；".join(reasons))
+    if task not in profile["tasks"]:
+        raise RuntimeError(
+            f"模型設定檔 {chosen!r} 不提供 {task}；這個設定檔可用的 task：{', '.join(sorted(profile['tasks']))}"
+        )
+    status, reason = _profiles.effective_validation(
+        profile, device.get("platform_key"), device.get("usable_memory_mb"), task,
+    )
+    if status != "verified":
+        print(
+            f"[提醒] 模型設定檔 {chosen} 的 {task} 在這台機器的驗證狀態是 {status}"
+            f"（{reason or '沒有額外說明'}），結果可能與已驗證平台不同。",
+            file=sys.stderr,
+        )
+    return chosen
 
 
 def preflight_image_task(args, style_checkpoint, comfy_url, request_timeout=DEFAULT_HTTP_TIMEOUT):
@@ -2550,6 +2634,15 @@ def _add_runtime_arguments(parser):
               "H3/Wan。未指定時可由 --config 的 video_config 或 ComfyUI/tools/video_capabilities.json 找到。"),
     )
     parser.add_argument(
+        "--profile", dest="profile_id", default=argparse.SUPPRESS,
+        help=("明確選用圖片模型設定檔（例如 sd15_light）；會檢查是否符合這台機器與 task。"
+              "未指定時用 image_capabilities.json 的 default_profile，再沒有就沿用 tier 對應。"),
+    )
+    parser.add_argument(
+        "--image-config", dest="image_config_path", default=argparse.SUPPRESS,
+        help="明確指定 machine-specific image_capabilities.json。",
+    )
+    parser.add_argument(
         "--timeout", type=float, default=argparse.SUPPRESS,
         help=(f"prompt 送達後輪詢生成結果的秒數上限；圖片預設 {DEFAULT_TIMEOUT:g}，"
               f"影片預設 {DEFAULT_VIDEO_TIMEOUT:g}。"),
@@ -2564,7 +2657,13 @@ def _validate_cli_args(args):
         validate_batch(args.batch)
         validate_lora_strength(args.lora_strength)
     if args.task in {"concept", "character_action", "pose_only", "style_lock", "icon_asset"}:
-        validate_dimensions(args.width, args.height)
+        # 沒給尺寸時由 builder 依選用的設定檔/device_config 補預設值,這裡只驗證使用者明確給的值。
+        # validate_dimensions 需要兩個值;未給的那一邊用合法佔位值 8,讓錯誤訊息只指向真正給錯的欄位。
+        if args.width is not None or args.height is not None:
+            validate_dimensions(
+                8 if args.width is None else args.width,
+                8 if args.height is None else args.height,
+            )
     if args.task == "flux2_concept":
         validate_flux2_dimensions(args.width, args.height)
     if args.task in {"inpaint", "guided_inpaint", "refine", "upscale"}:
@@ -2702,10 +2801,11 @@ def _build_image_task_graph(args, style_checkpoint, upload):
     return prompt, out_id
 
 def main(argv=None):
-    global ACTIVE_VIDEO_CONFIG
+    global ACTIVE_VIDEO_CONFIG, ACTIVE_IMAGE_PROFILE
     # A process may invoke main() more than once in tests or an embedding. Do
     # not let a previous machine config leak into a later task.
     ACTIVE_VIDEO_CONFIG = None
+    ACTIVE_IMAGE_PROFILE = None
     ap = argparse.ArgumentParser(description="穩定產圖核心腳本")
     _add_runtime_arguments(ap)
     sub = ap.add_subparsers(dest="task", required=True)
@@ -2746,8 +2846,8 @@ def main(argv=None):
 
     p_concept = sub.add_parser("concept", help="概念圖(純文字)", parents=[batch_lora_common])
     p_concept.add_argument("--prompt", required=True)
-    p_concept.add_argument("--width", type=int, default=DEVICE["default_width"])
-    p_concept.add_argument("--height", type=int, default=DEVICE["default_height"])
+    p_concept.add_argument("--width", type=int, default=None)
+    p_concept.add_argument("--height", type=int, default=None)
     p_concept.add_argument("--remove-bg", action="store_true")
 
     # Experimental FLUX.2 tasks are deliberately separate from model_common:
@@ -2788,8 +2888,8 @@ def main(argv=None):
     p_char.add_argument("--pose-strength", type=float, default=1.0)
     p_char.add_argument("--control-type", choices=["canny", "pose", "depth"], default="canny",
                          help="姿勢/構圖控制來源:canny=線稿邊緣(預設),pose=骨架姿勢,depth=深度圖")
-    p_char.add_argument("--width", type=int, default=DEVICE["default_width"])
-    p_char.add_argument("--height", type=int, default=DEVICE["default_height"])
+    p_char.add_argument("--width", type=int, default=None)
+    p_char.add_argument("--height", type=int, default=None)
     p_char.add_argument("--remove-bg", action="store_true")
 
     p_inpaint = sub.add_parser("inpaint", help="局部調整(需要來源圖 + 遮罩圖)", parents=[prompt_common])
@@ -2824,16 +2924,16 @@ def main(argv=None):
         "--control-backend", choices=["verified", "union"], default="verified",
         help="ControlNet 後端；verified=既有三顆正式模型(預設)，union=實驗性 xinsir ProMax A/B",
     )
-    p_pose.add_argument("--width", type=int, default=DEVICE["default_width"])
-    p_pose.add_argument("--height", type=int, default=DEVICE["default_height"])
+    p_pose.add_argument("--width", type=int, default=None)
+    p_pose.add_argument("--height", type=int, default=None)
     p_pose.add_argument("--remove-bg", action="store_true")
 
     p_style = sub.add_parser("style_lock", help="單獨鎖角色/風格一致性,姿勢隨意(不需要姿勢參考圖)", parents=[batch_lora_common])
     p_style.add_argument("--prompt", required=True)
     p_style.add_argument("--character-ref", required=True, help="角色/風格參考圖路徑")
     p_style.add_argument("--ip-weight", type=float, default=0.8)
-    p_style.add_argument("--width", type=int, default=DEVICE["default_width"])
-    p_style.add_argument("--height", type=int, default=DEVICE["default_height"])
+    p_style.add_argument("--width", type=int, default=None)
+    p_style.add_argument("--height", type=int, default=None)
     p_style.add_argument("--remove-bg", action="store_true")
 
     p_refine = sub.add_parser("refine", help="圖生圖:草稿精緻化 / 材質顏色變體(保留原圖構圖)", parents=[prompt_common])
@@ -3058,8 +3158,29 @@ def main(argv=None):
     except ValueError as exc:
         raise SystemExit(str(exc)) from exc
 
+    try:
+        capabilities, capabilities_source = None, None
+        if args.task in IMAGE_PROFILE_TASKS and not getattr(args, "profile_id", None):
+            capabilities, capabilities_source = load_image_capabilities(
+                getattr(args, "config_path", None), getattr(args, "image_config_path", None),
+            )
+        ACTIVE_IMAGE_PROFILE = resolve_image_profile(
+            args.task, getattr(args, "profile_id", None), capabilities, capabilities_source,
+        )
+    except RuntimeError as exc:
+        raise SystemExit(str(exc)) from exc
+    _sync_image_runtime()
+
     style_checkpoint = None
-    if getattr(args, "style", None):
+    if getattr(args, "style", None) and ACTIVE_IMAGE_PROFILE is not None:
+        active_profile = _profiles.load_profile(ACTIVE_IMAGE_PROFILE)
+        if args.style not in active_profile.get("variants", {}):
+            raise SystemExit(
+                f"--style {args.style} 不在模型設定檔 {ACTIVE_IMAGE_PROFILE!r}（{active_profile['family']}）的風格清單；"
+                f"這幾個風格 checkpoint 都是 SDXL 架構，跟非 SDXL 設定檔的 ControlNet/IPAdapter 對不上。"
+            )
+        style_checkpoint = active_profile["variants"][args.style]["checkpoint"]
+    elif getattr(args, "style", None):
         if DEVICE.get("tier") not in ("sdxl_high", "sdxl", "sdxl_light"):
             raise SystemExit(
                 f"--style 目前只支援 SDXL 家族機器(sdxl_high/sdxl/sdxl_light),"

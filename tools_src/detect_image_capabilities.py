@@ -7,7 +7,6 @@
 """
 
 import argparse
-import hashlib
 import json
 import os
 import platform
@@ -22,7 +21,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from comfyui_pipeline import profiles  # noqa: E402
 
 SCHEMA_VERSION = 1
-FINGERPRINT_FIELDS = ("platform_key", "backend", "tier", "gpu_name", "usable_memory_mb", "precision_support")
+device_fingerprint = profiles.device_fingerprint
 
 
 def _read_json(path, label):
@@ -62,12 +61,6 @@ def query_object_info(comfy_url, timeout):
     if not isinstance(payload, dict):
         return {"status": "error", "url": url, "classes": [], "error": "ComfyUI /object_info 回應不是 JSON object"}
     return {"status": "available", "url": url, "classes": sorted(str(name) for name in payload), "error": None}
-
-
-def device_fingerprint(device):
-    selected = {field: device.get(field) for field in FINGERPRINT_FIELDS}
-    encoded = json.dumps(selected, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 
 def _model_entry(entry, model_roots):
@@ -167,10 +160,28 @@ def detect(args):
         profile_id: evaluate_profile(profiles.load_profile(profile_id), device, model_roots, object_classes)
         for profile_id in profiles.list_profile_ids()
     }
-    tier_profile = profiles.profile_id_for_tier(device.get("tier"))
-    default_profile = None
-    if tier_profile and evaluated[tier_profile]["eligible"] and evaluated[tier_profile]["installed"]:
-        default_profile = tier_profile
+    requested = getattr(args, "default_profile", None)
+    if requested:
+        # 明確指定(例如大機器刻意選較小的設定檔):必須存在、符合平台且底模已安裝,不自動退回其他設定檔。
+        if requested not in evaluated:
+            raise RuntimeError(
+                f"找不到模型設定檔 {requested!r}；可用: {', '.join(sorted(evaluated))}"
+            )
+        chosen = evaluated[requested]
+        if not chosen["eligible"]:
+            raise RuntimeError(
+                f"模型設定檔 {requested!r} 不適用這台機器：" + "；".join(chosen["eligibility_reasons"])
+            )
+        if not chosen["installed"]:
+            raise RuntimeError(
+                f"模型設定檔 {requested!r} 的底模尚未安裝：{chosen['models']['checkpoint']['file']}"
+            )
+        default_profile = requested
+    else:
+        tier_profile = profiles.profile_id_for_tier(device.get("tier"))
+        default_profile = None
+        if tier_profile and evaluated[tier_profile]["eligible"] and evaluated[tier_profile]["installed"]:
+            default_profile = tier_profile
 
     return {
         "schema_version": SCHEMA_VERSION,
@@ -219,6 +230,10 @@ def build_parser():
     parser.add_argument("--device-config", help="device_config.json 路徑；預設 <ComfyUI>/tools/device_config.json")
     parser.add_argument("--comfy-url", help="可選；若 ComfyUI 正在執行則檢查 /object_info 的 node")
     parser.add_argument("--http-timeout", type=float, default=10.0)
+    parser.add_argument(
+        "--default-profile",
+        help="明確寫入 default_profile（例如大機器刻意選較小的設定檔）；不給就用 tier 對應且已安裝的設定檔",
+    )
     parser.add_argument("--out", help="輸出 JSON 路徑；預設 <ComfyUI>/tools/image_capabilities.json")
     parser.add_argument("--overwrite", action="store_true", help="明確允許更新既有 capability config")
     return parser

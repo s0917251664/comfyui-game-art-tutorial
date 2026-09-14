@@ -63,6 +63,14 @@ def validate_scale(scale):
 
 def require_sdxl_capability(feature, tier=None):
     """Fail before uploads/queueing when an SD1.5 graph needs SDXL add-ons."""
+    if tier is None and ACTIVE_PROFILE_ID is not None:
+        profile = _active_profile()
+        if profile["family"] != "sdxl":
+            raise RuntimeError(
+                f"{feature} 目前需要 SDXL 家族的 ControlNet/IPAdapter，"
+                f"但選用的模型設定檔是 {profile['id']!r}（{profile['family']}）；這個設定檔不支援這項功能。"
+            )
+        return
     current_tier = DEVICE.get("tier") if tier is None else tier
     if current_tier == "sd15" or (current_tier is not None and current_tier not in SDXL_TIERS):
         raise RuntimeError(
@@ -266,17 +274,35 @@ def load_device_config():
 
 DEVICE = load_device_config()
 CKPT = DEVICE["checkpoint"]
+# 明確選用的模型設定檔 id(generate.py 的 --profile 或 image_capabilities.json 的 default_profile)。
+# None = 沿用 tier 對應:底模與預設解析度讀 DEVICE(device_config.json),行為與第 1 階段相同。
+ACTIVE_PROFILE_ID = None
 
 
 def _active_profile():
-    """依目前 DEVICE 的 tier 回傳對應設定檔。
+    """回傳目前使用的設定檔。
 
-    沒有 tier(找不到 device_config.json 時的預設值)或 tier 不在任何設定檔時沿用 sdxl_standard,
-    跟重構前「寫死 SDXL 檔名」的行為一致;未知 tier 需要 add-on 時仍由 require_sdxl_capability 擋下。
-    底模 checkpoint 與預設解析度第 1 階段仍讀 DEVICE(device_config.json),不從設定檔覆寫。
+    有 ACTIVE_PROFILE_ID 時用它;否則依 DEVICE 的 tier 對應。沒有 tier(找不到 device_config.json
+    時的預設值)或 tier 不在任何設定檔時沿用 sdxl_standard,跟重構前「寫死 SDXL 檔名」的行為一致;
+    未知 tier 需要 add-on 時仍由 require_sdxl_capability 擋下。
     """
+    if ACTIVE_PROFILE_ID is not None:
+        return _profiles.load_profile(ACTIVE_PROFILE_ID)
     profile_id = _profiles.profile_id_for_tier(DEVICE.get("tier")) or DEFAULT_PROFILE_ID
     return _profiles.load_profile(profile_id)
+
+
+def _default_checkpoint():
+    if ACTIVE_PROFILE_ID is None:
+        return CKPT
+    return _profiles.model_file(_active_profile(), "checkpoint")
+
+
+def _default_size():
+    """預設畫布。選了設定檔時依這台機器的可用記憶體從設定檔挑,讓大機器選小設定檔也拿到對應解析度。"""
+    if ACTIVE_PROFILE_ID is None:
+        return DEVICE["default_width"], DEVICE["default_height"]
+    return _profiles.default_resolution(_active_profile(), DEVICE.get("usable_memory_mb") or 0)
 
 
 def _model(key):
@@ -315,14 +341,14 @@ def model_clip_refs(graph, lora_name=None, lora_strength=0.8, ckpt_node_id="1", 
 # ---------- task: concept (Ch3 系列:純文字概念圖) ----------
 def build_concept(prompt, negative=None, width=None, height=None, seed=None, steps=None, cfg=None, batch_size=1,
                    lora_name=None, lora_strength=0.8, checkpoint=None):
-    width = DEVICE["default_width"] if width is None else width
-    height = DEVICE["default_height"] if height is None else height
+    width = _default_size()[0] if width is None else width
+    height = _default_size()[1] if height is None else height
     validate_dimensions(width, height)
     validate_batch(batch_size)
     validate_lora_strength(lora_strength)
     negative = negative or DEFAULT_NEGATIVE
     s = _resolve_sampling(steps, cfg)
-    graph = {"1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or CKPT}}}
+    graph = {"1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or _default_checkpoint()}}}
     model_ref, clip_ref = model_clip_refs(graph, lora_name, lora_strength)
     graph.update({
         "2": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": clip_ref}},
@@ -472,7 +498,7 @@ def build_icon_asset(prompt, negative=None, width=1024, height=1024, seed=None, 
         require_sdxl_capability("icon_asset 的 appearance-ref/IPAdapter")
     negative = (negative or DEFAULT_NEGATIVE) + ICON_ASSET_NEGATIVE_SUFFIX
     s = _resolve_sampling(steps, cfg)
-    graph = {"1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or CKPT}}}
+    graph = {"1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or _default_checkpoint()}}}
     model_ref, clip_ref = model_clip_refs(graph, lora_name, lora_strength)
     graph.update({
         "2": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt + ICON_ASSET_PROMPT_SUFFIX, "clip": clip_ref}},
@@ -541,18 +567,18 @@ def build_character_action(prompt, character_ref_filename, pose_ref_filename, ne
                             lora_name=None, lora_strength=0.8, checkpoint=None):
     require_sdxl_capability("character_action (ControlNet/IPAdapter)")
     validate_dimensions(
-        DEVICE["default_width"] if width is None else width,
-        DEVICE["default_height"] if height is None else height,
+        _default_size()[0] if width is None else width,
+        _default_size()[1] if height is None else height,
     )
-    width = DEVICE["default_width"] if width is None else width
-    height = DEVICE["default_height"] if height is None else height
+    width = _default_size()[0] if width is None else width
+    height = _default_size()[1] if height is None else height
     validate_batch(batch_size)
     validate_unit_interval(ip_weight, "ip_weight")
     validate_unit_interval(pose_strength, "pose_strength")
     validate_lora_strength(lora_strength)
     negative = negative or DEFAULT_NEGATIVE
     s = _resolve_sampling(steps, cfg)
-    graph = {"1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or CKPT}}}
+    graph = {"1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or _default_checkpoint()}}}
     model_ref, clip_ref = model_clip_refs(graph, lora_name, lora_strength)
     graph.update({
         "2": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": clip_ref}},
@@ -607,7 +633,7 @@ def build_inpaint(prompt, image_filename, mask_filename, negative=None, denoise=
     negative = negative or DEFAULT_NEGATIVE
     s = _resolve_sampling(steps, cfg)
     return {
-        "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or CKPT}},
+        "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or _default_checkpoint()}},
         "2": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": ["1", 1]}},
         "3": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": ["1", 1]}},
         "4": {"class_type": "LoadImage", "inputs": {"image": image_filename}},
@@ -659,7 +685,7 @@ def build_guided_inpaint(prompt, image_filename, mask_filename, negative=None,
     negative = negative or DEFAULT_NEGATIVE
     s = _resolve_sampling(steps, cfg)
     graph = {
-        "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or CKPT}},
+        "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or _default_checkpoint()}},
         "2": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": ["1", 1]}},
         "3": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": ["1", 1]}},
         "4": {"class_type": "LoadImage", "inputs": {"image": image_filename}},
@@ -718,15 +744,15 @@ def build_pose_only(prompt, pose_ref_filename, negative=None, width=None, height
                      control_type="canny", lora_name=None, lora_strength=0.8, checkpoint=None,
                      control_backend="verified"):
     require_sdxl_capability("pose_only (ControlNet)")
-    width = DEVICE["default_width"] if width is None else width
-    height = DEVICE["default_height"] if height is None else height
+    width = _default_size()[0] if width is None else width
+    height = _default_size()[1] if height is None else height
     validate_dimensions(width, height)
     validate_batch(batch_size)
     validate_unit_interval(pose_strength, "pose_strength")
     validate_lora_strength(lora_strength)
     negative = negative or DEFAULT_NEGATIVE
     s = _resolve_sampling(steps, cfg)
-    graph = {"1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or CKPT}}}
+    graph = {"1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or _default_checkpoint()}}}
     model_ref, clip_ref = model_clip_refs(graph, lora_name, lora_strength)
     graph.update({
         "2": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": clip_ref}},
@@ -763,15 +789,15 @@ def build_style_lock(prompt, character_ref_filename, negative=None, width=None, 
                       seed=None, steps=None, cfg=None, ip_weight=0.8, batch_size=1,
                       lora_name=None, lora_strength=0.8, checkpoint=None):
     require_sdxl_capability("style_lock (IPAdapter)")
-    width = DEVICE["default_width"] if width is None else width
-    height = DEVICE["default_height"] if height is None else height
+    width = _default_size()[0] if width is None else width
+    height = _default_size()[1] if height is None else height
     validate_dimensions(width, height)
     validate_batch(batch_size)
     validate_unit_interval(ip_weight, "ip_weight")
     validate_lora_strength(lora_strength)
     negative = negative or DEFAULT_NEGATIVE
     s = _resolve_sampling(steps, cfg)
-    graph = {"1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or CKPT}}}
+    graph = {"1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or _default_checkpoint()}}}
     model_ref, clip_ref = model_clip_refs(graph, lora_name, lora_strength)
     graph.update({
         "2": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": clip_ref}},
@@ -809,7 +835,7 @@ def build_refine(prompt, image_filename, negative=None, denoise=0.6,
     negative = negative or DEFAULT_NEGATIVE
     s = _resolve_sampling(steps, cfg)
     return {
-        "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or CKPT}},
+        "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or _default_checkpoint()}},
         "2": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": ["1", 1]}},
         "3": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": ["1", 1]}},
         "4": {"class_type": "LoadImage", "inputs": {"image": image_filename}},
@@ -838,7 +864,7 @@ def build_upscale(prompt, image_filename, negative=None, scale=2.0, denoise=0.4,
     negative = negative or DEFAULT_NEGATIVE
     s = _resolve_sampling(steps, cfg)
     return {
-        "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or CKPT}},
+        "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or _default_checkpoint()}},
         "2": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": ["1", 1]}},
         "3": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": ["1", 1]}},
         "4": {"class_type": "LoadImage", "inputs": {"image": image_filename}},

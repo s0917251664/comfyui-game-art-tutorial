@@ -249,6 +249,8 @@ def _resolve_local_config_paths(local_config, config_dir):
     resolved["output_dir"] = _resolve_path(local_config["output_dir"], config_dir)
     video_config = local_config.get("video_config")
     resolved["video_config"] = _resolve_path(video_config, config_dir) if video_config else None
+    image_config = local_config.get("image_config")
+    resolved["image_config"] = _resolve_path(image_config, config_dir) if image_config else None
 
     if not resolved["comfyui_path"].is_dir():
         raise VerificationError("local_config.comfyui_path 指向的目錄不存在")
@@ -419,7 +421,41 @@ def _validate_video_config(local_paths, deployed_device_config, video_config, vi
     return available_backends
 
 
-def verify_install(repo_root, config_path, require_video=False, detector=None):
+def _load_profiles_module(repo_root):
+    profiles_path = repo_root / "tools_src" / "comfyui_pipeline" / "profiles.py"
+    spec = importlib.util.spec_from_file_location("_portable_profiles", profiles_path)
+    if spec is None or spec.loader is None or not profiles_path.is_file():
+        raise VerificationError("找不到 repo 的 comfyui_pipeline/profiles.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _validate_image_config(profiles_mod, deployed_device, image_config):
+    """回傳 default_profile(可能是 None);快照過期或預設設定檔不可用時丟 VerificationError。"""
+    if image_config.get("device_fingerprint") != profiles_mod.device_fingerprint(deployed_device):
+        raise VerificationError(
+            "image_capabilities.json 的設備指紋與部署的 device_config.json 不一致；請在目標機重跑 detect_image_capabilities.py"
+        )
+    default_profile = image_config.get("default_profile")
+    if default_profile is None:
+        return None
+    if default_profile not in profiles_mod.list_profile_ids():
+        raise VerificationError(f"default_profile {default_profile!r} 不是 repo 內的模型設定檔")
+    profile = profiles_mod.load_profile(default_profile)
+    reasons = profiles_mod.platform_eligibility(profile, deployed_device)
+    if reasons:
+        raise VerificationError(f"default_profile {default_profile!r} 不適用這台機器：" + "；".join(reasons))
+    checkpoint = (((image_config.get("profiles") or {}).get(default_profile) or {}).get("models") or {}).get("checkpoint") or {}
+    checkpoint_path = checkpoint.get("path")
+    if not checkpoint_path or not Path(checkpoint_path).is_file():
+        raise VerificationError(
+            f"default_profile {default_profile!r} 的底模檔案不存在：{checkpoint_path!r}；請補裝或重跑 detect_image_capabilities.py"
+        )
+    return default_profile
+
+
+def verify_install(repo_root, config_path, require_video=False, detector=None, require_image=False):
     repo_root = Path(repo_root).resolve(strict=False)
     config_path = Path(config_path)
     if not config_path.is_absolute():
@@ -457,6 +493,24 @@ def verify_install(repo_root, config_path, require_video=False, detector=None):
     else:
         results.append(("pass", "device_config 對照 live detect()", "部署 snapshot 與目標機 live detect() 一致"))
 
+    image_config_path = paths["image_config"] or paths["comfyui_path"] / "tools" / "image_capabilities.json"
+    if image_config_path.is_file():
+        image_config = _load_json_object(image_config_path, "image_config")
+        try:
+            default_profile = _validate_image_config(_load_profiles_module(repo_root), deployed_device, image_config)
+        except VerificationError as exc:
+            results.append(("fail", "image_config", str(exc)))
+        else:
+            results.append((
+                "pass", "image_config",
+                f"default_profile: {default_profile}" if default_profile
+                else "快照與設備一致；沒有 default_profile，圖片 task 沿用 tier 對應",
+            ))
+    elif require_image:
+        results.append(("fail", "image_config", "image_capabilities.json 不存在；請執行 detect_image_capabilities.py"))
+    else:
+        results.append(("info", "尚未產生 image_capabilities.json；圖片 task 沿用 tier 對應，送出前仍會檢查 node/模型。"))
+
     if require_video:
         video_config_path = paths["video_config"] or _default_video_config_path(paths["comfyui_path"])
         video_config = _load_json_object(video_config_path, "video_config")
@@ -481,6 +535,10 @@ def build_parser():
     parser.add_argument("--repo-root", default=Path(__file__).resolve().parents[1], help="repo 根目錄")
     parser.add_argument("--config", default="local_config.json", help="local_config.json 路徑")
     parser.add_argument("--require-video", action="store_true", help="同時驗證 video_capabilities.json")
+    parser.add_argument(
+        "--require-image", action="store_true",
+        help="image_capabilities.json 不存在時判為 FAIL（存在時一律驗證）",
+    )
     return parser
 
 
@@ -489,7 +547,8 @@ def main(argv=None, detector=None):
     args = parser.parse_args(argv)
     try:
         results, passed, failed = verify_install(
-            args.repo_root, args.config, require_video=args.require_video, detector=detector
+            args.repo_root, args.config, require_video=args.require_video, detector=detector,
+            require_image=args.require_image,
         )
     except VerificationError as exc:
         print(f"[FAIL] {exc}")
