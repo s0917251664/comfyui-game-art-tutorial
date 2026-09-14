@@ -195,7 +195,7 @@
 6. 用哪個 task(`img2video` / `character_video` / `camera_move` / `pose_drive` / `transition` / `fx_loop`)
 7. 跟前一鏡怎麼接(硬切 / 首尾幀 / 尾幀延續)
 
-這份鏡頭表是「影片版的固定問題」,對應 `comfyui-art-gen/SKILL.md` 裡每個 task 那組必問清單。
+這份鏡頭表是影片版的必要輸入整理，對應 `comfyui-video-gen/SKILL.md` 裡每個 task 的必要資訊。
 
 > **歷史設計註記(2026-08-26):** 原稿曾要求等第一個 task 實作後才寫操作 skill。現況是影片 CLI 與 `skills/comfyui-video-gen/SKILL.md` 已上線；使用者要求做一部片時仍先出鏡頭表，再逐鏡呼叫 task，最後視需要用 `video_concat` 做基本串接。
 
@@ -344,7 +344,7 @@ MiniMax H3 官方最小組(Comfy-Org,2026-08-26 核過 Hugging Face API):
 ### 第 2 階段:第一個穩定 task = `img2video`(已完成)
 
 - `generate.py` 已新增 task,鎖死模型檔名、步數、預設解析度/幀數
-- skill 固定問題:要動的那張圖、怎麼動、要不要 loop(不要就走 `img2video`,要就走 `fx_loop` 或同一 task 的 loop 預設)
+- skill 必要輸入:要動的那張圖、怎麼動、要不要 loop(不要就走 `img2video`,要就走 `fx_loop` 或同一 task 的 loop 預設)
 - 用現有產線的一張角色圖、一張圖示、一張場景,各跑一次,打開影片驗收(動作對不對、還是不是那張圖)
 - 文件:`教學.md` 功能地圖已同步；install `models.md` 已有影片段落；XU-Nano-PC 的版本與實機 smoke 已寫入 verified manifest，其他機器仍要各自 capture
 - 此階段結束的驗收:**使用者用自然語言說「讓這張圖動起來」,agent 能穩定交一支短 mp4**

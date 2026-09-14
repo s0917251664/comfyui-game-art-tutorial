@@ -1,48 +1,57 @@
+---
+name: comfyui-new-tool-checklist
+description: 為新增圖片、影片或本機工具能力建立適用的安裝、程式、實測與文件檢查；依能力類型勾選，不把不相關流程強加進來。
+---
+
 # 新工具/新能力上線檢查清單
 
 給任何操作這個 repo 的 agent(Claude Code、Codex、Gemini CLI 等)使用的技能說明。
 
 ## 何時使用
 
-當要幫這條產線新增一個新工具/新技術/新 task 時使用——不管是新增一種 ControlNet 類型、新增一個生成步驟(像 Upscale)、新增一個完全不同的生成引擎,還是既有 task 加一個新參數。**不管改動看起來多小、需求是誰提的,只要是「這條產線多了一個能力」,就照這份清單走完整輪,不要因為改動小就跳過幾步。**
+當要幫這條產線新增工具、技術、task 或既有 task 的新參數時使用——包括圖片 task／模型、影片 task／backend，或 Simple Mask、SAM、合成等本機工具。先辨認本次受影響的能力類型，可同時涉及多類；逐項檢查適用性，不能因改動小而省略適用項目。既有能力的純文件修正不套用完整新增能力流程。
 
 這份清單不是憑空想的,是把這個專案實際新增 ControlNet Pose/Depth、Upscale 這兩個能力時走過的完整流程整理出來的——過程中踩過的坑(文件跟程式碼講的不一樣、workflow JSON 手滑寫壞格式、模型寫死綁定 SDXL 卻沒講清楚)都變成了下面的檢查項目。
 
 ## 核心原則
 
-- 每一步都要真的做,不能因為「這次改動很小」就跳過——文件/程式碼/workflow 沒同步更新,下次接手的人(agent 或人類,包括未來的你自己)看到的會是過時或彼此矛盾的資訊,比完全沒有文件更糟
+- 檢查要和能力類型及風險相稱：圖片生成才檢查圖片 graph／模型與 `comfyui-art-gen`，影片才檢查影片 backend／runtime 與 `comfyui-video-gen`，本機工具才檢查自己的 CLI、輸出與部署；不要一律要求 custom node、ComfyUI queue 或另一個 skill。
+- 適用的每一步都要真的做，跳過時寫明原因；文件/程式碼/部署不同步會讓接手的人看到矛盾資訊。
 - 完成後要能有信心回答這句話:「如果現在讓一個完全沒看過這次對話的人接手,他讀這些文件能不能正確理解、正確使用這個新工具?」
-- 覺得某一步不適用(例如這次新增的東西沒有對應的手動操作方式,workflows/ 那步可以跳過),要明確講出「這步跳過,因為 XXX」,不要悄悄不做也不提
+- 不因為清單存在就增加沒有必要的流程、資料夾或 workflow；只留下能證明這項能力可用的最小證據。
 
 ## 檢查清單
 
-### 1. 安裝面(新工具需要新模型/新 custom node 時)
+### 1. 安裝面（依能力類型）
 
-- [ ] 模型/custom node 加進 `skills/comfyui-install/SKILL.md` 對應的表格,附上下載來源、用途、**最後確認日期**
-- [ ] 標明這個新工具是不是綁定特定底模架構(SDXL/SD1.5/...)——如果是,要在文件裡講清楚,不要讓它變成另一個「看起來通用、其實只在 SDXL 上驗證過」的坑
-- [ ] 實際跑一次下載/安裝步驟確認真的能裝起來,不要只是寫下載指令但沒執行過就當作完成
+- [ ] **圖片模型／custom node：** 模型來源加進 `skills/comfyui-install/reference/models.md`，custom node 安裝步驟更新 `skills/comfyui-install/SKILL.md`，附用途、最後確認日期與底模家族；實際安裝或如實記錄尚未安裝。
+- [ ] **影片模型／runtime／node：** 更新影片安裝與 capability 說明，標明 backend 綁定與實際依賴；實際安裝或如實記錄尚未安裝。
+- [ ] **本機工具：** 檢查自己的 Python 套件、外部 runtime、本機路徑與部署契約；若工具包含 Simple Mask 這類 custom node，照其契約同步 `tools/` 與 `custom_nodes/`，沒有則不新增無關依賴。
 
-### 2. 程式碼面(`tools_src/generate.py`)
+### 2. 程式碼與部署面
 
-- [ ] 新 task 或新參數遵守現有設計哲學:鎖死大部分參數,只留必要欄位可調,不要一次開放一堆旗標讓使用者自己組
-- [ ] 圖片模型檔名、取樣參數、預設解析度、task 可用範圍屬於**模型設定檔**(`tools_src/comfyui_pipeline/profiles/*.json`),不要寫死在 `image_graphs.py`。新增圖片模型要補進對應設定檔的 `models`/`tasks`,驗證狀態(`validation`)只能在實機驗證後才標 `verified`/`experimental`
-- [ ] 刻意改變圖片 graph 時,執行 `python tests/golden_image_graphs.py --write` 重產對照檔,並在 diff 裡確認只有預期的節點變了;非刻意的 graph 變化會讓 `tests/test_image_profiles.py` 失敗
-- [ ] 非顯而易見的技術決策(為什麼選這個模型、有什麼已知限制/技術債)寫成程式碼註解——不要只留在對話紀錄裡,那些之後沒人看得到
-- [ ] 改完 `tools_src/generate.py` 後,同步複製部署到 `<ComfyUI 安裝路徑>/tools/generate.py`(照 `AGENTS.md` 講的,不要讓這兩份長期不同步)
-- [ ] 至少確認語法沒錯(例如 `python -c "import ast; ast.parse(open(...).read())"`)
+- [ ] **圖片／影片 task：** 保持必要輸入與參數最小化；圖片模型檔名、取樣參數、解析度與 task 範圍放在既有 image profile，影片能力放在 video catalog／capability config；FLUX.2 維持獨立路線，不套用 image profile。
+- [ ] **修改 `tools_src/generate.py` 或 `tools_src/comfyui_pipeline/` 時：** 至少檢查語法與受影響的測試；圖片 graph 有刻意變更才執行 `python tests/golden_image_graphs.py --write`，並審查 diff 確認只有預期節點變更。
+- [ ] **部署產線 facade／package 時：** 同步 `tools_src/generate.py` 與整個 `tools_src/comfyui_pipeline/` 到 `<ComfyUI 安裝路徑>/tools/`；只改本機工具時改走該工具自己的部署契約。
+- [ ] **本機工具程式碼：** 依其實際入口與 package 一起驗證、部署；若有 custom node，確認 `tools/` 與 `custom_nodes/` 的同步範圍。
+- [ ] 至少確認受影響 Python 檔案語法沒錯（例如 `python -c "import ast; ast.parse(open(...).read())"`）。
+- [ ] 非顯而易見的技術決策與已知限制寫在受影響的程式碼或文件中。
 
-### 3. 實測驗證(「真的跑過」,不是「應該會動」)
+### 3. 實測驗證（依能力類型）
 
-- [ ] 真的呼叫一次新 task/新參數,確認 ComfyUI 沒有丟出 node error
-- [ ] 檢查輸出檔案本身是否符合預期(尺寸、格式、通道),不是「有印出檔名就算過」——例如去背要驗證 alpha channel 真的有透明區域、放大要驗證尺寸真的變成對應倍率
-- [ ] 沒有 ComfyUI 環境、沒辦法實測時,如實告知使用者這件事還沒驗證過,不要假裝測試通過
+- [ ] **圖片：** 實際呼叫受影響的 task／參數，檢查 ComfyUI graph、輸出尺寸／格式／通道與主觀畫面驗收；模型設定檔的 `validation` 只有實機驗收後才能標 `verified` 或 `experimental`。
+- [ ] **影片：** 實際呼叫受影響的 task／backend，檢查 runtime、輸出契約、sidecar、音訊與畫面驗收。
+- [ ] **本機工具：** 直接執行工具的 smoke test，檢查輸出檔案、格式與錯誤處理；不要求 ComfyUI queue。
+- [ ] 沒有相符的實機環境時，如實記錄未驗證項目，不把離線檢查當成實測通過。
 
-### 4. 文件面
+### 4. 文件面（只更新受影響入口）
 
-- [ ] `skills/comfyui-art-gen/SKILL.md`:新 task 要補「任務判斷」表格 + 「各 task 該問的固定問題」小節 + CLI usage 範例;既有 task 加新參數的話,補 `reference/full-params.md` 對應列
-- [ ] `教學.md`:功能地圖(第 0.5 章 A 段)裡對應這個新能力的那一列,更新掉「還沒收錄」之類的舊字樣;視情況補一個新章節/段落講解這個技術是什麼、怎麼用、**已實測驗證的證據**(不要用「應該可以」帶過)
-- [ ] 新增了新的技能檔案(`skills/<name>/SKILL.md`)的話,`AGENTS.md` 的核心文件清單要加一行連過去,講清楚「什麼時候該讀這份文件」
-- [ ] **SKILL.md 只放「每次都要走的判斷流程/固定問題/執行指令」,遇到問題才需要查的深度說明(踩過的坑、完整參數表、邊界情況)放進 `skills/<name>/reference/*.md`,並在 SKILL.md 對應位置留一句指向那份文件的話**——這個專案已經在 `comfyui-art-gen`、`comfyui-install`、`comfyui-pipeline-review` 這幾個 skill 採用這個拆法,新增內容時判斷屬於哪一類、放進對的地方,不要把新的踩坑細節或大段表格直接塞回 SKILL.md 主體讓它越長越肥
+- [ ] **圖片 task／參數：** 更新 `skills/comfyui-art-gen/SKILL.md` 的任務判斷、必要輸入與 CLI；參數細節放 `skills/comfyui-art-gen/reference/full-params.md`。
+- [ ] **影片 task／backend：** 更新 `skills/comfyui-video-gen/SKILL.md` 與必要的影片 reference。
+- [ ] **本機工具：** 更新該工具自己的 skill／reference、`AGENTS.md` 部署說明或 `教學.md` 受影響段落，不補無關圖片流程。
+- [ ] 新增技能時，在 `AGENTS.md` 核心文件清單加入入口與觸發條件；既有技能分工改變時同步更新。
+- [ ] `教學.md` 的功能地圖或操作段落只有在能力對外可用時才更新，並附實測證據；尚未實測就明確標示。
+- [ ] SKILL.md 保留每次都要走的判斷、必要輸入與指令；踩坑、完整參數與邊界情況放 reference，避免入口膨脹。
 
 ### 5. workflows/(選配,不是義務性同步)
 

@@ -11,16 +11,16 @@ description: 規劃並執行單一角色的一組遊戲動畫素材流程，從�
 
 ## 責任邊界
 
-- 產圖方式、固定問題與圖片產後驗收：`skills/comfyui-art-gen/SKILL.md`
+- 產圖方式、必要輸入與圖片產後驗收：`skills/comfyui-art-gen/SKILL.md`
 - 影片 task、backend、輸出契約、sidecar 與影片產後驗收：`skills/comfyui-video-gen/SKILL.md`
 - 新 provider、新 task 或新後製能力：先走 `skills/comfyui-new-tool-checklist/SKILL.md`，不能在本流程臨場補 graph 或假裝已支援
 - 模型升級比較：只有使用者明確要求時才走 `skills/comfyui-pipeline-review/SKILL.md`
 
 本技能只安排順序、保存決策與設置人工驗收點，不重複定義底層 task 參數，也不改寫 `generate.py` 的 `pass`／`warning`／`fail` 契約。
 
-## 開始前固定確認
+## 開始前必要確認
 
-**先確認這台機器能跑哪些 task，再跟使用者確認需求。** 讀 `image_capabilities.json`（靜幀要用的 `character_action`、`style_lock` 等，看 `available` 與 `validation`）與 `video_capabilities.json`（各 backend 的 `capabilities`），列出本流程可能用到的 task 哪些可用、驗證狀態為何。規則同 `skills/comfyui-art-gen/SKILL.md`「這台機器能跑什麼」與影片技能的同名段落：
+**先確認這台機器能跑哪些 task，再補問缺少的需求。** 先使用附件與前文已提供的角色圖、偏好、尺寸、FPS、授權及驗收決定；不要重複詢問已有答案。讀 `image_capabilities.json`（靜幀要用的 `character_action`、`style_lock` 等，看 `available` 與 `validation`）與 `video_capabilities.json`（各 backend 的 `capabilities`），列出本流程可能用到的 task 哪些可用、驗證狀態為何。規則同 `skills/comfyui-art-gen/SKILL.md`「這台機器能跑什麼」與影片技能的同名段落：
 
 - 不可用的 task 不列入動作表的方案，並告訴使用者缺什麼。
 - 整條路線缺關鍵能力（例如沒有任何影片 backend，或有動作參考影片卻沒有可用的 `pose_drive`）時，**在排動作表之前就停下告知**，不要先做完靜幀才發現影片做不了。
@@ -45,7 +45,7 @@ description: 規劃並執行單一角色的一組遊戲動畫素材流程，從�
 
 ### 2. 逐動作選 task
 
-只從「開始前固定確認」確認可用的 task 裡選；某個動作最適合的 task 在這台機器不可用時，說明取捨讓使用者決定，不自動換成另一個 task 硬做。
+只從「開始前必要確認」確認可用的 task 裡選；某個動作最適合的 task 在這台機器不可用時，說明取捨讓使用者決定，不自動換成另一個 task 硬做。
 
 - 原構圖內做 Idle／展示動作：`img2video`
 - 明確需要無縫循環的元素：`fx_loop`
@@ -75,9 +75,15 @@ description: 規劃並執行單一角色的一組遊戲動畫素材流程，從�
 
 把結果與原因回報使用者，由使用者決定接受、調整或放棄。未接受的原始影片仍保留供比較；不自動重送，也不在未確認狀態時覆寫。
 
-### 6. 接受後才抽幀或合成
+### 6. 準備並交付抽幀或合成
 
-只有動作內容接受後，才使用現有 `--extract-frames`／`fx_loop` 預設抽幀，或進行 `video_composite`。後製不能修復角色變形、重心錯誤或動作理解錯誤。
+需要影格時，支援該旗標的 task 在生成時帶 `--extract-frames`；`fx_loop` 預設抽幀，不使用此旗標。工具會在 MP4 通過契約檢查並寫入 sidecar 後準備 frames；這些影格仍屬候選輸出。只有動作內容經使用者接受後，才把準備好的 frames 或 `fx_loop` 的影格視為正式交付，或進行 `video_composite`。若生成時未準備 frames，接受後可直接對既有 MP4 重新執行既有 helper `extract_video_frames(video_path, output_dir)`，不必新增 CLI task，也不得為了抽幀重新生成影片。使用 `local_config.json` 的 `python_exe`（已安裝 PyAV 與 Pillow），將 `generate_script` 的所在資料夾及已驗收 MP4、輸出根目錄作為 argv 傳入：
+
+```text
+<python_exe> -c "import sys; from pathlib import Path; sys.path.insert(0, str(Path(sys.argv[1]))); from generate import extract_video_frames; extract_video_frames(sys.argv[2], sys.argv[3])" "<generate_script 所在資料夾>" "<accepted.mp4>" "<output_dir>"
+```
+
+helper 會在 `<output_dir>/<影片檔名移除副檔名與尾端底線>_frames/` 建立影格，完整解碼且至少一幀後才替換舊影格集；失敗會保留舊影格。它不重跑生成，也不重建 sidecar；執行後核對影格數與已驗收 sidecar 的實際幀數一致。路徑依所在 shell 正確引用；PowerShell 使用帶引號的執行檔路徑時加 `&`。後製不能修復角色變形、重心錯誤或動作理解錯誤。
 
 抽幀與合成完成後，再依影片技能檢查輸出尺寸、FPS、影格數、音訊政策與實際畫面。不要把綠幕合成稱為透明序列，也不要宣稱支援目前沒有的 APNG／sprite sheet 包裝。
 

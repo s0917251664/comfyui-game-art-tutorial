@@ -1,6 +1,6 @@
 # icon_asset 的 --structure-ref:結構/顏色配置已有明確答案時怎麼辦
 
-`skills/comfyui-art-gen/SKILL.md` 的 `icon_asset` 固定問題第 5 點指向這裡——平常不用讀,只有「結構描述用文字講不清楚」或「AI 一直畫不準確定的數量/配置」時才查。
+`skills/comfyui-art-gen/SKILL.md` 的 `icon_asset` 必要輸入第 5 點指向這裡——平常不用讀,只有「結構描述用文字講不清楚」或「AI 一直畫不準確定的數量/配置」時才查。
 
 ## 這是什麼
 

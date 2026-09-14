@@ -1,3 +1,8 @@
+---
+name: comfyui-video-gen
+description: 將短片、循環特效與鏡頭需求路由到既有影片 task，依 machine-specific 能力生成、驗收與交付；不處理靜態圖片產圖。
+---
+
 # ComfyUI 遊戲美術產影片
 
 給任何操作這個 repo 的 agent 使用。設計背景見同資料夾 `DESIGN.md`。
@@ -43,7 +48,9 @@
 
 時長沒要求就 **2 秒**,上限 6 秒,更長拆鏡。
 
-## 固定問題
+## 必要輸入
+
+先使用附件、前文已提供的素材與偏好；只補這支 task 缺少且無法合理推定的必要輸入，不重複詢問已確認的路徑、尺寸、時長或授權。以下清單保留主觀驗收需要使用者決定的項目。
 
 ### img2video
 1. 靜幀路徑
@@ -183,7 +190,7 @@ pose_drive:
 - 沒有「AI 自動判斷主體邊界」的影片去背/合成(沒有語意分割模型)——`video_composite` 是 chroma key,只吃乾淨綠幕素材,對任意實拍影片/雜亂背景不適用；效果好壞取決於前景綠幕乾不乾淨跟 `--tolerance`/`--softness` 調得準不準,不保證任意素材都摳得乾淨
 - `video_composite` 只保留前景音軌並丟棄背景音軌；需要背景聲、配樂或混音時交給外部剪接工具
 - `camera_move` 的 `--camera` 是枚舉;有 last_frame 的 backend 會再餵幾何終點靜幀(見 `reference/camera-move.md`)。`orbit_*` 只靠 prompt
-- `video_concat` 每支都有音軌才接立體聲;有任何一支無聲,整段當無聲(不要半段有聲)
+- `video_concat` 預設 `--audio-policy require-consistent`：混合有聲／無聲會拒絕並要求明確選擇；`drop` 丟掉全部音軌，`silence-missing` 為缺音鏡補靜音。不要把拒絕誤解成輸出整段無聲。
 - `pose_drive` 要角色靜幀 + 動作影片,而且**靜幀姿勢要接近動作片第一幀**;對不上會雙人/重影,不要拿兩張不相干的素材硬綁。歷史上 H3 臉比 Wan 穩，實際選擇以 capability config 為準；只要快才在確認 capability 後明確給 `--backend wan`
 - 每支影片輸出都會在 CLI 回報 task/backend、尺寸、FPS、幀數、音訊、耗時與輸出路徑；同名輸出預設拒絕覆寫，只有明確給 `--overwrite` 才會更新
 - 各 backend 能力表 / machine-specific config 規則,見 `reference/backends.md`

@@ -1,3 +1,8 @@
+---
+name: comfyui-install
+description: 在新機器上依硬體與既有狀態完成 ComfyUI 遊戲美術產線安裝、部署與能力偵測；這是判斷清單，不是固定腳本。
+---
+
 # ComfyUI 產線安裝
 
 給任何操作這個 repo 的 agent(Claude Code、Codex、Gemini CLI 等)使用的技能說明。

@@ -1,3 +1,8 @@
+---
+name: comfyui-art-gen
+description: 將遊戲美術需求分類為既有圖片 task，依本機能力與必要輸入執行並驗收；不處理影片或未接入的生成能力。
+---
+
 # ComfyUI 遊戲美術產圖
 
 給任何操作這個 repo 的 agent(Claude Code、Codex、Gemini CLI 等)使用的技能說明。
@@ -17,7 +22,7 @@
 
 把使用者的自然語言需求,轉成呼叫 `generate.py` 的結構化參數。目的是**穩定產圖**,不是即興生成——每個 task 對應鎖死大部分參數的 ComfyUI workflow,只有明確列出的欄位可調。
 
-**先問清楚必要資訊,再執行一次;不要開放式閒聊,不要重複生成瞎猜。** 每個 task 只問下面列出的固定問題,使用者答不出來的欄位就用預設值,不要無限追問——這是為了減少 token 浪費跟避免「用自然語言盲猜結果」的狀況。
+**先用附件與前文已提供的偏好、輸入路徑、尺寸和授權，補齊真正必要的資訊再執行。** 下面的清單是必要輸入的參考，不是逐字重問的問卷；已有答案不要重複問，只有缺少且無法合理推定時才問。使用者答不出來的非必要欄位用預設值，不要開放式閒聊或重複生成瞎猜；內容仍須保留後述的主觀驗收點。
 
 **產出後自己驗收,不要只看有沒有報錯。** 腳本執行成功、檔案格式/尺寸正確,不代表內容真的符合使用者要求——實際打開圖片檢查使用者提出的具體特徵(例如指定的顏色、動作、構圖是否真的出現)。不符合時,先判斷是哪個參數的貼合強度蓋過了文字描述(常見是 `--ip-weight`、`--pose-strength`、`--denoise` 這類「參考圖 vs. 文字描述」的拉鋸參數),調整後重新生成一次再比對,不要把單次結果沒達標的參數硬算過關,也不要因為之前某次測試用某個數字有效就把那個數字寫死當成通用預設。
 
@@ -58,16 +63,18 @@
 - **產出圖片一律要存回 `<output_dir>`(repo 裡的 `output/`),不要讓使用者需要跑去 ComfyUI 安裝目錄找圖**:每次呼叫都加上 `--output-dir <output_dir>`。腳本執行完會印出實際路徑,直接把這個路徑告訴使用者。`generate.py` 本身部署在 ComfyUI 安裝目錄底下只是執行環境,使用者體感上應該完全感覺不到 ComfyUI 這個東西的存在
 - **換到別的設備時**:照 `skills/comfyui-install/SKILL.md` 的流程重新走一次(或至少重跑 `tools_src/detect_device.py`),會依 GPU/VRAM 自動產生 `device_config.json`,`generate.py` 會自動讀這份設定決定 checkpoint/解析度,不用手動改程式碼;接著重跑 `detect_image_capabilities.py`,舊的 `image_capabilities.json` 設備指紋對不上時 `generate.py` 會拒絕使用
 
-### 這台機器能跑什麼(模型設定檔)
+### 這台機器能跑什麼（SDXL/SD1.5 模型設定檔）
 
-同一組圖片 task 可以跑在不同的模型設定檔上(`tools_src/comfyui_pipeline/profiles/*.json`):`sdxl_standard`(SDXL,完整功能)與 `sd15_light`(SD1.5,只有基礎路徑)。**規劃任何圖片 task 之前,先讀 `image_capabilities.json`**(`local_config.json` 的 `image_config`,或 `<comfyui_path>/tools/image_capabilities.json`),確認:
+SDXL/SD1.5 圖片 task 可以跑在不同的模型設定檔上(`tools_src/comfyui_pipeline/profiles/*.json`):`sdxl_standard`(SDXL,完整功能)與 `sd15_light`(SD1.5,只有基礎路徑)。**規劃使用 image profile 的 SDXL/SD1.5 task 之前,先讀 `image_capabilities.json`**(`local_config.json` 的 `image_config`,或 `<comfyui_path>/tools/image_capabilities.json`),確認:
 
-1. `default_profile` 是哪一份;使用者明確要求換管線時才加 `--profile`
+1. `default_profile` 是哪一份;使用者明確要求換 SDXL/SD1.5 管線時才加 `--profile`。`flux2_concept`／`flux2_edit` 不使用 image profile，改走獨立的 FLUX.2 Core node 與模型 preflight
 2. `profiles.<設定檔>.tasks.<task>.available`:不可用時看 `missing_files`/`missing_nodes`,如實告知缺什麼
 3. `tasks.<task>.validation`:`verified` 直接做;`experimental` 先說明是實驗性;`unverified` 先說明「這台平台或記憶體級距沒有驗證紀錄,結果可能較差」,使用者同意再做
 4. 要用的額外功能看 `features`(例如 `controlnet.pose` 不可用時,不要提議 `--control-type pose`)
 
 這份檔案是快照:裝了新模型或 custom node 後要重跑 `detect_image_capabilities.py --overwrite`。檔案不存在時(舊安裝)退回看 `device_config.json` 的 tier:`sdxl_high`/`sdxl`/`sdxl_light` 對應 `sdxl_standard`,`sd15` 對應 `sd15_light`,並建議使用者補跑偵測。不管快照怎麼寫,`generate.py` 送出前仍會比對 ComfyUI `/object_info`,缺 node 或模型一律停止。
+
+FLUX.2 不屬於上述 image profile 或 SDXL tier；`generate.py` 會以 `validate_flux2_capability` 獨立檢查 `/object_info` 的必要 Core nodes 與模型清單。preflight 通過只代表所需 node／模型存在，不代表這台硬體已驗證可跑；硬體與品質證據見 `教學.md` 第 8.75 章及 `docs/tested-versions.md`，不能把其他設備的結果當成本機已驗證。
 
 `sd15_light` 只有 `concept`、`icon_asset`(不帶參考圖)、`inpaint`、`guided_inpaint`(不帶 ControlNet/外觀參考)、`refine`、`upscale`、`layer_split`;`pose_only`、`style_lock`、`character_action`、`--style` 與 SDXL ControlNet/IPAdapter 參數都不支援,這不是換一顆 SD1.5 模型就會自動修好。各設定檔的調校經驗(取樣參數、預設解析度、風格變體眉角、驗證紀錄)見 `reference/profiles/<設定檔 id>.md`。
 
@@ -78,7 +85,7 @@
 在對照下面「任務判斷」表挑 task 之前,先照這個順序確認要不要用 `generate.py`:
 
 1. **有沒有現成 task 覆蓋這個需求?** 對照下面「任務判斷」表跟 `reference/full-params.md`。有覆蓋就用它,不要因為「MCP 比較彈性」或「自己組 graph 比較快」就繞過去——這條產線存在的目的就是要比臨場組圖穩定、可重現,能用鎖死 task 就不要繞道。
-2. **這台機器能不能跑、驗證過沒有?** 照上面「這台機器能跑什麼」小節讀 `image_capabilities.json`。task 不可用或設定檔不提供(例如 `sd15_light` 要 `style_lock`)就不要硬送——`generate.py` 會在上傳前 fail-fast 拒絕,不會產出爛結果,但也不會自動找替代方案。如實告訴使用者「這台機器目前跑不了這個 task」和缺什麼,選項是補裝(照 `skills/comfyui-install/SKILL.md`)、換一台已裝好的機器(`--comfy-url` 指過去)、或先不做;`unverified` 要先講清楚再做。**不要為了避開錯誤自行換設定檔或降級**(使用者明確要求換管線時才加 `--profile`,規則見 `reference/full-params.md`「選用模型設定檔」),也**不要因為 task 存在就假設任何機器都能跑**。影片是同一套邏輯,查 `video_capabilities.json` 有沒有可用 backend,見 `skills/comfyui-video-gen/SKILL.md`。
+2. **這台機器能不能跑、驗證過沒有?** SDXL/SD1.5 task 照上面小節讀 `image_capabilities.json`；FLUX.2 依上節核對獨立 preflight 所需內容與實測紀錄，先告知是實驗性路線；沒有適用硬體的實測紀錄時，說明尚未驗證並依使用者同意進行試跑。task 不可用或設定檔不提供(例如 `sd15_light` 要 `style_lock`)就不要硬送——`generate.py` 會在上傳前 fail-fast 拒絕,不會產出爛結果,但也不會自動找替代方案。如實告訴使用者「這台機器目前跑不了這個 task」和缺什麼,選項是補裝(照 `skills/comfyui-install/SKILL.md`)、換一台已裝好的機器(`--comfy-url` 指過去)、或先不做;`unverified` 要先講清楚再做。**不要為了避開錯誤自行換設定檔或降級**(使用者明確要求換管線時才加 `--profile`,規則見 `reference/full-params.md`「選用模型設定檔」),也**不要因為 task 存在就假設任何機器都能跑**。影片是同一套邏輯,查 `video_capabilities.json` 有沒有可用 backend,見 `skills/comfyui-video-gen/SKILL.md`。
 3. **⚠️ 尚未實作,先別當成可用選項——沒有現成 task 覆蓋,而且是一次性/探索性需求**(使用者在旁邊看效果、不是要排程量產、不是要當最終交付物)→ 規劃中是改用 ComfyUI MCP 直接操作,並跟使用者明講這次輸出沒有走鎖死管線,沒有 output contract/capability 驗證/resume 保障,品質自負,不要悄悄把 MCP 產出當成跟 `generate.py` 同等可靠。**這個 repo 目前還沒接 ComfyUI MCP,這條規則接上之前不適用——遇到這種需求,現在只能如實跟使用者說「目前沒有對應工具,做不到」,不要假裝有 MCP 可以救援,也不要自己臨場亂組 graph 頂替。**
 4. **沒有現成 task 覆蓋,而且這個需求會重複用到**(使用者說「以後常常要這樣」、或這其實要上生產線)→ 不要一直停在 MCP 或手動操作,照 `skills/comfyui-new-tool-checklist/SKILL.md` 把它轉正成真正的 task。
 
@@ -103,11 +110,11 @@
 | 「去背」「透明背景」 | 加 `--remove-bg` 旗標,可疊加在 `concept`/`pose_only`/`style_lock`/`character_action`/`refine` 之後(`icon_asset` 永遠去背,不用加旗標) | — |
 | 「多出幾個版本比較」「一次看幾種可能性」 | 加 `--batch N` 旗標,只有 `concept`/`icon_asset`/`pose_only`/`style_lock`/`character_action` 支援(探索型任務才需要);問使用者要幾張,沒概念就用 3 | — |
 
-## 各 task 該問的固定問題
+## 各 task 必要輸入
 
-> **這四個 task(concept / pose_only / style_lock / character_action)都要多問一題:圖片尺寸/比例有沒有要求?** 例如直式角色圖、橫式場景圖、正方形圖示、遊戲引擎規定的固定尺寸。使用者沒概念或沒特別要求就用預設值(不用主動報數字出來),有要求就用 `--width`/`--height` 帶入(數值必須是正整數且為 8 的倍數,實際可用上限仍受 VRAM/設備限制,常見值:1024x1024 方形、832x1216 直式、1216x832 橫式)。這題容易被忽略但常常很重要——遊戲素材有固定尺寸規格是常態,產出來尺寸不對通常等於要重做。
+> **這四個使用 image profile 的 task(concept / pose_only / style_lock / character_action)在前文與附件都沒有尺寸答案時才補問:圖片尺寸/比例有沒有要求?** 例如直式角色圖、橫式場景圖、正方形圖示、遊戲引擎規定的固定尺寸。沒有要求就用預設值；有要求才用 `--width`/`--height` 帶入(數值必須是正整數且為 8 的倍數,實際可用上限仍受 VRAM/設備限制,常見值:1024x1024 方形、832x1216 直式、1216x832 橫式)。
 
-> **`--style`(除 `layer_split` 外全部 task 都支援)不用主動問,使用者對這次美術方向有明確偏好時才用。** 例如「這次想要偏插畫感/概念設計稿的感覺」→ `--style illustration`,「二次元/動漫風」→ `--style anime`,「寫實一點」→ `--style realistic`。不給就完全沿用這台機器裝機時鎖定的預設 checkpoint,不要為了「風格更好」自作主張加這個旗標。只支援 `sdxl_standard` 設定檔,對應 checkpoint 沒下載過會在送出前停止,細節見 `reference/full-params.md` 跟 `reference/known-limitations.md`。**用 `--style anime` 時,prompt 開頭一定要加 `score_9, score_8_up, score_7_up`(Pony Diffusion V6 XL 的固定用法,至少 3 個 score 標籤),不加實測會出現灰階/構圖跑掉的不穩定結果,細節見 `reference/profiles/sdxl_standard.md`「風格變體」。**
+> **`--style` 只適用 SDXL 圖片 task（`layer_split`、FLUX.2 task 除外），不用主動問。** 使用者對 SDXL 這次美術方向有明確偏好時才用，例如「偏插畫感」→ `--style illustration`、「二次元」→ `--style anime`、「寫實」→ `--style realistic`。不給就沿用這台機器鎖定的預設 checkpoint；FLUX.2 不支援 `--style`、`--rating`、negative、batch、LoRA 或 SDXL 專用 ControlNet/IPAdapter 旗標。只支援 `sdxl_standard` 設定檔,對應 checkpoint 沒下載過會在送出前停止,細節見 `reference/full-params.md` 跟 `reference/known-limitations.md`。**用 `--style anime` 時,prompt 開頭一定要加 `score_9, score_8_up, score_7_up`(Pony Diffusion V6 XL 的固定用法,至少 3 個 score 標籤),不加實測會出現灰階/構圖跑掉的不穩定結果,細節見 `reference/profiles/sdxl_standard.md`「風格變體」。**
 
 ### concept(概念圖)
 1. 想畫什麼(轉成英文 prompt,SDXL 對英文 prompt 理解較準)
@@ -137,7 +144,7 @@
 
 ### layer_split(從定稿完成圖拆出單一圖層)
 1. 來源圖路徑(**必須是已經定稿的完成圖**,不是重新生成——這個 task 不吃 prompt,純粹裁切透明度)
-2. **一定要請使用者提供這一層的遮罩圖**,原則同 `inpaint`(alpha 語意一樣:要保留進這一層的區域 alpha=0,其餘 alpha=255),建議用 MaskEditor 畫
+2. **一定要有使用者確認過這一層的遮罩範圍**,原則同 `inpaint`(alpha 語意一樣:要保留進這一層的區域 alpha=0,其餘 alpha=255)。若前文或附件沒有現成遮罩，可手繪或採用 SAM 候選，查看 preview 後請使用者確認
 3. 這一層要取什麼名字(`--layer-name`,用來組輸出檔名前綴,例如 `border`、`center_hub`)
 4. 一次呼叫只拆一層,要拆幾層就呼叫幾次——**適合大塊、邊界明確的區域**(例如外框/中心鈕),不適合切太細碎或太多張視覺相似的區域(例如轉盤裡 8 片幾乎一樣的分區隔板),這種高度重複的元素該怎麼處理,見下面「複合元件的圖層」小節,不要硬用 `layer_split` 切
 
@@ -145,14 +152,14 @@
 使用者要「一個複合元件,但各個構件要能分開疊放/調色/動畫」時,依構件類型判斷用哪種做法,不要不分青紅皂白都套同一招:
 - **結構相異的大塊**(外框、中心鈕、指針這類長相彼此不同、只有一個的構件):各自用 `icon_asset` 呼叫一次獨立生成。想讓幾次呼叫的色調/材質風格盡量一致,prompt 裡重複寫同一組風格關鍵字(例如都寫 "gold ornate fantasy style, teal gemstone accents"),但**不保證完全一致**,仍需要美術後製微調——AI 獨立生成之間本來就沒有像素級一致性保證
 - **高度重複的元素**(例如轉盤的每個分區隔板,肉眼看起來該長一樣的那種):**不要**逐一各自生成,也**不要**事後用 `layer_split` 從一張合成圖裡切割相鄰的相似色塊——兩種做法都不可靠(前者色差/比例不一致,後者邊界抓不準)。看使用者要的是「一片樣板自己去複製組裝」還是「一張結構已經對的完整成品圖」:前者用 `icon_asset` 生一片分區樣板,交給使用者在自己的工具(Figma/遊戲引擎)裡旋轉複製組成整圈;後者用 `icon_asset` 的 `--structure-ref`(見 `reference/structure-ref.md`)在單次生成裡把整個放射狀結構跟顏色配置一次鎖住,不用使用者自己組裝,但代價是精細裝飾細節會被結構鎖一定程度壓掉
-- **已經有一張定稿合成圖,想事後切出幾個大塊區域**:用 `layer_split`,見上面固定問題
+- **已經有一張定稿合成圖,想事後切出幾個大塊區域**:用 `layer_split`,見上面必要輸入
 - **可先用 `sam_segment.py` 自動產生候選遮罩**，適合完整角色、尾巴、靴子、耳朵、口袋等邊界明確區域；候選不帶語意名稱，眼睛、手指與交疊瀏海等小部位可能不會自動成為候選。必須查看 contact sheet／preview 後才可交給 `layer_split`，細節見 `reference/sam-segmentation.md`。
 
 > 判斷理由/背景說明見 `reference/layered-assets.md`,平常照上面判斷就好,不用每次都讀。
 
 ### pose_only(單獨姿勢/構圖控制)
 1. 想要的畫面文字描述
-2. **一定要跟使用者要姿勢/線稿參考圖的檔案路徑**(照片、簡筆骨架圖、線稿都可以)
+2. 若前文或附件沒有姿勢／線稿參考圖，才取得檔案路徑(照片、簡筆骨架圖、線稿都可以)
 3. 尺寸/比例有沒有要求(見上面提示)
 4. 姿勢的精準度(--pose-strength,預設 1.0)通常不用問
 5. 構圖控制來源(--control-type,預設 canny)通常不用問,選擇判斷跟稀疏線稿的踩坑細節見 `reference/control-type-selection.md`
@@ -160,14 +167,14 @@
 
 ### style_lock(單獨角色/風格一致性)
 1. 想要的新場景/情境文字描述
-2. **一定要跟使用者要角色/風格參考圖的檔案路徑**(沒有的話無法保持一致性,不要憑空生成後假裝有一致性)
+2. 若前文或附件沒有角色／風格參考圖，才取得檔案路徑(沒有的話無法保持一致性,不要憑空生成後假裝有一致性)
 3. 尺寸/比例有沒有要求(見上面提示)
 4. 貼合強度(--ip-weight,預設 0.8)通常不用問,除非使用者主動提
 
 ### character_action(角色動作圖,姿勢 + 角色都要鎖)
 1. 想要的動作/姿勢文字描述
-2. **一定要跟使用者要角色參考圖的檔案路徑**
-3. **一定要跟使用者要姿勢/線稿參考圖的檔案路徑**——如果使用者沒有,可以建議「拍一張自己擺拍的照片,或畫一個簡單火柴人也行」
+2. 若前文或附件沒有角色參考圖，才取得檔案路徑
+3. 若前文或附件沒有姿勢／線稿參考圖，才取得檔案路徑——可以建議「拍一張自己擺拍的照片,或畫一個簡單火柴人也行」
 4. 尺寸/比例有沒有要求(見上面提示)
 5. 角色貼合強度(--ip-weight,預設 0.8)、姿勢精準度(--pose-strength,預設 1.0)通常不用問
 6. 構圖控制來源(--control-type,預設 canny)通常不用問,判斷原則同 `pose_only`,見 `reference/control-type-selection.md`
@@ -180,7 +187,7 @@
 
 ### inpaint(局部調整)
 1. 來源圖路徑
-2. **一定要請使用者提供遮罩圖**。一般使用者不知道 ComfyUI 時，優先用下方 Simple Mask Session 建立本機連結，指導只需「塗紅要修改的地方，按完成」；維護者才需要直接使用 ComfyUI MaskEditor。不要自己用文字描述猜測修改區域，座標／範圍必須來自使用者實際繪製並確認的遮罩。
+2. **一定要有使用者確認過的遮罩範圍**。可沿用已提供的遮罩、透過下方 Simple Mask Session 手繪，或先用 SAM 產生候選。Agent 要查看實際預覽；SAM 另先查看 contact sheet。使用者在編輯頁按完成，或已明確接受相同候選，即算確認，不重複詢問；範圍改變時才重新確認。不要自己用文字描述猜測修改區域；格式轉換可由工具處理。
 3. 想要新內容的描述
 4. 保留原圖程度(denoise,預設 1.0 = 完全重畫遮罩區域,想保留更多原圖細節可以問要不要調低)
 
@@ -193,19 +200,19 @@
 3. 指導使用者：「紅色區域會重新生成；沒塗紅的地方盡量保留。塗完按完成。」不必介紹節點、Alpha、Sampler 或 ComfyUI Workflow。
 4. 使用者完成後先執行 `status`；狀態為 `completed` 才執行 `fetch`。取回 `mask_editor.png`、`mask_comfy.png`、`preview.png`；必須先實際查看 `preview.png`，確認範圍正確後才能送 `inpaint`／`guided_inpaint`。
 5. 空遮罩會被拒絕；選取超過 98% 會要求二次確認。每個工作階段以不可猜測 Token 隔離，來源與結果暫存在本機 ComfyUI temp，fetch 後保存回指定 output。
-6. 這是獨立的純手動畫遮罩工具，不含也不依賴 SAM。SAM 候選可以供它選配匯入／複核，但兩者只透過標準遮罩交換。
+6. 這是獨立的純手動畫遮罩工具，不含也不依賴 SAM。SAM 候選可先查看後作為標準遮罩輸入；需要修正時再用此工具手繪，兩者只透過標準遮罩交換。
 
 ### SAM 2.1 自動候選遮罩
 
 1. 需要來源圖片與獨立的新輸出資料夾；輸出資料夾非空時工具會拒絕覆寫。
-2. 執行後先查看 `contact_sheet.png`，再查看準備採用候選的 `candidate_NN_preview.png`。
+2. 執行後先查看 `contact_sheet.png`，再查看準備採用候選的 `candidate_NN_preview.png`，並請使用者確認範圍。
 3. 候選沒有「尾巴／眼睛／衣服」等語意名稱；必須依紅色預覽判斷，不可只看 score。
-4. 選中後，把對應的 `candidate_NN_mask_comfy.png` 傳給 `layer_split`、`inpaint` 或 `guided_inpaint`。邊界不完整時改用 Simple Mask Tool 人工修正。
+4. 使用者確認後，把對應的 `candidate_NN_mask_comfy.png` 傳給 `layer_split`、`inpaint` 或 `guided_inpaint`。邊界不完整時改用 Simple Mask Tool 人工修正並再次確認。
 5. 大輪廓與獨立配件效果較好；極小、交疊或視覺相似部位不保證被分開。完整限制與實測見 `reference/sam-segmentation.md`。
 
 ### guided_inpaint(局部重繪 + 結構鎖定 / 外觀參考圖)
 1. 來源圖路徑
-2. **一定要請使用者提供遮罩圖**,原則同 `inpaint`(alpha 語意一樣,遮罩最好只蓋要換外觀的區域,不要順手蓋到不想動的部分,例如肩章/徽章這種容易被模型腦補補回來的細節——經驗上遮罩範圍越貪心,不想要的東西越容易一起被重新生成)
+2. **一定要有使用者確認過的遮罩範圍**,原則同 `inpaint`；可沿用已確認的遮罩、手繪或採用 SAM 候選；先查看 preview，沿用既有確認，範圍改變時才重新確認。遮罩最好只蓋要換外觀的區域,不要順手蓋到不想動的部分,例如肩章/徽章這種容易被模型腦補補回來的細節——經驗上遮罩範圍越貪心,不想要的東西越容易一起被重新生成
 3. **判斷外觀要靠文字描述、還是使用者有現成的一張參考圖(例如自己畫的材質/紋理圖)**——有圖的話優先用 `--appearance-ref`,純文字描述紋理細節通常講不清楚
    - 有參考圖:跟使用者要圖的檔案路徑,提醒最好是**乾淨的材質特寫**(就一塊紋理,不要整張場景照),不然背景/光影會一起被帶進來污染結果(原則同 IPAdapter 角色參考圖要裁緊的教訓)
    - 沒有參考圖:正常問想要的新內容文字描述
@@ -229,7 +236,7 @@
 
 `generate.py` 會在建立 graph 或上傳參考圖前檢查可調參數；超出界線就直接報錯，不要用環境或手寫 workflow 繞過固定 CLI 契約：
 
-- `width`、`height`:正整數且為 8 的倍數；沒有設定通用的最大像素值，是否能跑仍取決於該 tier 的 VRAM。
+- `width`、`height`:SDXL/SD1.5 可調尺寸須為正整數且為 8 的倍數；`flux2_concept` 須為 16 的倍數，`flux2_edit` 不開放自訂尺寸。沒有通用的最大像素值，是否能跑仍取決於硬體與所用模型。
 - `batch`:正整數（`>= 1`），只有探索型 task 支援；帶 `--structure-ref` 的 `icon_asset` 仍以單張範本 latent 為準。
 - `ip-weight`、`pose-strength`、`control-strength`、`appearance-weight`、`lora-strength`、`denoise`:有限數值 `0..1`（包含端點）。
 - `scale`:有限數值 `> 0` 且 `<= 4`。
@@ -297,7 +304,7 @@ SAM 2.1 自動候選遮罩（不經 ComfyUI queue；工具在 `<ComfyUI>/tools/s
 
 ## 深入參考(邊界情況/踩過的坑,查這裡,不用每次都讀)
 
-平常只問「各 task 該問的固定問題」列出的項目、照「執行」的指令模板呼叫就好。遇到下面這些狀況才需要多讀一份參考文件:
+平常只補「各 task 必要輸入」缺少的項目、照「執行」的指令模板呼叫就好。遇到下面這些狀況才需要多讀一份參考文件:
 
 | 狀況 | 讀這份 |
 |---|---|
