@@ -13,3 +13,4 @@ __pycache__/
 device_config.json
 image_capabilities.json
 video_capabilities.json
+reports
