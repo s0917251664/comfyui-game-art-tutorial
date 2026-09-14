@@ -84,6 +84,7 @@ class GenerateTests(unittest.TestCase):
 
     def test_parser_accepts_runtime_options_before_or_after_task(self):
         with mock.patch.object(self.generate, "build_concept", return_value=({}, "1")), \
+                mock.patch.object(self.generate, "preflight_image_task", return_value=True), \
                 mock.patch.object(self.generate, "submit_and_wait", return_value={"outputs": {}}), \
                 mock.patch.object(self.generate, "download_outputs", return_value=[]) as download:
             self.generate.main(["--comfy-url", "http://before:8188", "--timeout", "12", "concept", "--prompt", "x"])
@@ -353,12 +354,103 @@ class GenerateTests(unittest.TestCase):
     def test_main_downloads_only_transparent_saveimage_after_background_removal(self):
         graph = {"1": {"class_type": "SaveImage", "inputs": {}}}
         with mock.patch.object(self.generate, "build_concept", return_value=(graph, "1")), \
+                mock.patch.object(self.generate, "preflight_image_task", return_value=True), \
                 mock.patch.object(self.generate, "attach_bg_removal", return_value="9") as attach, \
                 mock.patch.object(self.generate, "submit_and_wait", return_value={"outputs": {}}), \
                 mock.patch.object(self.generate, "download_outputs", return_value=["out.png"]) as download:
             self.generate.main(["--comfy-url", "http://server:8188", "concept", "--prompt", "x", "--remove-bg"])
         attach.assert_called_once_with(graph, "1")
         self.assertEqual(["9"], download.call_args.kwargs["node_ids"])
+
+    def _object_info_for(self, graph, drop_nodes=(), drop_models=()):
+        """依 graph 產生剛好足夠的 /object_info;可指定要拿掉的 node 或模型檔。"""
+        payload = {}
+        for node in graph.values():
+            class_type = node["class_type"]
+            if class_type in drop_nodes:
+                continue
+            entry = payload.setdefault(class_type, {"input": {"required": {}}})
+            field = self.generate.IMAGE_MODEL_INPUTS.get(class_type)
+            if field:
+                options = entry["input"]["required"].setdefault(field, [[]])[0]
+                value = node["inputs"][field]
+                if value not in drop_models and value not in options:
+                    options.append(value)
+        return payload
+
+    def _full_graph(self, task_args, remove_bg=False):
+        graph, out_id = self.generate._build_image_task_graph(
+            task_args, None, lambda _p: self.generate.PREFLIGHT_IMAGE_PLACEHOLDER,
+        )
+        if remove_bg:
+            self.generate.attach_bg_removal(graph, out_id)
+        return graph
+
+    def test_image_preflight_rejects_missing_custom_node_before_upload(self):
+        argv = ["pose_only", "--prompt", "x", "--pose-ref", "pose.png", "--control-type", "pose"]
+        args = SimpleNamespace(task="pose_only", prompt="x", negative=None, width=None, height=None, seed=1,
+                               pose_ref="pose.png", pose_strength=1.0, batch=1, control_type="pose",
+                               lora=None, lora_strength=0.8, control_backend="verified")
+        payload = self._object_info_for(self._full_graph(args), drop_nodes=("OpenposePreprocessor",))
+        with mock.patch.object(self.generate, "_fetch_comfy_object_info", return_value=payload), \
+                mock.patch.object(self.generate, "upload_image") as upload, \
+                mock.patch.object(self.generate, "submit_and_wait") as submit:
+            with self.assertRaisesRegex(SystemExit, "OpenposePreprocessor"):
+                self.generate.main(["--comfy-url", "http://server:8188"] + argv)
+        upload.assert_not_called()
+        submit.assert_not_called()
+
+    def test_image_preflight_rejects_missing_model_file_before_upload(self):
+        argv = ["style_lock", "--prompt", "x", "--character-ref", "char.png"]
+        args = SimpleNamespace(task="style_lock", prompt="x", negative=None, width=None, height=None, seed=1,
+                               character_ref="char.png", ip_weight=0.8, batch=1, lora=None, lora_strength=0.8)
+        payload = self._object_info_for(
+            self._full_graph(args), drop_models=(self.generate._image_graphs.IPADAPTER_MODEL,),
+        )
+        with mock.patch.object(self.generate, "_fetch_comfy_object_info", return_value=payload), \
+                mock.patch.object(self.generate, "upload_image") as upload:
+            with self.assertRaisesRegex(SystemExit, "ip-adapter-plus_sdxl_vit-h"):
+                self.generate.main(["--comfy-url", "http://server:8188"] + argv)
+        upload.assert_not_called()
+
+    def test_image_preflight_checks_background_removal_model(self):
+        argv = ["concept", "--prompt", "x", "--remove-bg"]
+        args = SimpleNamespace(task="concept", prompt="x", negative=None, width=None, height=None, seed=1,
+                               batch=1, lora=None, lora_strength=0.8, remove_bg=True)
+        payload = self._object_info_for(
+            self._full_graph(args, remove_bg=True), drop_models=(self.generate._image_graphs.BG_REMOVAL_MODEL,),
+        )
+        with mock.patch.object(self.generate, "_fetch_comfy_object_info", return_value=payload), \
+                mock.patch.object(self.generate, "submit_and_wait") as submit:
+            with self.assertRaisesRegex(SystemExit, "birefnet"):
+                self.generate.main(["--comfy-url", "http://server:8188"] + argv)
+        submit.assert_not_called()
+
+    def test_image_preflight_passes_then_uploads_and_submits(self):
+        argv = ["style_lock", "--prompt", "x", "--character-ref", "char.png"]
+        args = SimpleNamespace(task="style_lock", prompt="x", negative=None, width=None, height=None, seed=1,
+                               character_ref="char.png", ip_weight=0.8, batch=1, lora=None, lora_strength=0.8)
+        payload = self._object_info_for(self._full_graph(args))
+        with mock.patch.object(self.generate, "_fetch_comfy_object_info", return_value=payload), \
+                mock.patch.object(self.generate, "upload_image", return_value="char.png") as upload, \
+                mock.patch.object(self.generate, "submit_and_wait", return_value={"outputs": {}}) as submit, \
+                mock.patch.object(self.generate, "download_outputs", return_value=["out.png"]):
+            self.generate.main(["--comfy-url", "http://server:8188"] + argv)
+        upload.assert_called_once()
+        submit.assert_called_once()
+
+    def test_object_info_options_accepts_legacy_and_combo_schema(self):
+        legacy = {"CheckpointLoaderSimple": {"input": {"required": {"ckpt_name": [["a.safetensors"], {}]}}}}
+        combo = {"CheckpointLoaderSimple": {"input": {"required": {
+            "ckpt_name": ["COMBO", {"options": ["b.safetensors"]}]}}}}
+        self.assertEqual(["a.safetensors"], self.generate._object_info_options(legacy, "CheckpointLoaderSimple", "ckpt_name"))
+        self.assertEqual(["b.safetensors"], self.generate._object_info_options(combo, "CheckpointLoaderSimple", "ckpt_name"))
+        self.assertIsNone(self.generate._object_info_options({}, "CheckpointLoaderSimple", "ckpt_name"))
+
+    def test_flux2_tasks_do_not_use_profile_preflight(self):
+        self.assertNotIn("flux2_concept", self.generate.IMAGE_PROFILE_TASKS)
+        self.assertNotIn("flux2_edit", self.generate.IMAGE_PROFILE_TASKS)
+        self.assertIn("layer_split", self.generate.IMAGE_PROFILE_TASKS)
 
     def test_video_backend_unsupported_combination_fails_fast_without_argv_fallback(self):
         with mock.patch.object(self.generate.sys, "argv", ["test_generate.py"]):

@@ -50,6 +50,8 @@
 - `--style` 三個候選底模也只支援 SDXL 家族。
 - `flux2_concept` / `flux2_edit` 不使用這個 SDXL tier 契約；它們有獨立模型／Core node preflight，缺任一 FLUX.2 模型或節點時會在圖片上傳／queue 前停止。這不代表低 VRAM 機器自動支援，仍以該機 smoke test 為準。
 
+tier 符合之後，`concept`、`icon_asset`、`character_action`、`inpaint`、`guided_inpaint`、`pose_only`、`style_lock`、`refine`、`upscale`、`layer_split` 還會做一次**安裝狀態 preflight**：用佔位檔名把這次實際要送出的 graph（含 `--remove-bg`／`icon_asset` 的去背節點）先組一次，逐節點比對 `/object_info`，缺任何 node class 或 loader 選單裡沒有對應模型檔（checkpoint、ControlNet、IPAdapter、CLIP Vision、BiRefNet、放大模型、LoRA）就在上傳前停止並列出缺什麼。模型檔名與取樣參數來自 `tools_src/comfyui_pipeline/profiles/*.json`。
+
 不符合 tier 的組合會在參考圖上傳或建立 ComfyUI 佇列前被拒絕，避免先產生一個必然 shape mismatch 的工作。若要支援 SD1.5 的 ControlNet/IPAdapter，必須另配同家族模型並完成實機驗證，不能只替換 checkpoint 檔名。
 
 ## 目前沒有開放的參數(刻意鎖死,不要嘗試加旗標繞過)

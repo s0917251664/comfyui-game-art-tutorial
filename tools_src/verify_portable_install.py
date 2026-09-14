@@ -27,6 +27,7 @@ SYNC_SOURCE_FILES = (
     ("comfyui_pipeline/video_catalog.py", Path("tools_src/comfyui_pipeline/video_catalog.py"), Path("tools/comfyui_pipeline/video_catalog.py")),
     ("comfyui_pipeline/video_graphs.py", Path("tools_src/comfyui_pipeline/video_graphs.py"), Path("tools/comfyui_pipeline/video_graphs.py")),
     ("comfyui_pipeline/profiles.py", Path("tools_src/comfyui_pipeline/profiles.py"), Path("tools/comfyui_pipeline/profiles.py")),
+    ("detect_image_capabilities.py", Path("tools_src/detect_image_capabilities.py"), Path("tools/detect_image_capabilities.py")),
 )
 # 模型設定檔數量會增加,依 repo 實際檔案動態核對,不在這裡逐一列名。
 PROFILES_REPO_DIR = Path("tools_src/comfyui_pipeline/profiles")
@@ -77,6 +78,14 @@ def _normalize_int(value):
     if isinstance(value, bool) or not isinstance(value, int):
         return value
     return int(value)
+
+
+def _normalize_list(value):
+    if value is None:
+        return None
+    if not isinstance(value, (list, tuple)):
+        return value
+    return tuple(sorted(str(item).strip().lower() for item in value))
 
 
 def _resolve_path(value, base_dir):
@@ -130,6 +139,11 @@ def _compare_device_configs(live_config, deployed_config):
         "vram_mb": (_normalize_int, _normalize_int),
         "unified_memory_mb": (_normalize_int, _normalize_int),
         "torch_index_url": (_normalize_text, _normalize_text),
+        "platform_key": (_normalize_text, _normalize_text),
+        "usable_memory_mb": (_normalize_int, _normalize_int),
+        "memory_kind": (_normalize_text, _normalize_text),
+        "compute_capability": (_normalize_text, _normalize_text),
+        "precision_support": (_normalize_list, _normalize_list),
     }
     for field, (live_norm, deployed_norm) in comparators.items():
         live_value = live_norm(live_config.get(field))

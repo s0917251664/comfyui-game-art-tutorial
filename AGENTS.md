@@ -15,6 +15,7 @@
 - `tools_src/sam_segment.py` —— SAM 2.1 自動候選遮罩工具；固定使用官方 `facebook/sam2.1-hiera-small`，輸出 contact sheet、預覽、cutout 與符合既有 Alpha 契約的 `mask_comfy.png`。候選必須人工驗收後才能交給 `layer_split`／局部重繪。
 - `tools_src/comfyui_pipeline/profiles/*.json` —— **圖片模型設定檔**(模型檔名、取樣參數、依記憶體的預設解析度、可用 task、各平台驗證狀態),全平台共用、進版控,隨 `comfyui_pipeline/` 一起部署;每台機器只是依 `device_config.json` 的 tier 選用其中一份。**要換圖片模型檔名或取樣參數,改設定檔,不要改 `image_graphs.py`**。設計見 `docs/model-profiles-design.md`
 - `tools_src/detect_device.py` —— 設備能力偵測(GPU/VRAM/OS),輸出 `device_config.json` 給 `generate.py` 讀取,決定用哪個 checkpoint/解析度
+- `tools_src/detect_image_capabilities.py` —— 圖片能力偵測(依模型設定檔掃描這台機器的平台資格、已裝模型、可選的 ComfyUI nodes 與各 task 驗證狀態),輸出 machine-specific `image_capabilities.json`;只掃描,不下載。`generate.py` 另會在上傳前用 `/object_info` 檢查 SDXL 路線 graph 需要的 node 與模型檔
 - `tools_src/detect_video_capabilities.py` —— 影片能力偵測(既有模型、影片 runtime、可選的 ComfyUI nodes),輸出 machine-specific `video_capabilities.json`;只掃描已安裝內容,不下載模型或套件
 - `workflows/` —— **不進版控**(見 `.gitignore`)。ComfyUI workflow JSON 檔案,是 `generate.py` 背後鎖死的產圖流程定義,給維護這條產線的人(不是美術)在 ComfyUI 網頁介面手動開、除錯、開發新能力時視覺化參考用,屬於本機個人產物,跟 `教學.md` 第 9 章「自己存一份到 `~/ComfyUI/user/default/workflows/`」是同一件事。不強制每個 `generate.py` 新能力都要補對應檔案——有空、真的會用到再補,不用當成義務性的同步負擔
 

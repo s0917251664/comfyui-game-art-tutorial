@@ -589,6 +589,87 @@ def _node_combo_values(payload, node_name, input_name):
     return values
 
 
+IMAGE_GRAPH_TASKS = frozenset((
+    "concept", "flux2_concept", "flux2_edit", "icon_asset", "character_action", "inpaint",
+    "guided_inpaint", "pose_only", "style_lock", "refine", "upscale", "layer_split",
+))
+# 走模型設定檔(profiles/*.json)的圖片 task;FLUX.2 另有 validate_flux2_capability。
+IMAGE_PROFILE_TASKS = IMAGE_GRAPH_TASKS - {"flux2_concept", "flux2_edit"}
+PREFLIGHT_IMAGE_PLACEHOLDER = "__preflight_input__.png"
+# 會載入模型檔的 loader node 與它的檔名 input;送出前逐一比對 /object_info 的選項清單。
+IMAGE_MODEL_INPUTS = {
+    "CheckpointLoaderSimple": "ckpt_name",
+    "ControlNetLoader": "control_net_name",
+    "IPAdapterModelLoader": "ipadapter_file",
+    "CLIPVisionLoader": "clip_name",
+    "LoadBackgroundRemovalModel": "bg_removal_name",
+    "UpscaleModelLoader": "model_name",
+    "LoraLoader": "lora_name",
+}
+
+
+def _object_info_options(payload, node_name, input_name):
+    """讀 combo 選項;同時支援舊格式 [[...], {...}] 與新格式 ["COMBO", {"options": [...]}]。"""
+    try:
+        inputs = payload[node_name]["input"]
+    except (KeyError, TypeError):
+        return None
+    for section in ("required", "optional"):
+        spec = (inputs.get(section) or {}).get(input_name) if isinstance(inputs, dict) else None
+        if not isinstance(spec, (list, tuple)) or not spec:
+            continue
+        if isinstance(spec[0], list):
+            return spec[0]
+        if spec[0] == "COMBO" and len(spec) > 1 and isinstance(spec[1], dict):
+            options = spec[1].get("options")
+            if isinstance(options, list):
+                return options
+    return None
+
+
+def check_image_graph_against_object_info(graph, payload):
+    """回傳 (缺少的 node class, 缺少的模型描述);兩者都空代表 ComfyUI 端具備這個 graph。"""
+    classes = {node.get("class_type") for node in graph.values() if isinstance(node, dict)}
+    missing_nodes = sorted(name for name in classes if name not in payload)
+    missing_models = set()
+    for node in graph.values():
+        class_type = node.get("class_type")
+        field = IMAGE_MODEL_INPUTS.get(class_type)
+        if not field or class_type in missing_nodes:
+            continue
+        value = node.get("inputs", {}).get(field)
+        options = _object_info_options(payload, class_type, field)
+        if options is None:
+            missing_models.add(f"{class_type}.{field}（ComfyUI node schema 讀不到模型清單）")
+        elif value not in options:
+            missing_models.add(f"{value}（{class_type}）")
+    return missing_nodes, sorted(missing_models)
+
+
+def preflight_image_task(args, style_checkpoint, comfy_url, request_timeout=DEFAULT_HTTP_TIMEOUT):
+    """在上傳/排隊前確認 ComfyUI 有這次 graph 需要的全部 node 與模型檔。
+
+    不另外維護「哪個 task 需要哪些模型」的規則:用佔位檔名把實際要送出的 graph(含去背)
+    空組一次,再逐節點比對 /object_info。缺任何一項就停止,不上傳參考圖、不觸發下載。
+    """
+    graph, out_id = _build_image_task_graph(
+        args, style_checkpoint, lambda _path: PREFLIGHT_IMAGE_PLACEHOLDER,
+    )
+    if args.task == "icon_asset" or getattr(args, "remove_bg", False):
+        attach_bg_removal(graph, out_id)
+    payload = _fetch_comfy_object_info(comfy_url, request_timeout=request_timeout)
+    missing_nodes, missing_models = check_image_graph_against_object_info(graph, payload)
+    if not missing_nodes and not missing_models:
+        return True
+    parts = [f"ComfyUI 缺少 {args.task} 需要的內容，已在上傳/排隊前停止"]
+    if missing_nodes:
+        parts.append("缺少 node（通常是 custom node 未安裝）: " + ", ".join(missing_nodes))
+    if missing_models:
+        parts.append("缺少模型檔: " + ", ".join(missing_models))
+    parts.append("可執行 detect_image_capabilities.py 查看這台機器可用的 task，缺的模型/node 依 comfyui-install 流程補齊")
+    raise RuntimeError("；".join(parts))
+
+
 def validate_flux2_capability(task, comfy_url, request_timeout=DEFAULT_HTTP_TIMEOUT):
     """Fail before image upload/queue when FLUX.2 nodes or models are absent."""
     required = list(FLUX2_REQUIRED_NODES)
@@ -2534,6 +2615,92 @@ def _validate_task_capabilities(args):
         raise SystemExit(str(exc)) from exc
 
 
+def _build_image_task_graph(args, style_checkpoint, upload):
+    """組圖片 task 的 graph;``upload`` 回傳 ComfyUI 端檔名。
+
+    main() 用真正的上傳函式呼叫;preflight_image_task() 用佔位檔名先空組一次,
+    讓送出前檢查與實際送出的 graph 來自同一份 dispatch,不會各自維護一套規則。
+    """
+    if args.task == "concept":
+        prompt, out_id = build_concept(args.prompt, args.negative, args.width, args.height, args.seed,
+                                        batch_size=args.batch, lora_name=args.lora, lora_strength=args.lora_strength,
+                                        checkpoint=style_checkpoint)
+    elif args.task == "flux2_concept":
+        prompt, out_id = build_flux2_concept(
+            args.prompt, width=args.width, height=args.height, seed=args.seed,
+        )
+    elif args.task == "flux2_edit":
+        img_fn = upload(args.image)
+        prompt, out_id = build_flux2_edit(args.prompt, img_fn, seed=args.seed)
+    elif args.task == "icon_asset":
+        structure_fn = upload(args.structure_ref) if args.structure_ref else None
+        appearance_fn = upload(args.appearance_ref) if args.appearance_ref else None
+        prompt, out_id = build_icon_asset(args.prompt, args.negative, args.width, args.height, args.seed,
+                                           batch_size=args.batch, lora_name=args.lora, lora_strength=args.lora_strength,
+                                           structure_ref_filename=structure_fn, checkpoint=style_checkpoint,
+                                           appearance_ref_filename=appearance_fn, appearance_weight=args.appearance_weight)
+    elif args.task == "character_action":
+        char_fn = upload(args.character_ref)
+        pose_fn = upload(args.pose_ref)
+        prompt, out_id = build_character_action(
+            args.prompt, char_fn, pose_fn, args.negative,
+            width=args.width, height=args.height,
+            seed=args.seed, ip_weight=args.ip_weight, pose_strength=args.pose_strength,
+            batch_size=args.batch, control_type=args.control_type,
+            lora_name=args.lora, lora_strength=args.lora_strength, checkpoint=style_checkpoint,
+        )
+    elif args.task == "inpaint":
+        img_fn = upload(args.image)
+        mask_fn = upload(args.mask)
+        prompt, out_id = build_inpaint(args.prompt, img_fn, mask_fn, args.negative,
+                                        denoise=args.denoise, seed=args.seed, checkpoint=style_checkpoint)
+    elif args.task == "guided_inpaint":
+        img_fn = upload(args.image)
+        mask_fn = upload(args.mask)
+        control_fn = None
+        if args.control_type:
+            control_fn = upload(args.control_ref) if args.control_ref else img_fn
+        appearance_fn = upload(args.appearance_ref) if args.appearance_ref else None
+        prompt, out_id = build_guided_inpaint(
+            args.prompt, img_fn, mask_fn, args.negative,
+            control_ref_filename=control_fn, control_type=args.control_type, control_strength=args.control_strength,
+            appearance_ref_filename=appearance_fn, appearance_weight=args.appearance_weight,
+            denoise=args.denoise, seed=args.seed, checkpoint=style_checkpoint,
+        )
+    elif args.task == "pose_only":
+        pose_fn = upload(args.pose_ref)
+        prompt, out_id = build_pose_only(args.prompt, pose_fn, args.negative,
+                                          width=args.width, height=args.height,
+                                          seed=args.seed, pose_strength=args.pose_strength,
+                                          batch_size=args.batch, control_type=args.control_type,
+                                          lora_name=args.lora, lora_strength=args.lora_strength,
+                                          checkpoint=style_checkpoint,
+                                          control_backend=args.control_backend)
+    elif args.task == "style_lock":
+        char_fn = upload(args.character_ref)
+        prompt, out_id = build_style_lock(args.prompt, char_fn, args.negative,
+                                           width=args.width, height=args.height,
+                                           seed=args.seed, ip_weight=args.ip_weight,
+                                           batch_size=args.batch,
+                                           lora_name=args.lora, lora_strength=args.lora_strength,
+                                           checkpoint=style_checkpoint)
+    elif args.task == "refine":
+        img_fn = upload(args.image)
+        prompt, out_id = build_refine(args.prompt, img_fn, args.negative,
+                                       denoise=args.denoise, seed=args.seed, checkpoint=style_checkpoint)
+    elif args.task == "upscale":
+        img_fn = upload(args.image)
+        prompt, out_id = build_upscale(args.prompt, img_fn, args.negative,
+                                        scale=args.scale, denoise=args.denoise, seed=args.seed,
+                                        checkpoint=style_checkpoint)
+    elif args.task == "layer_split":
+        img_fn = upload(args.image)
+        mask_fn = upload(args.mask)
+        prompt, out_id = build_layer_split(img_fn, mask_fn, args.layer_name)
+    else:
+        raise ValueError(f"不是圖片 graph task: {args.task}")
+    return prompt, out_id
+
 def main(argv=None):
     global ACTIVE_VIDEO_CONFIG
     # A process may invoke main() more than once in tests or an embedding. Do
@@ -2967,82 +3134,13 @@ def main(argv=None):
     def upload(path):
         return upload_image(path, comfy_url=comfy_url, request_timeout=request_timeout)
 
-    if args.task == "concept":
-        prompt, out_id = build_concept(args.prompt, args.negative, args.width, args.height, args.seed,
-                                        batch_size=args.batch, lora_name=args.lora, lora_strength=args.lora_strength,
-                                        checkpoint=style_checkpoint)
-    elif args.task == "flux2_concept":
-        prompt, out_id = build_flux2_concept(
-            args.prompt, width=args.width, height=args.height, seed=args.seed,
-        )
-    elif args.task == "flux2_edit":
-        img_fn = upload(args.image)
-        prompt, out_id = build_flux2_edit(args.prompt, img_fn, seed=args.seed)
-    elif args.task == "icon_asset":
-        structure_fn = upload(args.structure_ref) if args.structure_ref else None
-        appearance_fn = upload(args.appearance_ref) if args.appearance_ref else None
-        prompt, out_id = build_icon_asset(args.prompt, args.negative, args.width, args.height, args.seed,
-                                           batch_size=args.batch, lora_name=args.lora, lora_strength=args.lora_strength,
-                                           structure_ref_filename=structure_fn, checkpoint=style_checkpoint,
-                                           appearance_ref_filename=appearance_fn, appearance_weight=args.appearance_weight)
-    elif args.task == "character_action":
-        char_fn = upload(args.character_ref)
-        pose_fn = upload(args.pose_ref)
-        prompt, out_id = build_character_action(
-            args.prompt, char_fn, pose_fn, args.negative,
-            width=args.width, height=args.height,
-            seed=args.seed, ip_weight=args.ip_weight, pose_strength=args.pose_strength,
-            batch_size=args.batch, control_type=args.control_type,
-            lora_name=args.lora, lora_strength=args.lora_strength, checkpoint=style_checkpoint,
-        )
-    elif args.task == "inpaint":
-        img_fn = upload(args.image)
-        mask_fn = upload(args.mask)
-        prompt, out_id = build_inpaint(args.prompt, img_fn, mask_fn, args.negative,
-                                        denoise=args.denoise, seed=args.seed, checkpoint=style_checkpoint)
-    elif args.task == "guided_inpaint":
-        img_fn = upload(args.image)
-        mask_fn = upload(args.mask)
-        control_fn = None
-        if args.control_type:
-            control_fn = upload(args.control_ref) if args.control_ref else img_fn
-        appearance_fn = upload(args.appearance_ref) if args.appearance_ref else None
-        prompt, out_id = build_guided_inpaint(
-            args.prompt, img_fn, mask_fn, args.negative,
-            control_ref_filename=control_fn, control_type=args.control_type, control_strength=args.control_strength,
-            appearance_ref_filename=appearance_fn, appearance_weight=args.appearance_weight,
-            denoise=args.denoise, seed=args.seed, checkpoint=style_checkpoint,
-        )
-    elif args.task == "pose_only":
-        pose_fn = upload(args.pose_ref)
-        prompt, out_id = build_pose_only(args.prompt, pose_fn, args.negative,
-                                          width=args.width, height=args.height,
-                                          seed=args.seed, pose_strength=args.pose_strength,
-                                          batch_size=args.batch, control_type=args.control_type,
-                                          lora_name=args.lora, lora_strength=args.lora_strength,
-                                          checkpoint=style_checkpoint,
-                                          control_backend=args.control_backend)
-    elif args.task == "style_lock":
-        char_fn = upload(args.character_ref)
-        prompt, out_id = build_style_lock(args.prompt, char_fn, args.negative,
-                                           width=args.width, height=args.height,
-                                           seed=args.seed, ip_weight=args.ip_weight,
-                                           batch_size=args.batch,
-                                           lora_name=args.lora, lora_strength=args.lora_strength,
-                                           checkpoint=style_checkpoint)
-    elif args.task == "refine":
-        img_fn = upload(args.image)
-        prompt, out_id = build_refine(args.prompt, img_fn, args.negative,
-                                       denoise=args.denoise, seed=args.seed, checkpoint=style_checkpoint)
-    elif args.task == "upscale":
-        img_fn = upload(args.image)
-        prompt, out_id = build_upscale(args.prompt, img_fn, args.negative,
-                                        scale=args.scale, denoise=args.denoise, seed=args.seed,
-                                        checkpoint=style_checkpoint)
-    elif args.task == "layer_split":
-        img_fn = upload(args.image)
-        mask_fn = upload(args.mask)
-        prompt, out_id = build_layer_split(img_fn, mask_fn, args.layer_name)
+    if args.task in IMAGE_GRAPH_TASKS:
+        if args.task in IMAGE_PROFILE_TASKS:
+            try:
+                preflight_image_task(args, style_checkpoint, comfy_url, request_timeout=request_timeout)
+            except RuntimeError as exc:
+                raise SystemExit(str(exc)) from exc
+        prompt, out_id = _build_image_task_graph(args, style_checkpoint, upload)
     elif args.task == "img2video":
         backend = require_video_backend(args.task, args.backend, ACTIVE_VIDEO_CONFIG)
         duration = _require_video_duration(args.duration)

@@ -84,6 +84,52 @@ class ImageProfileTests(unittest.TestCase):
             self.assertEqual((checkpoint, width, height),
                              (device["checkpoint"], device["default_width"], device["default_height"]))
 
+    # ComfyUI Core 內建、不屬於任何模型的 node;其餘 node 必須由設定檔某個模型的 nodes 宣告,
+    # detect_image_capabilities.py 才能在沒跑 graph 的情況下判斷缺哪個 custom node。
+    CORE_NODES = frozenset((
+        "CLIPTextEncode", "EmptyLatentImage", "KSampler", "VAEDecode", "VAEEncode",
+        "VAEEncodeForInpaint", "SaveImage", "LoadImage", "LoraLoader",
+    ))
+    FLUX_CASES = frozenset(("flux2_concept", "flux2_edit"))
+
+    def test_every_graph_node_is_core_or_declared_by_profile_models(self):
+        with open(golden_image_graphs.FIXTURE_PATH, encoding="utf-8") as handle:
+            fixture = json.load(handle)
+        for tier, cases in fixture.items():
+            profile = self.profiles.load_profile(self.profiles.profile_id_for_tier(tier))
+            declared = set(self.CORE_NODES)
+            for entry in profile["models"].values():
+                declared.update(entry.get("nodes", ()))
+            for name, (graph, _out) in cases.items():
+                if name in self.FLUX_CASES:
+                    continue
+                undeclared = {node["class_type"] for node in graph.values()} - declared
+                with self.subTest(tier=tier, case=name):
+                    self.assertFalse(undeclared, f"{tier}/{name} 用到設定檔沒宣告的 node: {sorted(undeclared)}")
+
+    def test_task_requirements_expand_groups_without_experimental_members(self):
+        profile = self.profiles.load_profile("sdxl_standard")
+        requirement = self.profiles.task_requirements(profile, "pose_only")
+        self.assertIn(["controlnet.canny", "controlnet.depth", "controlnet.pose"], requirement["required"])
+        self.assertIn("controlnet.union", requirement["optional"])
+        with self.assertRaises(self.profiles.ProfileError):
+            self.profiles.task_requirements(self.profiles.load_profile("sd15_light"), "style_lock")
+
+    def test_effective_validation_and_eligibility(self):
+        profile = self.profiles.load_profile("sdxl_standard")
+        self.assertEqual(("verified", None),
+                         self.profiles.effective_validation(profile, "windows-cuda", 16376, "concept"))
+        self.assertEqual("unverified",
+                         self.profiles.effective_validation(profile, "windows-cuda", 8192, "concept")[0])
+        self.assertEqual("unverified",
+                         self.profiles.effective_validation(profile, "macos-mps", 36000, "concept")[0])
+        ok = {"backend": "mps", "usable_memory_mb": 18432, "precision_support": ["fp32", "fp16"]}
+        self.assertEqual([], self.profiles.platform_eligibility(profile, ok))
+        self.assertTrue(self.profiles.platform_eligibility(profile, dict(ok, backend="cpu")))
+        self.assertTrue(self.profiles.platform_eligibility(profile, dict(ok, usable_memory_mb=4096)))
+        self.assertTrue(self.profiles.platform_eligibility(profile, dict(ok, precision_support=["fp32"])))
+        self.assertTrue(self.profiles.platform_eligibility(profile, {"backend": "mps"}))
+
     def test_sd15_profile_has_no_sdxl_addons(self):
         self.ig.DEVICE = dict(golden_image_graphs.TIER_DEVICES["sd15"])
         for key in ("ipadapter", "clip_vision", "controlnet.canny", "controlnet.union"):

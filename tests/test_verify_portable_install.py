@@ -41,6 +41,7 @@ class VerifyPortableInstallTests(unittest.TestCase):
         cls.pipeline_video_bytes = (PIPELINE_PKG / "video_catalog.py").read_bytes()
         cls.pipeline_video_graphs_bytes = (PIPELINE_PKG / "video_graphs.py").read_bytes()
         cls.pipeline_profiles_bytes = (PIPELINE_PKG / "profiles.py").read_bytes()
+        cls.detect_image_bytes = (ROOT / "tools_src" / "detect_image_capabilities.py").read_bytes()
         cls.profile_json_bytes = {
             path.name: path.read_bytes() for path in sorted((PIPELINE_PKG / "profiles").glob("*.json"))
         }
@@ -71,6 +72,7 @@ class VerifyPortableInstallTests(unittest.TestCase):
         self._copy_source(tools_dir / "comfyui_pipeline" / "video_catalog.py", self.pipeline_video_bytes)
         self._copy_source(tools_dir / "comfyui_pipeline" / "video_graphs.py", self.pipeline_video_graphs_bytes)
         self._copy_source(tools_dir / "comfyui_pipeline" / "profiles.py", self.pipeline_profiles_bytes)
+        self._copy_source(tools_dir / "detect_image_capabilities.py", self.detect_image_bytes)
         for name, source in self.profile_json_bytes.items():
             self._copy_source(tools_dir / "comfyui_pipeline" / "profiles" / name, source)
         if include_video:
@@ -216,6 +218,41 @@ class VerifyPortableInstallTests(unittest.TestCase):
         self.assertEqual(1, code)
         self.assertIn("[FAIL] sam_segment.py source sync", out.getvalue())
 
+    def test_platform_field_drift_fails_against_live_detector(self):
+        live = {
+            "os": "Darwin", "machine": "arm64", "backend": "mps",
+            "tier": "sdxl", "checkpoint": "sd_xl_base_1.0.safetensors",
+            "default_width": 1024, "default_height": 1024,
+            "gpu_name": "Apple Silicon (MPS)", "vram_mb": None, "unified_memory_mb": 36864,
+            "platform_key": "macos-mps", "usable_memory_mb": 18432, "memory_kind": "unified",
+            "compute_capability": None, "precision_support": ["fp32", "fp16"],
+        }
+        legacy = {key: value for key, value in live.items()
+                  if key not in ("platform_key", "usable_memory_mb", "memory_kind",
+                                 "compute_capability", "precision_support")}
+        with tempfile.TemporaryDirectory() as tmp:
+            _, _, _, _, config_path = self._base_install(pathlib.Path(tmp), live, deployed_snapshot=legacy)
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                code = self.verify.main(["--config", str(config_path), "--repo-root", str(ROOT)], detector=lambda: live)
+        self.assertEqual(1, code)
+        self.assertIn("platform_key", out.getvalue())
+
+    def test_precision_support_order_does_not_matter(self):
+        live = {
+            "os": "Windows", "machine": "amd64", "backend": "cuda",
+            "tier": "sdxl", "checkpoint": "sd_xl_base_1.0.safetensors",
+            "default_width": 1024, "default_height": 1024,
+            "gpu_name": "Test GPU", "vram_mb": 16376, "precision_support": ["fp32", "fp16", "fp8"],
+        }
+        deployed = dict(live, precision_support=["FP8", "fp16", "fp32"])
+        with tempfile.TemporaryDirectory() as tmp:
+            _, _, _, _, config_path = self._base_install(pathlib.Path(tmp), live, deployed_snapshot=deployed)
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                code = self.verify.main(["--config", str(config_path), "--repo-root", str(ROOT)], detector=lambda: live)
+        self.assertEqual(0, code, out.getvalue())
+
     def _profile_sync_output(self, mutate_tools_dir):
         live = {
             "os": "Windows", "machine": "amd64", "backend": "cuda",
@@ -271,6 +308,7 @@ class VerifyPortableInstallTests(unittest.TestCase):
                     ("comfyui_pipeline/video_catalog.py", self.pipeline_video_bytes),
                     ("comfyui_pipeline/video_graphs.py", self.pipeline_video_graphs_bytes),
                     ("comfyui_pipeline/profiles.py", self.pipeline_profiles_bytes),
+                    ("detect_image_capabilities.py", self.detect_image_bytes),
                     *((f"comfyui_pipeline/profiles/{name}", source)
                       for name, source in self.profile_json_bytes.items())):
                 text = source.decode("utf-8").replace("\r\n", "\n").replace("\n", "\r\n")

@@ -13,9 +13,12 @@
   },
 
   "models": {
-    "checkpoint": {"dir": "checkpoints", "file": "dreamshaper_8.safetensors", "loader": "CheckpointLoaderSimple", "precision": "fp16"},
-    "bg_removal": {"dir": "background_removal", "file": "birefnet.safetensors", "loader": "LoadBackgroundRemovalModel", "optional": true},
-    "upscale": {"dir": "upscale_models", "file": "4x-UltraSharp.pth", "loader": "UpscaleModelLoader", "optional": true}
+    "checkpoint": {"dir": "checkpoints", "file": "dreamshaper_8.safetensors", "loader": "CheckpointLoaderSimple", "precision": "fp16",
+                   "nodes": ["CheckpointLoaderSimple"]},
+    "bg_removal": {"dir": "background_removal", "file": "birefnet.safetensors", "loader": "LoadBackgroundRemovalModel", "optional": true,
+                   "nodes": ["LoadBackgroundRemovalModel", "RemoveBackground", "InvertMask", "JoinImageWithAlpha"]},
+    "upscale": {"dir": "upscale_models", "file": "4x-UltraSharp.pth", "loader": "UpscaleModelLoader", "optional": true,
+                "nodes": ["UpscaleModelLoader", "ImageUpscaleWithModel", "ImageScaleBy"]}
   },
 
   "sampling": {"steps": 25, "cfg": 7.0, "sampler": "euler", "scheduler": "normal"},

@@ -27,6 +27,13 @@ def _fail(profile_id, message):
     raise ProfileError(f"模型設定檔 {profile_id!r} 無效：{message}")
 
 
+def _group_members(models, ref):
+    """``controlnet.*`` 群組 = 同前綴且非 experimental 的模型;實驗性模型不能滿足必要需求。"""
+    prefix = ref[:-1]
+    return sorted(key for key, entry in models.items()
+                  if key.startswith(prefix) and not entry.get("experimental"))
+
+
 def validate_profile(profile, expected_id=None):
     """Check structural invariants; return ``profile`` unchanged when valid."""
     if not isinstance(profile, dict):
@@ -46,6 +53,9 @@ def validate_profile(profile, expected_id=None):
     for key, entry in models.items():
         if not isinstance(entry, dict) or not entry.get("dir") or not entry.get("file"):
             _fail(profile_id, f"models.{key} 必須有 dir 與 file")
+        nodes = entry.get("nodes", [])
+        if not isinstance(nodes, list) or any(not isinstance(node, str) or not node for node in nodes):
+            _fail(profile_id, f"models.{key}.nodes 必須是 node class 名稱清單")
 
     sampling = profile["sampling"]
     if not isinstance(sampling, dict) or any(key not in sampling for key in _SAMPLING_KEYS):
@@ -67,9 +77,8 @@ def validate_profile(profile, expected_id=None):
     for task, spec in profile["tasks"].items():
         for ref in list(spec.get("requires", ())) + list(spec.get("optional_requires", ())):
             if ref.endswith(".*"):
-                prefix = ref[:-1]
-                if not any(key.startswith(prefix) for key in models):
-                    _fail(profile_id, f"tasks.{task} 引用不存在的模型群組 {ref}")
+                if not _group_members(models, ref):
+                    _fail(profile_id, f"tasks.{task} 引用的模型群組 {ref} 沒有非實驗性成員")
             elif ref not in models:
                 _fail(profile_id, f"tasks.{task} 引用不存在的模型 {ref}")
 
@@ -119,6 +128,66 @@ def model_file(profile, key):
             f"模型設定檔 {profile['id']!r} 沒有模型 {key!r}；這個設定檔不支援需要它的功能"
         )
     return entry["file"]
+
+
+def task_requirements(profile, task):
+    """回傳 task 的模型需求。
+
+    ``required`` 每一項是「候選模型 key 清單」,清單內任一個存在即滿足(一般模型只有一個候選,
+    ``controlnet.*`` 群組展開成所有非實驗性成員)。``optional`` 是只影響額外功能的模型 key。
+    """
+    spec = profile["tasks"].get(task)
+    if spec is None:
+        raise ProfileError(f"模型設定檔 {profile['id']!r} 不提供 task {task!r}")
+    models = profile["models"]
+    required = []
+    for ref in spec.get("requires", ()):
+        required.append(_group_members(models, ref) if ref.endswith(".*") else [ref])
+    optional = []
+    for ref in spec.get("optional_requires", ()):
+        for key in (_group_members(models, ref) if ref.endswith(".*") else [ref]):
+            if key not in optional:
+                optional.append(key)
+    return {"required": required, "optional": optional}
+
+
+def platform_eligibility(profile, device):
+    """回傳這台機器不符合設定檔 requirements 的原因清單;空清單代表符合。"""
+    reasons = []
+    requirements = profile["requirements"]
+    backend = device.get("backend")
+    if requirements.get("backends") and backend not in requirements["backends"]:
+        reasons.append(f"加速後端 {backend!r} 不在支援清單 {requirements['backends']}")
+    usable = device.get("usable_memory_mb")
+    minimum = requirements.get("min_usable_memory_mb", 0)
+    if usable is None:
+        reasons.append("device_config.json 缺少 usable_memory_mb；請在這台機器重跑 detect_device.py")
+    elif usable < minimum:
+        reasons.append(f"可用記憶體 {usable} MB 低於需求 {minimum} MB")
+    supported = device.get("precision_support")
+    wanted = requirements.get("precision")
+    if supported is None:
+        reasons.append("device_config.json 缺少 precision_support；請在這台機器重跑 detect_device.py")
+    elif wanted and not set(wanted) & set(supported):
+        reasons.append(f"精度需求 {wanted} 與這台機器支援的 {supported} 沒有交集")
+    return reasons
+
+
+def effective_validation(profile, platform_key, usable_memory_mb, task):
+    """回傳 (status, reason)。沒有紀錄、task 未涵蓋或記憶體低於驗證值時降為 unverified。"""
+    record = profile["validation"].get(platform_key)
+    if not record:
+        return "unverified", f"{platform_key} 平台沒有驗證紀錄"
+    status = record["status"]
+    if status in ("verified", "experimental"):
+        if "tasks" in record and task not in record["tasks"]:
+            return "unverified", f"{platform_key} 的驗證紀錄未涵蓋 {task}"
+        minimum = record.get("min_verified_memory_mb")
+        if minimum and (usable_memory_mb is None or usable_memory_mb < minimum):
+            return "unverified", (
+                f"可用記憶體 {usable_memory_mb} MB 低於 {platform_key} 驗證時的 {minimum} MB"
+            )
+    return status, None
 
 
 def default_resolution(profile, usable_memory_mb):

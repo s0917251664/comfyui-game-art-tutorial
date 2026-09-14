@@ -23,7 +23,7 @@
 1. **前置工具**:`git`、`python`(3.11+)在 PATH 上。缺的話請使用者先手動安裝,不要代為安裝系統層級工具。
 2. **ComfyUI 原始碼**:clone `https://github.com/comfyanonymous/ComfyUI.git` 到 `<ComfyUI 安裝路徑>`(沒有特殊需求的話,Windows 用 `%USERPROFILE%\ComfyUI`,Mac/Linux 用 `~/ComfyUI`)。已存在(`main.py` 在裡面)就跳過 clone。若 tested-version manifest 有 `comfyui.commit`，clone/fetch 後 checkout 該精確 commit；若欄位仍為 `null`，完成安裝後執行 `git -C <ComfyUI 安裝路徑> rev-parse HEAD` 記錄實際值，保持 manifest 的 pending 狀態直到 smoke test 完成。
 3. **Python 虛擬環境**:`<ComfyUI 安裝路徑>/.venv`。已存在就跳過建立,但確認裡面的 python 可以正常執行。
-4. **設備偵測**:把這個 repo 的 `tools_src/detect_device.py` 複製到 `<ComfyUI 安裝路徑>/tools/detect_device.py`,執行它；預設會把 `device_config.json` 寫在腳本同一個 `tools/` 目錄，也可用 `--out <明確路徑>` 覆寫。這支腳本本身是固定邏輯,不要修改它。
+4. **設備偵測**:把這個 repo 的 `tools_src/detect_device.py` 複製到 `<ComfyUI 安裝路徑>/tools/detect_device.py`,執行它；預設會把 `device_config.json` 寫在腳本同一個 `tools/` 目錄，也可用 `--out <明確路徑>` 覆寫。這支腳本本身是固定邏輯,不要修改它。輸出除了 tier，還有模型設定檔要用的平台欄位：`platform_key`（如 `windows-cuda`、`macos-mps`）、`usable_memory_mb`、`memory_kind`、`compute_capability`、`precision_support`；缺這些欄位的舊版 `device_config.json` 一律視為過期，要重跑。
 5. **PyTorch**:依 `device_config.json` 裡的 `backend`(`cuda`/`mps`/`cpu`)跟 `torch_index_url` 裝對應版本進 `.venv`。已裝的話檢查版本合理即可,不用強制重裝。
 6. **ComfyUI 依賴**:`.venv` 裡 `pip install -r requirements.txt`(在 `<ComfyUI 安裝路徑>` 底下)。
 7. **Custom nodes**(clone 進 `<ComfyUI 安裝路徑>/custom_nodes/`,已存在就跳過):
@@ -34,6 +34,7 @@
    - **Repository 內建 Simple Mask Tool**：把 `tools_src/simple_mask_tool/` 完整複製到 `<ComfyUI 安裝路徑>/custom_nodes/comfyui-simple-mask-tool/`，並把同一資料夾與 `tools_src/mask_session.py` 同步部署到 `<ComfyUI 安裝路徑>/tools/`。它不需要模型或額外 pip 套件，使用 ComfyUI 已有的 `aiohttp`、Pillow 與瀏覽器 Canvas；部署或更新後必須重啟 ComfyUI。這是獨立的本機手動畫遮罩入口，不是 SAM 自動分割，也不得因為未安裝 SAM 而失效。SAM 若另外安裝或開發，只能以標準遮罩檔案／API 作為選配銜接。
    - **SAM 2.1 自動候選遮罩工具**（最後確認：2026-09-05）：把 `tools_src/sam_segment.py` 複製到 `<ComfyUI 安裝路徑>/tools/`。固定使用 Meta 官方 Hugging Face 權重 `facebook/sam2.1-hiera-small`（Apache-2.0，約 184 MB safetensors）；首次執行下載到使用者模型快取。已驗證 PyTorch 2.13.0+cu130、Transformers 5.15.0、RTX 4080 16 GB。它不綁 SDXL／SD1.5，也不依賴 ComfyUI custom node。此 runtime 使用 `float16` 會在 TorchVision NMS 發生 dtype mismatch，因此工具鎖定 `float32`。
 8. **模型**:先確認 `device_config.json` 的 `tier` 落在哪個 family,再決定要裝哪一組。**這件事不是只有底模(checkpoint)要跟著 tier 換,ControlNet/IPAdapter/CLIP Vision 全部都是跟底模綁定的,底模架構變了,這些都要跟著換成對應版本,不能只換 checkpoint、其他照抄。** 完整清單(SDXL 家族的檔名/下載來源表,以及 sd15 tier 的處理方式)見 `reference/models.md`——那是安裝流程的模型家族、檔名與來源基準，不是 hash-level 的可重現版本鎖定；真正可重現的 commit、套件版本與模型 SHA-256 以 `docs/tested-versions.md` 為準。若 manifest 仍是 `pending_on_installed_machine`，不要把表格裡的歷史日期、檔名或大小當成已鎖定版本，也不要自行換成更新模型；真的想評估升級用 `skills/comfyui-pipeline-review/SKILL.md`,不是安裝流程該做的事。每個實際使用的模型都要在 manifest 記錄檔案路徑、模型家族、來源與 SHA-256；目前 manifest 未擷取完成前不可捏造 hash。
+8b. **圖片能力偵測**:把 `tools_src/detect_image_capabilities.py` 與整個 `tools_src/comfyui_pipeline/`（含 `profiles/`）複製到 `<ComfyUI 安裝路徑>/tools/`，用 `.venv` 執行 `detect_image_capabilities.py --comfyui-path <ComfyUI 安裝路徑>`；ComfyUI 已啟動時加 `--comfy-url http://127.0.0.1:<port>` 一併檢查 custom node。模型放在共享模型庫時用 `--model-root` 指定（可重複）。輸出預設 `<ComfyUI 安裝路徑>/tools/image_capabilities.json`，已有檔案需明確給 `--overwrite`。它**不下載任何東西**，只回報每份設定檔是否符合這台平台、裝了哪些模型、每個 task 是否可用（缺哪個模型/node）與驗證狀態（`verified`／`experimental`／`unverified`，記憶體低於驗證值或該平台沒有紀錄時會自動降為 `unverified`）。把不可用的 task 與 `unverified` 狀態如實告訴使用者，不要因為模型裝了就宣稱已驗證。
 9. **影片能力偵測(只有要開影片時)**:把 `tools_src/detect_video_capabilities.py` 與 `tools_src/generate.py` 複製到 `<ComfyUI 安裝路徑>/tools/`，等 ComfyUI、custom nodes、影片模型與 `.venv` 都確認存在後，使用該 `.venv` 執行 detector。可帶 `--comfy-url http://127.0.0.1:<port>` 檢查 `/object_info`，也可省略 URL 先只掃描檔案/runtime；偵測器**不會下載模型、套件或前處理權重**。不給 `--default-backend` 就把 `default_backend` 保持 `null`，每次 CLI 必須明確給 `--backend`；若明確給 `--default-backend h3|wan`，它必須是這台機器已完整具備的 backend。`pose`/`depth` 的 `comfyui_controlnet_aux` 前處理模型若尚未在 `ckpts/`，先停下告知使用者，不能讓 smoke test 靜默觸發大型下載。輸出預設是 `<ComfyUI 安裝路徑>/tools/video_capabilities.json`，已有檔案時需明確給 `--overwrite`。
 偵測器預設只記錄既有模型的 `size_bytes`，避免每次對 80+ GiB 重算 SHA-256；只有明確給 `--hash-models` 才計算並寫入 SHA-256。
 
@@ -92,7 +93,7 @@
 ## 執行原則
 
 - **冪等**:每一步先檢查是否已經成立,成立就跳過,不要盲目重跑或覆蓋使用者已經調整過的東西(`generate.py` 除外——它永遠要跟 repo 同步)
-- **換機器/換顯卡**:至少重跑步驟 4(設備偵測)、步驟 9(影片 capability 若有使用)、步驟 12(重寫 `local_config.json`)與步驟 13(離線部署驗證),不要假設 checkpoint、tier、預設解析度、backend 或路徑沒變；若 tier 變成 `sd15`，先看 `skills/comfyui-art-gen/SKILL.md` 的能力矩陣，ControlNet/IPAdapter/CLIP Vision 不可沿用 SDXL 版本。
+- **換機器/換顯卡**:至少重跑步驟 4(設備偵測)、步驟 8b(圖片能力偵測)、步驟 9(影片 capability 若有使用)、步驟 12(重寫 `local_config.json`)與步驟 13(離線部署驗證),不要假設 checkpoint、tier、預設解析度、backend 或路徑沒變；若 tier 變成 `sd15`，先看 `skills/comfyui-art-gen/SKILL.md` 的能力矩陣，ControlNet/IPAdapter/CLIP Vision 不可沿用 SDXL 版本。
 - **下載失敗/網路受限**:如實回報,不要用假路徑頂替或假裝下載成功
 - **版本收尾**:完成安裝後擷取 ComfyUI/custom node commit、Python/PyTorch/Pillow 版本、實際模型 SHA-256，再記錄至少一次實機 smoke test 的日期、指令與輸出；在這些資料齊全前，manifest 保持 `pending_on_installed_machine`。
 - **收尾**:全部完成後,把最終的 `local_config.json` 內容念給使用者確認一次,並提醒他下一步可以直接用自然語言要求產圖(見 `skills/comfyui-art-gen/SKILL.md`)。若這台機器沒有可用的 ComfyUI/模型，就只能完成文件與離線檢查，必須明確回報尚未 deploy/smoke test。

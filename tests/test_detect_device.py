@@ -115,6 +115,68 @@ class DetectDeviceTests(unittest.TestCase):
         self.assertEqual(config["tier"], "sd15")
         self.assertIn("unified memory", stderr.getvalue())
 
+    @mock.patch.object(detect_device.shutil, "which", return_value="/usr/bin/nvidia-smi")
+    @mock.patch.object(detect_device.subprocess, "run")
+    def test_compute_capability_uses_lowest_gpu(self, run, _which):
+        run.return_value = self.completed("8.9\n7.5\n")
+        self.assertEqual("7.5", detect_device.get_nvidia_compute_capability())
+
+    @mock.patch.object(detect_device.shutil, "which", return_value="/usr/bin/nvidia-smi")
+    @mock.patch.object(detect_device.subprocess, "run")
+    def test_unparseable_compute_capability_is_diagnostic(self, run, _which):
+        run.return_value = self.completed("[N/A]\n")
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr):
+            self.assertIsNone(detect_device.get_nvidia_compute_capability())
+        self.assertIn("compute capability", stderr.getvalue())
+
+    def test_precision_support_depends_on_backend_and_hardware_not_os(self):
+        self.assertEqual(["fp32", "fp16", "bf16", "fp8"], detect_device.precision_support("cuda", "8.9"))
+        self.assertEqual(["fp32", "fp16", "bf16"], detect_device.precision_support("cuda", "8.6"))
+        self.assertEqual(["fp32", "fp16"], detect_device.precision_support("cuda", "7.5"))
+        self.assertEqual(["fp32", "fp16"], detect_device.precision_support("cuda", None))
+        self.assertEqual(["fp32", "fp16"], detect_device.precision_support("mps"))
+        self.assertEqual(["fp32"], detect_device.precision_support("cpu"))
+        self.assertEqual(["fp32"], detect_device.precision_support("rocm"))
+
+    @mock.patch.object(detect_device.platform, "system", return_value="Windows")
+    @mock.patch.object(detect_device.platform, "machine", return_value="AMD64")
+    @mock.patch.object(detect_device, "get_nvidia_gpu", return_value=("NVIDIA GeForce RTX 4080", 16376))
+    @mock.patch.object(detect_device, "get_nvidia_driver_cuda_hint", return_value="cu130")
+    @mock.patch.object(detect_device, "get_nvidia_compute_capability", return_value="8.9")
+    def test_cuda_platform_fields(self, *_mocks):
+        config = detect_device.detect()
+        self.assertEqual("windows-cuda", config["platform_key"])
+        self.assertEqual(16376, config["usable_memory_mb"])
+        self.assertEqual("dedicated", config["memory_kind"])
+        self.assertEqual("8.9", config["compute_capability"])
+        self.assertIn("fp8", config["precision_support"])
+        self.assertEqual("sdxl", config["tier"])
+
+    @mock.patch.object(detect_device.platform, "system", return_value="Darwin")
+    @mock.patch.object(detect_device.platform, "machine", return_value="arm64")
+    @mock.patch.object(detect_device, "get_nvidia_gpu", return_value=None)
+    @mock.patch.object(detect_device, "get_nvidia_compute_capability", side_effect=AssertionError("no nvidia on mps"))
+    @mock.patch.object(detect_device.subprocess, "run")
+    def test_mps_platform_fields_use_halved_unified_memory(self, run, *_mocks):
+        run.return_value = self.completed(str(36 * 1024 * 1024 * 1024))
+        config = detect_device.detect()
+        self.assertEqual("macos-mps", config["platform_key"])
+        self.assertEqual(18 * 1024, config["usable_memory_mb"])
+        self.assertEqual("unified", config["memory_kind"])
+        self.assertIsNone(config["compute_capability"])
+        self.assertEqual(["fp32", "fp16"], config["precision_support"])
+
+    @mock.patch.object(detect_device.platform, "system", return_value="Linux")
+    @mock.patch.object(detect_device.platform, "machine", return_value="x86_64")
+    @mock.patch.object(detect_device, "get_nvidia_gpu", return_value=None)
+    def test_cpu_platform_fields(self, *_mocks):
+        config = detect_device.detect()
+        self.assertEqual("linux-cpu", config["platform_key"])
+        self.assertEqual(0, config["usable_memory_mb"])
+        self.assertEqual("system", config["memory_kind"])
+        self.assertEqual(["fp32"], config["precision_support"])
+
     def test_default_config_path_is_next_to_detector(self):
         expected = ROOT / "tools_src" / "device_config.json"
         self.assertEqual(expected, pathlib.Path(detect_device.DEFAULT_DEVICE_CONFIG_PATH))

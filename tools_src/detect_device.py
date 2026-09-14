@@ -116,6 +116,56 @@ def get_nvidia_gpu():
     return max(gpus, key=lambda item: item[1])
 
 
+def get_nvidia_compute_capability():
+    """回傳所有 GPU 中最低的 compute capability(例如 "8.9"),查不到回傳 None。
+
+    多卡時取最低值,跟 driver 版本判斷一樣保守,避免把某張卡不支援的精度標成可用。
+    """
+    out = _run_nvidia_smi(
+        ["--query-gpu=compute_cap", "--format=csv,noheader"],
+        "compute capability 查詢",
+    )
+    if out is None:
+        return None
+    capabilities = []
+    for match in re.finditer(r"(?<![\d.])(\d+)\.(\d+)(?![\d.])", out):
+        capabilities.append((int(match.group(1)), int(match.group(2))))
+    if not capabilities:
+        _diagnostic_warning(f"nvidia-smi compute capability 無法解析: {out!r}")
+        return None
+    major, minor = min(capabilities)
+    return f"{major}.{minor}"
+
+
+def precision_support(backend, compute_capability=None):
+    """依加速後端與硬體判斷可用精度;不從 OS 推斷。
+
+    CUDA:bf16 需要 Ampere(8.0)以上,fp8 需要 Ada(8.9)以上;查不到 compute capability 時
+    只列 fp32/fp16。MPS 目前只承諾 fp32/fp16,fp8/int8/nvfp4 要有該平台實機驗證才放寬。
+    未知後端(rocm/xpu/directml 等)沒有驗證紀錄前一律只列 fp32。
+    """
+    if backend == "cuda":
+        supported = ["fp32", "fp16"]
+        if compute_capability:
+            try:
+                version = tuple(int(part) for part in str(compute_capability).split(".")[:2])
+            except ValueError:
+                version = None
+            if version is not None:
+                if version >= (8, 0):
+                    supported.append("bf16")
+                if version >= (8, 9):
+                    supported.append("fp8")
+        return supported
+    if backend == "mps":
+        return ["fp32", "fp16"]
+    return ["fp32"]
+
+
+def platform_os_key(os_name):
+    return {"Windows": "windows", "Darwin": "macos", "Linux": "linux"}.get(os_name, str(os_name).strip().lower())
+
+
 def get_apple_unified_memory_mb():
     """讀取 Apple Silicon 的 unified memory,讀不到時回傳 None。"""
     try:
@@ -197,13 +247,22 @@ def detect():
             torch_index = get_nvidia_driver_cuda_hint() if backend == "cuda" else default_idx
             break
 
+    compute_capability = get_nvidia_compute_capability() if backend == "cuda" else None
+
     return {
         "os": os_name,
         "machine": machine,
         "backend": backend,  # cuda / mps / cpu
+        # 模型設定檔的驗證紀錄以 platform_key 記錄(例如 windows-cuda、macos-mps),不以機器名稱記錄。
+        "platform_key": f"{platform_os_key(os_name)}-{backend}",
         "gpu_name": gpu_name,
         "vram_mb": vram_mb,
         "unified_memory_mb": unified_memory_mb,
+        # 設定檔 requirements/validation 比較用的記憶體:CUDA=獨立 VRAM,MPS=統一記憶體折算後,CPU=0。
+        "usable_memory_mb": effective_vram,
+        "memory_kind": {"cuda": "dedicated", "mps": "unified"}.get(backend, "system"),
+        "compute_capability": compute_capability,
+        "precision_support": precision_support(backend, compute_capability),
         "tier": tier_name,
         "checkpoint": checkpoint,
         "default_width": width,
