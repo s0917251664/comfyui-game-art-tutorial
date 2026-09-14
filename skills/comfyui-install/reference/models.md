@@ -49,11 +49,9 @@ Union 是額外的實驗權重，**不會取代**上面三顆正式模型。ProM
 | `illustration` | 插畫/概念藝術 | Illustrious XL v1.1(官方 `OnomaAIResearch/Illustrious-XL-v1.1`,檔名 `Illustrious-XL-v1.1.safetensors`) | ~6.9GB | **2026-08-19 更正**:之前記成 MIT 是查到非官方鏡像倉庫自己標的授權,不是真實條款。官方倉庫標示 `sdxl-license`(沿用 Stability AI 的 SDXL 授權條款),同系列其他版本授權不同(v0 是 Fair AI Public License 1.0-SD,限制跟 Pony 類似;v2.0 是 CreativeML OpenRAIL-M)——**下載前務必自己去官方頁面看一次完整條款,不要沿用這裡的摘要當定論** | 2026-08-19 |
 | `anime` | 二次元/動漫 | Pony Diffusion V6 XL(`ponyDiffusionV6XL_v6StartWithThisOne.safetensors`,實際檔名以下載頁為準,另有 VAE `sdxl_vae.safetensors` ~335MB) | ~6.9GB | Fair AI Public License 1.0-SD,**限制「monetized web service/app 的商用推論」**,對外服務化需聯繫 purplesmart.ai;單純內部用來產遊戲美術素材通常不算這個限制範圍,但使用者自己要再覆核一次 | 2026-08-19 |
 
-### 使用眉角(實測發現才記,不是預先猜測;沒列出的部分代表還沒實測過)
+### 使用眉角
 
-- **`anime`(Pony Diffusion V6 XL)**:2026-08-19 實測確認,**prompt 沒帶 `score_9, score_8_up, score_7_up`(至少 3 個 score 標籤)這組 Pony 官方建議的品質標籤時,輸出會不穩定(實測出現灰階、跟描述無關的圓形徽章構圖);補上這組標籤後同一個 prompt 出圖正常,色彩/構圖都符合預期。** 已排除 VAE 是原因——原本懷疑跟 checkpoint 內建 VAE vs 建議搭配的獨立 `sdxl_vae.safetensors`(已下載到 `models/vae/`,`generate.py` 目前沒接這顆,一律用 `CheckpointLoaderSimple` 內建 VAE)有關,但隔離變數測試(只加 score 標籤、不改 VAE)就解決了,不是 VAE 問題,外部 VAE 那顆先留著沒必要接進程式碼
-- **`realistic`(Juggernaut XL Ragnarok)**:2026-08-19 實測,不需要特殊 prompt 慣例,預設參數直接出圖正常。官方建議解析度是 832x1216 直式(跟這台機器 `sdxl` tier 預設的 1024x1024 不同),想更貼近官方建議可以另外帶 `--width 832 --height 1216`
-- **`illustration`(Illustrious XL v1.1)**:2026-08-19 實測,`--rating safe` 正常出圖,沒有出現 `anime` 那種畫質問題。官方文件說分級標籤幾乎是必填,沒加可能結果不穩定,細節見上面表格 `--rating` 相關說明
+已搬到 [`skills/comfyui-art-gen/reference/profiles/sdxl_standard.md`](../../comfyui-art-gen/reference/profiles/sdxl_standard.md)「風格變體」：調校經驗綁在模型設定檔上，不跟安裝清單放在一起。重點仍是 **`--style anime` 的 prompt 開頭一定要加 `score_9, score_8_up, score_7_up`**。
 
 下載來源查 Civitai/Hugging Face 官方頁面確認實際檔名跟連結,不要用上面括號裡的檔名當成確定的下載網址去憑空組合。使用者可以只選其中幾個風格,不用三個全裝——**動手下載任何一顆之前,先告知該顆的概估大小,加總這台機器目前已用空間 + 想裝的這幾顆,確認硬碟還有沒有足夠可用空間**,原則同下面「硬碟空間概估」那段。
 

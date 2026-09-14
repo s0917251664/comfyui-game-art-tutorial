@@ -24,7 +24,8 @@
 - ComfyUI 是產線裡的其中一個生成引擎/工具,不是要求使用者學會拉節點。多數情境下只需要呼叫 `skills/comfyui-art-gen/SKILL.md` 描述的流程
 - 產圖流程要穩定、可重複——不要每次臨場亂組 ComfyUI 節點圖,新增能力時比照 `generate.py` 的模式(鎖死大部分參數,只留必要欄位可調)
 - 安裝/裝機是相反的情境:硬體排列組合太多,**刻意不寫死成腳本**,交給 agent 臨場判斷,細節見 `skills/comfyui-install/SKILL.md`
-- 換一台機器 / 換一顆顯卡時,至少重跑 `detect_device.py` 重新產生 `device_config.json`,不要假設 checkpoint 名稱或解析度跟這台機器一樣
+- 換一台機器 / 換一顆顯卡時,至少重跑 `detect_device.py` 重新產生 `device_config.json`,再重跑 `detect_image_capabilities.py`,不要假設 checkpoint 名稱、解析度、可用 task 或驗證狀態跟這台機器一樣
+- 規劃任何圖片/影片工作前先讀 `image_capabilities.json`/`video_capabilities.json` 確認這台機器能跑什麼;`unverified` 的 task 要先告知使用者。驗證狀態記在模型設定檔上、以平台(`platform_key`)為單位,不是每台機器各自重新調校
 - 影片模型、ComfyUI 版本、custom node 或 runtime 改變時,也要重跑 `detect_video_capabilities.py`;影片 task 不從圖片 tier 或 source code 猜 backend,缺模型/runtime/node 必須在 upload/queue 前停止
 - 目前沒有預算,只用本機免費模型;之後有預算要接外部雲端 API(GPT/BFL/Kling 等),ComfyUI 本身已經有對應的 API 節點,不用重建產線,詳見 `教學.md` 第 0.5 章 C 段
 - 如果需要在這個 repo 裡寫 `.ps1` 檔案,要存成**帶 BOM 的 UTF-8**——Windows PowerShell 5.1 沒有 BOM 會照系統 ANSI 編碼讀檔,中文字會把語法解析弄壞(這個專案已經踩過一次這個坑)

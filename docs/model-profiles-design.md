@@ -1,6 +1,6 @@
 # 模型設定檔（model profile）設計草案
 
-狀態：**第 1–3 階段已完成（離線驗證），第 4 階段起尚未實作**。分支 `feature/model-profiles`。實作時每個階段都要走 `skills/comfyui-new-tool-checklist/SKILL.md`。
+狀態：**第 1–4 階段已完成（離線驗證），第 5、6 階段需要實機**。分支 `feature/model-profiles`。實作時每個階段都要走 `skills/comfyui-new-tool-checklist/SKILL.md`。
 
 第 1 階段落地內容：`tools_src/comfyui_pipeline/profiles/{sdxl_standard,sd15_light}.json`、`profiles.py`（讀取與格式驗證）、`image_graphs.py` 改由設定檔取得 SDXL/SD1.5 模型檔名與取樣參數（FLUX.2 維持原樣）、`verify_portable_install.py` 核對部署端設定檔。`tests/fixtures/image_graphs_golden.json` 以重構前程式碼產生，鎖住 4 個 tier 共 99 組 graph 逐欄位不變。底模 checkpoint 與預設解析度仍讀 `device_config.json`，設定檔的 `resolution.by_memory` 目前只由測試確認與 `detect_device.py` 的 `TIERS` 一致，尚未取代它。
 
@@ -18,6 +18,13 @@
 - `--style` 在選了設定檔時改看設定檔的 `variants`。
 - `detect_image_capabilities.py --default-profile`：明確選用時必須符合平台且底模已裝，不自動退回。
 - `device_fingerprint` 移到 `profiles.py` 共用；`verify_portable_install.py` 核對 `image_capabilities.json`（指紋、default_profile 資格與底模檔案），新增 `--require-image`；`local_config.json` 可寫 `image_config`。
+
+第 4 階段落地內容（只改文件）：
+- `comfyui-art-gen`：「目前支援的 tier」改為「這台機器能跑什麼」，規劃前先讀 `image_capabilities.json`（可用性、`validation`、`features`），檔案不存在才退回 tier；決策順序第 2 步改為依快照判斷並禁止自行換設定檔。
+- `comfyui-video-gen`、`comfyui-character-animation-workflow`：規劃鏡頭表／動作表之前先確認圖片與影片能力，缺關鍵能力在規劃階段就停下告知。
+- `comfyui-install`：新增步驟 4b（下載模型前列出符合平台的設定檔與驗證狀態讓使用者選）、步驟 8 依設定檔安裝、收尾分三層回報、smoke 後依情境 C 補平台驗證紀錄。
+- `comfyui-new-tool-checklist`：新增「情境 B：新增模型設定檔」「情境 C：在新平台或新記憶體級距驗證既有設定檔」。
+- 調校經驗集中到 `skills/comfyui-art-gen/reference/profiles/<id>.md`，設定檔 `notes_ref` 指過去（測試確認檔案存在）；`models.md` 的使用眉角改為連結。
 
 ## 1. 要解決的問題
 

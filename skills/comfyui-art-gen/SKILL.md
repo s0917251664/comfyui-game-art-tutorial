@@ -41,6 +41,7 @@
   "comfyui_path": "...",       // ComfyUI 安裝路徑
   "python_exe": "...",         // 要用這個 python.exe 執行,不要用系統的 python
   "generate_script": "...",    // generate.py 的實際路徑
+  "image_config": "...",       // 這台機器的圖片能力快照(detect_image_capabilities.py 產生)
   "comfyui_url": "http://127.0.0.1:xxxx",
   "start_script": "...",       // 啟動 ComfyUI 伺服器用
   "output_dir": "..."          // 固定要存圖回去的資料夾(repo 根目錄的 output/)
@@ -55,18 +56,27 @@
 - **等待上限要依任務調整**:共同選項 `--timeout <秒數>` 控制 prompt 送達 ComfyUI 後輪詢生成結果的上限，必須是有限正數；上傳、送出與下載各自另有不超過 30 秒的 HTTP request timeout，所以它不是整支 CLI 的 wall-clock 上限。CPU、batch 或 upscale 需要較久時才提高。它不會改變 `steps`，也不代表 ComfyUI 在逾時後停止背景工作，逾時後不要未確認狀態就重複送出同一任務。
 - 原始碼版本控管在這個 repo 的 `tools_src/generate.py`,`<generate_script>` 只是部署後的執行副本
 - **產出圖片一律要存回 `<output_dir>`(repo 裡的 `output/`),不要讓使用者需要跑去 ComfyUI 安裝目錄找圖**:每次呼叫都加上 `--output-dir <output_dir>`。腳本執行完會印出實際路徑,直接把這個路徑告訴使用者。`generate.py` 本身部署在 ComfyUI 安裝目錄底下只是執行環境,使用者體感上應該完全感覺不到 ComfyUI 這個東西的存在
-- **換到別的設備時**:照 `skills/comfyui-install/SKILL.md` 的流程重新走一次(或至少重跑 `tools_src/detect_device.py`),會依 GPU/VRAM 自動產生 `device_config.json`,`generate.py` 會自動讀這份設定決定 checkpoint/解析度,不用手動改程式碼
+- **換到別的設備時**:照 `skills/comfyui-install/SKILL.md` 的流程重新走一次(或至少重跑 `tools_src/detect_device.py`),會依 GPU/VRAM 自動產生 `device_config.json`,`generate.py` 會自動讀這份設定決定 checkpoint/解析度,不用手動改程式碼;接著重跑 `detect_image_capabilities.py`,舊的 `image_capabilities.json` 設備指紋對不上時 `generate.py` 會拒絕使用
 
-### 目前支援的 tier
+### 這台機器能跑什麼(模型設定檔)
 
-`device_config.json` 的 tier 是能力契約，不只是解析度建議。SDXL 家族(`sdxl_high`、`sdxl`、`sdxl_light`)目前是 ControlNet/IPAdapter/風格底模的實測路線；`sd15` 只能走不依賴 SDXL add-on 的基礎路徑。`pose_only`、`style_lock`、`character_action` 永遠需要 SDXL；`icon_asset` 只有不帶 `--structure-ref`/`--appearance-ref` 時可走基礎路徑；`guided_inpaint` 只有不帶 ControlNet 與外觀參考圖時可走一般 inpaint。`--style` 的 `realistic`/`illustration`/`anime` 以及任何 SDXL ControlNet/IPAdapter 參數在 `sd15` 上會在上傳前被拒絕。這些不是替 SD1.5 選一套模型就會自動修好，必須另行匹配並實機驗證。
+同一組圖片 task 可以跑在不同的模型設定檔上(`tools_src/comfyui_pipeline/profiles/*.json`):`sdxl_standard`(SDXL,完整功能)與 `sd15_light`(SD1.5,只有基礎路徑)。**規劃任何圖片 task 之前,先讀 `image_capabilities.json`**(`local_config.json` 的 `image_config`,或 `<comfyui_path>/tools/image_capabilities.json`),確認:
+
+1. `default_profile` 是哪一份;使用者明確要求換管線時才加 `--profile`
+2. `profiles.<設定檔>.tasks.<task>.available`:不可用時看 `missing_files`/`missing_nodes`,如實告知缺什麼
+3. `tasks.<task>.validation`:`verified` 直接做;`experimental` 先說明是實驗性;`unverified` 先說明「這台平台或記憶體級距沒有驗證紀錄,結果可能較差」,使用者同意再做
+4. 要用的額外功能看 `features`(例如 `controlnet.pose` 不可用時,不要提議 `--control-type pose`)
+
+這份檔案是快照:裝了新模型或 custom node 後要重跑 `detect_image_capabilities.py --overwrite`。檔案不存在時(舊安裝)退回看 `device_config.json` 的 tier:`sdxl_high`/`sdxl`/`sdxl_light` 對應 `sdxl_standard`,`sd15` 對應 `sd15_light`,並建議使用者補跑偵測。不管快照怎麼寫,`generate.py` 送出前仍會比對 ComfyUI `/object_info`,缺 node 或模型一律停止。
+
+`sd15_light` 只有 `concept`、`icon_asset`(不帶參考圖)、`inpaint`、`guided_inpaint`(不帶 ControlNet/外觀參考)、`refine`、`upscale`、`layer_split`;`pose_only`、`style_lock`、`character_action`、`--style` 與 SDXL ControlNet/IPAdapter 參數都不支援,這不是換一顆 SD1.5 模型就會自動修好。各設定檔的調校經驗(取樣參數、預設解析度、風格變體眉角、驗證紀錄)見 `reference/profiles/<設定檔 id>.md`。
 
 ## 決策順序(這個需求該不該走這條管線)
 
 在對照下面「任務判斷」表挑 task 之前,先照這個順序確認要不要用 `generate.py`:
 
 1. **有沒有現成 task 覆蓋這個需求?** 對照下面「任務判斷」表跟 `reference/full-params.md`。有覆蓋就用它,不要因為「MCP 比較彈性」或「自己組 graph 比較快」就繞過去——這條產線存在的目的就是要比臨場組圖穩定、可重現,能用鎖死 task 就不要繞道。
-2. **這台機器的 tier 撐不撐得起這個 task?** 對照上面「目前支援的 tier」小節,確認 `device_config.json` 的 `tier` 真的支援。撐不起(例如 `sd15` 機器要 `pose_only`/`style_lock`/`character_action`)就不要硬送——`generate.py` 會在上傳前 fail-fast 拒絕,不會產出爛結果,但也不會自動找替代方案或自動降級。tier 撐得起不代表已經裝好:SDXL 路線的 task 在上傳前還會比對 ComfyUI `/object_info`,缺 custom node(例如 `OpenposePreprocessor`)或模型檔(例如 IPAdapter、BiRefNet)一樣會停止;事先想知道這台能跑哪些 task、驗證狀態為何,讀 `<ComfyUI 安裝路徑>/tools/image_capabilities.json`(由 `detect_image_capabilities.py` 產生,見 `skills/comfyui-install/SKILL.md` 步驟 8b),`unverified` 的 task 要先告知使用者結果可能未經驗證。使用者明確要求換較小的管線時，可加 `--profile <設定檔 id>`，規則見 `reference/full-params.md`「選用模型設定檔」；不要為了避開錯誤自行換設定檔。這種情況要如實告訴使用者「這台機器裝不了這個 task」,選項是換一台已裝對應模型的機器(`--comfy-url` 指過去)、或先不做;**不要因為 task 存在就假設任何機器都能跑**。影片是同一套邏輯,查 `video_capabilities.json` 有沒有可用 backend,見 `skills/comfyui-video-gen/SKILL.md`。
+2. **這台機器能不能跑、驗證過沒有?** 照上面「這台機器能跑什麼」小節讀 `image_capabilities.json`。task 不可用或設定檔不提供(例如 `sd15_light` 要 `style_lock`)就不要硬送——`generate.py` 會在上傳前 fail-fast 拒絕,不會產出爛結果,但也不會自動找替代方案。如實告訴使用者「這台機器目前跑不了這個 task」和缺什麼,選項是補裝(照 `skills/comfyui-install/SKILL.md`)、換一台已裝好的機器(`--comfy-url` 指過去)、或先不做;`unverified` 要先講清楚再做。**不要為了避開錯誤自行換設定檔或降級**(使用者明確要求換管線時才加 `--profile`,規則見 `reference/full-params.md`「選用模型設定檔」),也**不要因為 task 存在就假設任何機器都能跑**。影片是同一套邏輯,查 `video_capabilities.json` 有沒有可用 backend,見 `skills/comfyui-video-gen/SKILL.md`。
 3. **⚠️ 尚未實作,先別當成可用選項——沒有現成 task 覆蓋,而且是一次性/探索性需求**(使用者在旁邊看效果、不是要排程量產、不是要當最終交付物)→ 規劃中是改用 ComfyUI MCP 直接操作,並跟使用者明講這次輸出沒有走鎖死管線,沒有 output contract/capability 驗證/resume 保障,品質自負,不要悄悄把 MCP 產出當成跟 `generate.py` 同等可靠。**這個 repo 目前還沒接 ComfyUI MCP,這條規則接上之前不適用——遇到這種需求,現在只能如實跟使用者說「目前沒有對應工具,做不到」,不要假裝有 MCP 可以救援,也不要自己臨場亂組 graph 頂替。**
 4. **沒有現成 task 覆蓋,而且這個需求會重複用到**(使用者說「以後常常要這樣」、或這其實要上生產線)→ 不要一直停在 MCP 或手動操作,照 `skills/comfyui-new-tool-checklist/SKILL.md` 把它轉正成真正的 task。
 
@@ -95,7 +105,7 @@
 
 > **這四個 task(concept / pose_only / style_lock / character_action)都要多問一題:圖片尺寸/比例有沒有要求?** 例如直式角色圖、橫式場景圖、正方形圖示、遊戲引擎規定的固定尺寸。使用者沒概念或沒特別要求就用預設值(不用主動報數字出來),有要求就用 `--width`/`--height` 帶入(數值必須是正整數且為 8 的倍數,實際可用上限仍受 VRAM/設備限制,常見值:1024x1024 方形、832x1216 直式、1216x832 橫式)。這題容易被忽略但常常很重要——遊戲素材有固定尺寸規格是常態,產出來尺寸不對通常等於要重做。
 
-> **`--style`(除 `layer_split` 外全部 task 都支援)不用主動問,使用者對這次美術方向有明確偏好時才用。** 例如「這次想要偏插畫感/概念設計稿的感覺」→ `--style illustration`,「二次元/動漫風」→ `--style anime`,「寫實一點」→ `--style realistic`。不給就完全沿用這台機器裝機時鎖定的預設 checkpoint,不要為了「風格更好」自作主張加這個旗標。只支援 SDXL 家族 tier,對應 checkpoint 沒下載過會直接報錯,細節見 `reference/full-params.md` 跟 `reference/known-limitations.md`。**用 `--style anime` 時,prompt 開頭一定要加 `score_9, score_8_up, score_7_up`(Pony Diffusion V6 XL 的固定用法,至少 3 個 score 標籤),不加實測會出現灰階/構圖跑掉的不穩定結果,細節見 `skills/comfyui-install/reference/models.md`「使用眉角」。**
+> **`--style`(除 `layer_split` 外全部 task 都支援)不用主動問,使用者對這次美術方向有明確偏好時才用。** 例如「這次想要偏插畫感/概念設計稿的感覺」→ `--style illustration`,「二次元/動漫風」→ `--style anime`,「寫實一點」→ `--style realistic`。不給就完全沿用這台機器裝機時鎖定的預設 checkpoint,不要為了「風格更好」自作主張加這個旗標。只支援 `sdxl_standard` 設定檔,對應 checkpoint 沒下載過會在送出前停止,細節見 `reference/full-params.md` 跟 `reference/known-limitations.md`。**用 `--style anime` 時,prompt 開頭一定要加 `score_9, score_8_up, score_7_up`(Pony Diffusion V6 XL 的固定用法,至少 3 個 score 標籤),不加實測會出現灰階/構圖跑掉的不穩定結果,細節見 `reference/profiles/sdxl_standard.md`「風格變體」。**
 
 ### concept(概念圖)
 1. 想畫什麼(轉成英文 prompt,SDXL 對英文 prompt 理解較準)

@@ -56,6 +56,34 @@
 - [ ] 跟使用者總結:裝了什麼、改了哪些檔案、測過什麼(附證據,例如輸出尺寸/格式)、還缺什麼——如實講,不要隱瞞
 - [ ] 過程中如果發現「寫的時候才發現」的既有問題(像這個專案發現 ControlNet/IPAdapter 寫死 SDXL 的技術債那樣),要明確講出來,不要悄悄繞過去當作沒看到
 
+## 情境 B：新增模型設定檔
+
+要讓同一組 task 跑在另一套模型上（例如輕量 SDXL 蒸餾版、補齊 SD1.5 版 ControlNet/IPAdapter）。**設定檔代表一組彼此相容的模型與參數，不是單換一個檔名**；上面的完整清單照走，另外確認：
+
+- [ ] 先用 `skills/comfyui-pipeline-review/SKILL.md` 或明確的使用者需求決定候選模型，不要臨場挑
+- [ ] 新增 `tools_src/comfyui_pipeline/profiles/<id>.json`：`family`、`tiers`（沒有對應 tier 就給空清單，只能用 `--profile` 選用）、`requirements`（後端／最低可用記憶體／精度）、`models`（每顆模型的 `dir`、`file`、`loader`、`nodes`，選配標 `optional`，實驗性標 `experimental`）、`sampling`、`resolution.by_memory`、`tasks`（只列實際支援的）
+- [ ] 同一個 tier 不能對應兩份設定檔（測試會擋）；若新設定檔要取代某個 tier 的預設，要同時改 `detect_device.py` 的 `TIERS` 並確認 `tests/test_image_profiles.py` 的一致性測試
+- [ ] 取樣參數與 graph 結構不同時（例如蒸餾版需要 4–8 步、低 cfg，或需要不同 loader node），先確認現有 builder 能否只靠設定檔表達；不能的話是程式碼變更，要補 golden fixture 並說明
+- [ ] 新增 `skills/comfyui-art-gen/reference/profiles/<id>.md`，設定檔的 `notes_ref` 指過去；內容只寫實測發現
+- [ ] `validation` 一開始保持空的（全部 `unverified`），實機驗證後才依情境 C 補
+- [ ] 安裝清單（`skills/comfyui-install/reference/models.md`）補上這份設定檔需要的模型、來源、大小、最後確認日期
+
+## 情境 C：在新平台或新記憶體級距驗證既有設定檔
+
+例如在 `macos-mps` 第一次跑 `sdxl_standard`，或在 8GB 的 `windows-cuda` 機器補驗。**不改程式碼**，只補證據與驗證紀錄：
+
+- [ ] 在該機器照 `skills/comfyui-install/SKILL.md` 完成安裝、`detect_image_capabilities.py` 與 `verify_portable_install.py --require-image`
+- [ ] 逐 task 實際產圖並做人工驗收（`skills/comfyui-art-gen/SKILL.md` 的產後驗收），記下指令、輸出尺寸／格式、耗時與發現的問題；只跑出檔案、沒看過內容的不算
+- [ ] 更新設定檔 JSON 的 `validation.<platform_key>`：
+  - `status`：全部驗收通過才用 `verified`；能出圖但品質或穩定性有疑慮用 `experimental`；確認跑不起來（OOM、精度不支援、node 不相容）用 `unsupported`
+  - `tasks`：只列實際驗收過的 task
+  - `min_verified_memory_mb`：這台機器 `device_config.json` 的 `usable_memory_mb`
+  - `evidence`：指向證據位置
+- [ ] 證據寫進 `docs/tested-versions.md`（該機器的 commit、套件版本、模型 SHA-256、smoke 紀錄），不可捏造或沿用其他機器的數字
+- [ ] 同一平台已有紀錄時，新的 `min_verified_memory_mb` 只能在實測較低記憶體級距通過後才往下調
+- [ ] 平台特有的發現（例如 MPS 某個 task 很慢、某精度不支援）補進 `reference/profiles/<id>.md`
+- [ ] 設定檔 JSON 變了，部署端也要同步；`verify_portable_install.py` 會把內容不同判為 FAIL
+
 ## 已知限制
 
 這份清單本身也會過時。如果之後這條產線的架構有大幅變動(例如真的換了另一套生成引擎,不只是 ComfyUI 裡加新節點),這份清單要跟著重新檢視,不要當成永遠不變的教條。

@@ -16,7 +16,7 @@
 
 ## 開始裝之前:先告知硬碟空間需求
 
-**動手下載任何東西之前,先跟使用者說清楚這台機器大概要花多少硬碟空間**,概估數字跟拆解見 `reference/models.md`「硬碟空間概估」那段(不含 LoRA 訓練工具約 26~28GB,含的話約 31~36GB)。念完概估數字、確認使用者這台機器有足夠可用空間,再開始走下面的步驟——不要裝到一半才發現空間不夠中斷,那樣通常要使用者自己回頭清理下載到一半的檔案才能重來,比事前講清楚麻煩很多。
+**動手下載任何東西之前,先跟使用者說清楚這台機器大概要花多少硬碟空間**,概估數字跟拆解見 `reference/models.md`「硬碟空間概估」那段(不含 LoRA 訓練工具約 26~28GB,含的話約 31~36GB)。念完概估數字、確認使用者這台機器有足夠可用空間,再開始走下面的步驟——不要裝到一半才發現空間不夠中斷,那樣通常要使用者自己回頭清理下載到一半的檔案才能重來,比事前講清楚麻煩很多。模型部分的空間依步驟 4b 選定的模型設定檔而定:`sdxl_standard` 看 SDXL 表格(選配模型可逐項省略),`sd15_light` 只需要 SD1.5 底模、BiRefNet 與放大模型。
 
 ## 目標(裝完之後,以下都要成立)
 
@@ -24,6 +24,11 @@
 2. **ComfyUI 原始碼**:clone `https://github.com/comfyanonymous/ComfyUI.git` 到 `<ComfyUI 安裝路徑>`(沒有特殊需求的話,Windows 用 `%USERPROFILE%\ComfyUI`,Mac/Linux 用 `~/ComfyUI`)。已存在(`main.py` 在裡面)就跳過 clone。若 tested-version manifest 有 `comfyui.commit`，clone/fetch 後 checkout 該精確 commit；若欄位仍為 `null`，完成安裝後執行 `git -C <ComfyUI 安裝路徑> rev-parse HEAD` 記錄實際值，保持 manifest 的 pending 狀態直到 smoke test 完成。
 3. **Python 虛擬環境**:`<ComfyUI 安裝路徑>/.venv`。已存在就跳過建立,但確認裡面的 python 可以正常執行。
 4. **設備偵測**:把這個 repo 的 `tools_src/detect_device.py` 複製到 `<ComfyUI 安裝路徑>/tools/detect_device.py`,執行它；預設會把 `device_config.json` 寫在腳本同一個 `tools/` 目錄，也可用 `--out <明確路徑>` 覆寫。這支腳本本身是固定邏輯,不要修改它。輸出除了 tier，還有模型設定檔要用的平台欄位：`platform_key`（如 `windows-cuda`、`macos-mps`）、`usable_memory_mb`、`memory_kind`、`compute_capability`、`precision_support`；缺這些欄位的舊版 `device_config.json` 一律視為過期，要重跑。
+4b. **選擇模型設定檔(下載任何模型之前)**:先把 `tools_src/detect_image_capabilities.py` 與整個 `tools_src/comfyui_pipeline/`(含 `profiles/`)部署到 `<ComfyUI 安裝路徑>/tools/`,執行 `detect_image_capabilities.py --comfyui-path <ComfyUI 安裝路徑> --out <ComfyUI 安裝路徑>/tools/image_capabilities.preview.json`。此時還沒裝模型,只看每份設定檔的 `eligible`/`eligibility_reasons` 與各 task 的 `validation`。把**符合這台平台的設定檔**、各自提供的 task、在這台平台與記憶體級距的驗證狀態(`verified`/`experimental`/`unverified`)、概估模型空間念給使用者,讓使用者選:
+    - 預設建議 tier 對應的設定檔(`sdxl_high`/`sdxl`/`sdxl_light` → `sdxl_standard`,`sd15` → `sd15_light`)
+    - 使用者想在較大的機器上用較小的管線(例如省空間、只做基礎產圖)可以選較小的,之後步驟 8b 要加 `--default-profile`
+    - 不符合平台的設定檔不列為選項;全部都是 `unverified` 時要明講,這台會是該平台的第一台驗證機
+    記下選擇與理由,步驟 8 只裝這份設定檔需要的模型。選完即可刪除 preview 檔。
 5. **PyTorch**:依 `device_config.json` 裡的 `backend`(`cuda`/`mps`/`cpu`)跟 `torch_index_url` 裝對應版本進 `.venv`。已裝的話檢查版本合理即可,不用強制重裝。
 6. **ComfyUI 依賴**:`.venv` 裡 `pip install -r requirements.txt`(在 `<ComfyUI 安裝路徑>` 底下)。
 7. **Custom nodes**(clone 進 `<ComfyUI 安裝路徑>/custom_nodes/`,已存在就跳過):
@@ -33,8 +38,8 @@
    若 manifest 有對應的 `custom_nodes.<name>.commit`，各 repo 都要 checkout 那個精確 commit；欄位為 `null` 時，安裝後擷取各自的 `git rev-parse HEAD`，不要把 `main` 當成鎖定版本。裝完後確認各自的 `requirements.txt`(如果有)也裝了。`comfyui_controlnet_aux` 的前處理器模型(DWPose、Depth Anything 權重)會在第一次真的執行到的時候自己下載到它自己的 `ckpts/` 資料夾,不用手動預先下載。
    - **Repository 內建 Simple Mask Tool**：把 `tools_src/simple_mask_tool/` 完整複製到 `<ComfyUI 安裝路徑>/custom_nodes/comfyui-simple-mask-tool/`，並把同一資料夾與 `tools_src/mask_session.py` 同步部署到 `<ComfyUI 安裝路徑>/tools/`。它不需要模型或額外 pip 套件，使用 ComfyUI 已有的 `aiohttp`、Pillow 與瀏覽器 Canvas；部署或更新後必須重啟 ComfyUI。這是獨立的本機手動畫遮罩入口，不是 SAM 自動分割，也不得因為未安裝 SAM 而失效。SAM 若另外安裝或開發，只能以標準遮罩檔案／API 作為選配銜接。
    - **SAM 2.1 自動候選遮罩工具**（最後確認：2026-09-05）：把 `tools_src/sam_segment.py` 複製到 `<ComfyUI 安裝路徑>/tools/`。固定使用 Meta 官方 Hugging Face 權重 `facebook/sam2.1-hiera-small`（Apache-2.0，約 184 MB safetensors）；首次執行下載到使用者模型快取。已驗證 PyTorch 2.13.0+cu130、Transformers 5.15.0、RTX 4080 16 GB。它不綁 SDXL／SD1.5，也不依賴 ComfyUI custom node。此 runtime 使用 `float16` 會在 TorchVision NMS 發生 dtype mismatch，因此工具鎖定 `float32`。
-8. **模型**:先確認 `device_config.json` 的 `tier` 落在哪個 family,再決定要裝哪一組。**這件事不是只有底模(checkpoint)要跟著 tier 換,ControlNet/IPAdapter/CLIP Vision 全部都是跟底模綁定的,底模架構變了,這些都要跟著換成對應版本,不能只換 checkpoint、其他照抄。** 完整清單(SDXL 家族的檔名/下載來源表,以及 sd15 tier 的處理方式)見 `reference/models.md`——那是安裝流程的模型家族、檔名與來源基準，不是 hash-level 的可重現版本鎖定；真正可重現的 commit、套件版本與模型 SHA-256 以 `docs/tested-versions.md` 為準。若 manifest 仍是 `pending_on_installed_machine`，不要把表格裡的歷史日期、檔名或大小當成已鎖定版本，也不要自行換成更新模型；真的想評估升級用 `skills/comfyui-pipeline-review/SKILL.md`,不是安裝流程該做的事。每個實際使用的模型都要在 manifest 記錄檔案路徑、模型家族、來源與 SHA-256；目前 manifest 未擷取完成前不可捏造 hash。
-8b. **圖片能力偵測**:把 `tools_src/detect_image_capabilities.py` 與整個 `tools_src/comfyui_pipeline/`（含 `profiles/`）複製到 `<ComfyUI 安裝路徑>/tools/`，用 `.venv` 執行 `detect_image_capabilities.py --comfyui-path <ComfyUI 安裝路徑>`；ComfyUI 已啟動時加 `--comfy-url http://127.0.0.1:<port>` 一併檢查 custom node。模型放在共享模型庫時用 `--model-root` 指定（可重複）。輸出預設 `<ComfyUI 安裝路徑>/tools/image_capabilities.json`，已有檔案需明確給 `--overwrite`。它**不下載任何東西**，只回報每份設定檔是否符合這台平台、裝了哪些模型、每個 task 是否可用（缺哪個模型/node）與驗證狀態（`verified`／`experimental`／`unverified`，記憶體低於驗證值或該平台沒有紀錄時會自動降為 `unverified`）。把不可用的 task 與 `unverified` 狀態如實告訴使用者，不要因為模型裝了就宣稱已驗證。`default_profile` 預設是 tier 對應且底模已裝的設定檔；使用者明確想在較大的機器上用較小的管線時，才加 `--default-profile <設定檔 id>`（例如 `sd15_light`），它必須符合這台平台且底模已安裝，否則工具會拒絕，不會自動換成別的設定檔。
+8. **模型**:依步驟 4b 選定的設定檔決定要裝哪一組——設定檔 JSON 的 `models` 列出每顆模型的檔名與子資料夾,標 `optional` 的依使用者要用的功能逐項詢問(例如不需要姿勢控制就先不裝 OpenPose/Depth),`experimental` 的只有使用者明確要做 A/B 才裝。**這件事不是只有底模(checkpoint)要跟著 tier 換,ControlNet/IPAdapter/CLIP Vision 全部都是跟底模綁定的,底模架構變了,這些都要跟著換成對應版本,不能只換 checkpoint、其他照抄。** 完整清單(SDXL 家族的檔名/下載來源表,以及 sd15 tier 的處理方式)見 `reference/models.md`——那是安裝流程的模型家族、檔名與來源基準，不是 hash-level 的可重現版本鎖定；真正可重現的 commit、套件版本與模型 SHA-256 以 `docs/tested-versions.md` 為準。若 manifest 仍是 `pending_on_installed_machine`，不要把表格裡的歷史日期、檔名或大小當成已鎖定版本，也不要自行換成更新模型；真的想評估升級用 `skills/comfyui-pipeline-review/SKILL.md`,不是安裝流程該做的事。每個實際使用的模型都要在 manifest 記錄檔案路徑、模型家族、來源與 SHA-256；目前 manifest 未擷取完成前不可捏造 hash。
+8b. **圖片能力偵測**(模型與 custom node 都裝好、ComfyUI 啟動後):把 `tools_src/detect_image_capabilities.py` 與整個 `tools_src/comfyui_pipeline/`（含 `profiles/`）複製到 `<ComfyUI 安裝路徑>/tools/`，用 `.venv` 執行 `detect_image_capabilities.py --comfyui-path <ComfyUI 安裝路徑>`；ComfyUI 已啟動時加 `--comfy-url http://127.0.0.1:<port>` 一併檢查 custom node。模型放在共享模型庫時用 `--model-root` 指定（可重複）。輸出預設 `<ComfyUI 安裝路徑>/tools/image_capabilities.json`，已有檔案需明確給 `--overwrite`。它**不下載任何東西**，只回報每份設定檔是否符合這台平台、裝了哪些模型、每個 task 是否可用（缺哪個模型/node）與驗證狀態（`verified`／`experimental`／`unverified`，記憶體低於驗證值或該平台沒有紀錄時會自動降為 `unverified`）。把不可用的 task 與 `unverified` 狀態如實告訴使用者，不要因為模型裝了就宣稱已驗證。`default_profile` 預設是 tier 對應且底模已裝的設定檔；使用者明確想在較大的機器上用較小的管線時，才加 `--default-profile <設定檔 id>`（例如 `sd15_light`），它必須符合這台平台且底模已安裝，否則工具會拒絕，不會自動換成別的設定檔。
 9. **影片能力偵測(只有要開影片時)**:把 `tools_src/detect_video_capabilities.py` 與 `tools_src/generate.py` 複製到 `<ComfyUI 安裝路徑>/tools/`，等 ComfyUI、custom nodes、影片模型與 `.venv` 都確認存在後，使用該 `.venv` 執行 detector。可帶 `--comfy-url http://127.0.0.1:<port>` 檢查 `/object_info`，也可省略 URL 先只掃描檔案/runtime；偵測器**不會下載模型、套件或前處理權重**。不給 `--default-backend` 就把 `default_backend` 保持 `null`，每次 CLI 必須明確給 `--backend`；若明確給 `--default-backend h3|wan`，它必須是這台機器已完整具備的 backend。`pose`/`depth` 的 `comfyui_controlnet_aux` 前處理模型若尚未在 `ckpts/`，先停下告知使用者，不能讓 smoke test 靜默觸發大型下載。輸出預設是 `<ComfyUI 安裝路徑>/tools/video_capabilities.json`，已有檔案時需明確給 `--overwrite`。
 偵測器預設只記錄既有模型的 `size_bytes`，避免每次對 80+ GiB 重算 SHA-256；只有明確給 `--hash-models` 才計算並寫入 SHA-256。
 
@@ -64,20 +69,20 @@
 
 ### 產線模組部署補充
 
-`tools_src/generate.py` 是維持既有 CLI/API 相容性的 facade；圖片 graph、影片 catalog、不吃 runtime 狀態的影片 helper 分別位於 `tools_src/comfyui_pipeline/image_graphs.py`、`video_catalog.py`、`video_graphs.py`。圖片模型檔名與取樣參數則放在 `comfyui_pipeline/profiles.py` 讀取的 `comfyui_pipeline/profiles/*.json` 模型設定檔。部署時必須把整個資料夾（含 `profiles/`）同步到 `<ComfyUI 安裝路徑>/tools/comfyui_pipeline/`，不能只複製 `generate.py`；少了設定檔，`generate.py` 會在匯入時直接報錯。離線部署驗證會同時核對這五個模組檔案，以及部署端 `profiles/*.json` 與 repo 完全一致（少檔、多出舊檔或內容不同都算 FAIL），確保換設備後仍由該機器自己的 `device_config.json` 動態選擇圖片模型與解析度。真正組 ComfyUI graph 又要吃機器 capability config(`ACTIVE_VIDEO_CONFIG`)的影片 builder(`build_img2video_wan/h3` 等)仍留在 `generate.py` 裡,不在 `comfyui_pipeline/` 套件內。
+`tools_src/generate.py` 是維持既有 CLI/API 相容性的 facade；圖片 graph、影片 catalog、不吃 runtime 狀態的影片 helper 分別位於 `tools_src/comfyui_pipeline/image_graphs.py`、`video_catalog.py`、`video_graphs.py`。圖片模型檔名與取樣參數則放在 `comfyui_pipeline/profiles.py` 讀取的 `comfyui_pipeline/profiles/*.json` 模型設定檔。部署時必須把整個資料夾（含 `profiles/`）同步到 `<ComfyUI 安裝路徑>/tools/comfyui_pipeline/`，不能只複製 `generate.py`；少了設定檔，`generate.py` 會在匯入時直接報錯。離線部署驗證會同時核對這五個模組檔案，以及部署端 `profiles/*.json` 與 repo 完全一致（少檔、多出舊檔或內容不同都算 FAIL），確保換設備後仍由該機器自己的 `device_config.json` 與 `image_capabilities.json` 動態選擇圖片模型設定檔與解析度。真正組 ComfyUI graph 又要吃機器 capability config(`ACTIVE_VIDEO_CONFIG`)的影片 builder(`build_img2video_wan/h3` 等)仍留在 `generate.py` 裡,不在 `comfyui_pipeline/` 套件內。
 
 **只有使用者明確要準備訓練角色/風格 LoRA 時才裝,不是每台機器的基本配備。** 跟 ComfyUI 完全獨立的另一套工具(`kohya_ss`),裝法跟已知的編碼/踩坑細節見 `reference/lora-training.md`。
 
 ## 進階(選配):風格底模(`--style`)
 
-**只有使用者明確要用 `generate.py` 的 `--style` 切換風格才裝,不是每台機器的基本配備。** 只在 SDXL 家族 tier(`sdxl_high`/`sdxl`/`sdxl_light`)才問,`sd15` 機器不提。
+**只有使用者明確要用 `generate.py` 的 `--style` 切換風格才裝,不是每台機器的基本配備。** 只在選用 `sdxl_standard` 設定檔的機器才問,`sd15_light` 不提。
 
 三個候選(寫實/插畫/二次元)清單、檔名、授權注意事項見 `reference/models.md`「選用風格底模」那段。流程:
 
 1. 先問使用者要哪幾個風格方向,不用三個全裝
 2. **動手下載任何一顆之前,先告知該顆的檔名跟概估大小(每顆 ~6.5~7GB),加總這台機器目前已用空間 + 想裝的這幾顆,確認硬碟還有沒有足夠可用空間**——原則同前面「開始裝之前先告知硬碟空間需求」,不是另一套邏輯
 3. 下載到 `<ComfyUI 安裝路徑>/models/checkpoints/`,不用額外裝 ControlNet/IPAdapter/CLIP Vision(這些綁的是 SDXL 架構,不是特定微調版,現有那份就夠用)
-4. 裝完不用改 `tools_src/generate.py`(`STYLE_CHECKPOINTS` 白名單已經寫死對應檔名),使用者之後用 `--style realistic`/`illustration`/`anime` 就能直接切換
+4. 裝完不用改程式碼(檔名定義在 `sdxl_standard.json` 的 `variants`),使用者之後用 `--style realistic`/`illustration`/`anime` 就能直接切換;各風格的 prompt 眉角見 `skills/comfyui-art-gen/reference/profiles/sdxl_standard.md`
 
 ## 進階(選配):影片模型(`img2video` / `character_video`)
 
@@ -94,7 +99,12 @@
 ## 執行原則
 
 - **冪等**:每一步先檢查是否已經成立,成立就跳過,不要盲目重跑或覆蓋使用者已經調整過的東西(`generate.py` 除外——它永遠要跟 repo 同步)
-- **換機器/換顯卡**:至少重跑步驟 4(設備偵測)、步驟 8b(圖片能力偵測)、步驟 9(影片 capability 若有使用)、步驟 12(重寫 `local_config.json`)與步驟 13(離線部署驗證),不要假設 checkpoint、tier、預設解析度、backend 或路徑沒變；若 tier 變成 `sd15`，先看 `skills/comfyui-art-gen/SKILL.md` 的能力矩陣，ControlNet/IPAdapter/CLIP Vision 不可沿用 SDXL 版本。
+- **換機器/換顯卡**:至少重跑步驟 4(設備偵測)、步驟 8b(圖片能力偵測)、步驟 9(影片 capability 若有使用)、步驟 12(重寫 `local_config.json`)與步驟 13(離線部署驗證),不要假設 checkpoint、tier、預設解析度、backend 或路徑沒變；若 tier 變成 `sd15`，先看 `skills/comfyui-art-gen/SKILL.md`「這台機器能跑什麼」小節與 `sd15_light` 設定檔提供的 task，ControlNet/IPAdapter/CLIP Vision 不可沿用 SDXL 版本。
 - **下載失敗/網路受限**:如實回報,不要用假路徑頂替或假裝下載成功
 - **版本收尾**:完成安裝後擷取 ComfyUI/custom node commit、Python/PyTorch/Pillow 版本、實際模型 SHA-256，再記錄至少一次實機 smoke test 的日期、指令與輸出；在這些資料齊全前，manifest 保持 `pending_on_installed_machine`。
-- **收尾**:全部完成後,把最終的 `local_config.json` 內容念給使用者確認一次,並提醒他下一步可以直接用自然語言要求產圖(見 `skills/comfyui-art-gen/SKILL.md`)。若這台機器沒有可用的 ComfyUI/模型，就只能完成文件與離線檢查，必須明確回報尚未 deploy/smoke test。
+- **平台驗證紀錄**:smoke test 與人工驗收通過的 task,依 `skills/comfyui-new-tool-checklist/SKILL.md`「情境 C」更新設定檔的 `validation`(記錄 `platform_key` 與這台的 `usable_memory_mb`)並附上證據;只跑出檔案、沒做人工驗收的不能標 `verified`。
+- **收尾**:全部完成後,把最終的 `local_config.json` 內容念給使用者確認一次,並**分三層回報**,不要混成一句「裝好了」:
+    1. **部署結構**:`verify_portable_install.py` 的結果(PASS 只代表原始碼同步、設備快照沒過期)
+    2. **可用範圍**:`image_capabilities.json`(與 `video_capabilities.json`)列出的 `default_profile`、可用 task、不可用 task 與缺什麼
+    3. **實機驗證**:這次實際 smoke test 並人工驗收過的 task,以及各 task 在這台平台的驗證狀態(`verified`/`experimental`/`unverified`)
+    接著提醒使用者下一步可以直接用自然語言要求產圖(見 `skills/comfyui-art-gen/SKILL.md`)。若這台機器沒有可用的 ComfyUI/模型，就只能完成文件與離線檢查，必須明確回報尚未 deploy/smoke test。

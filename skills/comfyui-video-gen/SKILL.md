@@ -22,6 +22,8 @@
 
 `<python_exe> <generate_script> <task> [--comfy-url <URL> | --config <local_config.json>] [--timeout 1800] [options] --output-dir <output_dir>`
 
+**排鏡頭表或規劃一組影片之前,先確認這台機器能跑什麼**:讀 `video_capabilities.json` 的 `backends.<name>.available` 與 `capabilities`,只把可用的 task/backend 組合放進方案;鏡頭表需要先產靜幀時,同時依 `skills/comfyui-art-gen/SKILL.md`「這台機器能跑什麼」讀 `image_capabilities.json` 確認圖片 task 可用與驗證狀態。缺關鍵能力(例如沒有任何 backend 支援 `character_ref`)要在規劃階段就告訴使用者,不要先產完靜幀才發現影片做不了。
+
 ## 任務判斷
 
 | 使用者說的像... | task |

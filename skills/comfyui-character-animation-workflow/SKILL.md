@@ -20,6 +20,12 @@ description: 規劃並執行單一角色的一組遊戲動畫素材流程，從�
 
 ## 開始前固定確認
 
+**先確認這台機器能跑哪些 task，再跟使用者確認需求。** 讀 `image_capabilities.json`（靜幀要用的 `character_action`、`style_lock` 等，看 `available` 與 `validation`）與 `video_capabilities.json`（各 backend 的 `capabilities`），列出本流程可能用到的 task 哪些可用、驗證狀態為何。規則同 `skills/comfyui-art-gen/SKILL.md`「這台機器能跑什麼」與影片技能的同名段落：
+
+- 不可用的 task 不列入動作表的方案，並告訴使用者缺什麼。
+- 整條路線缺關鍵能力（例如沒有任何影片 backend，或有動作參考影片卻沒有可用的 `pose_drive`）時，**在排動作表之前就停下告知**，不要先做完靜幀才發現影片做不了。
+- 需要的 task 是 `unverified` 時，先讓使用者知道，再決定是否繼續。
+
 1. 角色主參考圖是否已定稿；若沒有，先走圖片產線，通過圖片產後驗收再繼續。
 2. 動作清單，以及每個動作的用途、是否循環、期望時長。
 3. 交付尺寸、FPS、是否需要 PNG frames；使用者沒指定時，不自行套用網站案例的 12 FPS。
@@ -38,6 +44,8 @@ description: 規劃並執行單一角色的一組遊戲動畫素材流程，從�
 產圖後依 `comfyui-art-gen` 的產後驗收打開檢查。角色靜幀未接受前，不進影片生成。
 
 ### 2. 逐動作選 task
+
+只從「開始前固定確認」確認可用的 task 裡選；某個動作最適合的 task 在這台機器不可用時，說明取捨讓使用者決定，不自動換成另一個 task 硬做。
 
 - 原構圖內做 Idle／展示動作：`img2video`
 - 明確需要無縫循環的元素：`fx_loop`

@@ -78,6 +78,13 @@ class ImageProfileTests(unittest.TestCase):
             with self.subTest(profile=profile_id):
                 self.assertEqual(profile_id, self.profiles.load_profile(profile_id)["id"])
 
+    def test_profile_notes_ref_points_to_existing_document(self):
+        for profile_id in self.profiles.list_profile_ids():
+            notes_ref = self.profiles.load_profile(profile_id).get("notes_ref")
+            with self.subTest(profile=profile_id):
+                self.assertTrue(notes_ref, "每份設定檔都要有調校經驗文件")
+                self.assertTrue(os.path.isfile(os.path.join(golden_image_graphs.ROOT, notes_ref)), notes_ref)
+
     def test_each_tier_maps_to_exactly_one_profile(self):
         seen = {}
         for profile_id in self.profiles.list_profile_ids():
