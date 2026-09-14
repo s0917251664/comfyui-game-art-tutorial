@@ -258,7 +258,7 @@ flowchart TD
 | 5 | 引入第一個真正的輕量設定檔（候選：SDXL 蒸餾版或 SD1.5 + 對應 add-on），走完整新工具清單 | 新能力 |
 | 6 | 在 `macos-mps` 等平台補驗既有設定檔 | 只更新驗證紀錄 |
 
-測試原則：階段 1–3 的離線測試不依賴 GPU／ComfyUI，需在 Windows、macOS、Linux 三平台的 CI 上都能跑（`.github/workflows/ci.yml` 視需要加 matrix）；平台偵測以注入假 `platform`／`nvidia-smi`／`sysctl` 輸出測試，不依賴 CI 機器實際硬體。
+測試原則：階段 1–3 的離線測試不依賴 GPU／ComfyUI，必須在 Windows、macOS、Linux 都能跑；平台偵測以注入假 `platform`／`nvidia-smi`／`sysctl` 輸出測試，不依賴執行機器的實際硬體。repository 目前不追蹤 CI workflow（develop `7b469f5` 已移除 `.github/workflows/ci.yml`），跨平台測試要在各平台手動執行 `python -m unittest discover -s tests -p 'test_*.py'`，不能宣稱已有 CI 驗證。
 
 ## 8. 待決問題
 

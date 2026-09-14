@@ -71,6 +71,8 @@
 
 `sd15_light` 只有 `concept`、`icon_asset`(不帶參考圖)、`inpaint`、`guided_inpaint`(不帶 ControlNet/外觀參考)、`refine`、`upscale`、`layer_split`;`pose_only`、`style_lock`、`character_action`、`--style` 與 SDXL ControlNet/IPAdapter 參數都不支援,這不是換一顆 SD1.5 模型就會自動修好。各設定檔的調校經驗(取樣參數、預設解析度、風格變體眉角、驗證紀錄)見 `reference/profiles/<設定檔 id>.md`。
 
+**`image_capabilities.json` 不涵蓋遮罩工具。** Simple Mask Tool(`mask_session.py`)與 SAM 2.1 自動候選遮罩(`sam_segment.py`)是獨立工具,不走模型設定檔,不會出現在這份快照,`generate.py` 的送出前檢查也不會檢查它們。要不要用、能不能跑,依 `reference/masking.md`、`reference/sam-segmentation.md` 與安裝時的 smoke test 判斷;SAM 第一次執行會自行下載約 184MB 權重,使用前先告知使用者。
+
 ## 決策順序(這個需求該不該走這條管線)
 
 在對照下面「任務判斷」表挑 task 之前,先照這個順序確認要不要用 `generate.py`:
