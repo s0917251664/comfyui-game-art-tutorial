@@ -97,6 +97,14 @@ description: 將短片、循環特效與鏡頭需求路由到既有影片 task�
 
 這個 task **純本機用 PyAV+numpy 串流逐幀 chroma key**,不呼叫 ComfyUI、不經過任何生成模型,所以不需要 `--comfy-url`/`--config`/`--timeout`。音訊只保留前景；背景有聲、前景無聲時，輸出仍為無聲。背景尺寸不同時預設 `--resize-mode fill`；目前不支援 `--resume`。調整去背邊緣與完整限制見 `reference/video-composite.md`。
 
+### video_concat
+1. 至少兩支要串接的 mp4，以及順序
+2. 輸出名稱（`--name`）
+3. **音訊政策**：預設 `--audio-policy require-consistent`。輸入混合有聲／無聲且使用者尚未指定時，說明 `drop`（丟掉全部音軌）與 `silence-missing`（缺音鏡補靜音）並取得選擇；已指定則沿用。不要把預設拒絕誤解成輸出整段無聲，也不要默默丟棄音訊。
+4. **尺寸政策**：預設 `--resize-mode strict`。尺寸不一致且尚未指定時，說明 `fit`（加黑邊）、`fill`（裁切）或 `stretch` 並取得選擇；已指定則沿用。不要默默拉伸或裁切。
+
+這個 task **純本機處理**，不需要 `--comfy-url`/`--config`/`--timeout`，也不要為此啟動模型安裝。
+
 ### 有劇情的短片(鏡頭表,必做)
 
 使用者要「一部片子」時,**先寫鏡頭表再生成**,每鏡一行:
@@ -196,7 +204,8 @@ pose_drive:
 - 各 backend 能力表 / machine-specific config 規則,見 `reference/backends.md`
 - 每支輸出都會有同名 `.mp4.json` sidecar：包含 task/backend、單次 resolve 的 seed、prompt/negative、輸入絕對路徑與 SHA-256、capability/config digest、模型檔名與 config 中的 hash/size、Comfy `prompt_id`、要求/實際 PyAV 契約、warnings、耗時與輸出路徑。尺寸、FPS、影格數、時長或音訊不符合契約會 fail；連續性指標目前 warning-only。
 - `video_concat` 預設 `--resize-mode strict`，尺寸/長寬比不同會 fail；要處理時明確選 `fit`(加黑邊)、`fill`(裁切) 或 `stretch`。預設 `--audio-policy require-consistent`，混合有聲/無聲會 fail；`drop` 丟掉全部音軌，`silence-missing` 為缺音鏡補靜音，並檢查音畫 duration drift。
-- `extract_video_frames` 先寫 staging，確認完整解碼且至少一幀後才換入固定輸出目錄；失敗會保留上一版影格。`--shot-id`/`--name` 產生安全、可追溯前綴；`--resume` 只有 sidecar 的 task/backend/seed/input/config/contract 全相符且輸出重新驗證通過時才跳過。
+- `extract_video_frames` 是本機 helper，不是獨立 CLI task：先寫 staging，確認完整解碼且至少一幀後才換入固定輸出目錄；失敗會保留上一版影格。抽幀數應與已驗收 sidecar 的實際幀數一致。呼叫方式見 `skills/comfyui-character-animation-workflow/SKILL.md`。
+- 生成影片的 `--shot-id`/`--name` 產生安全、可追溯前綴；`--resume` 只有 sidecar 的 task/backend/seed/input/config/contract 全相符且輸出重新驗證通過時才跳過。抽幀 helper 不重建 sidecar，也不接受這些旗標。
 - 連續性指標檢查 `fx_loop` 首尾 seam、`transition` 首/尾對 start/end、`img2video`/`camera_move`/`clip_extend` 來源到輸出首幀；閾值未跨題材校準，不用它判定 character/pose 身份品質。
 - timeout 會持久記錄 prompt_id 與精確 queue/running ownership；只有確認仍是該 prompt_id 的 pending queue item 時，才嘗試精確刪除，絕不呼叫全域 `/interrupt`，也不對 running/未知狀態自動重送工作。
 

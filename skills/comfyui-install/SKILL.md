@@ -49,8 +49,8 @@ description: 在新機器上依硬體與既有狀態完成 ComfyUI 遊戲美術�
 9. **影片能力偵測(只有要開影片時)**:把 `tools_src/detect_video_capabilities.py` 與 `tools_src/generate.py` 複製到 `<ComfyUI 安裝路徑>/tools/`，等 ComfyUI、custom nodes、影片模型與 `.venv` 都確認存在後，使用該 `.venv` 執行 detector。可帶 `--comfy-url http://127.0.0.1:<port>` 檢查 `/object_info`，也可省略 URL 先只掃描檔案/runtime；偵測器**不會下載模型、套件或前處理權重**。不給 `--default-backend` 就把 `default_backend` 保持 `null`，每次 CLI 必須明確給 `--backend`；若明確給 `--default-backend h3|wan`，它必須是這台機器已完整具備的 backend。`pose`/`depth` 的 `comfyui_controlnet_aux` 前處理模型若尚未在 `ckpts/`，先停下告知使用者，不能讓 smoke test 靜默觸發大型下載。輸出預設是 `<ComfyUI 安裝路徑>/tools/video_capabilities.json`，已有檔案時需明確給 `--overwrite`。
 偵測器預設只記錄既有模型的 `size_bytes`，避免每次對 80+ GiB 重算 SHA-256；只有明確給 `--hash-models` 才計算並寫入 SHA-256。
 
-10. **產圖腳本**:把 `tools_src/generate.py` 複製(覆蓋)到 `<ComfyUI 安裝路徑>/tools/generate.py`——**這支永遠以 repo 裡的原始碼為準**,不要在部署副本上直接改邏輯。影片 detector 也要跟 source 同步部署。
-    使用極簡遮罩頁面時，`tools_src/mask_session.py` 與整個 `tools_src/simple_mask_tool/` 也必須同步到 `<ComfyUI 安裝路徑>/tools/`；不能只部署 facade，否則 `mask_session.py` 找不到 client/core 模組。
+10. **產圖腳本與套件**:把 `tools_src/generate.py` **以及整個** `tools_src/comfyui_pipeline/`（含 `profiles/`）同步到 `<ComfyUI 安裝路徑>/tools/`——**永遠以 repo 原始碼為準**,不要在部署副本上直接改邏輯。`generate.py` 是相容 facade，不能只複製這一檔；少了 `comfyui_pipeline/` 或其中的模型設定檔，匯入時會直接報錯。影片 detector 也要跟 source 同步部署。細節見下方「產線模組部署契約」。
+    使用極簡遮罩頁面時，`tools_src/mask_session.py` 與整個 `tools_src/simple_mask_tool/` 也必須同步到 `<ComfyUI 安裝路徑>/tools/`；同一套 package 還要同步到 `<ComfyUI 安裝路徑>/custom_nodes/comfyui-simple-mask-tool/`。不能只部署 facade，否則 `mask_session.py` 找不到 client/core 模組。
     使用 SAM 自動候選遮罩時，`tools_src/sam_segment.py` 也必須同步到 `<ComfyUI 安裝路徑>/tools/`，並實際跑一次模型下載與圖片 smoke test；只確認 Python import 不算安裝完成。
 11. **啟動用的小捷徑**(方便使用者之後自己開伺服器,不一定要是腳本,一行指令也行):在 `<ComfyUI 安裝路徑>` 附近留一個能一鍵/一行啟動 `main.py --listen 127.0.0.1 --port <port>` 的方式。**先確認 port 8188 沒被佔用**(例如這台機器如果已經裝了 ComfyUI 桌面版且常駐執行,要換別的 port,如 8189)。把最後使用的 URL 寫入 `local_config.json`；產圖 CLI 不會自動猜測部署副本旁的 repo 設定。
 12. **寫入 repo 根目錄的 `local_config.json`**(不進版控,每台機器內容不同):
@@ -71,11 +71,15 @@ description: 在新機器上依硬體與既有狀態完成 ComfyUI 遊戲美術�
 
     離線驗證通過只代表「部署內容與動態選型規則一致」，不代表不同 GPU 的生成結果逐位元相同，也不取代版本／模型 hash 與實際輸出的驗收。之後仍須依 `docs/tested-versions.md` 核對目標 tier 的 commit、模型 SHA-256，並完成至少一次圖片與影片 smoke test。
 
-## 進階(選配):LoRA 訓練工具
+## 產線模組部署契約
 
-### 產線模組部署補充
+這不是選配。步驟 10 的完整部署範圍如下：
 
 `tools_src/generate.py` 是維持既有 CLI/API 相容性的 facade；圖片 graph、影片 catalog、不吃 runtime 狀態的影片 helper 分別位於 `tools_src/comfyui_pipeline/image_graphs.py`、`video_catalog.py`、`video_graphs.py`。圖片模型檔名與取樣參數則放在 `comfyui_pipeline/profiles.py` 讀取的 `comfyui_pipeline/profiles/*.json` 模型設定檔。部署時必須把整個資料夾（含 `profiles/`）同步到 `<ComfyUI 安裝路徑>/tools/comfyui_pipeline/`，不能只複製 `generate.py`；少了設定檔，`generate.py` 會在匯入時直接報錯。離線部署驗證會同時核對這五個模組檔案，以及部署端 `profiles/*.json` 與 repo 完全一致（少檔、多出舊檔或內容不同都算 FAIL），確保換設備後仍由該機器自己的 `device_config.json` 與 `image_capabilities.json` 動態選擇圖片模型設定檔與解析度。真正組 ComfyUI graph 又要吃機器 capability config(`ACTIVE_VIDEO_CONFIG`)的影片 builder(`build_img2video_wan/h3` 等)仍留在 `generate.py` 裡,不在 `comfyui_pipeline/` 套件內。
+
+只改本機工具（Simple Mask、SAM、抽幀／串接 helper）時，改走該工具自己的部署契約，不要漏掉它實際需要的 `tools/` 或 `custom_nodes/` 同步。
+
+## 進階(選配):LoRA 訓練工具
 
 **只有使用者明確要準備訓練角色/風格 LoRA 時才裝,不是每台機器的基本配備。** 跟 ComfyUI 完全獨立的另一套工具(`kohya_ss`),裝法跟已知的編碼/踩坑細節見 `skills/comfyui-install/reference/lora-training.md`。
 

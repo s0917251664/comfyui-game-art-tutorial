@@ -147,7 +147,7 @@
 - 上層 skill 只把自然語言收成結構化參數
 - 目前沒預算,本機免費模型;之後有預算走 ComfyUI 內建 API 節點(Kling 等),**不重建產線**
 - 換機器至少重跑 `detect_device.py`,不要假設影片 checkpoint 檔名跟這台一樣
-- 新能力上線走 `skills/comfyui-new-tool-checklist/SKILL.md` 完整輪,不因為「先做最小可用」就跳過實測跟文件
+- 新能力上線走 `skills/comfyui-new-tool-checklist/SKILL.md`，依能力類型勾選適用的安裝、程式碼、實測與文件；不因為「先做最小可用」就跳過適用項目，也不把不相關流程強加進來
 
 額外為影片加上的硬規則:
 

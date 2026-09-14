@@ -144,7 +144,7 @@ FLUX.2 不屬於上述 image profile 或 SDXL tier；`generate.py` 會以 `valid
 
 ### layer_split(從定稿完成圖拆出單一圖層)
 1. 來源圖路徑(**必須是已經定稿的完成圖**,不是重新生成——這個 task 不吃 prompt,純粹裁切透明度)
-2. **一定要有使用者確認過這一層的遮罩範圍**,原則同 `inpaint`(alpha 語意一樣:要保留進這一層的區域 alpha=0,其餘 alpha=255)。若前文或附件沒有現成遮罩，可手繪或採用 SAM 候選，查看 preview 後請使用者確認
+2. **一定要有使用者確認過這一層的遮罩範圍**,原則同 `inpaint`(alpha 語意一樣:要保留進這一層的區域 alpha=0,其餘 alpha=255)。前文或附件已有確認過的遮罩就沿用，不重複詢問；沒有時才手繪或採用 SAM 候選，查看 preview 後請使用者確認。範圍改變時才重新確認
 3. 這一層要取什麼名字(`--layer-name`,用來組輸出檔名前綴,例如 `border`、`center_hub`)
 4. 一次呼叫只拆一層,要拆幾層就呼叫幾次——**適合大塊、邊界明確的區域**(例如外框/中心鈕),不適合切太細碎或太多張視覺相似的區域(例如轉盤裡 8 片幾乎一樣的分區隔板),這種高度重複的元素該怎麼處理,見下面「複合元件的圖層」小節,不要硬用 `layer_split` 切
 
@@ -187,9 +187,10 @@ FLUX.2 不屬於上述 image profile 或 SDXL tier；`generate.py` 會以 `valid
 
 ### inpaint(局部調整)
 1. 來源圖路徑
-2. **一定要有使用者確認過的遮罩範圍**。可沿用已提供的遮罩、透過下方 Simple Mask Session 手繪，或先用 SAM 產生候選。Agent 要查看實際預覽；SAM 另先查看 contact sheet。使用者在編輯頁按完成，或已明確接受相同候選，即算確認，不重複詢問；範圍改變時才重新確認。不要自己用文字描述猜測修改區域；格式轉換可由工具處理。
+2. **一定要有使用者確認過的遮罩範圍**。可沿用已提供的遮罩、透過下方 Simple Mask Session 手繪，或先用 SAM 產生候選。Agent 要查看實際預覽與 Alpha 契約；SAM 另先查看 contact sheet。使用者在編輯頁按完成，或已明確接受相同候選，即算確認，不重複詢問；範圍改變時才重新確認。不要自己用文字描述猜測修改區域；格式轉換可由工具處理。
 3. 想要新內容的描述
 4. 保留原圖程度(denoise,預設 1.0 = 完全重畫遮罩區域,想保留更多原圖細節可以問要不要調低)
+5. **不支援 `--width`/`--height`**；輸出尺寸跟隨來源圖。若使用者指定了不同輸出尺寸，說明此限制，不要把尺寸旗標硬加到這個 task，也不要改走未要求的其他 task
 
 > **遮罩檔案格式是個真實陷阱,已實測踩過一次**(alpha 通道語意、沒生效卻不報錯的坑)**,遇到「遮罩好像沒生效」「局部修圖結果變差」時讀 `reference/masking.md`。** 不規則遮罩(多邊形等)的預覽驗證流程、以及貼合度/羽化範圍/`--denoise` 三者的搭配原則也在同一份文件裡。
 
@@ -198,21 +199,21 @@ FLUX.2 不屬於上述 image profile 或 SDXL tier；`generate.py` 會以 `valid
 1. 先確認來源圖片與「希望局部修改什麼」，這段文字只顯示為頁面提示，不會自動送出生成。
 2. 執行 `mask_session.py create` 建立工作階段；把印出的 `EDITOR_URL` 給使用者。頁面只顯示來源圖、畫筆、橡皮擦、筆刷大小、復原／重做、清除、適合視窗與完成按鈕。
 3. 指導使用者：「紅色區域會重新生成；沒塗紅的地方盡量保留。塗完按完成。」不必介紹節點、Alpha、Sampler 或 ComfyUI Workflow。
-4. 使用者完成後先執行 `status`；狀態為 `completed` 才執行 `fetch`。取回 `mask_editor.png`、`mask_comfy.png`、`preview.png`；必須先實際查看 `preview.png`，確認範圍正確後才能送 `inpaint`／`guided_inpaint`。
+4. 使用者完成後先執行 `status`；狀態為 `completed` 才執行 `fetch`。取回 `mask_editor.png`、`mask_comfy.png`、`preview.png`。Agent 必須實際查看 `preview.png` 與 Alpha 契約後才能送 `inpaint`／`guided_inpaint`；使用者按完成即算確認範圍，不重複詢問。範圍改變時才重新確認。
 5. 空遮罩會被拒絕；選取超過 98% 會要求二次確認。每個工作階段以不可猜測 Token 隔離，來源與結果暫存在本機 ComfyUI temp，fetch 後保存回指定 output。
 6. 這是獨立的純手動畫遮罩工具，不含也不依賴 SAM。SAM 候選可先查看後作為標準遮罩輸入；需要修正時再用此工具手繪，兩者只透過標準遮罩交換。
 
 ### SAM 2.1 自動候選遮罩
 
 1. 需要來源圖片與獨立的新輸出資料夾；輸出資料夾非空時工具會拒絕覆寫。
-2. 執行後先查看 `contact_sheet.png`，再查看準備採用候選的 `candidate_NN_preview.png`，並請使用者確認範圍。
+2. 執行後先查看 `contact_sheet.png`，再查看準備採用候選的 `candidate_NN_preview.png`。若使用者已明確接受同一候選，沿用該確認，不重複詢問；尚未確認或範圍改變時才請使用者確認。
 3. 候選沒有「尾巴／眼睛／衣服」等語意名稱；必須依紅色預覽判斷，不可只看 score。
-4. 使用者確認後，把對應的 `candidate_NN_mask_comfy.png` 傳給 `layer_split`、`inpaint` 或 `guided_inpaint`。邊界不完整時改用 Simple Mask Tool 人工修正並再次確認。
+4. 確認後，把對應的 `candidate_NN_mask_comfy.png` 傳給 `layer_split`、`inpaint` 或 `guided_inpaint`。邊界不完整時改用 Simple Mask Tool 人工修正；修正後的範圍才需要再次確認。
 5. 大輪廓與獨立配件效果較好；極小、交疊或視覺相似部位不保證被分開。完整限制與實測見 `reference/sam-segmentation.md`。
 
 ### guided_inpaint(局部重繪 + 結構鎖定 / 外觀參考圖)
 1. 來源圖路徑
-2. **一定要有使用者確認過的遮罩範圍**,原則同 `inpaint`；可沿用已確認的遮罩、手繪或採用 SAM 候選；先查看 preview，沿用既有確認，範圍改變時才重新確認。遮罩最好只蓋要換外觀的區域,不要順手蓋到不想動的部分,例如肩章/徽章這種容易被模型腦補補回來的細節——經驗上遮罩範圍越貪心,不想要的東西越容易一起被重新生成
+2. **一定要有使用者確認過的遮罩範圍**,原則同 `inpaint`；可沿用已確認的遮罩、手繪或採用 SAM 候選；先查看 preview 與 Alpha 契約，沿用既有確認，範圍改變時才重新確認。同樣不支援 `--width`/`--height`。遮罩最好只蓋要換外觀的區域,不要順手蓋到不想動的部分,例如肩章/徽章這種容易被模型腦補補回來的細節——經驗上遮罩範圍越貪心,不想要的東西越容易一起被重新生成
 3. **判斷外觀要靠文字描述、還是使用者有現成的一張參考圖(例如自己畫的材質/紋理圖)**——有圖的話優先用 `--appearance-ref`,純文字描述紋理細節通常講不清楚
    - 有參考圖:跟使用者要圖的檔案路徑,提醒最好是**乾淨的材質特寫**(就一塊紋理,不要整張場景照),不然背景/光影會一起被帶進來污染結果(原則同 IPAdapter 角色參考圖要裁緊的教訓)
    - 沒有參考圖:正常問想要的新內容文字描述
@@ -236,7 +237,7 @@ FLUX.2 不屬於上述 image profile 或 SDXL tier；`generate.py` 會以 `valid
 
 `generate.py` 會在建立 graph 或上傳參考圖前檢查可調參數；超出界線就直接報錯，不要用環境或手寫 workflow 繞過固定 CLI 契約：
 
-- `width`、`height`:SDXL/SD1.5 可調尺寸須為正整數且為 8 的倍數；`flux2_concept` 須為 16 的倍數，`flux2_edit` 不開放自訂尺寸。沒有通用的最大像素值，是否能跑仍取決於硬體與所用模型。
+- `width`、`height`:只有 `concept`、`pose_only`、`style_lock`、`character_action`、`icon_asset` 接受自訂尺寸，須為正整數且為 8 的倍數；`flux2_concept` 須為 16 的倍數。`inpaint`、`guided_inpaint`、`refine`、`upscale`、`layer_split`、`flux2_edit` 不開放 `--width`/`--height`（inpaint 類跟隨來源圖；`flux2_edit` 正規化到約 1MP）。沒有通用的最大像素值，是否能跑仍取決於硬體與所用模型。使用者指定了該 task 不支援的尺寸時，說明限制並停止硬加旗標。
 - `batch`:正整數（`>= 1`），只有探索型 task 支援；帶 `--structure-ref` 的 `icon_asset` 仍以單張範本 latent 為準。
 - `ip-weight`、`pose-strength`、`control-strength`、`appearance-weight`、`lora-strength`、`denoise`:有限數值 `0..1`（包含端點）。
 - `scale`:有限數值 `> 0` 且 `<= 4`。
@@ -296,6 +297,8 @@ SAM 2.1 自動候選遮罩（不經 ComfyUI queue；工具在 `<ComfyUI>/tools/s
 
 (`<python_exe>`、`<generate_script>`、`<output_dir>` 都從 `local_config.json` 讀,不要寫死實際路徑)
 
+SDXL/SD1.5 圖片 task 可選 `--profile`／`--image-config`，規則見 `reference/full-params.md`「選用模型設定檔」。`flux2_concept`／`flux2_edit` 不要加 `--profile`、`--style`、`--rating`、`--negative`、`--batch` 或 LoRA／ControlNet／IPAdapter 旗標；parser 若收到 `--profile` 也會在送出前拒絕，不要靠它當切換手段。
+
 執行完把腳本印出的圖片路徑告訴使用者,不用額外描述生成過程。如果使用者明確要求存到別的資料夾,才把 `--output-dir` 換成使用者指定的路徑。每次要把 `local_config.json` 的 `comfyui_url` 轉成 `--comfy-url`（或明確用 `--config`），並依任務耗時調整 `--timeout`。
 
 ## 離線檢查與實機 smoke test
@@ -314,3 +317,5 @@ SAM 2.1 自動候選遮罩（不經 ComfyUI queue；工具在 `<ComfyUI>/tools/s
 | 使用者問「這個能不能做到」「有沒有什麼做不到的」,或遇到看起來像已知限制的失敗結果 | `reference/known-limitations.md` |
 | 複合式 UI 元件要拆圖層,想知道判斷理由/背景說明 | `reference/layered-assets.md` |
 | `icon_asset` 的結構/顏色描述用文字講不清楚,或 AI 一直畫不準確定的數量/配置(例如放射狀等分) | `reference/structure-ref.md` |
+| 規劃 SDXL/SD1.5 task 時要查設定檔調校經驗、預設解析度或驗證紀錄 | `reference/profiles/<設定檔 id>.md`（先讀 SKILL.md「這台機器能跑什麼」） |
+| SAM 候選限制、輸出檔名與實測 | `reference/sam-segmentation.md` |
