@@ -40,6 +40,10 @@ class VerifyPortableInstallTests(unittest.TestCase):
         cls.pipeline_image_bytes = (PIPELINE_PKG / "image_graphs.py").read_bytes()
         cls.pipeline_video_bytes = (PIPELINE_PKG / "video_catalog.py").read_bytes()
         cls.pipeline_video_graphs_bytes = (PIPELINE_PKG / "video_graphs.py").read_bytes()
+        cls.pipeline_profiles_bytes = (PIPELINE_PKG / "profiles.py").read_bytes()
+        cls.profile_json_bytes = {
+            path.name: path.read_bytes() for path in sorted((PIPELINE_PKG / "profiles").glob("*.json"))
+        }
 
     def _write_json(self, path, payload):
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -66,6 +70,9 @@ class VerifyPortableInstallTests(unittest.TestCase):
         self._copy_source(tools_dir / "comfyui_pipeline" / "image_graphs.py", self.pipeline_image_bytes)
         self._copy_source(tools_dir / "comfyui_pipeline" / "video_catalog.py", self.pipeline_video_bytes)
         self._copy_source(tools_dir / "comfyui_pipeline" / "video_graphs.py", self.pipeline_video_graphs_bytes)
+        self._copy_source(tools_dir / "comfyui_pipeline" / "profiles.py", self.pipeline_profiles_bytes)
+        for name, source in self.profile_json_bytes.items():
+            self._copy_source(tools_dir / "comfyui_pipeline" / "profiles" / name, source)
         if include_video:
             self._copy_source(tools_dir / "detect_video_capabilities.py", self.detect_video_bytes)
 
@@ -209,6 +216,41 @@ class VerifyPortableInstallTests(unittest.TestCase):
         self.assertEqual(1, code)
         self.assertIn("[FAIL] sam_segment.py source sync", out.getvalue())
 
+    def _profile_sync_output(self, mutate_tools_dir):
+        live = {
+            "os": "Windows", "machine": "amd64", "backend": "cuda",
+            "tier": "sdxl", "checkpoint": "sd_xl_base_1.0.safetensors",
+            "default_width": 1024, "default_height": 1024,
+            "gpu_name": "Test GPU", "vram_mb": 24576,
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            _, tools_dir, _, _, config_path = self._base_install(pathlib.Path(tmp), live)
+            mutate_tools_dir(tools_dir / "comfyui_pipeline" / "profiles")
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                code = self.verify.main(["--config", str(config_path), "--repo-root", str(ROOT)], detector=lambda: live)
+        return code, out.getvalue()
+
+    def test_missing_deployed_profile_fails_source_sync(self):
+        code, text = self._profile_sync_output(lambda d: (d / "sd15_light.json").unlink())
+        self.assertEqual(1, code)
+        self.assertIn("[FAIL] comfyui_pipeline/profiles/sd15_light.json source sync", text)
+        self.assertIn("[PASS] comfyui_pipeline/profiles/sdxl_standard.json source sync", text)
+
+    def test_stale_deployed_profile_fails_source_sync(self):
+        code, text = self._profile_sync_output(lambda d: (d / "retired.json").write_text("{}", encoding="utf-8"))
+        self.assertEqual(1, code)
+        self.assertIn("[FAIL] comfyui_pipeline/profiles/retired.json source sync", text)
+        self.assertIn("repo 已不存在", text)
+
+    def test_drifted_deployed_profile_fails_source_sync(self):
+        def drift(profiles_dir):
+            path = profiles_dir / "sdxl_standard.json"
+            path.write_text(path.read_text(encoding="utf-8").replace('"steps": 25', '"steps": 8'), encoding="utf-8")
+        code, text = self._profile_sync_output(drift)
+        self.assertEqual(1, code)
+        self.assertIn("[FAIL] comfyui_pipeline/profiles/sdxl_standard.json source sync", text)
+
     def test_source_sync_accepts_only_newline_differences(self):
         live = {
             "os": "Windows", "machine": "amd64", "backend": "cuda",
@@ -227,7 +269,10 @@ class VerifyPortableInstallTests(unittest.TestCase):
                     ("comfyui_pipeline/__init__.py", self.pipeline_init_bytes),
                     ("comfyui_pipeline/image_graphs.py", self.pipeline_image_bytes),
                     ("comfyui_pipeline/video_catalog.py", self.pipeline_video_bytes),
-                    ("comfyui_pipeline/video_graphs.py", self.pipeline_video_graphs_bytes)):
+                    ("comfyui_pipeline/video_graphs.py", self.pipeline_video_graphs_bytes),
+                    ("comfyui_pipeline/profiles.py", self.pipeline_profiles_bytes),
+                    *((f"comfyui_pipeline/profiles/{name}", source)
+                      for name, source in self.profile_json_bytes.items())):
                 text = source.decode("utf-8").replace("\r\n", "\n").replace("\n", "\r\n")
                 target = tools_dir / name
                 target.parent.mkdir(parents=True, exist_ok=True)

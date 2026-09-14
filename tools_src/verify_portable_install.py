@@ -26,7 +26,11 @@ SYNC_SOURCE_FILES = (
     ("comfyui_pipeline/image_graphs.py", Path("tools_src/comfyui_pipeline/image_graphs.py"), Path("tools/comfyui_pipeline/image_graphs.py")),
     ("comfyui_pipeline/video_catalog.py", Path("tools_src/comfyui_pipeline/video_catalog.py"), Path("tools/comfyui_pipeline/video_catalog.py")),
     ("comfyui_pipeline/video_graphs.py", Path("tools_src/comfyui_pipeline/video_graphs.py"), Path("tools/comfyui_pipeline/video_graphs.py")),
+    ("comfyui_pipeline/profiles.py", Path("tools_src/comfyui_pipeline/profiles.py"), Path("tools/comfyui_pipeline/profiles.py")),
 )
+# 模型設定檔數量會增加,依 repo 實際檔案動態核對,不在這裡逐一列名。
+PROFILES_REPO_DIR = Path("tools_src/comfyui_pipeline/profiles")
+PROFILES_DEPLOYED_DIR = Path("tools/comfyui_pipeline/profiles")
 
 
 class VerificationError(RuntimeError):
@@ -179,6 +183,8 @@ def _check_source_sync(repo_root, comfyui_path, results, require_video=False):
                 ("fail", f"{label} source sync", "repo 與部署副本內容不同；請重新同步部署副本")
             )
 
+    _check_profile_sync(repo_root, comfyui_path, results)
+
     if require_video:
         repo_file = repo_root / "tools_src" / "detect_video_capabilities.py"
         deployed_file = comfyui_path / "tools" / "detect_video_capabilities.py"
@@ -193,6 +199,27 @@ def _check_source_sync(repo_root, comfyui_path, results, require_video=False):
             results.append(
                 ("fail", f"{label} source sync", "repo 與部署副本內容不同；請重新同步部署副本")
             )
+
+
+def _check_profile_sync(repo_root, comfyui_path, results):
+    """Profiles are shared by every machine: deployed set must equal the repo set."""
+    repo_dir = repo_root / PROFILES_REPO_DIR
+    deployed_dir = comfyui_path / PROFILES_DEPLOYED_DIR
+    repo_names = {path.name for path in repo_dir.glob("*.json")} if repo_dir.is_dir() else set()
+    deployed_names = {path.name for path in deployed_dir.glob("*.json")} if deployed_dir.is_dir() else set()
+    if not repo_names:
+        results.append(("fail", "comfyui_pipeline/profiles source sync", "repo 沒有任何模型設定檔"))
+        return
+    for name in sorted(repo_names | deployed_names):
+        label = f"comfyui_pipeline/profiles/{name} source sync"
+        if name not in deployed_names:
+            results.append(("fail", label, "部署副本不存在；請同步整個 comfyui_pipeline/ 資料夾"))
+        elif name not in repo_names:
+            results.append(("fail", label, "部署副本有 repo 已不存在的設定檔；請移除或重新同步"))
+        elif _normalize_source_text(repo_dir / name) == _normalize_source_text(deployed_dir / name):
+            results.append(("pass", label, "repo 與部署副本一致"))
+        else:
+            results.append(("fail", label, "repo 與部署副本內容不同；請重新同步部署副本"))
 
 
 def _resolve_local_config_paths(local_config, config_dir):

@@ -1,6 +1,8 @@
 # 模型設定檔（model profile）設計草案
 
-狀態：**草案，尚未實作**。分支 `feature/model-profiles`。實作時每個階段都要走 `skills/comfyui-new-tool-checklist/SKILL.md`。
+狀態：**第 1 階段已完成（離線驗證），第 2 階段起尚未實作**。分支 `feature/model-profiles`。實作時每個階段都要走 `skills/comfyui-new-tool-checklist/SKILL.md`。
+
+第 1 階段落地內容：`tools_src/comfyui_pipeline/profiles/{sdxl_standard,sd15_light}.json`、`profiles.py`（讀取與格式驗證）、`image_graphs.py` 改由設定檔取得 SDXL/SD1.5 模型檔名與取樣參數（FLUX.2 維持原樣）、`verify_portable_install.py` 核對部署端設定檔。`tests/fixtures/image_graphs_golden.json` 以重構前程式碼產生，鎖住 4 個 tier 共 99 組 graph 逐欄位不變。底模 checkpoint 與預設解析度仍讀 `device_config.json`，設定檔的 `resolution.by_memory` 目前只由測試確認與 `detect_device.py` 的 `TIERS` 一致，尚未取代它。
 
 ## 1. 要解決的問題
 

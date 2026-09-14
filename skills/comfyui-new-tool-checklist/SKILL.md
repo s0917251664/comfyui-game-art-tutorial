@@ -25,6 +25,8 @@
 ### 2. 程式碼面(`tools_src/generate.py`)
 
 - [ ] 新 task 或新參數遵守現有設計哲學:鎖死大部分參數,只留必要欄位可調,不要一次開放一堆旗標讓使用者自己組
+- [ ] 圖片模型檔名、取樣參數、預設解析度、task 可用範圍屬於**模型設定檔**(`tools_src/comfyui_pipeline/profiles/*.json`),不要寫死在 `image_graphs.py`。新增圖片模型要補進對應設定檔的 `models`/`tasks`,驗證狀態(`validation`)只能在實機驗證後才標 `verified`/`experimental`
+- [ ] 刻意改變圖片 graph 時,執行 `python tests/golden_image_graphs.py --write` 重產對照檔,並在 diff 裡確認只有預期的節點變了;非刻意的 graph 變化會讓 `tests/test_image_profiles.py` 失敗
 - [ ] 非顯而易見的技術決策(為什麼選這個模型、有什麼已知限制/技術債)寫成程式碼註解——不要只留在對話紀錄裡,那些之後沒人看得到
 - [ ] 改完 `tools_src/generate.py` 後,同步複製部署到 `<ComfyUI 安裝路徑>/tools/generate.py`(照 `AGENTS.md` 講的,不要讓這兩份長期不同步)
 - [ ] 至少確認語法沒錯(例如 `python -c "import ast; ast.parse(open(...).read())"`)

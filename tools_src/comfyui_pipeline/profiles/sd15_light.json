@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "id": "sd15_light",
+  "display_name": "SD1.5 輕量（基礎路徑）",
+  "family": "sd15",
+  "kind": "image",
+  "tiers": ["sd15"],
+
+  "requirements": {
+    "backends": ["cuda", "mps", "cpu"],
+    "min_usable_memory_mb": 0,
+    "precision": ["fp16", "fp32"]
+  },
+
+  "models": {
+    "checkpoint": {"dir": "checkpoints", "file": "dreamshaper_8.safetensors", "loader": "CheckpointLoaderSimple", "precision": "fp16"},
+    "bg_removal": {"dir": "background_removal", "file": "birefnet.safetensors", "loader": "LoadBackgroundRemovalModel", "optional": true},
+    "upscale": {"dir": "upscale_models", "file": "4x-UltraSharp.pth", "loader": "UpscaleModelLoader", "optional": true}
+  },
+
+  "sampling": {"steps": 25, "cfg": 7.0, "sampler": "euler", "scheduler": "normal"},
+
+  "resolution": {
+    "native": [512, 512],
+    "multiple_of": 8,
+    "by_memory": [
+      {"min_usable_memory_mb": 0, "default": [512, 512]}
+    ]
+  },
+
+  "variants": {},
+
+  "tasks": {
+    "concept": {"requires": ["checkpoint"]},
+    "icon_asset": {"requires": ["checkpoint", "bg_removal"]},
+    "inpaint": {"requires": ["checkpoint"]},
+    "guided_inpaint": {"requires": ["checkpoint"]},
+    "refine": {"requires": ["checkpoint"]},
+    "upscale": {"requires": ["checkpoint", "upscale"]},
+    "layer_split": {"requires": []}
+  },
+
+  "notes_ref": "skills/comfyui-install/reference/models.md",
+
+  "validation": {}
+}

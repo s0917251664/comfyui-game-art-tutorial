@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "id": "sdxl_standard",
+  "display_name": "SDXL 標準",
+  "family": "sdxl",
+  "kind": "image",
+  "tiers": ["sdxl_high", "sdxl", "sdxl_light"],
+
+  "requirements": {
+    "backends": ["cuda", "mps"],
+    "min_usable_memory_mb": 8000,
+    "precision": ["fp16"]
+  },
+
+  "models": {
+    "checkpoint": {"dir": "checkpoints", "file": "sd_xl_base_1.0.safetensors", "loader": "CheckpointLoaderSimple", "precision": "fp16"},
+    "controlnet.canny": {"dir": "controlnet", "file": "controlnet-canny-sdxl-1.0.safetensors", "loader": "ControlNetLoader", "optional": true},
+    "controlnet.pose": {"dir": "controlnet", "file": "controlnet-openpose-sdxl-1.0.safetensors", "loader": "ControlNetLoader", "optional": true},
+    "controlnet.depth": {"dir": "controlnet", "file": "controlnet-depth-sdxl-1.0.safetensors", "loader": "ControlNetLoader", "optional": true},
+    "controlnet.union": {"dir": "controlnet", "file": "xinsir-controlnet-union-sdxl-1.0-promax.safetensors", "loader": "ControlNetLoader", "optional": true},
+    "ipadapter": {"dir": "ipadapter", "file": "ip-adapter-plus_sdxl_vit-h.safetensors", "loader": "IPAdapterModelLoader", "optional": true},
+    "clip_vision": {"dir": "clip_vision", "file": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors", "loader": "CLIPVisionLoader", "optional": true},
+    "bg_removal": {"dir": "background_removal", "file": "birefnet.safetensors", "loader": "LoadBackgroundRemovalModel", "optional": true},
+    "upscale": {"dir": "upscale_models", "file": "4x-UltraSharp.pth", "loader": "UpscaleModelLoader", "optional": true}
+  },
+
+  "sampling": {"steps": 25, "cfg": 7.0, "sampler": "euler", "scheduler": "normal"},
+
+  "resolution": {
+    "native": [1024, 1024],
+    "multiple_of": 8,
+    "by_memory": [
+      {"min_usable_memory_mb": 12000, "default": [1024, 1024]},
+      {"min_usable_memory_mb": 8000, "default": [768, 768]}
+    ]
+  },
+
+  "variants": {
+    "realistic": {"checkpoint": "juggernautXL_ragnarok.safetensors"},
+    "illustration": {
+      "checkpoint": "Illustrious-XL-v1.1.safetensors",
+      "rating_tags": {"safe": "rating:general", "questionable": "rating:questionable", "explicit": "rating:explicit"}
+    },
+    "anime": {
+      "checkpoint": "ponyDiffusionV6XL_v6StartWithThisOne.safetensors",
+      "rating_tags": {"safe": "rating_safe", "questionable": "rating_questionable", "explicit": "rating_explicit"}
+    }
+  },
+
+  "tasks": {
+    "concept": {"requires": ["checkpoint"]},
+    "icon_asset": {"requires": ["checkpoint", "bg_removal"], "optional_requires": ["controlnet.canny", "ipadapter", "clip_vision"]},
+    "character_action": {"requires": ["checkpoint", "ipadapter", "clip_vision", "controlnet.*"]},
+    "pose_only": {"requires": ["checkpoint", "controlnet.*"]},
+    "style_lock": {"requires": ["checkpoint", "ipadapter", "clip_vision"]},
+    "inpaint": {"requires": ["checkpoint"]},
+    "guided_inpaint": {"requires": ["checkpoint"], "optional_requires": ["controlnet.*", "ipadapter", "clip_vision"]},
+    "refine": {"requires": ["checkpoint"]},
+    "upscale": {"requires": ["checkpoint", "upscale"]},
+    "layer_split": {"requires": []}
+  },
+
+  "notes_ref": "skills/comfyui-install/reference/models.md",
+
+  "validation": {
+    "windows-cuda": {
+      "status": "verified",
+      "tasks": ["concept", "icon_asset", "character_action", "pose_only", "style_lock", "inpaint", "guided_inpaint", "refine", "upscale", "layer_split"],
+      "min_verified_memory_mb": 16000,
+      "evidence": "docs/tested-versions.md"
+    }
+  }
+}

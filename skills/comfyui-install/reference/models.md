@@ -108,9 +108,9 @@ Wan + H3 FL2VA 約 56.4 GiB;加上 Ref2VA 約 76 GiB。Ref2VA 跟 FL2VA 是不�
 
 ## `sd15` tier(VRAM < 8GB,SD1.5 家族)
 
-**這條路線目前這個 repo 完全沒有實機驗證過**。`tools_src/generate.py` 裡 `CONTROLNET_MODELS`/`ip-adapter_file`/`clip_name` 仍指向 SDXL 版本，因此 CLI 目前會對需要 ControlNet/IPAdapter 的 SD1.5 組合先 fail-fast（提早拒絕）；只有繞過 capability gate、直接把 SDXL add-on graph 跟 SD1.5 底模混用時，才會因架構不符發生 shape mismatch。遇到這個 tier 時:
+**這條路線目前這個 repo 完全沒有實機驗證過**。`tools_src/comfyui_pipeline/profiles/sd15_light.json` 模型設定檔目前只有 SD1.5 底模、BiRefNet 與放大模型，沒有任何 ControlNet/IPAdapter/CLIP Vision，因此 CLI 目前會對需要 ControlNet/IPAdapter 的 SD1.5 組合先 fail-fast（提早拒絕）；只有繞過 capability gate、直接把 SDXL add-on graph 跟 SD1.5 底模混用時，才會因架構不符發生 shape mismatch。遇到這個 tier 時:
 
 1. 先跟使用者說清楚這是還沒驗證過的路線,不是「裝了就一定動」
 2. `checkpoint` 換成 `device_config.json` 裡指定的 SD1.5 系列模型(如 DreamShaper),下載來源跟使用者確認,不要臆測網址
 3. ControlNet/IPAdapter/CLIP Vision 路徑目前會被 capability gate 主動拒絕；只下載對應的 **SD1.5 版本**並不會自動開通，不能把「模型已安裝」當成「task 已支援」
-4. 真正新增 SD1.5 add-on 支援時，要照 `skills/comfyui-new-tool-checklist/SKILL.md` 完整處理：建立依 tier 選擇的模型映射、更新 capability gate、補 graph/CLI 測試、完成 ComfyUI 實機 smoke test，再同步文件。只修改 `CONTROLNET_MODELS` 常數仍不完整，IPAdapter/CLIP Vision 與 gate 也必須一起處理
+4. 真正新增 SD1.5 add-on 支援時，要照 `skills/comfyui-new-tool-checklist/SKILL.md` 完整處理：在 `sd15_light.json` 補上 SD1.5 版 ControlNet/IPAdapter/CLIP Vision 與對應 `tasks`、更新 capability gate、補 graph/CLI 測試、完成 ComfyUI 實機 smoke test，再同步文件與設定檔的 `validation`。只補 ControlNet 仍不完整，IPAdapter/CLIP Vision 與 gate 也必須一起處理

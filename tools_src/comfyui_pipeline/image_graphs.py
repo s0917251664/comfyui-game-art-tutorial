@@ -12,8 +12,15 @@ except ImportError:  # Pillow is only needed by the local template/mask helpers.
     ImageDraw = None
     ImageFilter = None
 
+from . import profiles as _profiles
+
 DEFAULT_NEGATIVE = "blurry, low quality, extra fingers, deformed, watermark"
-SDXL_TIERS = frozenset(("sdxl_high", "sdxl", "sdxl_light"))
+# 模型檔名與取樣參數的單一來源是 profiles/*.json(全平台共用、隨 comfyui_pipeline/ 部署)。
+# 下面的模組常數只是從 sdxl_standard 設定檔衍生出來的相容別名(generate.py facade 與舊呼叫端仍在用),
+# 不要在這裡直接改檔名——改設定檔,並更新 tests/fixtures/image_graphs_golden.json。
+DEFAULT_PROFILE_ID = "sdxl_standard"
+_SDXL_PROFILE = _profiles.load_profile(DEFAULT_PROFILE_ID)
+SDXL_TIERS = frozenset(_SDXL_PROFILE["tiers"])
 DEVICE_CONFIG_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "device_config.json")
 
 def _require_pillow():
@@ -67,15 +74,13 @@ def require_sdxl_capability(feature, tier=None):
 # (canny=線稿邊緣,pose=骨架姿勢,depth=深度圖),需要 comfyui_controlnet_aux custom node
 # 提供 OpenposePreprocessor / DepthAnythingV2Preprocessor,細節見 skills/comfyui-install/SKILL.md
 #
-# 已知技術債:這裡跟下面 build_character_action/build_style_lock 裡的 ipadapter_file/clip_name
-# 都是寫死指向 SDXL 版本,沒有跟著 CKPT(見 load_device_config)的 tier 走。目前只在 SDXL 家族
-# tier(sdxl_high/sdxl/sdxl_light)上驗證過。如果之後真的有機器落在 sd15 tier(底模自動換成
-# SD1.5 系列),這幾個常數也要跟著換成 SD1.5 對應版本,不然底模跟 ControlNet/IPAdapter 架構
-# 對不上,執行期會 shape mismatch——換 tier 時記得回來檢查這裡,不要假設現有檔名通用。
+# ControlNet/IPAdapter/CLIP Vision 跟底模架構綁定。builder 依 DEVICE 的 tier 對應到設定檔
+# (見 _active_profile),再從該設定檔取檔名;sd15_light 設定檔刻意沒有這些 add-on,
+# 所以 require_sdxl_capability 擋不住的情況下也會在組 graph 時報錯,不會把 SDXL add-on 混進 SD1.5。
+# 要開通 SD1.5 add-on,是在 sd15_light.json 補上對應模型與 tasks,並完成實機驗證。
 CONTROLNET_MODELS = {
-    "canny": "controlnet-canny-sdxl-1.0.safetensors",
-    "pose": "controlnet-openpose-sdxl-1.0.safetensors",
-    "depth": "controlnet-depth-sdxl-1.0.safetensors",
+    control_type: _profiles.model_file(_SDXL_PROFILE, f"controlnet.{control_type}")
+    for control_type in ("canny", "pose", "depth")
 }
 
 # --style 選填參數的白名單(選配,不裝也完全不影響預設行為)。都是 SDXL 架構的社群微調底模,
@@ -85,9 +90,7 @@ CONTROLNET_MODELS = {
 # ——這三顆各自授權都不一樣(Juggernaut/Pony 都有針對「做成付費服務」的限制;Illustrious 依版本
 # 不同差很多,2026-08-19 曾經記錯成 MIT,見 models.md 更正說明),不要憑這裡的常數名稱就假設能商用。
 STYLE_CHECKPOINTS = {
-    "realistic": "juggernautXL_ragnarok.safetensors",
-    "illustration": "Illustrious-XL-v1.1.safetensors",
-    "anime": "ponyDiffusionV6XL_v6StartWithThisOne.safetensors",
+    style: variant["checkpoint"] for style, variant in _SDXL_PROFILE["variants"].items()
 }
 
 # --rating 選填參數(選配,不給就完全不影響 prompt)。只對 anime/illustration 這兩個 --style
@@ -95,13 +98,17 @@ STYLE_CHECKPOINTS = {
 # 沿用 Danbooru 的 rating:xxx),不是這個腳本自己發明的機制。realistic/預設底模沒有對應標籤慣例,
 # 給了 --rating 也沒意義,main() 裡會直接擋掉,不要讓它靜默沒效果。
 RATING_TAGS = {
-    "anime": {"safe": "rating_safe", "questionable": "rating_questionable", "explicit": "rating_explicit"},
-    "illustration": {"safe": "rating:general", "questionable": "rating:questionable", "explicit": "rating:explicit"},
+    style: dict(variant["rating_tags"])
+    for style, variant in _SDXL_PROFILE["variants"].items()
+    if variant.get("rating_tags")
 }
 
 # Experimental A/B only.  ProMax is deliberately pinned to one explicit file;
 # the existing per-control models remain the production default.
-CONTROLNET_UNION_MODEL = "xinsir-controlnet-union-sdxl-1.0-promax.safetensors"
+CONTROLNET_UNION_MODEL = _profiles.model_file(_SDXL_PROFILE, "controlnet.union")
+IPADAPTER_MODEL = _profiles.model_file(_SDXL_PROFILE, "ipadapter")
+CLIP_VISION_MODEL = _profiles.model_file(_SDXL_PROFILE, "clip_vision")
+BG_REMOVAL_MODEL = _profiles.model_file(_SDXL_PROFILE, "bg_removal")
 CONTROLNET_UNION_TYPES = {
     "canny": "canny/lineart/anime_lineart/mlsd",
     "pose": "openpose",
@@ -116,13 +123,13 @@ def add_controlnet_loader(graph, node_id, control_type, control_backend="verifie
     if control_backend == "verified":
         graph[node_id] = {
             "class_type": "ControlNetLoader",
-            "inputs": {"control_net_name": CONTROLNET_MODELS[control_type]},
+            "inputs": {"control_net_name": _model(f"controlnet.{control_type}")},
         }
         return [node_id, 0]
     if control_backend == "union":
         graph[node_id] = {
             "class_type": "ControlNetLoader",
-            "inputs": {"control_net_name": CONTROLNET_UNION_MODEL},
+            "inputs": {"control_net_name": _model("controlnet.union")},
         }
         union_node_id = f"{node_id}u"
         graph[union_node_id] = {
@@ -249,12 +256,41 @@ def load_device_config():
     沒有這份設定檔就用保守的 SDXL 預設值,並提醒使用者先跑一次偵測。"""
     if not os.path.exists(DEVICE_CONFIG_PATH):
         print(f"[提醒] 找不到 {DEVICE_CONFIG_PATH},建議先執行 detect_device.py。目前用預設 SDXL 設定。", file=sys.stderr)
-        return {"checkpoint": "sd_xl_base_1.0.safetensors", "default_width": 1024, "default_height": 1024}
+        width, height = _SDXL_PROFILE["resolution"]["native"]
+        return {
+            "checkpoint": _profiles.model_file(_SDXL_PROFILE, "checkpoint"),
+            "default_width": width, "default_height": height,
+        }
     with open(DEVICE_CONFIG_PATH, encoding="utf-8") as f:
         return json.load(f)
 
 DEVICE = load_device_config()
 CKPT = DEVICE["checkpoint"]
+
+
+def _active_profile():
+    """依目前 DEVICE 的 tier 回傳對應設定檔。
+
+    沒有 tier(找不到 device_config.json 時的預設值)或 tier 不在任何設定檔時沿用 sdxl_standard,
+    跟重構前「寫死 SDXL 檔名」的行為一致;未知 tier 需要 add-on 時仍由 require_sdxl_capability 擋下。
+    底模 checkpoint 與預設解析度第 1 階段仍讀 DEVICE(device_config.json),不從設定檔覆寫。
+    """
+    profile_id = _profiles.profile_id_for_tier(DEVICE.get("tier")) or DEFAULT_PROFILE_ID
+    return _profiles.load_profile(profile_id)
+
+
+def _model(key):
+    return _profiles.model_file(_active_profile(), key)
+
+
+def _resolve_sampling(steps=None, cfg=None):
+    """設定檔的鎖死取樣參數;呼叫端明確傳入 steps/cfg 時才覆寫。"""
+    sampling = dict(_active_profile()["sampling"])
+    if steps is not None:
+        sampling["steps"] = steps
+    if cfg is not None:
+        sampling["cfg"] = cfg
+    return sampling
 
 def seed_or_random(seed):
     return seed if seed is not None else int.from_bytes(os.urandom(6), "big")
@@ -277,7 +313,7 @@ def model_clip_refs(graph, lora_name=None, lora_strength=0.8, ckpt_node_id="1", 
     return [lora_node_id, 0], [lora_node_id, 1]
 
 # ---------- task: concept (Ch3 系列:純文字概念圖) ----------
-def build_concept(prompt, negative=None, width=None, height=None, seed=None, steps=25, cfg=7.0, batch_size=1,
+def build_concept(prompt, negative=None, width=None, height=None, seed=None, steps=None, cfg=None, batch_size=1,
                    lora_name=None, lora_strength=0.8, checkpoint=None):
     width = DEVICE["default_width"] if width is None else width
     height = DEVICE["default_height"] if height is None else height
@@ -285,6 +321,7 @@ def build_concept(prompt, negative=None, width=None, height=None, seed=None, ste
     validate_batch(batch_size)
     validate_lora_strength(lora_strength)
     negative = negative or DEFAULT_NEGATIVE
+    s = _resolve_sampling(steps, cfg)
     graph = {"1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or CKPT}}}
     model_ref, clip_ref = model_clip_refs(graph, lora_name, lora_strength)
     graph.update({
@@ -295,8 +332,8 @@ def build_concept(prompt, negative=None, width=None, height=None, seed=None, ste
             "class_type": "KSampler",
             "inputs": {
                 "model": model_ref, "positive": ["2", 0], "negative": ["3", 0], "latent_image": ["4", 0],
-                "seed": seed_or_random(seed), "steps": steps, "cfg": cfg,
-                "sampler_name": "euler", "scheduler": "normal", "denoise": 1.0,
+                "seed": seed_or_random(seed), "steps": s["steps"], "cfg": s["cfg"],
+                "sampler_name": s["sampler"], "scheduler": s["scheduler"], "denoise": 1.0,
             },
         },
         "6": {"class_type": "VAEDecode", "inputs": {"samples": ["5", 0], "vae": ["1", 2]}},
@@ -418,7 +455,7 @@ def build_wheel_layer_masks(width=1024, height=1024, frame_ratio=0.86, hub_ratio
     return frame_mask, prize_mask, pointer_mask
 
 
-def build_icon_asset(prompt, negative=None, width=1024, height=1024, seed=None, steps=25, cfg=7.0,
+def build_icon_asset(prompt, negative=None, width=1024, height=1024, seed=None, steps=None, cfg=None,
                       batch_size=1, lora_name=None, lora_strength=0.8,
                       structure_ref_filename=None, control_strength=STRUCTURE_REF_CONTROL_STRENGTH,
                       structure_ref_denoise=STRUCTURE_REF_DENOISE, checkpoint=None,
@@ -434,6 +471,7 @@ def build_icon_asset(prompt, negative=None, width=1024, height=1024, seed=None, 
     if appearance_ref_filename:
         require_sdxl_capability("icon_asset 的 appearance-ref/IPAdapter")
     negative = (negative or DEFAULT_NEGATIVE) + ICON_ASSET_NEGATIVE_SUFFIX
+    s = _resolve_sampling(steps, cfg)
     graph = {"1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or CKPT}}}
     model_ref, clip_ref = model_clip_refs(graph, lora_name, lora_strength)
     graph.update({
@@ -446,8 +484,8 @@ def build_icon_asset(prompt, negative=None, width=1024, height=1024, seed=None, 
         # 像哪張參考圖」的責任從純文字描述轉移到圖片級別的參考,對材質/質感這類文字講不清楚的
         # 特徵比較有效。套在 model_ref 上,KSampler 用的 model 要接這裡回傳的新參照,不要漏接。
         graph["1b2"] = {"class_type": "LoadImage", "inputs": {"image": appearance_ref_filename}}
-        graph["1b3"] = {"class_type": "CLIPVisionLoader", "inputs": {"clip_name": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors"}}
-        graph["1b4"] = {"class_type": "IPAdapterModelLoader", "inputs": {"ipadapter_file": "ip-adapter-plus_sdxl_vit-h.safetensors"}}
+        graph["1b3"] = {"class_type": "CLIPVisionLoader", "inputs": {"clip_name": _model("clip_vision")}}
+        graph["1b4"] = {"class_type": "IPAdapterModelLoader", "inputs": {"ipadapter_file": _model("ipadapter")}}
         graph["1b5"] = {
             "class_type": "IPAdapterAdvanced",
             "inputs": {
@@ -473,7 +511,7 @@ def build_icon_asset(prompt, negative=None, width=1024, height=1024, seed=None, 
     positive_ref, negative_ref = ["2", 0], ["3", 0]
     if structure_ref_filename:
         graph["4c"] = build_control_preprocessor("canny", "4")
-        graph["4d"] = {"class_type": "ControlNetLoader", "inputs": {"control_net_name": CONTROLNET_MODELS["canny"]}}
+        graph["4d"] = {"class_type": "ControlNetLoader", "inputs": {"control_net_name": _model("controlnet.canny")}}
         graph["4e"] = {
             "class_type": "ControlNetApplyAdvanced",
             "inputs": {
@@ -487,8 +525,8 @@ def build_icon_asset(prompt, negative=None, width=1024, height=1024, seed=None, 
         "class_type": "KSampler",
         "inputs": {
             "model": model_ref, "positive": positive_ref, "negative": negative_ref, "latent_image": latent_ref,
-            "seed": seed_or_random(seed), "steps": steps, "cfg": cfg,
-            "sampler_name": "euler", "scheduler": "normal", "denoise": denoise,
+            "seed": seed_or_random(seed), "steps": s["steps"], "cfg": s["cfg"],
+            "sampler_name": s["sampler"], "scheduler": s["scheduler"], "denoise": denoise,
         },
     }
     graph["6"] = {"class_type": "VAEDecode", "inputs": {"samples": ["5", 0], "vae": ["1", 2]}}
@@ -498,7 +536,7 @@ def build_icon_asset(prompt, negative=None, width=1024, height=1024, seed=None, 
 
 # ---------- task: character_action(Ch7 ControlNet + Ch8 IPAdapter 合併)----------
 def build_character_action(prompt, character_ref_filename, pose_ref_filename, negative=None,
-                            width=None, height=None, seed=None, steps=25, cfg=7.0,
+                            width=None, height=None, seed=None, steps=None, cfg=None,
                             ip_weight=0.8, pose_strength=1.0, batch_size=1, control_type="canny",
                             lora_name=None, lora_strength=0.8, checkpoint=None):
     require_sdxl_capability("character_action (ControlNet/IPAdapter)")
@@ -513,6 +551,7 @@ def build_character_action(prompt, character_ref_filename, pose_ref_filename, ne
     validate_unit_interval(pose_strength, "pose_strength")
     validate_lora_strength(lora_strength)
     negative = negative or DEFAULT_NEGATIVE
+    s = _resolve_sampling(steps, cfg)
     graph = {"1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or CKPT}}}
     model_ref, clip_ref = model_clip_refs(graph, lora_name, lora_strength)
     graph.update({
@@ -522,8 +561,8 @@ def build_character_action(prompt, character_ref_filename, pose_ref_filename, ne
         "5": {"class_type": "LoadImage", "inputs": {"image": pose_ref_filename}},
         # 明確指定 IPAdapter 模型 + CLIP Vision 檔名,不用 IPAdapterUnifiedLoader 的自動猜測
         # (它的 preset 自動配對邏輯會挑到 bigG 版 CLIP Vision,跟我們裝的 ViT-H 版 IPAdapter 模型維度對不上)
-        "6a": {"class_type": "CLIPVisionLoader", "inputs": {"clip_name": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors"}},
-        "6b": {"class_type": "IPAdapterModelLoader", "inputs": {"ipadapter_file": "ip-adapter-plus_sdxl_vit-h.safetensors"}},
+        "6a": {"class_type": "CLIPVisionLoader", "inputs": {"clip_name": _model("clip_vision")}},
+        "6b": {"class_type": "IPAdapterModelLoader", "inputs": {"ipadapter_file": _model("ipadapter")}},
         "7": {
             "class_type": "IPAdapterAdvanced",
             "inputs": {
@@ -533,7 +572,7 @@ def build_character_action(prompt, character_ref_filename, pose_ref_filename, ne
             },
         },
         "8": build_control_preprocessor(control_type, "5"),
-        "9": {"class_type": "ControlNetLoader", "inputs": {"control_net_name": CONTROLNET_MODELS[control_type]}},
+        "9": {"class_type": "ControlNetLoader", "inputs": {"control_net_name": _model(f"controlnet.{control_type}")}},
         "10": {
             "class_type": "ControlNetApplyAdvanced",
             "inputs": {
@@ -546,8 +585,8 @@ def build_character_action(prompt, character_ref_filename, pose_ref_filename, ne
             "class_type": "KSampler",
             "inputs": {
                 "model": ["7", 0], "positive": ["10", 0], "negative": ["10", 1], "latent_image": ["11", 0],
-                "seed": seed_or_random(seed), "steps": steps, "cfg": cfg,
-                "sampler_name": "euler", "scheduler": "normal", "denoise": 1.0,
+                "seed": seed_or_random(seed), "steps": s["steps"], "cfg": s["cfg"],
+                "sampler_name": s["sampler"], "scheduler": s["scheduler"], "denoise": 1.0,
             },
         },
         "13": {"class_type": "VAEDecode", "inputs": {"samples": ["12", 0], "vae": ["1", 2]}},
@@ -563,9 +602,10 @@ def build_character_action(prompt, character_ref_filename, pose_ref_filename, ne
 # 如果不是透過 ComfyUI 的 MaskEditor 存檔(那個格式一定對),而是agent自己用程式產生遮罩,
 # 務必存成帶 alpha 通道的 RGBA 圖,不要用 .convert('RGB') 之類的操作把 alpha 弄丟。
 def build_inpaint(prompt, image_filename, mask_filename, negative=None, denoise=1.0,
-                   seed=None, steps=25, cfg=7.0, grow_mask_by=6, checkpoint=None):
+                   seed=None, steps=None, cfg=None, grow_mask_by=6, checkpoint=None):
     validate_unit_interval(denoise, "denoise")
     negative = negative or DEFAULT_NEGATIVE
+    s = _resolve_sampling(steps, cfg)
     return {
         "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or CKPT}},
         "2": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": ["1", 1]}},
@@ -580,8 +620,8 @@ def build_inpaint(prompt, image_filename, mask_filename, negative=None, denoise=
             "class_type": "KSampler",
             "inputs": {
                 "model": ["1", 0], "positive": ["2", 0], "negative": ["3", 0], "latent_image": ["6", 0],
-                "seed": seed_or_random(seed), "steps": steps, "cfg": cfg,
-                "sampler_name": "euler", "scheduler": "normal", "denoise": denoise,
+                "seed": seed_or_random(seed), "steps": s["steps"], "cfg": s["cfg"],
+                "sampler_name": s["sampler"], "scheduler": s["scheduler"], "denoise": denoise,
             },
         },
         "8": {"class_type": "VAEDecode", "inputs": {"samples": ["7", 0], "vae": ["1", 2]}},
@@ -608,7 +648,7 @@ def build_inpaint(prompt, image_filename, mask_filename, negative=None, denoise=
 def build_guided_inpaint(prompt, image_filename, mask_filename, negative=None,
                           control_ref_filename=None, control_type=None, control_strength=1.0,
                           appearance_ref_filename=None, appearance_weight=0.8,
-                          denoise=1.0, seed=None, steps=25, cfg=7.0, grow_mask_by=6, checkpoint=None):
+                          denoise=1.0, seed=None, steps=None, cfg=None, grow_mask_by=6, checkpoint=None):
     validate_unit_interval(denoise, "denoise")
     validate_unit_interval(control_strength, "control_strength")
     validate_unit_interval(appearance_weight, "appearance_weight")
@@ -617,6 +657,7 @@ def build_guided_inpaint(prompt, image_filename, mask_filename, negative=None,
     if appearance_ref_filename:
         require_sdxl_capability("guided_inpaint 的 IPAdapter")
     negative = negative or DEFAULT_NEGATIVE
+    s = _resolve_sampling(steps, cfg)
     graph = {
         "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or CKPT}},
         "2": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": ["1", 1]}},
@@ -632,8 +673,8 @@ def build_guided_inpaint(prompt, image_filename, mask_filename, negative=None,
     model_ref = ["1", 0]
     if appearance_ref_filename:
         graph["7a"] = {"class_type": "LoadImage", "inputs": {"image": appearance_ref_filename}}
-        graph["7b"] = {"class_type": "CLIPVisionLoader", "inputs": {"clip_name": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors"}}
-        graph["7c"] = {"class_type": "IPAdapterModelLoader", "inputs": {"ipadapter_file": "ip-adapter-plus_sdxl_vit-h.safetensors"}}
+        graph["7b"] = {"class_type": "CLIPVisionLoader", "inputs": {"clip_name": _model("clip_vision")}}
+        graph["7c"] = {"class_type": "IPAdapterModelLoader", "inputs": {"ipadapter_file": _model("ipadapter")}}
         graph["7d"] = {
             "class_type": "IPAdapterAdvanced",
             "inputs": {
@@ -648,7 +689,7 @@ def build_guided_inpaint(prompt, image_filename, mask_filename, negative=None,
     if control_type:
         graph["8"] = {"class_type": "LoadImage", "inputs": {"image": control_ref_filename or image_filename}}
         graph["9"] = build_control_preprocessor(control_type, "8")
-        graph["10"] = {"class_type": "ControlNetLoader", "inputs": {"control_net_name": CONTROLNET_MODELS[control_type]}}
+        graph["10"] = {"class_type": "ControlNetLoader", "inputs": {"control_net_name": _model(f"controlnet.{control_type}")}}
         graph["11"] = {
             "class_type": "ControlNetApplyAdvanced",
             "inputs": {
@@ -662,8 +703,8 @@ def build_guided_inpaint(prompt, image_filename, mask_filename, negative=None,
         "class_type": "KSampler",
         "inputs": {
             "model": model_ref, "positive": positive_ref, "negative": negative_ref, "latent_image": ["6", 0],
-            "seed": seed_or_random(seed), "steps": steps, "cfg": cfg,
-            "sampler_name": "euler", "scheduler": "normal", "denoise": denoise,
+            "seed": seed_or_random(seed), "steps": s["steps"], "cfg": s["cfg"],
+            "sampler_name": s["sampler"], "scheduler": s["scheduler"], "denoise": denoise,
         },
     }
     graph["13"] = {"class_type": "VAEDecode", "inputs": {"samples": ["12", 0], "vae": ["1", 2]}}
@@ -673,7 +714,7 @@ def build_guided_inpaint(prompt, image_filename, mask_filename, negative=None,
 
 # ---------- task: pose_only(Ch7:單獨 ControlNet,不鎖角色)----------
 def build_pose_only(prompt, pose_ref_filename, negative=None, width=None, height=None,
-                     seed=None, steps=25, cfg=7.0, pose_strength=1.0, batch_size=1,
+                     seed=None, steps=None, cfg=None, pose_strength=1.0, batch_size=1,
                      control_type="canny", lora_name=None, lora_strength=0.8, checkpoint=None,
                      control_backend="verified"):
     require_sdxl_capability("pose_only (ControlNet)")
@@ -684,6 +725,7 @@ def build_pose_only(prompt, pose_ref_filename, negative=None, width=None, height
     validate_unit_interval(pose_strength, "pose_strength")
     validate_lora_strength(lora_strength)
     negative = negative or DEFAULT_NEGATIVE
+    s = _resolve_sampling(steps, cfg)
     graph = {"1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or CKPT}}}
     model_ref, clip_ref = model_clip_refs(graph, lora_name, lora_strength)
     graph.update({
@@ -706,8 +748,8 @@ def build_pose_only(prompt, pose_ref_filename, negative=None, width=None, height
             "class_type": "KSampler",
             "inputs": {
                 "model": model_ref, "positive": ["7", 0], "negative": ["7", 1], "latent_image": ["8", 0],
-                "seed": seed_or_random(seed), "steps": steps, "cfg": cfg,
-                "sampler_name": "euler", "scheduler": "normal", "denoise": 1.0,
+                "seed": seed_or_random(seed), "steps": s["steps"], "cfg": s["cfg"],
+                "sampler_name": s["sampler"], "scheduler": s["scheduler"], "denoise": 1.0,
             },
         },
         "10": {"class_type": "VAEDecode", "inputs": {"samples": ["9", 0], "vae": ["1", 2]}},
@@ -718,7 +760,7 @@ def build_pose_only(prompt, pose_ref_filename, negative=None, width=None, height
 
 # ---------- task: style_lock(Ch8:單獨 IPAdapter,不鎖姿勢)----------
 def build_style_lock(prompt, character_ref_filename, negative=None, width=None, height=None,
-                      seed=None, steps=25, cfg=7.0, ip_weight=0.8, batch_size=1,
+                      seed=None, steps=None, cfg=None, ip_weight=0.8, batch_size=1,
                       lora_name=None, lora_strength=0.8, checkpoint=None):
     require_sdxl_capability("style_lock (IPAdapter)")
     width = DEVICE["default_width"] if width is None else width
@@ -728,14 +770,15 @@ def build_style_lock(prompt, character_ref_filename, negative=None, width=None, 
     validate_unit_interval(ip_weight, "ip_weight")
     validate_lora_strength(lora_strength)
     negative = negative or DEFAULT_NEGATIVE
+    s = _resolve_sampling(steps, cfg)
     graph = {"1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or CKPT}}}
     model_ref, clip_ref = model_clip_refs(graph, lora_name, lora_strength)
     graph.update({
         "2": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": clip_ref}},
         "3": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": clip_ref}},
         "4": {"class_type": "LoadImage", "inputs": {"image": character_ref_filename}},
-        "5": {"class_type": "CLIPVisionLoader", "inputs": {"clip_name": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors"}},
-        "6": {"class_type": "IPAdapterModelLoader", "inputs": {"ipadapter_file": "ip-adapter-plus_sdxl_vit-h.safetensors"}},
+        "5": {"class_type": "CLIPVisionLoader", "inputs": {"clip_name": _model("clip_vision")}},
+        "6": {"class_type": "IPAdapterModelLoader", "inputs": {"ipadapter_file": _model("ipadapter")}},
         "7": {
             "class_type": "IPAdapterAdvanced",
             "inputs": {
@@ -749,8 +792,8 @@ def build_style_lock(prompt, character_ref_filename, negative=None, width=None, 
             "class_type": "KSampler",
             "inputs": {
                 "model": ["7", 0], "positive": ["2", 0], "negative": ["3", 0], "latent_image": ["8", 0],
-                "seed": seed_or_random(seed), "steps": steps, "cfg": cfg,
-                "sampler_name": "euler", "scheduler": "normal", "denoise": 1.0,
+                "seed": seed_or_random(seed), "steps": s["steps"], "cfg": s["cfg"],
+                "sampler_name": s["sampler"], "scheduler": s["scheduler"], "denoise": 1.0,
             },
         },
         "10": {"class_type": "VAEDecode", "inputs": {"samples": ["9", 0], "vae": ["1", 2]}},
@@ -761,9 +804,10 @@ def build_style_lock(prompt, character_ref_filename, negative=None, width=None, 
 
 # ---------- task: refine(Ch5:圖生圖,草稿精緻化/材質變體)----------
 def build_refine(prompt, image_filename, negative=None, denoise=0.6,
-                  seed=None, steps=25, cfg=7.0, checkpoint=None):
+                  seed=None, steps=None, cfg=None, checkpoint=None):
     validate_unit_interval(denoise, "denoise")
     negative = negative or DEFAULT_NEGATIVE
+    s = _resolve_sampling(steps, cfg)
     return {
         "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or CKPT}},
         "2": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": ["1", 1]}},
@@ -774,8 +818,8 @@ def build_refine(prompt, image_filename, negative=None, denoise=0.6,
             "class_type": "KSampler",
             "inputs": {
                 "model": ["1", 0], "positive": ["2", 0], "negative": ["3", 0], "latent_image": ["5", 0],
-                "seed": seed_or_random(seed), "steps": steps, "cfg": cfg,
-                "sampler_name": "euler", "scheduler": "normal", "denoise": denoise,
+                "seed": seed_or_random(seed), "steps": s["steps"], "cfg": s["cfg"],
+                "sampler_name": s["sampler"], "scheduler": s["scheduler"], "denoise": denoise,
             },
         },
         "7": {"class_type": "VAEDecode", "inputs": {"samples": ["6", 0], "vae": ["1", 2]}},
@@ -784,20 +828,21 @@ def build_refine(prompt, image_filename, negative=None, denoise=0.6,
 
 
 # ---------- task: upscale(放大精修:放大模型 + 二次 KSampler 補細節)----------
-UPSCALE_MODEL = "4x-UltraSharp.pth"  # 4 倍放大模型,scale 參數透過 ImageScaleBy 縮回使用者要的倍率
+UPSCALE_MODEL = _profiles.model_file(_SDXL_PROFILE, "upscale")  # 4 倍放大模型,scale 參數透過 ImageScaleBy 縮回使用者要的倍率
 
 
 def build_upscale(prompt, image_filename, negative=None, scale=2.0, denoise=0.4,
-                   seed=None, steps=25, cfg=7.0, checkpoint=None):
+                   seed=None, steps=None, cfg=None, checkpoint=None):
     validate_scale(scale)
     validate_unit_interval(denoise, "denoise")
     negative = negative or DEFAULT_NEGATIVE
+    s = _resolve_sampling(steps, cfg)
     return {
         "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint or CKPT}},
         "2": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": ["1", 1]}},
         "3": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": ["1", 1]}},
         "4": {"class_type": "LoadImage", "inputs": {"image": image_filename}},
-        "5": {"class_type": "UpscaleModelLoader", "inputs": {"model_name": UPSCALE_MODEL}},
+        "5": {"class_type": "UpscaleModelLoader", "inputs": {"model_name": _model("upscale")}},
         "6": {"class_type": "ImageUpscaleWithModel", "inputs": {"upscale_model": ["5", 0], "image": ["4", 0]}},
         # UPSCALE_MODEL 固定放大 4 倍,這裡再縮回使用者要的實際倍率(scale/4),避免要另外讀原圖尺寸算絕對像素
         "7": {
@@ -809,8 +854,8 @@ def build_upscale(prompt, image_filename, negative=None, scale=2.0, denoise=0.4,
             "class_type": "KSampler",
             "inputs": {
                 "model": ["1", 0], "positive": ["2", 0], "negative": ["3", 0], "latent_image": ["8", 0],
-                "seed": seed_or_random(seed), "steps": steps, "cfg": cfg,
-                "sampler_name": "euler", "scheduler": "normal", "denoise": denoise,
+                "seed": seed_or_random(seed), "steps": s["steps"], "cfg": s["cfg"],
+                "sampler_name": s["sampler"], "scheduler": s["scheduler"], "denoise": denoise,
             },
         },
         "10": {"class_type": "VAEDecode", "inputs": {"samples": ["9", 0], "vae": ["1", 2]}},
@@ -854,7 +899,7 @@ def attach_bg_removal(prompt, image_node_id):
     """
     next_id = str(max(int(k) for k in prompt.keys() if k.isdigit()) + 1)
     n1, n2, n3, n4 = next_id, str(int(next_id) + 1), str(int(next_id) + 2), str(int(next_id) + 3)
-    prompt[n1] = {"class_type": "LoadBackgroundRemovalModel", "inputs": {"bg_removal_name": "birefnet.safetensors"}}
+    prompt[n1] = {"class_type": "LoadBackgroundRemovalModel", "inputs": {"bg_removal_name": _model("bg_removal")}}
     prompt[n2] = {"class_type": "RemoveBackground", "inputs": {"bg_removal_model": [n1, 0], "image": [image_node_id, 0]}}
     prompt[n3] = {"class_type": "InvertMask", "inputs": {"mask": [n2, 0]}}
     prompt[n4] = {"class_type": "JoinImageWithAlpha", "inputs": {"image": [image_node_id, 0], "alpha": [n3, 0]}}
