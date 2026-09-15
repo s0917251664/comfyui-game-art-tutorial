@@ -35,6 +35,13 @@ agent 會依 [`AGENTS.md`](AGENTS.md) 找到對應的技能文件，確認這台
 
 換電腦或換顯卡時，不要複製舊機器的 `local_config.json`、`device_config.json`、`image_capabilities.json`、`video_capabilities.json`；要在新機器重新偵測。
 
+以上 `<...>` 是指令模板，需替換成實際值。Windows PowerShell 可在 repo 根目錄直接讀取設定執行：
+
+```powershell
+$artConfig = Get-Content -Raw -Encoding UTF8 .\local_config.json | ConvertFrom-Json
+& $artConfig.python_exe $artConfig.generate_script concept --prompt "fantasy armor character concept art" --config .\local_config.json --output-dir $artConfig.output_dir
+```
+
 ## 開發檢查
 
 ```bash
@@ -54,6 +61,19 @@ python -m unittest discover -s tests -p 'test_*.py'
 | [安裝流程](skills/comfyui-install/SKILL.md) / [模型清單](skills/comfyui-install/reference/models.md) | 新機器環境與模型準備 |
 | [模型設定檔設計](docs/model-profiles-design.md) | SDXL/SD1.5 設定檔與各平台的驗證狀態 |
 | [已驗證版本](docs/tested-versions.md) | commit、套件版本、模型 SHA-256 與 smoke test 紀錄 |
+
+### 文件與實作如何對照
+
+| 要確認的事情 | 依據 |
+|---|---|
+| 需求該走哪個流程、要驗收什麼 | `AGENTS.md` 與對應 `SKILL.md` |
+| CLI 真正接受的參數、輸出與錯誤處理 | `tools_src/` 的 parser 與實作；reference 應與它一致 |
+| SDXL／SD1.5 模型、預設參數與平台驗證狀態 | `tools_src/comfyui_pipeline/profiles/*.json` |
+| 當前機器的路徑與已安裝能力 | 本機 config／capability 快照；送出前仍需即時 preflight（前置檢查） |
+| 某次實測用的版本、hash 與結果 | `docs/tested-versions.md` 與附日期的實測紀錄 |
+| 架構理由與未實作構想 | 設計稿、歷史升級評估；不能據此宣稱能力已可用 |
+
+發現文件與實作衝突時，先核對實作並修正說明；不要為了符合舊文件而臨場改 graph、換模型或補不存在的旗標。
 
 ## 授權
 

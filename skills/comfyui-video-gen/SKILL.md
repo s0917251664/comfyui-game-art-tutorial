@@ -23,7 +23,7 @@ description: 將短片、循環特效與鏡頭需求路由到既有影片 task�
 
 ## 環境
 
-先讀 `local_config.json`。影片另外需要已安裝機器的 `video_capabilities.json`：若不存在或模型/runtime/nodes 有變，先依 `skills/comfyui-install/SKILL.md` 執行 `tools_src/detect_video_capabilities.py`；偵測器只掃描既有內容，不下載模型或套件。ComfyUI 要在 `<comfyui_url>` 跑著；每個需要送工作給 ComfyUI 的 CLI 範例都要明確帶 `--comfy-url <URL>` 或 `--config <local_config.json>`，必要時再帶 `--video-config <video_capabilities.json>`，不要假設腳本會自動搜尋 repository 設定檔。影片生成等待上限建議帶 `--timeout 1800`（秒）；這是輪詢 ComfyUI 生成結果的上限，不是 server port。純本地的 `video_concat` 不需要 URL 或 timeout。
+先讀 `local_config.json`。影片另外需要已安裝機器的 `video_capabilities.json`：若不存在或模型/runtime/nodes 有變，先依 `skills/comfyui-install/SKILL.md` 執行 `tools_src/detect_video_capabilities.py`；偵測器只掃描既有內容，不下載模型或套件。ComfyUI 要在 `<comfyui_url>` 跑著；每個需要送工作給 ComfyUI 的 CLI 範例都要明確帶 `--comfy-url <URL>` 或 `--config <local_config.json>`，必要時再帶 `--video-config <video_capabilities.json>`，不要假設腳本會自動搜尋 repository 設定檔。影片生成等待上限建議帶 `--timeout 1800`（秒）；這是輪詢 ComfyUI 生成結果的上限，不是 server port。純本地的 `video_concat`／`video_composite` 不需要 URL 或 timeout，也不要求影片模型與 capability config；先依需求分流，僅檢查本機 Python 的 PyAV／Pillow（合成另需 numpy）與輸入檔案。
 
 `<python_exe> <generate_script> <task> [--comfy-url <URL> | --config <local_config.json>] [--timeout 1800] [options] --output-dir <output_dir>`
 
@@ -46,7 +46,9 @@ description: 將短片、循環特效與鏡頭需求路由到既有影片 task�
 
 `--backend` 只有在 capability config 明確寫了 `default_backend` 時才可以省略；若 config 是 `null`，必須問清楚或要求使用者明確指定。不要因模型缺失、node 缺失或 task 不支援而自動換 H3/Wan。哪個 task 接了哪個 backend,見 `reference/backends.md`;沒接上的組合腳本會在 upload/queue 前報錯,不要因此改 task 名。
 
-時長沒要求就 **2 秒**,上限 6 秒,更長拆鏡。
+生成 task 的時長沒要求就 **2 秒**，接受範圍為 2～6 秒，更長拆鏡；本機串接與合成不受這個單鏡生成上限限制。
+
+生成與本機影片處理固定 **24 FPS**，目前沒有 `--fps`。生成 task 的 `--width`／`--height` 要成對提供，畫布仍會縮至最長邊 768 以內，再向下對齊 32 的倍數；不是任意交付尺寸的保證。影格數依 backend 對齊，因此要求 2 秒不一定剛好輸出 2.00 秒，以 sidecar 的預期與實際契約為準。使用者要求其他 FPS、精確時長或更大尺寸時，先說明既有輸出限制，不虛構旗標或把需求直接填成已支援。
 
 ## 必要輸入
 
@@ -62,7 +64,7 @@ description: 將短片、循環特效與鏡頭需求路由到既有影片 task�
 2. 循環怎麼動(會自動補 seamless loop)
 3. 時長(預設 2)。預設抽幀;使用者不要 frames 才加 `--no-extract-frames`
 
-`img2video` 預設只留下 mp4；需要 png 序列時才加 `--extract-frames`。其他影片 task 也只有明確加上 `--extract-frames` 才抽幀。
+`img2video` 預設只留下 mp4；需要 png 序列時才加 `--extract-frames`。其他生成影片 task 也只有明確加上 `--extract-frames` 才抽幀；`video_concat`／`video_composite` 沒有此旗標，需要時對既有 MP4 使用抽幀 helper。
 
 ### transition
 1. 起始靜幀 `--start`
@@ -86,7 +88,7 @@ description: 將短片、循環特效與鏡頭需求路由到既有影片 task�
 ### pose_drive
 1. 角色靜幀 `--image`
 2. 動作參考影片 `--motion-ref`
-3. **靜幀姿勢/朝向必須接近動作片第一幀**(跟靜態 `character_action` 一樣)。站姿持槍去套走路片會雙人/重影,不要硬跑——沒有接近的靜幀時,先抽動作片第一幀當角色圖,或先走圖片產線 `character_action` 擺成那個起點姿勢
+3. **靜幀姿勢/朝向必須接近動作片第一幀**(跟靜態 `character_action` 一樣)。站姿持槍去套走路片會雙人/重影,不要硬跑——沒有接近的靜幀時，先抽動作片第一幀作姿勢參考，再以目標角色圖走 `character_action` 準備起點姿勢；只有動作片本來就是目標角色且該幀已接受時，才直接用它當角色圖
 4. 這段在做什麼(英文 prompt)
 5. 時長(預設 2)。`--control-type` 預設 pose;細節見 `reference/pose-drive.md`
 
@@ -98,7 +100,7 @@ description: 將短片、循環特效與鏡頭需求路由到既有影片 task�
 這個 task **純本機用 PyAV+numpy 串流逐幀 chroma key**,不呼叫 ComfyUI、不經過任何生成模型,所以不需要 `--comfy-url`/`--config`/`--timeout`。音訊只保留前景；背景有聲、前景無聲時，輸出仍為無聲。背景尺寸不同時預設 `--resize-mode fill`；目前不支援 `--resume`。調整去背邊緣與完整限制見 `reference/video-composite.md`。
 
 ### video_concat
-1. 至少兩支要串接的 mp4，以及順序
+1. 至少兩支要串接的 24 FPS mp4，以及順序
 2. 輸出名稱（`--name`）
 3. **音訊政策**：預設 `--audio-policy require-consistent`。輸入混合有聲／無聲且使用者尚未指定時，說明 `drop`（丟掉全部音軌）與 `silence-missing`（缺音鏡補靜音）並取得選擇；已指定則沿用。不要把預設拒絕誤解成輸出整段無聲，也不要默默丟棄音訊。
 4. **尺寸政策**：預設 `--resize-mode strict`。尺寸不一致且尚未指定時，說明 `fit`（加黑邊）、`fill`（裁切）或 `stretch` 並取得選擇；已指定則沿用。不要默默拉伸或裁切。

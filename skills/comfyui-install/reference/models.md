@@ -1,6 +1,6 @@
-# 模型清單(依 tier 分)
+# 模型清單（依選定設定檔與獨立能力分）
 
-`skills/comfyui-install/SKILL.md` 步驟 8 指向這裡——先確認 `device_config.json` 的 `tier` 落在哪個 family,再往下看對應的段落。
+`skills/comfyui-install/SKILL.md` 步驟 8 指向這裡——先依安裝流程確認選定的 image profile，再看對應 family；tier 只提供預設建議，大機器選 `sd15_light` 時也應使用 SD1.5 清單。影片與 FLUX.2 另看各自段落。
 
 **這件事不是只有底模(checkpoint)要跟著 tier 換,ControlNet/IPAdapter/CLIP Vision 全部都是跟底模綁定的,底模架構變了,這些都要跟著換成對應版本,不能只換 checkpoint、其他照抄。**
 
@@ -61,7 +61,7 @@ Union 是額外的實驗權重，**不會取代**上面三顆正式模型。ProM
 |---|---|---|
 | ComfyUI 原始碼(git clone) | ~0.3GB | 必要 |
 | Python 虛擬環境(torch + CUDA + 其他依賴套件) | ~6~8GB | 必要 |
-| 上面這張表全部裝齊(SDXL tier) | ~20GB | 必要(VRAM 吃緊的 `sdxl_light` 可先跳過 Depth/OpenPose,省 ~7GB) |
+| SDXL 正式模型全套（不含 Union） | ~20GB | 底模必要，其餘依選定 task 安裝；所有 tier 均可省略不用的選配模型 |
 | LoRA 訓練工具(`kohya_ss` + 它自己的 `uv sync` 依賴,選配) | ~5~8GB | 選配,只有使用者明確要練 LoRA 才裝 |
 | 選用風格底模(`--style`,見上面「選用風格底模」表格,3 顆全裝) | ~20GB(每顆 ~6.5~7GB) | 選配,只有使用者明確要用 `--style` 切換風格才裝,可以只選其中幾個 |
 | **合計(不含 LoRA 訓練工具、不含風格底模)** | **約 26~28GB** | — |
@@ -100,16 +100,16 @@ Union 是額外的實驗權重，**不會取代**上面三顆正式模型。ProM
 | MiniMax H3 video VAE | `vae` | `minimax_h3_video_vae_fp16.safetensors` | 同上 `vae/` | 4.85 GiB | 2026-08-26 |
 | MiniMax H3 audio VAE | `vae` | `minimax_h3_audio_vae_fp32.safetensors` | 同上 `vae/` | 0.56 GiB | 2026-08-26 |
 
-Wan + H3 FL2VA 約 56.4 GiB;加上 Ref2VA 約 76 GiB。Ref2VA 跟 FL2VA 是不同 UNET,h3 的 `character_ref` / `control_video` 不能拿 FL2VA 頂替。h3 的 `pose_drive` 也用這顆 Ref2VA,不用再下 Fun ControlNet。`camera_move` 不另外下模型(走已有 I2V backend)。對照見 `skills/comfyui-video-gen/reference/backends.md`。torch 需 cu130 才能走 H3 的 `int8_convrot`(這台已是 2.13.0+cu130)。LTX-2.5 本輪不裝(Hugging Face gated)。下載前先講空間,原則同風格底模。
+Wan I2V + H3 FL2VA 約 56.4 GiB；加上 Ref2VA 約 76 GiB；若再安裝表內 Wan Fun Control 5B，另加 9.32 GiB，全表約 85.3 GiB。Ref2VA 跟 FL2VA 是不同 UNET,h3 的 `character_ref` / `control_video` 不能拿 FL2VA 頂替。h3 的 `pose_drive` 也用這顆 Ref2VA,不用再下 Fun ControlNet。`camera_move` 不另外下模型(走已有 I2V backend)。對照見 `skills/comfyui-video-gen/reference/backends.md`。torch 需 cu130 才能走 H3 的 `int8_convrot`(這台已是 2.13.0+cu130)。LTX-2.5 本輪不裝(Hugging Face gated)。下載前先講空間,原則同風格底模。
 
-模型安裝完成後，若要開影片能力，執行 `tools_src/detect_video_capabilities.py` 產生 machine-specific `video_capabilities.json`。它會把每個 backend 的模型路徑與可用 capability 寫入設定，但不會計算大型檔案 hash，也不會下載缺檔；可重現的 SHA-256 仍要在 smoke test 收尾時填入 `docs/tested-versions.md`。`generate.py` 每次影片 task 都會重新檢查模型檔案、runtime 與 ComfyUI nodes，避免把「檔案曾經存在」誤當成目前可跑。
+模型安裝完成後，若要開影片能力，執行 `tools_src/detect_video_capabilities.py` 產生 machine-specific `video_capabilities.json`。它會把每個 backend 的模型路徑與可用 capability 寫入設定，預設只記 size；明確帶 `--hash-models` 才計算 SHA-256，也不會下載缺檔；可重現的 SHA-256 仍要在 smoke test 收尾時填入 `docs/tested-versions.md`。`generate.py` 每次影片 task 都會重新檢查模型檔案、runtime 與 ComfyUI nodes，避免把「檔案曾經存在」誤當成目前可跑。
 
 ## `sd15` tier(VRAM < 8GB,SD1.5 家族)
 
 **這條路線目前這個 repo 完全沒有實機驗證過**。`tools_src/comfyui_pipeline/profiles/sd15_light.json` 模型設定檔目前只有 SD1.5 底模、BiRefNet 與放大模型，沒有任何 ControlNet/IPAdapter/CLIP Vision，因此 CLI 目前會對需要 ControlNet/IPAdapter 的 SD1.5 組合先 fail-fast（提早拒絕）；只有繞過 capability gate、直接把 SDXL add-on graph 跟 SD1.5 底模混用時，才會因架構不符發生 shape mismatch。遇到這個 tier 時:
 
 1. 先跟使用者說清楚這是還沒驗證過的路線,不是「裝了就一定動」
-2. `checkpoint` 換成 `device_config.json` 裡指定的 SD1.5 系列模型(如 DreamShaper),下載來源跟使用者確認,不要臆測網址
+2. 依選定的 `sd15_light.json` 安裝 `dreamshaper_8.safetensors`；不要從較大機器的 `device_config.json` 沿用 SDXL checkpoint。下載來源須確認，不能臆測網址
 3. ControlNet/IPAdapter/CLIP Vision 路徑目前會被 capability gate 主動拒絕；只下載對應的 **SD1.5 版本**並不會自動開通，不能把「模型已安裝」當成「task 已支援」
 4. 真正新增 SD1.5 add-on 支援時，要照 `skills/comfyui-new-tool-checklist/SKILL.md` 完整處理：在 `sd15_light.json` 補上 SD1.5 版 ControlNet/IPAdapter/CLIP Vision 與對應 `tasks`、更新 capability gate、補 graph/CLI 測試、完成 ComfyUI 實機 smoke test，再同步文件與設定檔的 `validation`。只補 ControlNet 仍不完整，IPAdapter/CLIP Vision 與 gate 也必須一起處理
 

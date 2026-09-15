@@ -17,10 +17,10 @@ SDXL 只負責在這個底圖上疊材質/光澤/風格,不負責決定「有幾
 範本圖可以是任何來源(使用者提供的草圖、美術自己畫的,或程式產生),不限定畫法。`tools_src/generate.py` 裡的 `build_wheel_segment_template(n_segments, width, height, colors, gold)` 是一個現成的輔助函式,用來畫「圓形外框 + N 條放射狀分隔線 + 交錯色塊」這種放射狀等分圖示的範本,不是獨立的 CLI task,是給呼叫端(agent)自己 import 呼叫、存成檔案後再餵給 `--structure-ref` 用:
 
 ```python
-import importlib.util
-spec = importlib.util.spec_from_file_location("generate", "<generate_script 路徑>")
-m = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(m)
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path("<generate_script 路徑>").resolve().parent))
+import generate as m
 img = m.build_wheel_segment_template(n_segments=8, width=1024, height=1024)
 img.save("<暫存路徑>/template.png")
 ```
@@ -28,7 +28,7 @@ img.save("<暫存路徑>/template.png")
 存好之後正常呼叫:
 
 ```
-icon_asset --prompt "..." --structure-ref "<暫存路徑>/template.png" --output-dir <output_dir>
+<python_exe> <generate_script> icon_asset --prompt "..." --structure-ref "<暫存路徑>/template.png" --config <local_config.json> --output-dir <output_dir>
 ```
 
 放射狀等分只是其中一種結構類型,遇到其他「結構/配置已經確定、AI 用文字講不清楚」的圖示,自己畫一張對應的範本圖(規則相同:目標結構的線條/色塊直接畫在圖上)一樣可以餵給 `--structure-ref`,不用侷限在轉盤這個案例上。

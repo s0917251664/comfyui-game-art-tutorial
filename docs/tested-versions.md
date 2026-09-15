@@ -2,7 +2,7 @@
 
 這份文件記錄「曾在同一台已安裝機器上實際跑通」的工具、custom node（自訂節點）、Python 套件與模型版本。它不是目前最新版推薦，也不應把可變的 main/master 分支當成版本。安裝流程先依這份清單的已驗證版本重現；要升級時，另做一次完整 smoke test（冒煙測試）並更新紀錄。
 
-目前狀態：**已驗證（verified）**，capture machine 為 XU-Nano-PC，最後補驗日期為 2026-09-05。這筆資料直接取自 C:\Users\XU\ComfyUI 的實際安裝、模型檔與本機 ComfyUI API；repo 本身仍不提交 local_config.json、device_config.json 或 video_capabilities.json。
+目前狀態：**已驗證（verified）**，capture machine 為 XU-Nano-PC，最後補驗日期為 2026-09-05。這筆資料直接取自 C:\Users\XU\ComfyUI 的實際安裝、模型檔與本機 ComfyUI API；repo 本身仍不提交 local_config.json、device_config.json、image_capabilities.json 或 video_capabilities.json。
 
 2026-09-05 另部署 repository 內建 `comfyui-simple-mask-tool`（非外部 Git custom node、無模型），於 ComfyUI 0.34.0／Frontend 1.49.6 實測 Session create/save/fetch 與既有 `layer_split` 串接。832×1232 測試遮罩輸出 RGBA，Alpha extrema `(0,255)`，透明像素 1,009,014、不透明像素 16,010。
 
@@ -16,13 +16,14 @@
 
 - 會隨 repository 一起移動並鎖定的是 `tools_src/` 原始碼、ComfyUI/custom node commit、模型家族與對應 SHA-256，以及圖片／影片 task 的 CLI 契約。
 - 每台目標機都必須重新執行 `detect_device.py`；圖片 checkpoint family、tier 與預設解析度由該機的 backend、VRAM／統一記憶體動態決定。不得複製來源機的 `device_config.json`。
+- 圖片需再執行 `detect_image_capabilities.py`，依選定 image profile 記錄模型／nodes 與平台驗證狀態；不得複製來源機的 `image_capabilities.json`。
 - 要使用影片時，每台目標機都必須重新執行 `detect_video_capabilities.py`；可用 backend 與 task capability 由該機現有模型、Python runtime 與 ComfyUI node schema 動態決定。不得複製來源機的 `video_capabilities.json`。
 - `local_config.json` 只記錄目標機的絕對路徑與 URL，也必須在目標機重建。`workflows/` 是不進版控的維護用視覺化參考；正式 task 由 `generate.py` 依上述 machine-specific config 組 graph，不靠人工逐台修改 workflow JSON。
 - 本頁的 XU-Nano-PC hash 是已驗證的 SDXL／影片基線。若目標硬體偵測到另一個 tier，只能使用該 tier 已明確支援並完成 smoke 的模型組；例如目前 `sd15` 的 SDXL add-on 路徑尚未實機驗證，不能為了追求「相同」而強制載入 SDXL 模型造成 OOM 或架構不相容。
 
 ## 擷取規則
 
-在另一台已安裝機器上，先以 tools_src/detect_device.py 產生圖片的 device_config.json，再以 tools_src/detect_video_capabilities.py 掃描既有影片模型、runtime 與 /object_info。兩者都不負責下載模型。完成至少一次最小圖片與影片 smoke、並驗收輸出容器後，才可把該台機器的 capture_status 改為 verified。
+在另一台已安裝機器上，先以 tools_src/detect_device.py 產生圖片的 device_config.json，再以 tools_src/detect_image_capabilities.py 掃描圖片能力；有安裝影片生成才以 tools_src/detect_video_capabilities.py 掃描既有影片模型、runtime 與 /object_info。偵測器均不負責下載模型。完成本次安裝能力的最小 smoke 與內容驗收（僅圖片安裝不要求影片 smoke），才可把該台機器的 capture_status 改為 verified。
 
 每個 hash 都要對應實際檔案、模型家族與來源；影片模型必須涵蓋 diffusion_models、text_encoders、vae 三類路徑。若模型由 extra_model_paths.yaml 指向共享模型庫，應記錄共享模型庫的真實檔案路徑。拿不到的欄位保留 null/pending，不能用猜測的 commit、版本或 hash 填補。
 

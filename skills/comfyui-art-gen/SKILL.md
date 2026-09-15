@@ -72,7 +72,7 @@ SDXL/SD1.5 圖片 task 可以跑在不同的模型設定檔上(`tools_src/comfyu
 3. `tasks.<task>.validation`:`verified` 直接做;`experimental` 先說明是實驗性;`unverified` 先說明「這台平台或記憶體級距沒有驗證紀錄,結果可能較差」,使用者同意再做
 4. 要用的額外功能看 `features`(例如 `controlnet.pose` 不可用時,不要提議 `--control-type pose`)
 
-這份檔案是快照:裝了新模型或 custom node 後要重跑 `detect_image_capabilities.py --overwrite`。檔案不存在時(舊安裝)退回看 `device_config.json` 的 tier:`sdxl_high`/`sdxl`/`sdxl_light` 對應 `sdxl_standard`,`sd15` 對應 `sd15_light`,並建議使用者補跑偵測。不管快照怎麼寫,`generate.py` 送出前仍會比對 ComfyUI `/object_info`,缺 node 或模型一律停止。
+這份檔案是快照:裝了新模型或 custom node，或更新設定檔的 task／validation 後，要帶原本的路徑選項重跑 `detect_image_capabilities.py --overwrite`；若已有使用者選定的 `default_profile`，以 `--default-profile <原 id>` 保留，避免重掃時回到 tier 預設。檔案不存在時(舊安裝)退回看 `device_config.json` 的 tier:`sdxl_high`/`sdxl`/`sdxl_light` 對應 `sdxl_standard`,`sd15` 對應 `sd15_light`,並建議使用者補跑偵測。不管快照怎麼寫,`generate.py` 送出前仍會比對 ComfyUI `/object_info`,缺 node 或模型一律停止。
 
 FLUX.2 不屬於上述 image profile 或 SDXL tier；`generate.py` 會以 `validate_flux2_capability` 獨立檢查 `/object_info` 的必要 Core nodes 與模型清單。preflight 通過只代表所需 node／模型存在，不代表這台硬體已驗證可跑；硬體與品質證據見 `教學.md` 第 8.75 章及 `docs/tested-versions.md`，不能把其他設備的結果當成本機已驗證。
 
@@ -135,7 +135,7 @@ FLUX.2 不屬於上述 image profile 或 SDXL tier；`generate.py` 會以 `valid
 ### icon_asset(單一小型圖示/物件素材)
 1. 想畫的圖示/物件內容(轉成英文 prompt)——不用特別強調「單一置中、無背景」,`icon_asset` 已經固定在 prompt 尾端加這段引導詞,加了反而是重複
 2. 有沒有想避開的東西(負向詞,沒有就用預設)
-3. 尺寸/比例**預設 1024x1024 正方形,不用主動問**——這是跟 `concept`/`pose_only`/`style_lock`/`character_action` 四個 task 不同的地方,圖示類素材幾乎都是方形/近方形,只有使用者主動提出別的比例才用 `--width`/`--height` 覆蓋。**但如果這批圖示是要替換/匹配一組現成的素材包(例如既有遊戲的 symbol 資料夾),先看那組素材實際的解析度**(常常遠小於 1024,例如 300x300、140x140)**,生成/探索階段仍用預設 1024 跑,只在最後交付前統一縮放+壓縮到目標尺寸**——不用整個探索期間都用完稿解析度來回讀圖,浪費且沒必要
+3. 尺寸/比例**預設使用設定檔的原生正方形畫布（`sdxl_standard` 為 1024x1024、`sd15_light` 為 512x512），不用主動問**——這是跟 `concept`/`pose_only`/`style_lock`/`character_action` 四個 task 不同的地方,圖示類素材幾乎都是方形/近方形,只有使用者主動提出別的比例才用 `--width`/`--height` 覆蓋。**但如果這批圖示是要替換/匹配一組現成的素材包(例如既有遊戲的 symbol 資料夾),先看那組素材實際的解析度**(常常遠小於 1024,例如 300x300、140x140)**,生成/探索階段仍用預設 1024 跑,只在最後交付前統一縮放+壓縮到目標尺寸**——不用整個探索期間都用完稿解析度來回讀圖,浪費且沒必要
 4. **不用問要不要去背**——`icon_asset` 永遠輸出透明背景,沒有 `--remove-bg` 旗標
 5. **判斷這個圖示的結構/顏色配置有沒有明確答案、不該讓 AI 自己瞎猜**(例如「精確等分成 N 塊放射狀分區」這種計數幾何需求,**或圖示內容本身就是文字/字母/數字這類有精確筆畫答案的元素**,例如撲克牌花色符號 A/K/Q/J/10)——這種情況純靠文字描述給 SDXL 不可靠,改用 `--structure-ref <範本圖路徑>`,範本圖從哪來、怎麼判斷要不要用,見 `reference/structure-ref.md`,不是每次都要讀,只有遇到「結構描述用文字講不清楚/AI 一直畫不準」時才需要。**範本圖如果是文字/字母,額外問使用者一句「要工整易讀,還是重視風格/連筆流暢」**——兩者常有取捨(例如連筆花體字型的大寫 K/J 對一般人來說幾乎認不出原本的字母),先問清楚優先順序,不要生完一輪才發現方向不對,細節/字型建議見 `reference/known-limitations.md`
 6. **使用者手上有一張現成圖,想要「材質/質感偏向那張圖」才問要不要用 `--appearance-ref <路徑>`**(IPAdapter,原則同 `guided_inpaint` 的同名參數)——**參考圖如果帶文字(例如成品截圖上印的按鈕字),`--appearance-weight` 要從低值(0.3~0.4)開始試,不要用預設 0.8**,不然文字視覺印象會被一起帶進來變成畫面裡一坨假字,細節見 `reference/known-limitations.md`
@@ -201,7 +201,7 @@ FLUX.2 不屬於上述 image profile 或 SDXL tier；`generate.py` 會以 `valid
 3. 指導使用者：「紅色區域會重新生成；沒塗紅的地方盡量保留。塗完按完成。」不必介紹節點、Alpha、Sampler 或 ComfyUI Workflow。
 4. 使用者完成後先執行 `status`；狀態為 `completed` 才執行 `fetch`。取回 `mask_editor.png`、`mask_comfy.png`、`preview.png`。Agent 必須實際查看 `preview.png` 與 Alpha 契約後才能送 `inpaint`／`guided_inpaint`；使用者按完成即算確認範圍，不重複詢問。範圍改變時才重新確認。
 5. 空遮罩會被拒絕；選取超過 98% 會要求二次確認。每個工作階段以不可猜測 Token 隔離，來源與結果暫存在本機 ComfyUI temp，fetch 後保存回指定 output。
-6. 這是獨立的純手動畫遮罩工具，不含也不依賴 SAM。SAM 候選可先查看後作為標準遮罩輸入；需要修正時再用此工具手繪，兩者只透過標準遮罩交換。
+6. 這是獨立的純手動畫遮罩工具，不含也不依賴 SAM。SAM 候選可直接作為下游 task 的標準遮罩輸入；目前手動畫面不能匯入候選，需要修正時對來源圖重新手繪，勿承諾載入候選接續編輯。
 
 ### SAM 2.1 自動候選遮罩
 
@@ -303,7 +303,7 @@ SDXL/SD1.5 圖片 task 可選 `--profile`／`--image-config`，規則見 `refere
 
 ## 離線檢查與實機 smoke test
 
-修改產線或接手新機器時，先在 repository 根目錄跑 `python -m compileall -q tools_src tests` 與 `python -m unittest discover -s tests -p 'test_*.py' -v`。這兩條指令在 Windows、macOS、Linux 都不依賴 shell 展開 glob。這些檢查不需要 Pillow、GPU 或 ComfyUI；它們只驗證 graph/參數/HTTP 邊界。真正的節點相容性、模型載入、輸出尺寸、PNG/RGBA alpha 與去背品質，仍要在有 `local_config.json` 的已安裝機器上用 `--comfy-url` 做一次 smoke test，不能把離線測試結果當成實機產圖通過。
+修改產線或接手新機器時，先在 repository 根目錄跑 `python -m compileall -q tools_src tests` 與 `python -m unittest discover -s tests -p 'test_*.py' -v`。這兩條指令在 Windows、macOS、Linux 都不依賴 shell 展開 glob。核心 graph／參數／HTTP 測試不需要 GPU 或 ComfyUI；Pillow、PyAV、numpy 等可選依賴未安裝時，部分影像／影片測試會 skip，回報時須列明跳過數量，不能當成全部實測通過。真正的節點相容性、模型載入、輸出尺寸、PNG/RGBA alpha 與去背品質，仍要在有 `local_config.json` 的已安裝機器上用 `--comfy-url` 做一次 smoke test，不能把離線測試結果當成實機產圖通過。
 
 ## 深入參考(邊界情況/踩過的坑,查這裡,不用每次都讀)
 

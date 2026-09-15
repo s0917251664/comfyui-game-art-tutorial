@@ -3,7 +3,7 @@
 > **狀態:第一波 CLI 已上線並實測。** 對外契約是 **task 名 + `--backend`**,不是模型名。`img2video` / `fx_loop` / `transition` / `clip_extend` / `video_concat` / `character_video` / `camera_move` / `pose_drive` 都在 `generate.py`。哪個 backend 接了哪些能力見 `reference/backends.md`。操作走 `SKILL.md`。
 > Agent 看到「幫我產一段影片」時讀 `SKILL.md`,不要臨場組節點。**不要自動播放成品。**
 >
-> 初稿日期:2026-08-26；目前狀態更新:2026-08-30
+> 初稿日期:2026-08-26；文件契約校對:2026-09-15（未新增實機驗證）。本文保留歷史設計，操作以 `SKILL.md`、reference 與現有 CLI 為準；尚未接入的構想不能作為可執行選項。
 > 分支:`feature/video-pipeline`
 > 對齊對象:現有靜態圖產線(`skills/comfyui-art-gen/SKILL.md` + `tools_src/generate.py`)
 
@@ -76,8 +76,8 @@
 
 1. 盡量從一張已經 lock 的靜幀出發(現有 `icon_asset` / `concept`),不要純文字賭第一幀長什麼樣
 2. 運動寫「原地循環、鏡頭鎖定」,不要寫情節
-3. 需要進引擎的,生成後抽 frames 做成 sprite sheet(這步是 ffmpeg / PIL,不是 ComfyUI 節點)
-4. 需要透明的,第一波**不要承諾影片去背**;能接受的話先在單色背景上生、再逐幀去背(沿用現有 BiRefNet,當後期步驟,不是影片模型的能力)
+3. 需要進引擎的，生成後抽 PNG frames。sprite sheet 包裝尚未接入，需另行實作與驗證。
+4. 需要透明的，不承諾現有產線可交透明影片或逐幀 AI 去背；逐幀 BiRefNet 是未接入構想。目前 `video_composite` 只能把乾淨綠幕合成到背景，輸出仍是一般 MP4。
 
 這是 **ROI 最高、最該先做** 的方向。失敗了重跑成本低,成功了遊戲跟影片兩邊都能用。
 
@@ -175,7 +175,7 @@
 | `transition` | 內容轉場 | `--start` + `--end` + 中間發生什麼 | 時長、`--backend` | **已上線；需支援 last_frame 的 backend，品質依實測** |
 | `pose_drive` | 動作捕捉套角色 | `--image`(角色) + `--motion-ref`(動作影片) | `--control-type` canny/pose/depth、時長、`--backend` | **已上線。對應靜態 `character_action`** |
 | `clip_extend` | 場記連戲 / 同一場下一鏡 | `--video` 或 `--image`(上一鏡尾幀) + 接下來發生什麼 | 時長、`--backend` | **已上線** |
-| `txt2video` | 純文字賭畫面 | 只有 prompt | — | **預設不做獨立 task。** 沒有靜幀時,先走現有 `concept` 出圖,再 `img2video`。純 T2V 當 `img2video` 省略 `--image` 的後門即可,不要鼓勵這條路 |
+| `txt2video` | 純文字賭畫面 | 只有 prompt | — | **預設不做獨立 task。** 沒有靜幀時,先走現有 `concept` 出圖,再 `img2video`。目前 `img2video --image` 是必填，沒有省略圖片的 T2V 後門 |
 | `video_inpaint` | 清理組 | 影片 + 時間遮罩 | — | 不做第一波 |
 | `video_upscale` | 成片放大 | 已定稿短片 | — | 不做第一波 |
 
@@ -305,7 +305,7 @@ MiniMax H3 官方最小組(Comfy-Org,2026-08-26 核過 Hugging Face API):
 
 三邊 bake-off 硬碟(Wan 16.9 + H3 39.6 + LTX int8 distilled 預估再 30 上下)落在約 90 GiB 級,這台 C: 2026-08-26 剩約 268 GB,空間夠。**歷史上 H3 bake-off 當下不另外下載 Ref2VA / bf16 / 非 pruned 的 34GB int8；2026-08-27 已補裝 Ref2VA**(`minimax_h3_ref2va_pruned_int8_convrot.safetensors`,19.53 GiB)給 `character_video` / `pose_drive`，CLIP 跟兩個 VAE 跟 FL2VA 共用,不用再下一份。XU-Nano-PC 的精確檔案 hash 已寫入 verified manifest，其他機器必須自行重算。
 
-`detect_device.py` 之後要多一個影片 family(例如 `wan5b`),**不要**把 Wan checkpoint 塞進現有 `sdxl` tier 的 `CKPT` 欄位。圖片跟影片的 device_config 應該是兩組鍵,同一張卡可以同時是 `sdxl` + `wan5b`。
+現行影片已由 `detect_video_capabilities.py` 產生獨立 `video_capabilities.json`，不新增圖片 tier，也不把 Wan checkpoint 塞進 `device_config.json` 的 `CKPT`。
 
 ---
 
@@ -316,9 +316,9 @@ MiniMax H3 官方最小組(Comfy-Org,2026-08-26 核過 Hugging Face API):
 - **一次數秒,不是數分鐘。** 「長片」= 多鏡頭；可先用 `video_concat` 基本串接，再交給外部剪接工具完成時間線。
 - **身分會漂。** 同一角色連續多鏡,I2V 比靜態 IPAdapter 更容易越走越不像。緩解:永遠從 lock 靜幀出發、鏡不要太長、下一鏡吃上一鏡尾幀;要新鏡頭(第一幀不必是那張定稿圖)走 `character_video`(H3 Ref2VA),不要拿 SDXL IPAdapter 接上影片 graph。
 - **Loop 不是所有 task 的預設能力。** 要循環必須特別做(首尾同一張、或後製丟掉不閉環的尾幀)。`img2video` 預設不保證能 loop 且預設不抽幀;`fx_loop` 會驗循環並預設抽 png 序列。
-- **影片沒有跟靜態同等的去背。** 第一波輸出當不透明畫面。要透明素材走「單色背景 + 逐幀 BiRefNet」的後期,並誠實講這條又慢又可能閃爍。
+- **影片沒有跟靜態同等的去背。** 現有輸出是不透明影片，逐幀 BiRefNet 尚未接入；綠幕合成依 `video_composite` 的限制執行。
 - **文字、Logo、UI 字還是弱項。** 靜態已經承認這點,影片只會更差。
-- **聲音依 backend 而異。** Wan 2.2 產出無聲 mp4；目前預設 H3 會產 AAC 音軌。`video_concat` 只有在每支輸入都有音軌時才保留立體聲，混入無聲片段會使整段無聲；對白、配樂與混音仍留給外部工具。
+- **聲音依 backend 而異。** Wan 2.2 產出無聲 MP4；H3 會產 AAC 音軌，是否預設由本機 config 決定。`video_concat` 混合有聲／無聲時預設拒絕，需明確選 `drop` 或 `silence-missing`；對白、配樂與混音仍留給外部工具。
 - **5B 畫質是草稿/中段可用,不是院線。** 交件級鏡頭以後可能要 14B 選用路徑或雲端 API,那是明確的升級決策,不是裝完 5B 就自動變好。
 - **乾淨 clone 不附帶影片模型與本機設定。** Windows RTX 4080 的安裝/實測只代表 XU-Nano-PC；新機器仍須依安裝流程部署，並以 `docs/tested-versions.md` 的 machine-specific manifest 完成版本與 hash 捕捉後才可宣稱可重現。
 
@@ -344,7 +344,7 @@ MiniMax H3 官方最小組(Comfy-Org,2026-08-26 核過 Hugging Face API):
 ### 第 2 階段:第一個穩定 task = `img2video`(已完成)
 
 - `generate.py` 已新增 task,鎖死模型檔名、步數、預設解析度/幀數
-- skill 必要輸入:要動的那張圖、怎麼動、要不要 loop(不要就走 `img2video`,要就走 `fx_loop` 或同一 task 的 loop 預設)
+- skill 必要輸入:要動的那張圖、怎麼動、要不要 loop(不要就走 `img2video`,要就走 `fx_loop`；`img2video` 沒有 loop 旗標)
 - 用現有產線的一張角色圖、一張圖示、一張場景,各跑一次,打開影片驗收(動作對不對、還是不是那張圖)
 - 文件:`教學.md` 功能地圖已同步；install `models.md` 已有影片段落；XU-Nano-PC 的版本與實機 smoke 已寫入 verified manifest，其他機器仍要各自 capture
 - 此階段結束的驗收:**使用者用自然語言說「讓這張圖動起來」,agent 能穩定交一支短 mp4**

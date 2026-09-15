@@ -10,7 +10,7 @@
 |---|---|---|---|
 | `--seed N` | 除 `layer_split` 外全部 | 固定隨機種子(整數),不給的話每次隨機 | 使用者要「重現上次結果」或「鎖住構圖只改小地方」時才用,平常不用主動問 |
 | `--width` / `--height` | `flux2_concept` | 覆蓋 FLUX.2 預設 1024x1024，兩者須為 16 的倍數 | 只有前文與附件都沒有尺寸要求時才問；RTX 4080 PoC 先以約 1MP 為主，不要未實測就拉高 |
-| `--width` / `--height` | `concept`、`pose_only`、`style_lock`、`character_action` | 覆蓋預設解析度(預設值來自 `device_config.json`),數值須為 8 的倍數 | 前文與附件沒有尺寸／比例要求時才補問；有答案就沿用，不重問 |
+| `--width` / `--height` | `concept`、`pose_only`、`style_lock`、`character_action` | 覆蓋依選定模型設定檔與 `usable_memory_mb` 決定的預設解析度,數值須為 8 的倍數 | 前文與附件沒有尺寸／比例要求時才補問；有答案就沿用，不重問 |
 | `--width` / `--height` | `icon_asset` | 覆蓋預設解析度(**預設是模型設定檔的原生正方形畫布,固定值,不依記憶體縮小**:`sdxl_standard` 1024x1024、`sd15_light` 512x512) | 圖示類素材幾乎都是方形,**不用主動問**,只有使用者主動提出別的比例才用 |
 | `--width` / `--height` | `inpaint`、`guided_inpaint`、`refine`、`upscale`、`layer_split`、`flux2_edit` | **不開放**。inpaint 類與 `refine` 跟隨來源圖；`upscale` 用 `--scale`；`flux2_edit` 正規化到約 1MP | 使用者指定了不同輸出尺寸時說明限制，不要硬加旗標或改走未要求的 task |
 | `--layer-name` | `layer_split` | 這一層的名稱,組輸出檔名前綴 | 缺少且無法從需求或前文推定時才問 |
@@ -43,9 +43,9 @@
 
 `tools_src/benchmark_birefnet.py` 是維護者用的回歸工具，不是 `generate.py` task，也不會出現在一般美術需求的必要輸入中。2026-09-01 的 general／HR／HR-matting／dynamic A/B 沒有證明新變體可全面勝過 general，因此正式 `--remove-bg` 與 `icon_asset` 仍鎖定 `birefnet.safetensors`。只有再次明確要求評估模型時才執行 benchmark；不要把變體選擇暴露成日常 CLI 旗標。
 
-## tier 能力閘門
+## 模型設定檔能力閘門
 
-`device_config.json` 的 `tier` 會限制 SDXL/SD1.5 圖片 graph 能安全使用的範圍，不只是選擇預設解析度。`sdxl_high`、`sdxl`、`sdxl_light` 可使用目前鎖定的 SDXL ControlNet、IPAdapter 與風格底模；`sd15` 目前只允許不依賴這些 SDXL add-on 的基礎路徑：
+SDXL/SD1.5 圖片的可用 task 與 add-on 由選定的模型設定檔決定，`tier` 用來推導預設設定檔。`sdxl_standard` 可使用目前鎖定的 SDXL ControlNet、IPAdapter 與風格底模；即使硬體 tier 是 `sdxl`，明確選 `sd15_light` 後也只允許不依賴這些 SDXL add-on 的基礎路徑：
 
 - `concept`、`refine`、一般 `inpaint`、`upscale` 可走基礎路徑。
 - `icon_asset` 只有不帶 `--structure-ref` 與 `--appearance-ref` 時可走基礎路徑；任一參考圖都需要 SDXL。
@@ -53,7 +53,7 @@
 - `--style` 三個候選底模也只支援 SDXL 家族。
 - `flux2_concept` / `flux2_edit` 不使用這個 image profile 或 SDXL tier 契約；`generate.py` 有獨立的 `validate_flux2_capability`，缺任一 FLUX.2 模型或 Core node 時會在圖片上傳／queue 前停止。模型／node 存在不等於硬體驗證通過，仍以該機 smoke test 為準。
 
-tier 符合之後，`concept`、`icon_asset`、`character_action`、`inpaint`、`guided_inpaint`、`pose_only`、`style_lock`、`refine`、`upscale`、`layer_split` 還會做一次**安裝狀態 preflight**：用佔位檔名把這次實際要送出的 graph（含 `--remove-bg`／`icon_asset` 的去背節點）先組一次，逐節點比對 `/object_info`，缺任何 node class 或 loader 選單裡沒有對應模型檔（checkpoint、ControlNet、IPAdapter、CLIP Vision、BiRefNet、放大模型、LoRA）就在上傳前停止並列出缺什麼。模型檔名與取樣參數來自 `tools_src/comfyui_pipeline/profiles/*.json`。
+設定檔資格符合之後，`concept`、`icon_asset`、`character_action`、`inpaint`、`guided_inpaint`、`pose_only`、`style_lock`、`refine`、`upscale`、`layer_split` 還會做一次**安裝狀態 preflight**：用佔位檔名把這次實際要送出的 graph（含 `--remove-bg`／`icon_asset` 的去背節點）先組一次，逐節點比對 `/object_info`，缺任何 node class 或 loader 選單裡沒有對應模型檔（checkpoint、ControlNet、IPAdapter、CLIP Vision、BiRefNet、放大模型、LoRA）就在上傳前停止並列出缺什麼。模型檔名與取樣參數來自 `tools_src/comfyui_pipeline/profiles/*.json`。
 
 ### 選用模型設定檔（`--profile`、`--image-config`）
 
@@ -64,7 +64,7 @@ tier 符合之後，`concept`、`icon_asset`、`character_action`、`inpaint`、
 - 驗證狀態不是 `verified` 時只在 stderr 印 `[提醒]`，不會阻擋；要把這個提醒轉告使用者。
 - `--profile` 只用於上面列出的 SDXL/SD1.5 task；FLUX.2 與影片 task 不接受。
 
-不符合 tier 的組合會在參考圖上傳或建立 ComfyUI 佇列前被拒絕，避免先產生一個必然 shape mismatch 的工作。若要支援 SD1.5 的 ControlNet/IPAdapter，必須另配同家族模型並完成實機驗證，不能只替換 checkpoint 檔名。
+不符合選定設定檔的組合會在參考圖上傳或建立 ComfyUI 佇列前被拒絕，避免先產生一個必然 shape mismatch 的工作。若要支援 SD1.5 的 ControlNet/IPAdapter，必須另配同家族模型並完成實機驗證，不能只替換 checkpoint 檔名。
 
 ## 目前沒有開放的參數(刻意鎖死,不要嘗試加旗標繞過)
 

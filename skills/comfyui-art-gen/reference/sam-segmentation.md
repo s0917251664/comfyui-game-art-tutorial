@@ -20,4 +20,4 @@
 - 此 runtime 的 `float16` 在 TorchVision NMS 後處理會發生 dtype mismatch，因此工具鎖定 `float32`。
 - Windows 未啟用 Developer Mode 時，Hugging Face 快取無法使用 symlink，仍可執行但可能多占磁碟空間。
 
-SAM 與 Simple Mask Tool 是獨立工具。SAM 先提出候選以節省大輪廓描邊時間；候選不準時再用 Simple Mask Tool 人工修正，兩者只交換標準 PNG 遮罩。
+SAM 與 Simple Mask Tool 是獨立工具。SAM 先提出候選以節省大輪廓描邊時間；候選不準時，可用 Simple Mask Tool 對來源圖重新手繪。目前頁面與 client 沒有匯入 SAM 候選的入口，不能宣稱能載入候選後接續編輯。兩者輸出的標準 PNG 遮罩皆可交給下游 task。

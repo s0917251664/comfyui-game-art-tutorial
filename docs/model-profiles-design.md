@@ -1,6 +1,15 @@
-# 模型設定檔（model profile）設計草案
+# 模型設定檔（model profile）設計與實作紀錄
 
-狀態：**第 1–4 階段已完成（離線驗證），第 5、6 階段需要實機**。分支 `feature/model-profiles`。實作時每個階段都要走 `skills/comfyui-new-tool-checklist/SKILL.md`。
+本文保留 `feature/model-profiles` 的設計與階段紀錄；其中「第 1 階段」「第 2 階段」描述的是當時狀態，不是目前操作規則。第 1–4 階段已完成；實機驗證範圍以各設定檔 JSON 的 `validation` 與 `docs/tested-versions.md` 為準。Mac 的部分 smoke 發現另記於 `skills/comfyui-art-gen/reference/profiles/sdxl_standard.md`，尚未完成 manifest capture，不能升格為平台已驗證。
+
+**目前已實作的界線（2026-09-15 文件校對）：**
+
+- 選擇順序為 CLI `--profile` → capability config 的 `default_profile` → tier 對應；不依驗證分數自動換模型。
+- detector 的 `installed` 只表示底模存在；各 task、額外功能與即時 node 檢查仍須分別確認。
+- `variants` 目前提供 checkpoint 與 rating tags；自動 `prompt_prefix`、變體專屬 sampling／resolution／validation 與任意 loader 切換是設計構想，不能只加 JSON 欄位就宣稱生效。
+- FLUX.2 與影片維持獨立 preflight／capability 路線，未合併進 image profile。
+
+實際安裝與操作以對應 `SKILL.md` 為準；新增能力時才套用新工具清單。
 
 第 1 階段落地內容：`tools_src/comfyui_pipeline/profiles/{sdxl_standard,sd15_light}.json`、`profiles.py`（讀取與格式驗證）、`image_graphs.py` 改由設定檔取得 SDXL/SD1.5 模型檔名與取樣參數（FLUX.2 維持原樣）、`verify_portable_install.py` 核對部署端設定檔。`tests/fixtures/image_graphs_golden.json` 以重構前程式碼產生，鎖住 4 個 tier 共 99 組 graph 逐欄位不變。底模 checkpoint 與預設解析度仍讀 `device_config.json`，設定檔的 `resolution.by_memory` 目前只由測試確認與 `detect_device.py` 的 `TIERS` 一致，尚未取代它。
 
@@ -28,7 +37,7 @@
 
 ## 1. 要解決的問題
 
-現況是 `tools_src/detect_device.py` 的 `TIERS` 依 VRAM 挑 tier，但 tier 只決定底模檔名與預設解析度：
+重構前的狀態是 `tools_src/detect_device.py` 的 `TIERS` 依 VRAM 挑 tier，但 tier 只決定底模檔名與預設解析度：
 
 1. ControlNet、IPAdapter、CLIP Vision、`--style` 底模、取樣參數都寫死成 SDXL 值（`comfyui_pipeline/image_graphs.py`）。
 2. tier 描述的是「硬體撐得起」，不是「這台實際裝了什麼」；SDXL add-on 在 upload/queue 前沒有 `/object_info` preflight。
@@ -55,7 +64,7 @@
 
 不依設備產生「客製版設定檔」，否則每台機器的模型組合與參數都不同，驗證經驗無法累積，等於每台都要重新調校。
 
-選擇規則：**可選設定檔 = 平台符合 `requirements` ∩ 已安裝完整 ∩ 驗證狀態不是 `unsupported`**。
+目前選擇先檢查平台 `requirements`；安裝時可列尚未下載但符合平台的設定檔。detector 設定 default 時要求底模存在；執行各 task 時再檢查其模型／nodes 與驗證狀態。`unsupported` 不應列為可執行方案，`unverified` 則先告知並沿用使用者對試跑的決定。
 
 tier 不刪除，降格成「這台最多建議到哪個設定檔」的提示，保留相容。
 
@@ -112,6 +121,8 @@ tier 不刪除，降格成「這台最多建議到哪個設定檔」的提示，
 | 腳本檔案 | `.ps1` 仍需 UTF-8 BOM（Windows PowerShell 5.1）；macOS／Linux 用 POSIX shell 或 Python，不共用 shell 腳本 |
 
 ## 4. 設定檔結構
+
+以下 JSON 是初稿示意，含未落地構想，不能直接複製作為現行設定檔。實際 schema 與支援欄位以 `profiles.py` 及現有 JSON 為準。
 
 檔案：`tools_src/comfyui_pipeline/profiles/<profile_id>.json`，隨 `comfyui_pipeline/` 一起部署到 `<ComfyUI>/tools/`，由 `verify_portable_install.py` 做原始碼同步檢查。
 
@@ -222,7 +233,7 @@ flowchart TD
 ```
 
 - 偵測器只掃描，不下載（與 `detect_video_capabilities.py` 相同原則）。
-- `default_profile`：預設選「可用且驗證狀態最高、記憶體需求最高」的設定檔；使用者可在安裝時明確指定較小的設定檔，寫入這裡，**不再需要手改 `device_config.json`**。
+- `default_profile`：預設只選 tier 對應、符合平台且底模已安裝的設定檔；不符合時為 `null`，不自動選其他設定檔。使用者可透過 `--default-profile` 明確選擇；重掃時帶回既有選擇，不需手改 `device_config.json`。
 - `generate.py` 新增 `--profile <id>`；未給則用 `default_profile`。preflight 依設定檔檢查模型、node、精度，缺任何一項都在 upload/queue 前停止。
 - `verify_portable_install.py`：`device_config.json` 仍與即時偵測比對；另核對 `image_capabilities.json` 的 `device_fingerprint` 與實際模型存在性，`default_profile` 不再與 tier 綁定比對。
 
@@ -230,7 +241,7 @@ flowchart TD
 
 ### `comfyui-install`
 1. 偵測平台 → 列出**符合平台的設定檔**與各自驗證狀態、空間需求。
-2. 使用者選設定檔（預設建議最高已驗證者；可主動選較小的）。
+2. 使用者選設定檔（預設建議 tier 對應者，並告知驗證狀態；可主動選較小的）。
 3. 只安裝該設定檔需要的模型；`optional` 模型逐項詢問。
 4. 跑 `detect_image_capabilities.py` → 對該設定檔每個 `verified`／`experimental` task 至少跑一次 smoke。
 5. 收尾回報分三層：原始碼同步 PASS／可用 task／本機 smoke 通過的 task。

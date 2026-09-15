@@ -91,7 +91,7 @@ description: 為新增圖片、影片或本機工具能力建立適用的安裝�
 - [ ] 證據寫進 `docs/tested-versions.md`（該機器的 commit、套件版本、模型 SHA-256、smoke 紀錄），不可捏造或沿用其他機器的數字
 - [ ] 同一平台已有紀錄時，新的 `min_verified_memory_mb` 只能在實測較低記憶體級距通過後才往下調
 - [ ] 平台特有的發現（例如 MPS 某個 task 很慢、某精度不支援）補進 `reference/profiles/<id>.md`
-- [ ] 設定檔 JSON 變了，部署端也要同步；`verify_portable_install.py` 會把內容不同判為 FAIL
+- [ ] 設定檔 JSON 變了，部署端也要同步；`verify_portable_install.py` 會把內容不同判為 FAIL。重新執行 `detect_image_capabilities.py --overwrite` 更新快照中的驗證狀態，帶回原本的路徑選項與 `--default-profile <原 id>`，保留使用者選定的設定檔
 
 ## 已知限制
 
