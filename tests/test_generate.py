@@ -95,6 +95,48 @@ class GenerateTests(unittest.TestCase):
         self.assertEqual("http://after:8188", download.call_args_list[1].kwargs["comfy_url"])
         self.assertEqual(13.0, download.call_args_list[1].kwargs["request_timeout"])
 
+    def test_result_json_rejects_video_before_runtime_or_upload(self):
+        with tempfile.TemporaryDirectory() as directory:
+            destination = os.path.join(directory, "result.json")
+            with mock.patch.object(self.generate, "upload_image") as upload, \
+                    mock.patch.object(self.generate, "submit_and_wait") as submit:
+                with self.assertRaisesRegex(SystemExit, "只支援圖片 task"):
+                    self.generate.main([
+                        "--result-json", destination, "img2video",
+                        "--image", "still.png", "--prompt", "motion",
+                    ])
+            upload.assert_not_called()
+            submit.assert_not_called()
+
+    def test_result_json_writes_manifest_from_the_submitted_graph(self):
+        from PIL import Image
+
+        with tempfile.TemporaryDirectory() as directory:
+            image_path = os.path.join(directory, "generated.png")
+            manifest_path = os.path.join(directory, "result.json")
+            Image.new("RGB", (64, 64), (20, 30, 40)).save(image_path)
+            graph = {
+                "4": {"class_type": "KSampler", "inputs": {"seed": 123456}},
+                "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": "base.safetensors"}},
+                "2": {"class_type": "EmptyLatentImage", "inputs": {"width": 64, "height": 64}},
+            }
+            with mock.patch.object(self.generate, "resolve_image_profile", return_value="sdxl_standard"), \
+                    mock.patch.object(self.generate, "preflight_image_task", return_value=True), \
+                    mock.patch.object(self.generate, "_build_image_task_graph", return_value=(graph, "9")), \
+                    mock.patch.object(self.generate, "submit_and_wait", return_value={"_prompt_id": "prompt-1", "outputs": {}}), \
+                    mock.patch.object(self.generate, "download_outputs", return_value=[image_path]):
+                self.generate.main([
+                    "--comfy-url", "http://localhost:8188", "--result-json", manifest_path,
+                    "concept", "--prompt", "test request", "--seed", "5",
+                ])
+            with open(manifest_path, encoding="utf-8") as stream:
+                manifest = json.load(stream)
+            self.assertEqual("prompt-1", manifest["prompt_id"])
+            self.assertEqual({"4": {"seed": 123456}}, manifest["resolved_seeds"])
+            self.assertEqual("pass", manifest["technical_validation"]["status"])
+            self.assertEqual("pending", manifest["content_review"])
+            self.assertEqual((64, 64), (manifest["outputs"][0]["width"], manifest["outputs"][0]["height"]))
+
     def test_boundary_validators_reject_invalid_values(self):
         with self.assertRaises(ValueError):
             self.generate.validate_batch(0)

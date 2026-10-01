@@ -1,0 +1,140 @@
+{
+  "source_url": "https://github.com/AgriciDaniel/claude-obsidian",
+  "archive_url": "https://codeload.github.com/AgriciDaniel/claude-obsidian/zip/32ac5a02c4e082e4a5628ca810776375e134708e",
+  "requested_commit": "32ac5a02c4e082e4a5628ca810776375e134708e",
+  "release_manifest_source_commit": "de39db6a6be1c5447949b167a6d1894b7bed26b7",
+  "archive_sha256": "78525b25d700f38f39506adaba6fb8ed6bad2644c7c624f316fb75c76a14e67e",
+  "manifest_file_count": 203,
+  "vendor_hashes": {
+    "SHA256SUMS": "cc531ea33b3b877ef96ccfc059c2876c5a87bc4064dd38425845540a0f2269b9",
+    "ATTRIBUTION.md": "372c188cec4b631202349edbaca54e1d288133ba07bb7f1a9681ce7aa1e50f94",
+    "LICENSE": "1c5915b8cde3e16949e40961353e483d44a65f90fae72405465dcff60118e57f",
+    "RELEASE_MANIFEST.json": "ed0e3b9f99ad8f20fedc7a4c66f7332cff17a2ad686e4b5a13fe3141d2d6ad11"
+  },
+  "notes": [
+    "Vendor contents extracted unchanged from the fixed-commit archive according to RELEASE_MANIFEST.json.",
+    "The release manifest declares a different source_commit; this archive matches all 203 declared product-file SHA-256 values.",
+    "No .git metadata or undeclared archive files were included."
+  ],
+  "vendor_root": "claude-obsidian",
+  "product_root": "claude-obsidian",
+  "project_root": "..",
+  "knowledge_root": "../docs/knowledge",
+  "adapted_skills": {
+    "count": 15,
+    "records": [
+      {
+        "name": "autoresearch",
+        "upstream_skill_sha256": "54ca6599760e6e5827cee50d448b182e40ff77e784a7eda5cd44976b968b5970",
+        "project_skill_sha256": "3246384fc1de9ec2e03afd4c2f6757e8835c57f2875f74bd0e6b8ad2b8228f2c",
+        "project_binding_sha256": "21b3ca7daec627fdffc3c31bad6fd918633879784bfd971104d99369feab0c8a",
+        "upstream_prefix_exact": true
+      },
+      {
+        "name": "canvas",
+        "upstream_skill_sha256": "f41c4fae57eafae3191ffc8a04c81c131b819fb0cf8a1afe22b2bf9c1135bbd8",
+        "project_skill_sha256": "6ae74c1a88038cbc0722da4585e4023f658fe9a6f5c6b05dd3fca410ad27fd3a",
+        "project_binding_sha256": "21b3ca7daec627fdffc3c31bad6fd918633879784bfd971104d99369feab0c8a",
+        "upstream_prefix_exact": true
+      },
+      {
+        "name": "defuddle",
+        "upstream_skill_sha256": "f87f3ef756830d1cf1472af38ab3b47e67309d11638cd56e37a19c6ee15a7a96",
+        "project_skill_sha256": "33bf430b283aff25f42ca86bad76f626e8f6ad20c301a186fed0e3845d207edc",
+        "project_binding_sha256": "21b3ca7daec627fdffc3c31bad6fd918633879784bfd971104d99369feab0c8a",
+        "upstream_prefix_exact": true
+      },
+      {
+        "name": "obsidian-bases",
+        "upstream_skill_sha256": "3cdfbd83629c52cfb551a9d22e941d570d0a9cf12903630f1e873718f356f817",
+        "project_skill_sha256": "8dcb280efebb884a8b2b53ae738666aba24de0a7aabfd43d2b6ef002b49d5b31",
+        "project_binding_sha256": "21b3ca7daec627fdffc3c31bad6fd918633879784bfd971104d99369feab0c8a",
+        "upstream_prefix_exact": true
+      },
+      {
+        "name": "obsidian-markdown",
+        "upstream_skill_sha256": "bfee21f23247a8d677b56c0ccfc2e5ee8a25748cc30ac9bf16f32ae427316458",
+        "project_skill_sha256": "684b2a53dad68b469b21b10442d2098d138502d5e3af875c5ce7946c6192e265",
+        "project_binding_sha256": "21b3ca7daec627fdffc3c31bad6fd918633879784bfd971104d99369feab0c8a",
+        "upstream_prefix_exact": true
+      },
+      {
+        "name": "save",
+        "upstream_skill_sha256": "22d7864e0f059c21d3f62be5719197ef0f5cd7740f16bae100c7a9dbcb29470b",
+        "project_skill_sha256": "d1305a0fb54f36700794f3b278e5f18b51bf4534c57e2a294f44803e443cf051",
+        "project_binding_sha256": "21b3ca7daec627fdffc3c31bad6fd918633879784bfd971104d99369feab0c8a",
+        "upstream_prefix_exact": true
+      },
+      {
+        "name": "think",
+        "upstream_skill_sha256": "3a50f23f31b6aca41fae5d76017dace73191bbdde0cfb4c9515d069a9005644a",
+        "project_skill_sha256": "29ab5c14771b7379bd90c9475f27099d8a4e016c79ff2ff6a6c92e5cf6f0a629",
+        "project_binding_sha256": "21b3ca7daec627fdffc3c31bad6fd918633879784bfd971104d99369feab0c8a",
+        "upstream_prefix_exact": true
+      },
+      {
+        "name": "wiki",
+        "upstream_skill_sha256": "965568b92479236bb48eed617901f2d786405384a0f328f22454960e058c3492",
+        "project_skill_sha256": "3a2d8da4ed3b914a4db61d88ad61abbc9f6d24e52a2afe4dd1d88ba0beff9712",
+        "project_binding_sha256": "21b3ca7daec627fdffc3c31bad6fd918633879784bfd971104d99369feab0c8a",
+        "upstream_prefix_exact": true
+      },
+      {
+        "name": "wiki-cli",
+        "upstream_skill_sha256": "468df53c8712379c1681a897225e898771ca36f21e4e6e02dc8eec9f02fc8c87",
+        "project_skill_sha256": "bb1aad1488f95b7ae1fbbc6c3077f98e4aa2af6dfb407e0cc70633121973ea67",
+        "project_binding_sha256": "21b3ca7daec627fdffc3c31bad6fd918633879784bfd971104d99369feab0c8a",
+        "upstream_prefix_exact": true
+      },
+      {
+        "name": "wiki-fold",
+        "upstream_skill_sha256": "df61e257eaaed9a3ea413af9cb5e27bc8b3f6bac04eff96565af484787bb823f",
+        "project_skill_sha256": "09ce95ac6e4e35253c88d8cb7c309392c8bf8aa91521074c281992f59d306e0a",
+        "project_binding_sha256": "21b3ca7daec627fdffc3c31bad6fd918633879784bfd971104d99369feab0c8a",
+        "upstream_prefix_exact": true
+      },
+      {
+        "name": "wiki-ingest",
+        "upstream_skill_sha256": "a0f819843af60799a5a9d26f06793671c05d8a424e16d4da148a9b111a8b88b2",
+        "project_skill_sha256": "7cc9e5f8d631a6d2c010f550248b96d27efadaacdac0c53b6f427147a2044614",
+        "project_binding_sha256": "21b3ca7daec627fdffc3c31bad6fd918633879784bfd971104d99369feab0c8a",
+        "upstream_prefix_exact": true
+      },
+      {
+        "name": "wiki-lint",
+        "upstream_skill_sha256": "a660684a0b1cb5ea1382556922976b1abafa19e77992e694a7d8d9496d8a8215",
+        "project_skill_sha256": "74bdd59e6c335ce2af3d9e5d9695bddb93d61acf75f00c7e34c36cfd5d65d6a0",
+        "project_binding_sha256": "21b3ca7daec627fdffc3c31bad6fd918633879784bfd971104d99369feab0c8a",
+        "upstream_prefix_exact": true
+      },
+      {
+        "name": "wiki-mode",
+        "upstream_skill_sha256": "4862cce74fa58fba69f4f85039205f2a7b432a5bc4562a68070694049e54e21c",
+        "project_skill_sha256": "820a47626730eb0d950b3106401c41ee221bf8fa4cc95238fcb563174d4cc3eb",
+        "project_binding_sha256": "21b3ca7daec627fdffc3c31bad6fd918633879784bfd971104d99369feab0c8a",
+        "upstream_prefix_exact": true
+      },
+      {
+        "name": "wiki-query",
+        "upstream_skill_sha256": "37d2686d7d9fe2409dec02dccb1d59a5199b687b27a57e8e04bf8983e84221c1",
+        "project_skill_sha256": "6ada21cbad46ba3f3e1eb7a9d2ac92226ca3e2de08a4a7a363d995a34a39b859",
+        "project_binding_sha256": "21b3ca7daec627fdffc3c31bad6fd918633879784bfd971104d99369feab0c8a",
+        "upstream_prefix_exact": true
+      },
+      {
+        "name": "wiki-retrieve",
+        "upstream_skill_sha256": "1e7735d493e9f9943e079cfec0d28d8db76821b1f50e0f569dea8e115a8b67b6",
+        "project_skill_sha256": "bf1a6378dc7fe91b7c5f513d6b32354783e9cd874011fea2bfb5329117f80d9a",
+        "project_binding_sha256": "21b3ca7daec627fdffc3c31bad6fd918633879784bfd971104d99369feab0c8a",
+        "upstream_prefix_exact": true
+      }
+    ]
+  },
+  "project_knowledge_skill": {
+    "name": "project-knowledge",
+    "source_type": "project-authored",
+    "description": "Standard Markdown guidance, repository scoped; no dedicated CLI or vault runtime.",
+    "project_skill_sha256": "a54a651d513645833aae65209fa6c0f62885e51033ac2e1d57aae4b313da2d7d",
+    "project_binding_sha256": "822d2779163b838e585c9ef4e388ceb7d21599ba2234cb42d0a39c0f758b82f9"
+  }
+}

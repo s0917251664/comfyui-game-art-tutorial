@@ -57,6 +57,7 @@ DEFAULT_POLL_TIMEOUT = 15.0
 DEFAULT_POLL_INTERVAL = 1.0
 DEFAULT_POLL_RETRIES = 3
 from comfyui_pipeline import image_graphs as _image_graphs
+from comfyui_pipeline import image_results as _image_results
 from comfyui_pipeline import profiles as _profiles
 from comfyui_pipeline import video_catalog as _video_catalog
 from comfyui_pipeline import video_graphs as _video_graphs
@@ -2656,6 +2657,10 @@ def _add_runtime_arguments(parser):
         help=(f"prompt 送達後輪詢生成結果的秒數上限；圖片預設 {DEFAULT_TIMEOUT:g}，"
               f"影片預設 {DEFAULT_VIDEO_TIMEOUT:g}。"),
     )
+    parser.add_argument(
+        "--result-json", dest="result_json", default=argparse.SUPPRESS,
+        help="選用：成功圖片 task 寫入技術結果 manifest（不得覆寫既有檔案）。",
+    )
 
 
 def _validate_cli_args(args):
@@ -3162,9 +3167,19 @@ def main(argv=None):
     p_pd.add_argument("--extract-frames", action="store_true")
 
     args = ap.parse_args(argv)
+    if getattr(args, "prompt", None) is not None:
+        # Keep the user's actual CLI text even when --rating later decorates the
+        # effective conditioning prompt for the graph.
+        args.requested_prompt = args.prompt
     try:
         _validate_cli_args(args)
+        if getattr(args, "result_json", None) is not None:
+            if args.task not in IMAGE_GRAPH_TASKS:
+                raise ValueError("--result-json 只支援圖片 task；影片與本機影片工具不支援")
+            args.result_json = _image_results.validate_manifest_path(args.result_json)
     except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
+    except FileExistsError as exc:
         raise SystemExit(str(exc)) from exc
 
     try:
@@ -3265,12 +3280,29 @@ def main(argv=None):
         return upload_image(path, comfy_url=comfy_url, request_timeout=request_timeout)
 
     if args.task in IMAGE_GRAPH_TASKS:
+        result_inputs = []
+        if getattr(args, "result_json", None):
+            for role in ("image", "mask", "character_ref", "pose_ref", "structure_ref",
+                         "appearance_ref", "control_ref"):
+                value = getattr(args, role, None)
+                if role == "control_ref" and not value and args.task == "guided_inpaint" \
+                        and getattr(args, "control_type", None):
+                    value = getattr(args, "image", None)
+                if isinstance(value, (list, tuple)):
+                    result_inputs.extend({"role": role, "path": path} for path in value)
+                elif value:
+                    result_inputs.append({"role": role, "path": value})
+            try:
+                result_input_records = _image_results.input_records(result_inputs)
+            except (OSError, ValueError) as exc:
+                raise SystemExit(str(exc)) from exc
         if args.task in IMAGE_PROFILE_TASKS:
             try:
                 preflight_image_task(args, style_checkpoint, comfy_url, request_timeout=request_timeout)
             except RuntimeError as exc:
                 raise SystemExit(str(exc)) from exc
         prompt, out_id = _build_image_task_graph(args, style_checkpoint, upload)
+        result_graph = prompt if getattr(args, "result_json", None) else None
     elif args.task == "img2video":
         backend = require_video_backend(args.task, args.backend, ACTIVE_VIDEO_CONFIG)
         duration = _require_video_duration(args.duration)
@@ -3620,6 +3652,46 @@ def main(argv=None):
         request_timeout=request_timeout,
         allow_overwrite=(getattr(args, "overwrite", False) if args.task in VIDEO_TASKS else True),
     )
+    if getattr(args, "result_json", None):
+        result_warnings = []
+        try:
+            expected_dimensions = _image_results.graph_output_dimensions(result_graph)
+            result_outputs = _image_results.validate_png_outputs(
+                paths,
+                expected_dimensions=(None if args.task in {"flux2_concept", "flux2_edit"}
+                                     else expected_dimensions),
+                require_alpha=(args.task == "layer_split" or args.task == "icon_asset"
+                               or bool(getattr(args, "remove_bg", False))),
+                require_transparency=(args.task == "icon_asset"
+                                      or bool(getattr(args, "remove_bg", False))),
+            )
+            if args.task in {"flux2_concept", "flux2_edit"} and expected_dimensions:
+                for output in result_outputs:
+                    if (output["width"], output["height"]) != (
+                            expected_dimensions["width"], expected_dimensions["height"]):
+                        result_warnings.append(
+                            "FLUX.2 output dimensions differ from graph request: "
+                            f"requested={expected_dimensions['width']}x{expected_dimensions['height']}, "
+                            f"actual={output['width']}x{output['height']}"
+                        )
+        except (OSError, RuntimeError, ValueError) as exc:
+            raise SystemExit(str(exc)) from exc
+        selected_backend = "flux2" if args.task in {"flux2_concept", "flux2_edit"} else "comfyui"
+        manifest = _image_results.make_manifest(
+            task=args.task,
+            profile_id=None if selected_backend == "flux2" else ACTIVE_IMAGE_PROFILE,
+            backend=selected_backend,
+            prompt_id=history.get("_prompt_id") if isinstance(history, dict) else None,
+            graph=result_graph,
+            inputs=result_input_records,
+            outputs=result_outputs,
+            args=args,
+            technical_warnings=result_warnings,
+        )
+        try:
+            _image_results.write_manifest_atomic(args.result_json, manifest)
+        except (OSError, ValueError) as exc:
+            raise SystemExit(str(exc)) from exc
     if args.task in VIDEO_TASKS:
         video_paths = [path for path in paths if path.lower().endswith(".mp4")]
         if not video_paths:

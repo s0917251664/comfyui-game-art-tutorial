@@ -1,26 +1,15 @@
 # 單角色動畫工作流程表格
 
-這些表格只負責整理既有技能已要求的資訊，不新增模型參數或自動品質門檻。沒有使用到的欄位可省略。
+表格已合併至 canonical [單角色動畫 workflow](../../../docs/knowledge/animation/workflow.md)。此舊 reference 保留 heading anchors 供既有連結使用。
 
 ## 動作規格表
 
-| 動作 | 遊戲用途 | 是否循環 | 期望時長 | 起始靜幀 | task | backend | 交付格式 |
-|---|---|---|---:|---|---|---|---|
-| Idle | 等待狀態 | 是 | 由使用者指定 | 已定稿角色圖 | `img2video` 或依需求改用 `fx_loop` | 依 capability config | MP4；需要時抽 PNG |
-
-不要預填網站案例的 12 FPS、固定幀數或第三方 provider。FPS、尺寸與時長以本案需求及現有 task 契約為準。生成時，支援的 task 可用 `--extract-frames` 準備候選影格；`fx_loop` 預設抽幀；使用者接受 MP4 內容後，才將影格列為正式交付，不得為抽幀重新生成。
+動作規格表：[跳至 workflow 表格](../../../docs/knowledge/animation/workflow.md#角色靜幀與動作表)
 
 ## 逐支驗收紀錄
 
-| 動作 | MP4／sidecar | 技術狀態 | 人工檢查重點 | 使用者決定 | 後續 |
-|---|---|---|---|---|---|
-| Idle | 實際路徑 | `pass`／`warning`／`fail` | 身份、動作、Loop、腳底與接縫 | 接受／調整／放棄 | 接受後交付已準備的 frames，或從既有 MP4 抽幀 |
-
-其中「技術狀態」只能抄錄 `generate.py` 的輸出契約結果；「使用者決定」是主觀驗收，不能由技術狀態自動推導。
+逐支驗收表：[跳至 workflow 表格](../../../docs/knowledge/animation/workflow.md#逐支驗收紀錄)
 
 ## 交付清單
 
-| 動作 | 原始 MP4 | sidecar | frames／合成檔 | 技術狀態 | 已知限制 |
-|---|---|---|---|---|---|
-
-交付清單不取代 sidecar，也不建立新的 manifest 格式；只有使用者要求保存成檔案時才另行建立文件。
+交付清單：[跳至 workflow 交付](../../../docs/knowledge/animation/workflow.md#交付)

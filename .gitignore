@@ -14,3 +14,9 @@ device_config.json
 image_capabilities.json
 video_capabilities.json
 reports
+
+# Obsidian vault machine-specific layout/cache; keep app.json and core-plugins.json tracked
+docs/knowledge/.obsidian/workspace.json
+docs/knowledge/.obsidian/workspace-mobile.json
+docs/knowledge/.obsidian/cache/
+docs/knowledge/.obsidian/plugins/

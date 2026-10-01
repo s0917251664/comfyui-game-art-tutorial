@@ -1,19 +1,19 @@
+# Compatibility entrypoint
+
+Canonical content is maintained in [layered-assets.md](../../../docs/knowledge/art/layered-assets.md). The headings below preserve legacy section names; edit the canonical vault page, not this wrapper.
+
 # 複合元件的圖層拆分:判斷理由
 
-`skills/comfyui-art-gen/SKILL.md` 的「複合元件的圖層」小節指向這裡——平常照那個小節的判斷流程走就好,這份文件是背景說明,不是每次都要讀。
+Canonical section: [複合元件的圖層拆分:判斷理由](../../../docs/knowledge/art/layered-assets.md).
 
 ## 為什麼「每個構件都各自獨立生成」對高度重複元素不可靠
 
-2026-08-18 實測案例:一個轉盤 UI 有外框、8 個分區隔板、中心鈕。曾經考慮過「每個分區隔板各自呼叫一次 `icon_asset`」,但這在技術上站不住腳——AI 每次獨立生成的圖不保證像素/色彩一致,8 個視覺上該長得一模一樣的扇形,分開生成一定會有色差、比例不一致、光影角度不一致,拼回去反而更明顯突兀。
-
-也考慮過「先生成一張完整合成圖,再用 `layer_split` 從裡面切出每一片分區」,這條路一樣不可靠——相鄰的分區在合成圖裡往往只靠一條細分隔線區隔,色塊本身視覺相似,遮罩邊界很難畫準,切出來的圖層邊緣品質也不會比原圖更好(遮罩範圍內是原圖既有像素,不會產生原圖沒畫出的細節)。
-
-正確做法是遊戲美術處理放射狀重複元素的標準做法:**只生成一片「分區樣板」**(`icon_asset` 生一次),交給使用者在自己的工具(Figma/遊戲引擎)裡旋轉複製組成整圈。這樣每一片分區保證像素級一致(因為根本是同一張圖複製貼上),而且複製後還能統一調色/替換,比 AI 生成 8 次更省成本也更可控。
+Canonical section: [為什麼「每個構件都各自獨立生成」對高度重複元素不可靠](../../../docs/knowledge/art/layered-assets.md).
 
 ## 為什麼結構相異的大塊(外框/中心鈕/指針)適合各自獨立生成
 
-這些構件彼此長相本來就不同,不存在「要求 N 份彼此一致」的問題。可用 `icon_asset` 各自生成,在 prompt 重複色調、材質與裝飾語彙。需要更接近既有成品的質感時，SDXL 路線可用 `--appearance-ref`／`--appearance-weight` 引入 IPAdapter；已有相容 LoRA 且使用者指定套用時，也可用 `--lora`／`--lora-strength`。先確認設定檔與對應模型可用，參數見 `full-params.md`。這些控制只能輔助風格接近，均不保證顏色、材質或像素完全一致，仍需比對成品。
+Canonical section: [為什麼結構相異的大塊(外框/中心鈕/指針)適合各自獨立生成](../../../docs/knowledge/art/layered-assets.md).
 
 ## 為什麼不做「AI 自動判斷圖層邊界」
 
-2026-09-05 起可先用獨立 `sam_segment.py` 產生 SAM 2.1 候選遮罩，再把人工驗收通過的 `mask_comfy.png` 交給 `layer_split`。SAM 候選沒有語意名稱，也不會自動補畫交疊部位；無合適候選時仍要用 Simple Mask Tool 手動畫。完整證據與限制見 `reference/sam-segmentation.md`。
+Canonical section: [為什麼不做「AI 自動判斷圖層邊界」](../../../docs/knowledge/art/layered-assets.md).

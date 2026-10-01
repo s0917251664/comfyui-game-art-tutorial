@@ -24,6 +24,7 @@ SYNC_SOURCE_FILES = (
     ("sam_segment.py", Path("tools_src/sam_segment.py"), Path("tools/sam_segment.py")),
     ("comfyui_pipeline/__init__.py", Path("tools_src/comfyui_pipeline/__init__.py"), Path("tools/comfyui_pipeline/__init__.py")),
     ("comfyui_pipeline/image_graphs.py", Path("tools_src/comfyui_pipeline/image_graphs.py"), Path("tools/comfyui_pipeline/image_graphs.py")),
+    ("comfyui_pipeline/image_results.py", Path("tools_src/comfyui_pipeline/image_results.py"), Path("tools/comfyui_pipeline/image_results.py")),
     ("comfyui_pipeline/video_catalog.py", Path("tools_src/comfyui_pipeline/video_catalog.py"), Path("tools/comfyui_pipeline/video_catalog.py")),
     ("comfyui_pipeline/video_graphs.py", Path("tools_src/comfyui_pipeline/video_graphs.py"), Path("tools/comfyui_pipeline/video_graphs.py")),
     ("comfyui_pipeline/profiles.py", Path("tools_src/comfyui_pipeline/profiles.py"), Path("tools/comfyui_pipeline/profiles.py")),

@@ -1,0 +1,8 @@
+# Preserve imported skill and binding byte hashes across platforms.
+skills/wiki*/** -text
+skills/obsidian-*/** -text
+skills/autoresearch/** -text
+skills/canvas/** -text
+skills/defuddle/** -text
+skills/save/** -text
+skills/think/** -text
