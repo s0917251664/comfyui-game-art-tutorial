@@ -378,6 +378,115 @@ def sweep(plan_path, config_path, output_dir, *, profile=None, timeout=240,
     return report
 
 
+def checker_preview(image, background="checker"):
+    """Flatten for inspection only; never modify the source asset."""
+    base = Image.new("RGBA", image.size, background if background != "checker" else "#dddddd")
+    if background == "checker":
+        draw = ImageDraw.Draw(base)
+        for y in range(0, image.height, 24):
+            for x in range(0, image.width, 24):
+                if (x // 24 + y // 24) % 2:
+                    draw.rectangle((x, y, x + 23, y + 23), fill="#999999")
+    return Image.alpha_composite(base, image).convert("RGB")
+
+
+def asset_audit(image, output_dir):
+    record = file_record(image)
+    with Image.open(image) as original:
+        has_alpha = "A" in original.getbands() or "transparency" in original.info
+        original_mode = original.mode
+    rgba = load_image(image)
+    alpha = np.asarray(rgba.getchannel("A"))
+    bbox = rgba.getchannel("A").getbbox()
+    edge = np.concatenate((alpha[0], alpha[-1], alpha[:, 0], alpha[:, -1]))
+    findings = []
+    if not has_alpha:
+        findings.append("no_alpha_channel")
+    if not (alpha == 0).any():
+        findings.append("no_fully_transparent_pixels")
+    if bbox is None:
+        findings.append("fully_transparent_image")
+    if (edge > 0).any():
+        findings.append("visible_pixels_touch_canvas_edge")
+    if file_record(image) != record:
+        raise ValueError("Input changed during audit")
+    out = new_directory(output_dir)
+    for bg in ("white", "black", "checker"):
+        preview = rgba.copy()
+        preview.thumbnail((1200, 1200))
+        checker_preview(preview, bg).save(out / f"preview_{bg}.png")
+    result = {"schema_version": 1, "kind": "asset_alpha_audit", "status": "observed",
+              "input": record, "original_mode": original_mode, "has_alpha": has_alpha,
+              "dimensions": list(rgba.size), "visible_bbox": list(bbox) if bbox else None,
+              "transparent_pixels": int((alpha == 0).sum()),
+              "partial_alpha_pixels": int(((alpha > 0) & (alpha < 255)).sum()),
+              "opaque_pixels": int((alpha == 255).sum()),
+              "findings": findings, "acceptance": "pending human review; alpha statistics cannot judge cutout quality"}
+    save_json(out / "audit.json", result)
+    return result
+
+
+def reference_board(plan, output_dir):
+    plan = Path(plan).resolve()
+    plan_record = file_record(plan)
+    specification = json.loads(plan.read_text(encoding="utf-8-sig"))
+    if not isinstance(specification, dict) or set(specification) != {"items"}:
+        raise ValueError("Reference plan must contain only items")
+    items = specification["items"]
+    if not isinstance(items, list) or not 1 <= len(items) <= 12:
+        raise ValueError("Reference board needs 1..12 items")
+    roles = {"source", "character", "pose", "appearance", "mask-preview", "candidate"}
+    images, records = [], []
+    for index, item in enumerate(items, 1):
+        if not isinstance(item, dict) or set(item) != {"path", "label", "role"}:
+            raise ValueError("Each reference needs path, label and role")
+        if not all(isinstance(item[k], str) and item[k].strip() for k in item):
+            raise ValueError("Reference fields must be nonempty strings")
+        if item["role"] not in roles or len(item["label"]) > 120:
+            raise ValueError("Invalid reference role or label longer than 120 characters")
+        path = (plan.parent / item["path"]).resolve()
+        record = file_record(path)
+        image = load_image(path)
+        records.append({"index": index, "role": item["role"], "label": item["label"],
+                        "input": record, "dimensions": list(image.size)})
+        images.append(image)
+    if file_record(plan) != plan_record or any(file_record(r["input"]["path"]) != r["input"] for r in records):
+        raise ValueError("Input changed during board preparation")
+    columns = min(3, len(items))
+    cell_w, cell_h = 360, 420
+    board = Image.new("RGB", (columns * cell_w, math.ceil(len(items) / columns) * cell_h), "#192231")
+    draw = ImageDraw.Draw(board)
+    # Pillow's bundled font may not cover CJK: a local Windows font is optional.
+    from PIL import ImageFont
+    try:
+        font = ImageFont.truetype("C:/Windows/Fonts/msjh.ttc", 16)
+    except OSError:
+        font = ImageFont.load_default()
+    for i, (image, record) in enumerate(zip(images, records)):
+        x, y = (i % columns) * cell_w, (i // columns) * cell_h
+        image.thumbnail((336, 336))
+        thumb = checker_preview(image)
+        board.paste(thumb, (x + (cell_w - thumb.width) // 2, y + 72 + (336 - thumb.height) // 2))
+        draw.text((x + 12, y + 8), f"{record['index']:02d} | {record['role']}", font=font, fill="white")
+        # Fit labels with pixel-aware wrapping; the full label remains in JSON.
+        line, lines = "", []
+        for char in record["label"].replace("\n", " "):
+            if draw.textlength(line + char, font=font) > 336:
+                lines.append(line)
+                line = char
+            else:
+                line += char
+        lines.append(line)
+        draw.text((x + 12, y + 30), "\n".join(lines[:2]), font=font, fill="#c9d5e6", spacing=2)
+    out = new_directory(output_dir)
+    board.save(out / "reference_board.png")
+    result = {"schema_version": 1, "kind": "reference_board", "status": "candidate",
+              "plan": plan_record, "items": records,
+              "usage": "Human review only; pass original files to supported tasks, not this board"}
+    save_json(out / "references.json", result)
+    return result
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -395,12 +504,22 @@ def main(argv=None):
     p.add_argument("--timeout", type=float, default=240)
     p.add_argument("--dry-run", action="store_true", help="Validate plan/write commands; do not submit generation")
     p.add_argument("--allow-unverified", action="store_true", help="Only for a user-approved unverified/experimental trial")
+    p = sub.add_parser("asset-audit", help="Inspect Alpha and previews; does not repair or grade the asset")
+    p.add_argument("--image", required=True)
+    p.add_argument("--output-dir", required=True)
+    p = sub.add_parser("reference-board", help="Role-labelled human preview of original references")
+    p.add_argument("--plan", required=True)
+    p.add_argument("--output-dir", required=True)
     args = parser.parse_args(argv)
     try:
         if args.command == "composite":
             result = composite(args.source, args.edited, args.mask, args.output_dir)
         elif args.command == "compare":
             result = compare(args.source, args.edited, args.output_dir, args.mask)
+        elif args.command == "asset-audit":
+            result = asset_audit(args.image, args.output_dir)
+        elif args.command == "reference-board":
+            result = reference_board(args.plan, args.output_dir)
         else:
             if not math.isfinite(args.timeout) or args.timeout <= 0:
                 raise ValueError("timeout must be positive and finite")

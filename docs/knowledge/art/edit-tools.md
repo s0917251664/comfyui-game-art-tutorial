@@ -4,7 +4,7 @@ status: current
 ---
 # 本機圖片編修工具
 
-`tools_src/image_edit_tools.py` 提供三種本機操作：Alpha 遮罩合成、RGBA byte 差異檢視，以及固定輸入的有限參數 sweep。它不含生成模型、ComfyUI graph 或新的 `generate.py` task。操作入口是 [`skills/local-image-edit-tools/SKILL.md`](../../../skills/local-image-edit-tools/SKILL.md)。
+`tools_src/image_edit_tools.py` 提供五種本機操作：Alpha 遮罩合成、RGBA byte 差異檢視、固定輸入的有限參數 sweep、參考圖板與素材 Alpha 稽核。它不含生成模型、ComfyUI graph 或新的 `generate.py` task。操作入口是 [`skills/local-image-edit-tools/SKILL.md`](../../../skills/local-image-edit-tools/SKILL.md)，情境選擇見[圖片編修情境手冊](../../../skills/game-art-edit-brief/references/scenarios.md)。
 
 ## 能力與契約
 
@@ -24,6 +24,12 @@ seed、prompt、來源與參考固定；只能在現有 task 白名單的 0–1 
 
 每次 run 透過 `generate.py` 寫入原生 `generation.json` manifest；總目錄含 `sweep.json`、逐 run log、比較資料夾與 `candidates.png`。Queue 需在開始前為空。未完成或失敗時停止後續提交並保存狀態，不自動重送。timeout 後先查 queue。所有輸出都是待 Steve 逐張檢視的 candidate，不會由程式自動評定 accepted/rejected。
 
+### 參考圖板與 Alpha 稽核
+
+`reference-board --plan <plan.json> --output-dir <new-dir>` 將 1–12 張原圖做成供人工檢視的用途標籤版面，並輸出 `reference_board.png` 和帶路徑／hash／尺寸資訊的 `references.json`。Plan 只能含 `items`；每筆只能有 `path`、`label`、`role`，路徑相對 plan JSON 所在資料夾，role 限 `source`、`character`、`pose`、`appearance`、`mask-preview`、`candidate`，label 最多 120 字元。Board 不是生成輸入，task 必須使用原始圖片與其既有參數欄位。
+
+`asset-audit --image <image.png> --output-dir <new-dir>` 輸出 `audit.json` 及白／黑／棋盤預覽。它只報告原始尺寸、Alpha 通道、完全透明／半透明／不透明像素數、可見像素框及可見像素是否碰邊；預覽最長邊 1200 px，統計使用原始解析度。工具不修改素材、不修邊、不判斷文字、姿勢、角色、物件結構或美術接受度。兩者都只需要 Pillow／NumPy 和檔案路徑，不需要 ComfyUI server、runtime config 或 image capability；每次輸出需使用新目錄。
+
 ## 安裝與部署
 
 本機依賴為 Pillow 與 NumPy，沿用現有 ComfyUI Python 環境；無需新增模型或 custom node。單一 source 檔部署到 `<ComfyUI 安裝路徑>/tools/image_edit_tools.py`。repository 的 `verify_portable_install.py` 具有對應同步條目；部署驗證範圍及安裝步驟見 [`skills/comfyui-install/SKILL.md`](../../../skills/comfyui-install/SKILL.md) 與 [`installation/install-guide.md`](../installation/install-guide.md)。
@@ -35,6 +41,8 @@ seed、prompt、來源與參考固定；只能在現有 task 白名單的 0–1 
 畫面觀察：guided 0.8 結果是低飽和淺藍細絲，1.0 是鮮亮藍細絲，且 mask 內輪廓外仍可見淡色暈邊；不能據此宣稱「短絨」要求達標。`inpaint` 的單張候選把頭髮改成灰褐色且髮型大幅改變。`refine` anime seed `278787708121530` 的 denoise 0.4、0.6 各一張，0.6 對髮型、衣服和腰帶的改動更明顯。`character_action` 使用角色來源與 `reports/.../pose-reference-isolated.png` 姿勢 Canny reference，產生一張；姿勢與槌方向接近姿勢圖，但帶入毛邊帽造型，臉與服裝也不是原角色。所有候選均是待 Steve 驗收的輸出，這些單案例觀察不構成引擎排名或 task quality validation。
 
 部署 verifier `verify_portable_install.py --require-image` 回報 17 pass、0 fail；單元與部署測試共 30 項通過，Python syntax 檢查通過。重現命令與耗時在 `output/local_edit_tools_20261001/execution.json`，獨立尺寸、通道、秒數與保留區核對在 `independent-validation.json`；完整腳本為 `run_smoke.py`。原始輸出在同目錄下的 guided、refine、inpaint、character 子目錄，以及 standalone-composite、standalone-compare。耗時受首張模型載入快取影響，不可用來比較 task 效率。ComfyUI server 曾出現既有 `comfyui.db` 權限警告，但六張生成完成；本次未更動資料庫。離線驗證、CLI smoke 與單案例畫面觀察不會自動改寫 image profile 或 task 的 validation 狀態。
+
+2026-10-02 新增的參考圖板與 Alpha 稽核在 Windows／RTX 4080 環境實跑：33 項工具測試通過，部署 verifier 18 項通過，並確認拒絕既有 output 目錄。三張參考圖輸出 1080×420 board，中文職責完整、縮圖未裁切；2048×2048 RGBA cutout 記錄 2,708,657 透明、192,410 半透明、1,293,237 不透明像素，bbox `[134, 59, 1910, 2003]`；832×1232 RGB 圖則正確標出無 Alpha、無透明像素與內容碰邊。輸出證據與預覽在 [`output/scenario_tools_20261002/`](../../../output/scenario_tools_20261002/)；此驗證只證明板面整理與機械 Alpha 檢查，不驗收生成圖或去背美術品質。
 
 ## 官方參考與本機適配
 
