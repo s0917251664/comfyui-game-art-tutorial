@@ -2,9 +2,25 @@
 
 ## 一般使用者優先用 Simple Mask Session
 
-2026-09-05 已加入 repository 內建的極簡本機遮罩頁面。遮罩範圍必須經使用者確認；可由使用者在 `mask_session.py create` 產生的頁面塗紅，也可先採用 SAM 候選。手繪要查看 `preview.png`；SAM 要先看 contact sheet，再看選定候選的 preview。使用者按完成或已接受同一範圍，就沿用該確認；只有範圍改變或尚未確認時才詢問。手繪流程完成後以 `fetch` 取回三份檔案：`mask_editor.png`（黑白人類可讀）、`mask_comfy.png`（本產線 RGBA Alpha 契約）與 `preview.png`（原圖＋紅色半透明覆蓋）。
+2026-09-05 已加入 repository 內建的極簡本機遮罩頁面。遮罩範圍必須經使用者確認；可由使用者在 `mask_session.py create` 產生的頁面塗紅，也可先採用 SAM 候選。手繪要查看 `preview.png`；SAM 要先看 contact sheet，再看選定候選的 preview。使用者按完成或已接受同一範圍，就沿用該確認；只有範圍改變或尚未確認時才詢問。手繪流程完成後以 `fetch` 取回三份檔案：`mask_editor.png`（白色選取、黑色未選的人類可讀遮罩）、`mask_comfy.png`（本產線 RGBA Alpha 契約）與 `preview.png`（原圖＋紅色半透明覆蓋）。
 
 目前 Simple Mask 頁面從來源圖建立空白選取範圍，沒有匯入既有 SAM 候選的介面；候選不準時需重新手繪。此工具的底層輸出仍遵守本頁既有規則：選取區 `alpha=0`，保留區 `alpha=255`。使用者介面刻意隱藏這個反直覺細節。空遮罩會拒絕儲存，選取超過 98% 會要求二次確認。它是獨立的純手動工具，不含也不依賴 SAM。自動分割應另做成獨立工具；兩者若要合作，只透過標準遮罩輸入／輸出選配串接。
+
+### 貼合手繪遮罩邊界（選用）
+
+手繪時可先用筆刷或多邊形將物件內部塗滿，再按「貼合物件邊界」。頁面把來源圖和目前粗略選區交給獨立的 `mask_refine.py` helper，使用 OpenCV GrabCut 在有限邊界帶內估計較貼近物件的候選。此功能不是 SAM、不下載模型，也不產生新圖片；沒有安裝 OpenCV 時，Simple Mask 原有手繪仍可使用。
+
+候選只會在原本塗選範圍內收窄，絕不擴張，無法補畫漏掉的區域。物件內部需先塗滿，邊界附近要留少量未選背景作為線索；近色、細髮和交疊邊緣要放大檢查，必要時用橡皮擦或筆刷修正。選用 `邊界搜尋` 半徑 1–64 像素（預設 16）、`再往內收` 0–16 像素（預設 0）與 `柔邊` 0–16 像素（預設 1）；均以來源圖像素計算。過大的搜尋範圍或線索不足時可能失敗，請縮小範圍、補塗物件內部並留未選背景，或改回手動調整。
+
+結果先顯示為候選，使用「查看原範圍」比較，可選套用或取消。套用後仍可 undo／redo。UI 使用者套用前在頁面檢視紅色候選；獨立 CLI 使用者則檢查輸出的 `preview.png`。柔邊以灰階選取權重保留，不應被二值化。`mask_editor.png` 是選取白、不選黑的灰階 PNG；`mask_comfy.png` 才是送給現有 ComfyUI task 的 RGBA Alpha 格式（選取區 alpha 0、保留區 alpha 255）。兩者語意相反，不可混用。
+
+貼合工具也可獨立呼叫：`python <ComfyUI>\tools\mask_refine.py --image <source.png> --mask <mask_editor.png> --output-dir <new-dir> [--radius 16] [--shrink 0] [--feather 1]`。輸出目錄必須尚不存在；工具輸出候選 `mask_editor.png`、`mask_comfy.png`、`preview.png` 及 `manifest.json`，manifest 狀態為 candidate，原輸入不覆寫。
+
+更新已部署的 Simple Mask JavaScript／package 後，重啟 ComfyUI 並重新整理頁面，以新工作階段測試新版介面。舊 session 或已完成遮罩不會被貼合功能自動更新；不要將測試候選存回或覆蓋使用者已完成的遮罩，應另開 session、另存新輸出，再由使用者檢視選用。
+
+### 實測紀錄（2026-10-02）
+
+OpenCV `cv2 5.0.0`、NumPy `2.4.4`、Pillow `12.2` 環境下，28 項相關 unit tests 通過。Edge headless UI 驗證包含筆刷／多邊形、貼合候選、原範圍比較、取消、原範圍顯示時套用、undo／redo、柔邊匯出與保存。832×1232 角色頭髮案例中，粗選區 122,971 個選取像素收窄至 103,256，manifest 記錄 `expanded_pixels: 0`；目視預覽輪廓合理。這只驗證工具輸出與互動行為；遮罩仍為 candidate，需由使用者檢視，不代表生成結果或美術接受。證據見 `output/mask_refine_20261002/ui-proof.json` 與 `output/mask_refine_20261002/hair-cli/manifest.json`。
 
 `skills/comfyui-art-gen/SKILL.md` 的 `inpaint` 章節指向這裡——平常執行 `inpaint` 不用先讀這份,只有遇到「遮罩好像沒生效」「局部修圖結果變差/變爛」這類狀況時才查。
 
@@ -15,7 +31,7 @@
 - 要重畫的區域 = 那個像素的 **alpha 要是透明(0)**
 - 要保留的區域 = alpha 要不透明(255)
 - **不是**一般直覺以為的「存一張白色區域代表要重畫的灰階/RGB 圖」——如果遮罩圖沒有 alpha 通道(例如存成 RGB、或用 `.convert('RGB')` 處理過),不會報錯,但整個遮罩會靜默失效,產出看起來幾乎和原圖一樣,容易誤以為「有跑但沒什麼變化」而不是「根本沒吃到遮罩」
-- 如果是 agent 自己用程式產生遮罩圖(不是透過 MaskEditor),**一定要存成帶 alpha 通道的 RGBA 圖片,要重畫的區域 alpha=0,其餘 alpha=255**,存完最好實際跑一次確認遮罩區域真的有變化,不要只看有沒有報錯就當作成功
+- 如果是 agent 自己用程式產生 Comfy 遮罩圖（不是透過 Simple Mask），**一定要存成帶 alpha 通道的 RGBA 圖片，要重畫的區域 alpha=0，其餘 alpha=255**。Simple Mask 的 `mask_editor.png` 則是白選黑不選的灰階選取遮罩，另由 export 轉成上述 Alpha 契約；不要把 editor 格式當成 Comfy 格式直接送入生成 task。柔邊灰階權重要完整保留，不能把任意非零值轉成 255。存完最好實際檢查遮罩語意，不要只看有沒有報錯就當作成功。
 
 ## 不規則遮罩要先確認範圍再送測
 

@@ -1,4 +1,6 @@
 import base64
+import asyncio
+import importlib.util
 import io
 import json
 import secrets
@@ -131,6 +133,34 @@ def register_routes():
         meta["completed_at"] = datetime.now(timezone.utc).isoformat()
         _write_meta(token, meta)
         return web.json_response(meta)
+
+    @routes.post("/simple-mask/api/sessions/{token}/refine")
+    async def refine_session(request):
+        token = request.match_info["token"]
+        meta = _read_meta(token)
+        try:
+            payload = await request.json()
+            rough = normalize_editor_mask(_data_url_bytes(payload.get("mask_png")), (meta["width"], meta["height"]))
+            # Optional standalone tool. The editor remains usable if it is not installed.
+            tool_path = Path(folder_paths.base_path) / "tools" / "mask_refine.py"
+            if not tool_path.is_file():
+                raise ImportError("邊界貼合工具尚未部署，仍可使用筆刷與多邊形")
+            spec = importlib.util.spec_from_file_location("local_mask_refine", tool_path)
+            tool = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(tool)
+            with Image.open(_session_dir(token) / "source.png") as image:
+                source = image.convert("RGBA")
+            candidate, info = await asyncio.to_thread(tool.refine_mask, source, rough,
+                payload.get("radius", 16), payload.get("shrink", 0), payload.get("feather", 1))
+            output = io.BytesIO()
+            candidate.save(output, format="PNG")
+            # Preview only: no session files or accepted mask are overwritten.
+            return web.json_response({"mask_png": "data:image/png;base64," + base64.b64encode(output.getvalue()).decode("ascii"),
+                                      "info": info})
+        except ImportError as exc:
+            return web.json_response({"message": str(exc)}, status=503)
+        except (ValueError, json.JSONDecodeError, AttributeError) as exc:
+            return web.json_response({"message": str(exc)}, status=400)
 
     @routes.get("/simple-mask/api/sessions/{token}/result/{kind}")
     async def session_result(request):
