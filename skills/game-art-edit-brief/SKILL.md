@@ -32,6 +32,8 @@ description: 整理遊戲圖片編修前需求，將來源圖、參考圖用途�
 
 參考 OpenAI 圖片指南時，讀 [OpenAI 圖片編修指引摘要](references/openai-image-guidance.md)。該文件只借用需求組織方式，不代表 SDXL、IPAdapter 或本機 task 具有 GPT Image API 的行為。
 
+需要選擇參考素材整理、局部編修、透明素材檢查或其他本機工具時，直接查[圖片編修情境與工具路徑](references/scenarios.md)；生成輸入仍以既有 task 欄位為準。
+
 brief 完成後，若 Steve 明確要求固定來源、seed 與參考並比較事前指定的有限參數組合，可依需求交接至[本機圖片編修工具](../local-image-edit-tools/SKILL.md) 的 sweep；一般單次生成仍交由產圖技能，不把 brief 流程變成自動多次重抽。
 
 ### 簡例：只改頭髮短絨

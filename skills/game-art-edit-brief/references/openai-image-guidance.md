@@ -1,16 +1,25 @@
 # OpenAI 圖片編修指引：需求整理參考
 
-查閱日期：2026-10-01。
+查閱日期：2026-10-02。
 
-這份摘要把官方 GPT 圖片生成／編修資料轉成需求整理方法。它只協助說清目標、參考圖用途與驗收觀察，不代表本機 ComfyUI 模型或 task 具有相同能力，也不證明任何提示方式必然改善結果。
+本文件把 OpenAI 官方圖片生成與評估範例轉成需求整理方法。官方資料協助說清楚修改目標、參考圖用途與驗收觀察；本機可做什麼仍以既有 task、工具契約、機器能力快照與實測紀錄為準。GPT Image API 的參數、遮罩行為或保真能力不會因此成為本機 ComfyUI 能力。
 
-## 官方資料摘要與專案適配
+需要按情境選工具時，讀[圖片編修情境與工具路徑](scenarios.md)。本機 brief 只整理需求和既有 task 支援情況，不執行生成、不新增 API 能力。
 
-- 官方圖片提示指南建議清楚拆開要改的部分與應保留的部分，並在多張輸入圖時說明每張圖的角色；複雜編修可分步進行。專案適配：brief 分列修改項、保留項與參考圖用途；是否分階段依使用者需求和可驗收性決定。[Image prompting](https://developers.openai.com/api/docs/guides/image-prompting)
-- Cookbook 圖片生成指南以明確參考圖職責、alpha 保留需求與提示中的 invariants 作為控制描述。專案適配：將參考用途和不得變項寫進自然語言需求；本機 Alpha mask 仍需符合既有格式與人工確認流程，不能把文字要求當作遮罩。[Image generation prompting guide](https://developers.openai.com/cookbook/examples/multimodal/image-gen-models-prompting-guide)
-- 官方 image eval 範例依任務檢查指令符合度、局部性與內容保留。專案適配：產出回報可分項描述提示符合度、指定區域以外的變動及保留項，再獨立記錄人工美術接受決定。這些是觀察維度，不是自動品質分數。[Image evals](https://developers.openai.com/cookbook/examples/multimodal/image_evals)
-- Image generation API 文件說明遮罩只引導編修區域，未必精準遵守；API 可用選項亦只適用於文件所述 API。專案適配：不把平台／API 遮罩控制等同本機 Alpha mask，也不把官方 API 選項寫成內建工具或 ComfyUI 已支援的功能。[Image generation guide](https://developers.openai.com/api/docs/guides/image-generation)
+## 官方資料與專案適配
 
-## 適用邊界
+- [Image prompting guide](https://developers.openai.com/api/docs/guides/image-prompting)：角色特徵 anchor、清楚說明需修改與需保留內容，以及逐輪集中描述變更。專案適配：brief 寫出不變項、本輪改動及來源版本；這種編排不保證本機模型結果更好。
+- [Image generation models prompting guide](https://developers.openai.com/cookbook/examples/multimodal/image-gen-models-prompting-guide)：參考圖的明確職責、風格轉換、換裝、多圖合成與角色一致性情境。專案適配：先標示參考用途，再映射到既有 task 支援的輸入欄位；官方多圖工作流不代表本機 task 可接收相同數量或角色的圖片。
+- [Image evals](https://developers.openai.com/cookbook/examples/multimodal/image_evals)：正確性、指定區域以外的變動、需保留內容及空間關係等觀察面向。專案適配：作為產後人工檢查項，搭配 `compare` 的像素差異及 `asset-audit` 的 Alpha／尺寸檢查；不輸出自動美術分數。
+- [Transparent image assets](https://developers.openai.com/cookbook/examples/multimodal/transparent-image-assets-for-campaigns-and-presentations)：透明素材生成與交付範例。專案適配：把 Alpha 通道、邊緣及畫布內完整度列入檢查；本機去背仍走既有 task。
+- [High input fidelity example](https://developers.openai.com/cookbook/examples/generate_images_with_high_input_fidelity)：示範特定 Image API 的輸入保真選項。專案適配：只借用列出關鍵細節並檢查是否保留的方式；API 專屬參數不移植到本機 ComfyUI。
 
-以上內容是需求表達的參考，不是本機模型驗證或效能結論。SDXL、IPAdapter、遮罩、`flux2_edit` 及其他既有 task 的實際輸入限制，仍以 [ComfyUI 產圖技能](../../comfyui-art-gen/SKILL.md) 和專案 task 文件為準。此參考不表示 GPT Image API 已接入，也不提供固定模型型號、價格或生成參數。
+## 工具入口
+
+`asset-audit` 與 `reference-board` 已整合於既有 `tools_src/image_edit_tools.py`，沒有額外依賴或部署檔。操作格式及限制見[圖片編修情境與工具路徑](scenarios.md)，輸出只供技術檢視和人工判斷。
+
+已在 Windows／RTX 4080 專案環境完成兩工具與既有 image edit tools 的 33 項測試；部署驗證 18 項通過，拒絕覆寫既有輸出目錄的案例也已實測。Alpha、參考板的輸出證據及案例限制見[情境文件](scenarios.md)和 `output/scenario_tools_20261002/`。這些測試不代表驗收任何生成結果或美術品質。
+
+## 本機輸入依據
+
+本機 task 欄位查[遊戲圖片編修需求整理技能](../SKILL.md)、[圖片完整參數規格](../../comfyui-art-gen/reference/full-params.md)所指向的 canonical [art-parameters.md](../../../docs/knowledge/art-parameters.md) 及 task 文件；工具契約和證據見 [edit-tools.md](../../../docs/knowledge/art/edit-tools.md)。`guided_inpaint` 需要已確認 Alpha mask，`character_action` 是角色與姿勢參考欄位，`flux2_edit` 僅支援單張來源圖且沒有 mask 或 denoise 控制。其他輸入不能從官方 API 文件推定。
