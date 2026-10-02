@@ -11,6 +11,8 @@ description: 將遊戲美術需求分類為既有圖片 task，依本機能力�
 
 使用者要先整理多參考圖、局部編修、角色／結構保留需求時，可按需讀[遊戲圖片編修需求整理](../game-art-edit-brief/SKILL.md)；該技能只整理 brief，task 選擇與能力 gate 仍依本技能。
 
+使用者要對本機 RGBA 圖片做遮罩合成或差異診斷，或明確要求固定來源／參考的有限參數比較時，另讀[本機圖片編修工具](../local-image-edit-tools/SKILL.md)。其 sweep 僅呼叫本技能既有 task，輸出仍須逐張人工驗收，不代替一般單次產圖流程。
+
 ## 每次任務的固定順序
 
 1. 先讀 repo 根目錄 `local_config.json`，取得本機路徑、`python_exe`、`generate_script`、`image_config`、`comfyui_url`、啟動方式與 `output_dir`；若 config 未指定 `image_config`，讀 `<ComfyUI>/tools/image_capabilities.json`。檔案不存在時依 [安裝技能](../comfyui-install/SKILL.md) 處理，不得假裝能實機產圖。不可將機器專屬路徑寫進版控文件。
@@ -26,6 +28,7 @@ description: 將遊戲美術需求分類為既有圖片 task，依本機能力�
 - FLUX.2 `flux2_concept`／`flux2_edit` 是獨立路線，不套用 `--profile`、SDXL tier 或風格旗標；node／模型存在只證明 preflight 通過，不代表能在這台設備成功生成。
 - 換機或換 GPU，重跑 `detect_device.py` 與 `detect_image_capabilities.py`；改模型、ComfyUI/custom node 時重新掃描相關能力。不能把其他平台 validation 當成本機驗證。
 - `mask_session.py`、`sam_segment.py` 是獨立遮罩工具，不在 image capability snapshot 中。遮罩送入 `inpaint`、`guided_inpaint` 或 `layer_split` 前，必須檢查預覽與 Alpha 契約；SAM 候選需人工查看並確認範圍。操作細節依 task 指南的遮罩參考連結。
+- `image_edit_tools.py` 是本機合成／比較／有限 sweep 工具，不在 image capability snapshot 中新增 task。sweep 使用既有 task 時仍要依該 task 的 snapshot validation gate；細節依[本機圖片編修工具](../local-image-edit-tools/SKILL.md)。
 
 ## 快速 task 路由
 

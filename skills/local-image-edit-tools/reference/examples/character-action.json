@@ -1,0 +1,18 @@
+{
+  "task": "character_action",
+  "base": {
+    "prompt": "Show the referenced character performing the pose. Preserve the character's hairstyle, clothing colors, and equipment design; show the full body.",
+    "seed": 20261001,
+    "character_ref": "../../../../output/examples/character.png",
+    "pose_ref": "../../../../output/examples/pose.png",
+    "control_type": "pose",
+    "width": 1024,
+    "height": 1024,
+    "style": "illustration",
+    "rating": "safe"
+  },
+  "sweep": {
+    "ip_weight": [0.65, 0.8],
+    "pose_strength": [0.8, 0.95]
+  }
+}

@@ -5,6 +5,7 @@
 - `教學.md` —— 完整的環境建置紀錄、功能地圖(哪種需求對應哪種技術)、設備/預算選型建議
 - `skills/comfyui-art-gen/SKILL.md` —— **當使用者用自然語言要求產生遊戲美術素材時,讀這份文件並照它的流程操作**
 - `skills/game-art-edit-brief/SKILL.md` —— **當使用者要先整理多參考圖、指定部位編修、角色／結構保留等遊戲圖片編修需求時讀取**；只整理需求並映射到既有 task，不接 API、不執行生成。OpenAI 圖片指南僅作需求表達參考，能力仍依產圖技能檢查
+- `skills/local-image-edit-tools/SKILL.md` —— **當使用者要對本機圖片做 RGBA 遮罩合成、差異檢查，或明確要求固定輸入的有限參數 sweep 時讀取**；只包裝既有圖片 task，不新增生成 graph；實機驗證狀態見 `docs/knowledge/art/edit-tools.md`
 - `skills/comfyui-install/SKILL.md` —— **當要在新機器上設置這條產線、或 `local_config.json` 不存在時,讀這份文件並照它的流程操作**。這是一份目標清單而不是腳本,不同機器的 OS/硬體/既有安裝狀態交給 agent 臨場判斷怎麼達成
 - `skills/comfyui-pipeline-review/SKILL.md` —— **只有使用者明確要求「評估/盤點產線有沒有新技術可以升級」時才讀這份文件**,平常不要主動觸發。負責盤點現有模型清單 + 查現況 + 給建議,不負責自己動手換模型
 - `skills/comfyui-new-tool-checklist/SKILL.md` —— **要幫這條產線新增任何新工具/新技術/新 task 時,讀這份文件並依能力類型勾選適用項目**。圖片、影片與本機工具各自檢查安裝、程式碼、實測與文件；`workflows/` 不是義務。純文件修正不套用完整新增能力流程。適用項目不要因改動小而省略。
@@ -16,6 +17,7 @@
 - `tools_src/generate.py` 與 `tools_src/comfyui_pipeline/` —— 實際執行產圖/產影片的原始碼(版本控管在這裡)。部署時要把 `generate.py` 與整個 `comfyui_pipeline/` 一起複製到 `<ComfyUI 安裝路徑>/tools/`；`generate.py` 是相容 facade，不可只部署單一檔案
 - 圖片 task 可選 `--result-json <新 JSON 路徑>` 產生技術追溯 manifest；不含美術驗收結論。需要保存素材版本時，在 `docs/knowledge/assets/<asset-id>.md` 按需建立 Markdown 記錄，明確寫 candidate／accepted／rejected 狀態、使用者決定與理由；不可捏造接受狀態或讓新輸出繼承舊版本驗收。格式與沿用規則見 `docs/knowledge/result-records.md`
 - `tools_src/mask_session.py` 與 `tools_src/simple_mask_tool/` —— 給不知道 ComfyUI 的使用者畫局部修改範圍；由本機 ComfyUI 提供極簡網址，部署時 client 要同步到 `<ComfyUI>/tools/`，同一套 package 也要同步到 `<ComfyUI>/custom_nodes/comfyui-simple-mask-tool/`。這是獨立的純手動畫遮罩工具，不含也不依賴 SAM。SAM 自動分割若後續新增，必須作為另一個獨立工具／能力開發；兩者只能透過標準遮罩檔案選配串接
+- `tools_src/image_edit_tools.py` —— 本機 RGBA composite、差異診斷與既有 task 有界 sweep；部署單檔至 `<ComfyUI>/tools/image_edit_tools.py`，沿用 ComfyUI Python 的 Pillow、NumPy，不需 custom node。CLI／實測狀態見 `skills/local-image-edit-tools/SKILL.md` 與 `docs/knowledge/art/edit-tools.md`
 - `tools_src/sam_segment.py` —— SAM 2.1 自動候選遮罩工具；固定使用官方 `facebook/sam2.1-hiera-small`，輸出 contact sheet、預覽、cutout 與符合既有 Alpha 契約的 `mask_comfy.png`。候選必須人工驗收後才能交給 `layer_split`／局部重繪。
 - `tools_src/comfyui_pipeline/profiles/*.json` —— **SDXL/SD1.5 圖片模型設定檔**(模型檔名、取樣參數、依記憶體的預設解析度、可用 task、各平台驗證狀態),全平台共用、進版控,隨 `comfyui_pipeline/` 一起部署;每台機器只是依 `device_config.json` 的 tier 選用其中一份。FLUX.2 `flux2_concept`/`flux2_edit` 不使用 image profile，改由 `generate.py` 的獨立 Core node／模型 preflight 與實機 smoke test 判斷。**要換這些 profile 的模型檔名或取樣參數,改設定檔,不要改 `image_graphs.py`**。使用者明確要在大機器用小管線時,用 `generate.py --profile <id>` 或 `detect_image_capabilities.py --default-profile <id>`,不要手改 `device_config.json`。設計見 `docs/model-profiles-design.md`
 - `tools_src/detect_device.py` —— 設備能力偵測(GPU/VRAM/OS),輸出 `device_config.json` 給 `generate.py` 讀取,決定用哪個 checkpoint/解析度

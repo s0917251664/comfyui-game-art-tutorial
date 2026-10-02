@@ -13,5 +13,6 @@ description: 在新機器上依硬體與既有狀態安裝、部署 ComfyUI 遊�
 - [模型家族、來源與容量](../../docs/knowledge/installation/models-and-sources.md)
 - [LoRA 訓練工具（僅使用者要訓練時）](../../docs/knowledge/installation/lora-training.md)
 - [`docs/tested-versions.md`](../../docs/tested-versions.md) 的實際版本／hash 捕捉狀態
+- 本機圖片合成／診斷／參數 sweep 的部署契約：按需讀取[edit-tools.md](../../docs/knowledge/art/edit-tools.md)
 
 在任何模型或套件下載前，先說明所選能力需要的磁碟空間並確認可用空間足夠。模型選擇以已核准設定檔和 tested-version manifest 為準；安裝時看到較新模型，不代表要評估或替換它。不同平台的 smoke test 必須在該機器實際完成，離線部署檢查不等於生成驗證。

@@ -22,6 +22,7 @@ SYNC_SOURCE_FILES = (
     ("generate.py", Path("tools_src/generate.py"), Path("tools/generate.py")),
     ("detect_device.py", Path("tools_src/detect_device.py"), Path("tools/detect_device.py")),
     ("sam_segment.py", Path("tools_src/sam_segment.py"), Path("tools/sam_segment.py")),
+    ("image_edit_tools.py", Path("tools_src/image_edit_tools.py"), Path("tools/image_edit_tools.py")),
     ("comfyui_pipeline/__init__.py", Path("tools_src/comfyui_pipeline/__init__.py"), Path("tools/comfyui_pipeline/__init__.py")),
     ("comfyui_pipeline/image_graphs.py", Path("tools_src/comfyui_pipeline/image_graphs.py"), Path("tools/comfyui_pipeline/image_graphs.py")),
     ("comfyui_pipeline/image_results.py", Path("tools_src/comfyui_pipeline/image_results.py"), Path("tools/comfyui_pipeline/image_results.py")),

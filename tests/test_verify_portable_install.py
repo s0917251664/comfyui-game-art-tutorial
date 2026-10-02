@@ -36,6 +36,7 @@ class VerifyPortableInstallTests(unittest.TestCase):
         cls.detect_device_bytes = DETECT_DEVICE_PATH.read_bytes()
         cls.detect_video_bytes = DETECT_VIDEO_PATH.read_bytes()
         cls.sam_segment_bytes = SAM_SEGMENT_PATH.read_bytes()
+        cls.image_edit_tools_bytes = (ROOT / "tools_src/image_edit_tools.py").read_bytes()
         cls.pipeline_init_bytes = (PIPELINE_PKG / "__init__.py").read_bytes()
         cls.pipeline_image_bytes = (PIPELINE_PKG / "image_graphs.py").read_bytes()
         cls.pipeline_image_results_bytes = (PIPELINE_PKG / "image_results.py").read_bytes()
@@ -68,6 +69,7 @@ class VerifyPortableInstallTests(unittest.TestCase):
         self._copy_source(tools_dir / "generate.py", self.generate_bytes)
         self._copy_source(tools_dir / "detect_device.py", self.detect_device_bytes)
         self._copy_source(tools_dir / "sam_segment.py", self.sam_segment_bytes)
+        self._copy_source(tools_dir / "image_edit_tools.py", self.image_edit_tools_bytes)
         self._copy_source(tools_dir / "comfyui_pipeline" / "__init__.py", self.pipeline_init_bytes)
         self._copy_source(tools_dir / "comfyui_pipeline" / "image_graphs.py", self.pipeline_image_bytes)
         self._copy_source(tools_dir / "comfyui_pipeline" / "image_results.py", self.pipeline_image_results_bytes)
@@ -362,6 +364,7 @@ class VerifyPortableInstallTests(unittest.TestCase):
                     ("generate.py", self.generate_bytes),
                     ("detect_device.py", self.detect_device_bytes),
                     ("sam_segment.py", self.sam_segment_bytes),
+                    ("image_edit_tools.py", self.image_edit_tools_bytes),
                     ("comfyui_pipeline/__init__.py", self.pipeline_init_bytes),
                     ("comfyui_pipeline/image_graphs.py", self.pipeline_image_bytes),
                     ("comfyui_pipeline/video_catalog.py", self.pipeline_video_bytes),
