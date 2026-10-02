@@ -9,6 +9,7 @@ status: current
 | 能力／入口 | 現況與限制 | 何時讀哪份技能 |
 |---|---|---|
 | 圖片生成：`tools_src/generate.py` facade + `tools_src/comfyui_pipeline/` | 現有 12 個圖片 task：`concept`、`flux2_concept`、`flux2_edit`、`icon_asset`、`pose_only`、`style_lock`、`character_action`、`refine`、`inpaint`、`guided_inpaint`、`upscale`、`layer_split`。固定 graph；SDXL/SD1.5 查 image capability/profile；FLUX.2 有獨立 preflight 與實機證據，不套 image profile。不可自行組 graph。 | 自然語言遊戲圖片需求讀 `skills/comfyui-art-gen/SKILL.md`；路由看 [art-generation.md](art-generation.md)。 |
+| 遊戲圖片編修需求整理：brief | 純文件型規劃技能；整理來源、修改／保留項、參考圖用途、提示與既有 task 輸入映射，不執行生成或增加能力。OpenAI 官方提示方法僅供需求表達參考。 | 多參考圖、指定局部修改、要求維持角色／結構或想先整理編修需求時讀 `skills/game-art-edit-brief/SKILL.md`；實際生成仍依 `skills/comfyui-art-gen/SKILL.md`。 |
 | 影片生成與影片本機處理：`generate.py` + PyAV helpers | 7 個生成 task：`img2video`、`fx_loop`、`transition`、`clip_extend`、`character_video`、`camera_move`、`pose_drive`；2 個本機 task：`video_concat`、`video_composite`。影片查 `video_capabilities.json`，concat/composite 不需 ComfyUI server；不得猜 backend 或切換 task。 | 影片需求讀 `skills/comfyui-video-gen/SKILL.md`，規格與能力見 [video/README.md](video/README.md)。 |
 | 結果 manifest：`--result-json` | 選用圖片 task manifest，schema v1；只記技術輸出檢查，不代表內容驗收。 | 需要追溯時看 [art-generation.md](art-generation.md) 的結果紀錄小節與技能的 [result-records.md](result-records.md)。 |
 | 素材版本與驗收紀錄：Markdown | 需要保存時才在 `docs/knowledge/assets/<asset-id>.md` 建頁；只記有實際產出的版本。candidate 不代表驗收；accepted/rejected 需對應 Steve 明確決定與理由。 | 產圖後需要留存版本或驗收理由時看 [result-records.md](result-records.md)。 |

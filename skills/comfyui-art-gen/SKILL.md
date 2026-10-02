@@ -9,6 +9,8 @@ description: 將遊戲美術需求分類為既有圖片 task，依本機能力�
 
 不適用於整張 UI 版面、Logo／中文字排版、影片或尚未接入的能力。單一 UI 圖示可用 `icon_asset`。影片需求改讀 [comfyui-video-gen](../comfyui-video-gen/SKILL.md)。未有 task 覆蓋的重複生產需求，依 [新能力清單](../comfyui-new-tool-checklist/SKILL.md) 評估；不可把圖片 task 假裝成影片或自行接線替代。
 
+使用者要先整理多參考圖、局部編修、角色／結構保留需求時，可按需讀[遊戲圖片編修需求整理](../game-art-edit-brief/SKILL.md)；該技能只整理 brief，task 選擇與能力 gate 仍依本技能。
+
 ## 每次任務的固定順序
 
 1. 先讀 repo 根目錄 `local_config.json`，取得本機路徑、`python_exe`、`generate_script`、`image_config`、`comfyui_url`、啟動方式與 `output_dir`；若 config 未指定 `image_config`，讀 `<ComfyUI>/tools/image_capabilities.json`。檔案不存在時依 [安裝技能](../comfyui-install/SKILL.md) 處理，不得假裝能實機產圖。不可將機器專屬路徑寫進版控文件。
