@@ -13,6 +13,7 @@ description: 使用本機 image_edit_tools.py 做 RGBA 遮罩合成、像素差�
 
 1. 先依情境選擇：整理多張來源／參考素材時用 `reference-board`；檢查透明素材 Alpha、可見範圍與碰邊時用 `asset-audit`；單件純換色且已有適當遮罩時用 `recolor`；既有合成、差異檢查或固定輸入參數比較照下方流程。這些本機操作只需本機腳本、Pillow／NumPy 與檔案路徑，不讀 ComfyUI runtime 或 capability。一般生成仍走 [ComfyUI 產圖技能](../comfyui-art-gen/SKILL.md)；不可用 sweep 盲目重抽。brief 需求整理仍由 [遊戲圖片編修需求整理](../game-art-edit-brief/SKILL.md) 負責。
 2. `composite`／`compare` 的 source、edited 與選用 mask 必須是同尺寸單影格圖片；不會自動對齊或縮放。mask 必須是帶 Alpha channel 的 PNG：alpha 0 選編修圖，255 保留來源圖，中間值對 RGBA byte 逐通道插值。這是遮罩選擇合成，不是前景 alpha-over 或線性光混合。sweep 的角色、姿勢、材質等 task reference 可有不同尺寸，按各既有 task 的輸入契約處理。
+   `composite --keep-source-alpha` 會令輸出沿用 source Alpha；只在需要保留來源透明度時加此旗標。省略時仍依原有遮罩方向對完整 RGBA byte 插值。這不影響 `recolor`，後者本來就保留來源 Alpha。
    `recolor` 的 mask 同樣須為同尺寸、帶 Alpha 的單影格 PNG；Alpha 小於 255 表示可編輯選區，255 排除。只改可見、符合色相範圍及最低飽和度條件的像素，並保留 HSV saturation/value 到 RGB 量化前；不呼叫生成模型、不新增紋理、不保證精確 RGB、不換材質或重打光，也沒有語意分割／畫遮罩功能。來源 Alpha 與未匹配 RGBA 精確保留，選區品質仍須人工確認。
 3. 每次指定全新的 output directory；工具會拒絕已存在的路徑，避免混合或覆寫既有結果。
 4. sweep 前先準備 plan JSON 和 runtime config。prompt、seed 與來源／參考圖固定；僅能掃描 task 白名單內參數，笛卡兒積最多 16 次。`preserve_outside` 只適用 `inpaint` 與 `guided_inpaint`。可先用 `--dry-run` 檢查計畫與命令。
@@ -38,3 +39,5 @@ python <ComfyUI>\tools\image_edit_tools.py asset-audit --image <image.png> --out
 ## 驗證狀態
 
 2026-10-01 本機 smoke 已覆蓋 standalone composite/compare、dry-run，以及 `guided_inpaint`、`refine`、`inpaint`、`character_action` 共六張 832×1232 候選。guided preserve_outside 的原始生成在 mask 外有 815,312/846,943 個變動像素；composite 後 mask 外為 0，保留區 902,053 像素另經 NumPy 比對。部署 verifier 17 項通過，單元與部署測試 30 項通過。生成候選仍待 Steve 驗收；畫面觀察與限制見 [知識手冊](../../docs/knowledge/art/edit-tools.md)。這些結果不會自動更新 image profile/task validation。
+
+2026-10-03 增補 `recolor` 與 `composite --keep-source-alpha` 實測；43 項單元測試及 19 項部署 verifier 通過。玻璃瓶案例仍是待 Steve 驗收的 candidate，生成未命中紅色的兩次試跑及色相旋轉限制見[單一物件換色紀錄](../../docs/knowledge/art/single-object-color.md)。日期化觀察不會改寫 image profile 或 task validation。

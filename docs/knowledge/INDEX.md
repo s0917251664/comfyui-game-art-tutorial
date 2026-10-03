@@ -31,6 +31,13 @@ status: current
 - 每項經驗保留日期、模型、平台／硬體、task／輸入、證據、觀察、適用範圍與限制，避免把單次結果當成通則。
 - 歷史觀察只有在新增可重現證據並經人工核准後才能提升成正式 profile／技能規則；更新時同步改正式設定與能力 gate，並記錄決策理由。
 
+## 遊戲美術工具參考
+
+- [遮罩格式、Simple Mask、GrabCut 與 SAM](art/masking.md)：準備局部修改或拆層選區時查閱，遮罩預覽仍需人工確認。
+- [本機圖片編修工具](art/edit-tools.md)：遮罩內 recolor、composite、compare、有限 sweep、參考圖板與 Alpha 稽核的契約及驗證。
+- [物件平面組裝流程](art/object-design-workflows.md)：`scene`／`sheet`／`pattern` 的使用範圍與限制。
+- [單一物件換色](art/single-object-color.md)：HSV 色相旋轉案例、像素保留證據與限制。
+
 ## 決策與經驗
 
 - [生效中決策](DECISIONS.md)

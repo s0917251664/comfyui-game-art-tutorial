@@ -12,9 +12,17 @@ agent 會依 [`AGENTS.md`](AGENTS.md) 找到對應的技能文件，確認這台
 
 ## 可以做什麼
 
-- **產圖**：文生圖、UI 圖示、草稿精緻化、局部重繪（可鎖結構）、姿勢／角色／風格控制、放大、去背、圖層拆分，以及實驗性的 FLUX.2 路線
-- **產短片**：靜圖動起來、運鏡、角色動作、循環特效、轉場、接續與拼接、綠幕合成
-- **遮罩工具**：瀏覽器手動畫遮罩（Simple Mask Tool），以及 SAM 2.1 自動候選分割
+美術可用自然語言提出需求；agent 依現有 task 和本機能力選入口，不需要自己拉 ComfyUI 節點。生成、圖片後處理與版面組裝是不同步驟：`generate.py` 產生候選，本機圖片工具負責遮罩內純色調整／合成／檢查，固定 ComfyUI Core helper 負責物件展示與排版組裝。產線也有概念圖、角色與姿勢控制、放大、拆層，以及實驗性 FLUX.2 圖片路線；可用性依 task、能力檢查和驗收結果而定。
+
+| 需求 | 入口與能力 | 注意事項 |
+|---|---|---|
+| 概念圖、草稿精緻化、角色／姿勢／風格控制、放大或拆出透明圖層 | 依任務使用既有圖片 task；[產圖技能](skills/comfyui-art-gen/SKILL.md) | 需依本機能力與輸入選擇 task；角色、姿勢或結構控制的輸出仍要檢查。 |
+| 單一透明物件或 UI 圖示 | `icon_asset`；[產圖技能](skills/comfyui-art-gen/SKILL.md) | 產生透明背景候選，仍須檢查外形與去背邊緣。 |
+| 只改單一物件既有顏色 | 本機 `recolor`；[本機圖片編修技能](skills/local-image-edit-tools/SKILL.md) | 需已有 Alpha 遮罩；只旋轉符合色相／飽和度條件的像素，不新增紋理或改材質。 |
+| 改材質或局部生成 | 依需求選既有 `refine`、`inpaint`、`guided_inpaint`；[產圖技能](skills/comfyui-art-gen/SKILL.md) | 生成結果要逐張驗收；不能保證精確材質控制或角色結構必定不變。 |
+| 把物件放進平面背景、排列候選或重複圖樣 | 固定 Core `scene`／`sheet`／`pattern`；[物件組裝技能](skills/comfyui-object-design/SKILL.md) | 組裝既有素材，不是生成 task；輸出為不透明 RGB。 |
+| 選取局部區域 | Simple Mask 手動畫、GrabCut 邊界候選或 SAM 候選遮罩 | 使用者檢查遮罩預覽，再交給既有圖片 task 或本機工具；SAM／GrabCut 結果是候選。 |
+| 產短片 | [產影片流程](skills/comfyui-video-gen/SKILL.md) | 依既有影片 task 與影片能力快照判斷。 |
 
 各 task 的選擇方式與參數見 [產圖流程](skills/comfyui-art-gen/SKILL.md) 與 [產影片流程](skills/comfyui-video-gen/SKILL.md)。
 
@@ -44,7 +52,10 @@ $artConfig = Get-Content -Raw -Encoding UTF8 .\local_config.json | ConvertFrom-J
 
 ## 開發檢查
 
-```bash
+在 repository 根目錄執行；先讓 Python 找到 `tools_src/` 的工具模組：
+
+```powershell
+$env:PYTHONPATH = "tools_src"
 python -m unittest discover -s tests -p 'test_*.py'
 ```
 
@@ -60,6 +71,8 @@ python -m unittest discover -s tests -p 'test_*.py'
 | [產影片流程](skills/comfyui-video-gen/SKILL.md) / [單角色動畫流程](skills/comfyui-character-animation-workflow/SKILL.md) | 短片 task、backend 與整組動作的製作驗收 |
 | [安裝流程](skills/comfyui-install/SKILL.md) / [模型清單](skills/comfyui-install/reference/models.md) | 新機器環境與模型準備 |
 | [模型設定檔設計](docs/model-profiles-design.md) | SDXL/SD1.5 設定檔與各平台的驗證狀態 |
+| [本機圖片編修](skills/local-image-edit-tools/SKILL.md) / [物件組裝](skills/comfyui-object-design/SKILL.md) / [工具總表](docs/knowledge/TOOLS.md) | 遮罩內換色、局部合成與檢查、平面展示／檢視表／圖樣組裝 |
+| [單一物件換色紀錄](docs/knowledge/art/single-object-color.md) | HSV 色相旋轉的實測案例與能力限制 |
 | [已驗證版本](docs/tested-versions.md) | commit、套件版本、模型 SHA-256 與 smoke test 紀錄 |
 
 ### 文件與實作如何對照
