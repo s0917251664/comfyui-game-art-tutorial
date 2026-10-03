@@ -112,3 +112,7 @@ timeout 會保存 `prompt_id` 及精確 queue/running ownership；只有確認�
 ## 已知限制及待辦界線
 
 角色身份/動作自然度無法由目前自動分數保證；loop/transition 等連續性分數閾值尚未跨題材校準。輸入姿勢與動作首幀不符仍可能得到壞結果，即使 task 技術檢查 pass。背景音訊混音、字幕、配樂、對白與精剪交外部剪輯工具。雲端/API、Fun Camera、透明影片及包裝工具只出現在 [`design.md`](design.md) 的歷史/規劃討論，不代表已接入。
+
+## 可靠範圍盤點
+
+- [2026-10-03 本機影片可靠範圍盤點](reliability-audit-2026-10-03.md)：環境快照、MP4/sidecar 追溯、有限內容抽樣與下一階段基準缺口。

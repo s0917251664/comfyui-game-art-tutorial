@@ -11,6 +11,8 @@ description: 將短片、循環特效與鏡頭需求路由到已接入的影片 
 
 影片、過場、循環特效、讓靜幀動起來或單支多鏡短片使用本技能。單張靜態圖走 `comfyui-art-gen`。需要同一角色一整組遊戲動作與分階段人工驗收，改走[單角色動畫 workflow](../comfyui-character-animation-workflow/SKILL.md)。
 
+劇情多鏡製作、長影片規劃與分鏡，先走 [劇情影片流程](../comfyui-film-workflow/SKILL.md) 建立鏡頭表與連續性紀錄，再回本技能逐鏡執行。單支影片仍直接使用本技能。
+
 不以 `transition` 做傳統硬切／疊化／擦除；Logo 或中文字效果不可靠，直接說明限制。成品不自動以系統播放器開啟，只回報檔案路徑。
 
 ## 開始前

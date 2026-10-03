@@ -9,7 +9,7 @@ description: 編排同一角色的一整組遊戲動作，從定稿靜幀到逐�
 
 ## 何時使用
 
-當使用者要同一角色的一整組遊戲動作（如 Idle、Win、Expect、Fail、Attack），或從角色圖一路做到逐支驗收與交付時使用。單支「讓這張靜幀動起來」走 [`comfyui-video-gen`](../comfyui-video-gen/SKILL.md)；有劇情的多鏡過場仍走影片技能鏡頭表。
+當使用者要同一角色的一整組遊戲動作（如 Idle、Win、Expect、Fail、Attack），或從角色圖一路做到逐支驗收與交付時使用。單支「讓這張靜幀動起來」走 [`comfyui-video-gen`](../comfyui-video-gen/SKILL.md)；有劇情的多鏡過場走 [劇情影片流程](../comfyui-film-workflow/SKILL.md)。
 
 ## 執行邊界
 

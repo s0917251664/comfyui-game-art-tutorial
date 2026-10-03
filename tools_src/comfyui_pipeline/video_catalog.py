@@ -1,4 +1,40 @@
-"""Immutable video model/catalog constants for the ComfyUI pipeline."""
+"""Video model/catalog constants and shared schema fingerprinting."""
+
+import hashlib
+import json
+
+
+def node_schema_fingerprint(payload, classes=None):
+    """Ignore uploaded-file inventory while retaining node interface changes."""
+    if not isinstance(payload, dict):
+        raise ValueError("ComfyUI /object_info response is not a JSON object")
+    selected = {}
+    for name in sorted(payload if classes is None else classes):
+        info = payload.get(name)
+        if not isinstance(info, dict):
+            continue
+        schema = json.loads(json.dumps({
+            key: info[key]
+            for key in ("input", "output", "output_name", "display_name", "name")
+            if key in info
+        }))
+        inputs = schema.get("input", {})
+        if isinstance(inputs, dict):
+            for fields in inputs.values():
+                if not isinstance(fields, dict):
+                    continue
+                for field in fields.values():
+                    if not isinstance(field, list) or len(field) < 2 or not isinstance(field[1], dict):
+                        continue
+                    options = field[1]
+                    if options.get("image_upload") or options.get("video_upload") or options.get("audio_upload"):
+                        if isinstance(field[0], list):
+                            field[0] = []
+                        if "options" in options:
+                            options["options"] = []
+        selected[name] = schema
+    encoded = json.dumps(selected, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 CHARACTER_REF_MAX = 9
 VIDEO_WAN_UNET = "wan2.2_ti2v_5B_fp16.safetensors"

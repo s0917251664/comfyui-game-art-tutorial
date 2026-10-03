@@ -539,22 +539,7 @@ def _required_video_nodes(backend, capabilities, config, control_type=None):
 
 
 def _node_schema_fingerprint(payload, required_nodes=None):
-    """Digest only the node input/output schemas used by this video pipeline."""
-    if not isinstance(payload, dict):
-        raise ValueError("ComfyUI /object_info 回應不是 JSON object")
-    names = sorted(required_nodes or payload)
-    selected = {}
-    for name in names:
-        info = payload.get(name)
-        if not isinstance(info, dict):
-            continue
-        selected[name] = {
-            key: info.get(key)
-            for key in ("input", "output", "output_name", "display_name", "name")
-            if key in info
-        }
-    encoded = json.dumps(selected, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+    return _video_catalog.node_schema_fingerprint(payload, required_nodes)
 
 
 def _fetch_comfy_object_info(comfy_url, request_timeout=DEFAULT_HTTP_TIMEOUT):

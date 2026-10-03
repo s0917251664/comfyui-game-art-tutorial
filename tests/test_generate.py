@@ -931,6 +931,28 @@ class GenerateTests(unittest.TestCase):
             self.assertTrue(config["backends"]["wan"]["available"])
             self.assertIn("i2v", config["backends"]["h3"]["capabilities"])
 
+    def test_video_fingerprint_ignores_uploaded_inventory_but_retains_interface(self):
+        payload = {
+            "LoadImage": {"input": {"required": {"image": [["old.png"], {"image_upload": True}]}}, "output": ["IMAGE"]},
+            "LoadVideo": {"input": {"required": {"file": ["COMBO", {"options": ["old.mp4"], "video_upload": True}]}}, "output": ["VIDEO"]},
+            "Sampler": {"input": {"required": {"mode": [["fast", "slow"], {}]}}, "output": ["LATENT"]},
+        }
+        before = json.loads(json.dumps(payload))
+        fingerprint = self.generate._node_schema_fingerprint(payload)
+        self.assertEqual(before, payload)
+        self.assertEqual(fingerprint, self.detector._schema_fingerprint(payload, list(payload)))
+        payload["LoadImage"]["input"]["required"]["image"][0].append("new.png")
+        payload["LoadVideo"]["input"]["required"]["file"][1]["options"].append("new.mp4")
+        self.assertEqual(fingerprint, self.generate._node_schema_fingerprint(payload))
+        payload["LoadVideo"]["input"]["required"]["file"][1]["video_upload"] = False
+        self.assertNotEqual(fingerprint, self.generate._node_schema_fingerprint(payload))
+        payload["LoadVideo"] = before["LoadVideo"]
+        payload["Sampler"]["input"]["required"]["mode"][0].append("new-mode")
+        self.assertNotEqual(fingerprint, self.generate._node_schema_fingerprint(payload))
+        payload["Sampler"] = before["Sampler"]
+        payload["LoadImage"]["output"] = ["MASK"]
+        self.assertNotEqual(fingerprint, self.generate._node_schema_fingerprint(payload))
+
     def test_detector_catalog_loads_without_generate_py(self):
         repo_root = os.path.dirname(os.path.dirname(__file__))
         with tempfile.TemporaryDirectory() as tmp:

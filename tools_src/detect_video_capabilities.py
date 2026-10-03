@@ -167,18 +167,7 @@ def _normalise_url(value):
 
 
 def _schema_fingerprint(payload, classes):
-    selected = {}
-    for name in sorted(classes):
-        info = payload.get(name)
-        if not isinstance(info, dict):
-            continue
-        selected[name] = {
-            key: info.get(key)
-            for key in ("input", "output", "output_name", "display_name", "name")
-            if key in info
-        }
-    encoded = json.dumps(selected, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+    return _load_generate_catalog().node_schema_fingerprint(payload, classes)
 
 
 def _query_object_info(comfy_url, timeout):

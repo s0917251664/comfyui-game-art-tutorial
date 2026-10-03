@@ -19,6 +19,10 @@ import sys
 from urllib.parse import urlparse
 
 SYNC_SOURCE_FILES = (
+    ("film_audio.py", Path("tools_src/film_audio.py"), Path("tools/film_audio.py")),
+    ("film_sapi.ps1", Path("tools_src/film_sapi.ps1"), Path("tools/film_sapi.ps1")),
+    ("film_qwen.py", Path("tools_src/film_qwen.py"), Path("tools/film_qwen.py")),
+    ("film_lipsync.py", Path("tools_src/film_lipsync.py"), Path("tools/film_lipsync.py")),
     ("generate.py", Path("tools_src/generate.py"), Path("tools/generate.py")),
     ("detect_device.py", Path("tools_src/detect_device.py"), Path("tools/detect_device.py")),
     ("sam_segment.py", Path("tools_src/sam_segment.py"), Path("tools/sam_segment.py")),
