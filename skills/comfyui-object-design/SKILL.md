@@ -1,0 +1,41 @@
+---
+name: comfyui-object-design
+description: 以既有 ComfyUI 圖片 task 和固定 Core 圖層組裝，規劃物件系列、展示場景、證明圖與簡單圖樣；不新增生成 task。
+---
+
+# ComfyUI 物件與平面素材流程
+
+先讀[工具總表](../../docs/knowledge/TOOLS.md)和[流程評估與實測](../../docs/knowledge/art/object-design-workflows.md)。這份技能編排本機 ComfyUI 既有圖片 task、單件換色工具與 `comfyui_design.py` 固定 Core 合成流程。產生前仍依[產圖技能](../comfyui-art-gen/SKILL.md)做路由、能力檢查與人工驗收。
+
+單一物件需求先分流：新素材走 `comfyui-art-gen` 的 `icon_asset`；既有素材只改顏色並保留細節與外形，走本機 `image_edit_tools.py recolor`；要改紋理或材質則依需求評估既有生成 task，產出仍須人工驗收。換色工具的遮罩契約與實測限制見[單一物件換色](../../docs/knowledge/art/single-object-color.md)。
+
+## 工作流
+
+1. 先拆需求：要生成新物件，走既有 `icon_asset`（單一透明遊戲素材）或 `concept`（概念／背景）；有明確來源圖要局部改材質，才走 `guided_inpaint` 或 `inpaint`。檢查所需 task 在本機 `image_capabilities.json` 可用且驗證狀態允許試跑。
+2. 先產並檢查單一素材。保留每個候選與 prompt，確認各參考圖與輸出素材的用途。透明輸出要檢查 Alpha 與輪廓；若要送入組裝 helper，輸入物件／圖樣必須真的有透明區域。
+3. 需要放置時，依情境用已部署的 `comfyui_design.py` 固定 Core graph：`scene` 把一張透明物件放進一張不透明背景；`sheet` 把 1–16 張透明素材排成檢視表；`pattern` 將同一張透明素材按格重複。這些是確定性合成，不會生成或修補輸入內容。
+4. 先從 `local_config.json` 取得 `comfyui_path`、`python_exe`、`generate_script`、`comfyui_url`、`output_dir`。helper 在 `<comfyui_path>\tools\comfyui_design.py`；同目錄需有既有 `generate.py` facade、`image_edit_tools.py` 與 `comfyui_pipeline/`。執行時明確傳 `--comfy-url <設定值>`、`--output-dir <新資料夾>`；輸出資料夾不得已存在。helper 會先檢查 Core node schema，通過後才上傳輸入及排程；遇錯不自動重試。
+5. 中文標題、品牌字、長文案和精細版面交給外部文字／向量排版工具；目前 helper 標題僅支援 ASCII，且只有固定頂端／底端位置。Comfy Core 合成輸出為不透明 RGB，不能當作透明資產交付。
+6. 開啟實際輸出檢查物件完整性、位置、縮放、接縫、背景關係及尺寸；manifest 的 `candidate` 和技術成功都不代表美術驗收。保存 request、graph、history、manifest 及輸出路徑，等待使用者決定接受與否。
+
+
+## 已知能力界線
+
+- `scene` 只用遮罩 Alpha 將物件置入背景，沒有光線重算、接觸陰影、反射或透視配準；適合平面展示合成原型，不可稱為商品攝影重打光。
+- `sheet` 是排版檢視圖，可統一格子與可見範圍留白，不會讓生成的多個物件自動共享風格或相同物件比例。
+- `pattern` 重複一個母圖樣，不做 seamless（無縫）接縫生成或檢查。
+- `TextOverlay` 目前只接受可列印 ASCII，不支援中文字型與一般海報排版。
+- 不得臨場組 graph，也不新增 `generate.py` task、模型或 profile。需要新生成能力時先走[新能力清單](../comfyui-new-tool-checklist/SKILL.md)。
+
+
+## 固定 CLI 範例
+
+下列是參數模板；執行時由 `local_config.json` 解析 Python、部署工具與服務網址，再換入真實輸入和全新的輸出資料夾。
+
+```text
+<python_exe> <comfyui_path>/tools/comfyui_design.py scene --images object.png --background background.png --x 260 --y 190 --width 504 --height 536 --canvas-width 1024 --canvas-height 1024 --title "POTION STUDY" --comfy-url <comfyui_url> --output-dir <new-output-dir>
+<python_exe> <comfyui_path>/tools/comfyui_design.py sheet --images object-a.png object-b.png object-c.png --cell 256 --columns 3 --padding 32 --comfy-url <comfyui_url> --output-dir <new-output-dir>
+<python_exe> <comfyui_path>/tools/comfyui_design.py pattern --images motif.png --cell 256 --columns 3 --rows 3 --padding 64 --color "#f5f0e5" --comfy-url <comfyui_url> --output-dir <new-output-dir>
+```
+
+`scene` 的 width/height 是物件配置框，保留物件長寬比；x/y 是配置框左上角，整個框必須落在畫布內。背景可按指定畫布縮放並置中裁切；canvas-width/height 必須成對提供，範圍 64–4096。`sheet`/`pattern` 的 cell 範圍 64–512，columns 1–8，pattern rows 1–8，padding 不超過 cell 的三分之一。pattern 僅接受一張母圖樣。title/caption 是固定頂端／底端的 ASCII 文字，最長 200 字元；不提供字型選擇。預設 timeout 為 180 秒，逾時不自動重新排程。

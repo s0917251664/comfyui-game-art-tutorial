@@ -82,7 +82,7 @@ description: 在新機器上依硬體與既有狀態完成 ComfyUI 遊戲美術�
 
 圖片生成結果選用 `generate.py --result-json <path>` 時，`comfyui_pipeline/image_results.py` 會以 Pillow 讀取及驗證 PNG；Pillow 已是 ComfyUI requirements 的依賴，若從其他 Python 環境執行，該環境也需可 import Pillow。`--result-json` 只產生技術 manifest，不取代人工美術驗收；素材版本與人工決定另依 [result-records.md](../result-records.md) 按需保存為 Markdown。
 
-只改本機工具（Simple Mask、SAM、抽幀／串接 helper）時，改走該工具自己的部署契約，不要漏掉它實際需要的 `tools/` 或 `custom_nodes/` 同步。`tools_src/image_edit_tools.py` 是單檔工具，需同步到 `<ComfyUI>/tools/image_edit_tools.py`；沿用 ComfyUI Python 的 Pillow 與 NumPy，沒有 custom node 或模型安裝步驟。部署 verifier 會核對該檔同步；CLI、輸出與實測證據見 `docs/knowledge/art/edit-tools.md`。
+只改本機工具（Simple Mask、SAM、抽幀／串接 helper）時，改走該工具自己的部署契約，不要漏掉它實際需要的 `tools/` 或 `custom_nodes/` 同步。`tools_src/image_edit_tools.py` 是單檔工具，需同步到 `<ComfyUI>/tools/image_edit_tools.py`；沿用 ComfyUI Python 的 Pillow 與 NumPy，沒有 custom node 或模型安裝步驟。`tools_src/comfyui_design.py` 也需單檔同步至 `<ComfyUI>/tools/comfyui_design.py`；它同目錄依賴既有 `generate.py` facade、`image_edit_tools.py` 與整個 `comfyui_pipeline/`，不另裝模型或 custom node。部署來源路徑依當前 `local_config.json` 的 `comfyui_path` 解析，不在文件寫死機器路徑。CLI、輸出與實測限制見 `docs/knowledge/art/object-design-workflows.md`。
 
 ## 進階(選配):LoRA 訓練工具
 

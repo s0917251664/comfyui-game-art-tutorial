@@ -9,6 +9,8 @@ description: 將遊戲美術需求分類為既有圖片 task，依本機能力�
 
 不適用於整張 UI 版面、Logo／中文字排版、影片或尚未接入的能力。單一 UI 圖示可用 `icon_asset`。影片需求改讀 [comfyui-video-gen](../comfyui-video-gen/SKILL.md)。未有 task 覆蓋的重複生產需求，依 [新能力清單](../comfyui-new-tool-checklist/SKILL.md) 評估；不可把圖片 task 假裝成影片或自行接線替代。
 
+物件展示合成、物件候選檢視表或單圖樣重複，可按需讀[物件與平面素材流程](../comfyui-object-design/SKILL.md)；其中固定 Core graph 只組合既有輸入，不新增生成 task。中文排版仍交給外部排版工具。
+
 使用者要先整理多參考圖、局部編修、角色／結構保留需求時，可按需讀[遊戲圖片編修需求整理](../game-art-edit-brief/SKILL.md)；該技能只整理 brief，task 選擇與能力 gate 仍依本技能。
 
 使用者要對本機 RGBA 圖片做遮罩合成或差異診斷，或明確要求固定來源／參考的有限參數比較時，另讀[本機圖片編修工具](../local-image-edit-tools/SKILL.md)。其 sweep 僅呼叫本技能既有 task，輸出仍須逐張人工驗收，不代替一般單次產圖流程。
