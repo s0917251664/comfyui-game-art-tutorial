@@ -71,6 +71,7 @@ class VerifyPortableInstallTests(unittest.TestCase):
         self._copy_source(tools_dir / "detect_device.py", self.detect_device_bytes)
         self._copy_source(tools_dir / "sam_segment.py", self.sam_segment_bytes)
         self._copy_source(tools_dir / "image_edit_tools.py", self.image_edit_tools_bytes)
+        self._copy_source(tools_dir / "comfyui_design.py", (ROOT / "tools_src/comfyui_design.py").read_bytes())
         self._copy_source(tools_dir / "mask_refine.py", self.mask_refine_bytes)
         self._copy_source(tools_dir / "comfyui_pipeline" / "__init__.py", self.pipeline_init_bytes)
         self._copy_source(tools_dir / "comfyui_pipeline" / "image_graphs.py", self.pipeline_image_bytes)

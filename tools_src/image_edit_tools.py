@@ -91,12 +91,14 @@ def aligned_pair(source, edited):
     return a, b
 
 
-def composite(source, edited, mask, output_dir):
+def composite(source, edited, mask, output_dir, keep_source_alpha=False):
     a, b = aligned_pair(source, edited)
     alpha = load_mask(mask, a.size)
     # Selection blend, not foreground alpha-over: fully selected pixels must
     # reproduce the edited RGBA bytes, including transparent edited pixels.
     result = Image.composite(a, b, alpha)
+    if keep_source_alpha:
+        result.putalpha(a.getchannel("A"))
     preserved = np.asarray(alpha) == 255
     before, after = np.asarray(a), np.asarray(result)
     if np.any(before[preserved] != after[preserved]):
@@ -109,7 +111,57 @@ def composite(source, edited, mask, output_dir):
               "mask_contract": "alpha=0 edited; alpha=255 source; intermediate values blend RGBA bytes",
               "dimensions": list(a.size), "preserved_pixels": int(preserved.sum()),
               "outside_changed_pixels": 0, "output": file_record(target),
+              "keep_source_alpha": keep_source_alpha,
               "acceptance": "pending Steve review; pixel preservation does not judge edit quality"}
+    save_json(out / "result.json", report)
+    return report
+
+
+def recolor(source, mask, output_dir, from_hue, to_hue, hue_range=45, min_saturation=0.12):
+    """Rotate an existing hue within an explicit selection; never invent texture.
+
+    Hue is in degrees. HSV saturation/value are retained before RGB quantization;
+    this is not a physical lighting or perceptual luminance preservation operation.
+    Source Alpha and unselected RGBA bytes are preserved exactly.
+    """
+    for name, value, upper in (("from_hue", from_hue, 360), ("to_hue", to_hue, 360),
+                               ("hue_range", hue_range, 180), ("min_saturation", min_saturation, 1)):
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or not 0 <= value <= upper:
+            raise ValueError(f"{name} must be finite and between 0 and {upper}")
+    a = load_image(source)
+    preserve = np.asarray(load_mask(mask, a.size))
+    rgba = np.asarray(a)
+    hsv = np.asarray(a.convert("RGB").convert("HSV")).copy()
+    degrees = hsv[:, :, 0].astype(float) * (360 / 255)
+    distance = np.abs((degrees - from_hue + 180) % 360 - 180)
+    selected = (preserve < 255) & (rgba[:, :, 3] > 0) & (distance <= hue_range) & (hsv[:, :, 1] / 255 >= min_saturation)
+    if not selected.any():
+        raise ValueError("No visible chromatic pixels match the selected hue and mask")
+    # Only matching pixels undergo the HSV round trip; all others retain exact bytes.
+    shifted = np.round(((degrees + to_hue - from_hue) % 360) * (255 / 360)).astype(np.uint8)
+    hsv[:, :, 0][selected] = shifted[selected]
+    rgb = np.asarray(Image.frombytes("HSV", a.size, hsv.tobytes()).convert("RGB"))
+    edited = rgba.copy()
+    edited[:, :, :3][selected] = rgb[selected]
+    result = Image.composite(a, Image.fromarray(edited), Image.fromarray(preserve))
+    result.putalpha(a.getchannel("A"))
+    after = np.asarray(result)
+    if not np.array_equal(after[:, :, 3], rgba[:, :, 3]) or not np.array_equal(after[~selected], rgba[~selected]):
+        raise RuntimeError("Recolor preservation invariant failed")
+    out = new_directory(output_dir)
+    result.save(out / "recolored.png")
+    contact_sheet([a, result], ["SOURCE", "LOCAL HUE ROTATION"], out / "comparison.png", 480)
+    report = {"schema_version": 1, "kind": "local_hue_recolor", "status": "candidate",
+              "inputs": {"source": file_record(source), "mask": file_record(mask)},
+              "parameters": {"from_hue": from_hue, "to_hue": to_hue, "hue_range": hue_range, "min_saturation": min_saturation},
+              "dimensions": list(a.size), "matched_pixels": int(selected.sum()),
+              "changed_pixels": int(np.any(after != rgba, axis=2).sum()),
+              "outside_changed_pixels": 0, "alpha_changed_pixels": 0,
+              "model_generation": False, "output": file_record(out / "recolored.png"),
+              "limitations": ["HSV hue rotation only; no material change or exact target RGB guarantee",
+                              "Saturation and HSV value retained before quantization; not physical relighting",
+                              "Neutral/low-saturation pixels and hues outside range remain unchanged"],
+              "acceptance": "pending Steve review"}
     save_json(out / "result.json", report)
     return report
 
@@ -496,6 +548,16 @@ def main(argv=None):
         p.add_argument("--edited", required=True)
         p.add_argument("--mask", required=name == "composite")
         p.add_argument("--output-dir", required=True, help="New directory; existing directories are rejected")
+        if name == "composite":
+            p.add_argument("--keep-source-alpha", action="store_true", help="Keep the source silhouette Alpha exactly")
+    p = sub.add_parser("recolor", help="Local hue rotation in an explicit mask; not AI generation")
+    p.add_argument("--source", required=True)
+    p.add_argument("--mask", required=True)
+    p.add_argument("--output-dir", required=True)
+    p.add_argument("--from-hue", type=float, required=True)
+    p.add_argument("--to-hue", type=float, required=True)
+    p.add_argument("--hue-range", type=float, default=45)
+    p.add_argument("--min-saturation", type=float, default=0.12)
     p = sub.add_parser("sweep")
     p.add_argument("--plan", required=True)
     p.add_argument("--config", required=True)
@@ -513,7 +575,10 @@ def main(argv=None):
     args = parser.parse_args(argv)
     try:
         if args.command == "composite":
-            result = composite(args.source, args.edited, args.mask, args.output_dir)
+            result = composite(args.source, args.edited, args.mask, args.output_dir, args.keep_source_alpha)
+        elif args.command == "recolor":
+            result = recolor(args.source, args.mask, args.output_dir, args.from_hue, args.to_hue,
+                             args.hue_range, args.min_saturation)
         elif args.command == "compare":
             result = compare(args.source, args.edited, args.output_dir, args.mask)
         elif args.command == "asset-audit":
