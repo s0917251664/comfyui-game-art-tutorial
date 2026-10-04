@@ -19,6 +19,7 @@ import sys
 from urllib.parse import urlparse
 
 SYNC_SOURCE_FILES = (
+    ("face_swap.py", Path("tools_src/face_swap.py"), Path("tools/face_swap.py")),
     ("film_audio.py", Path("tools_src/film_audio.py"), Path("tools/film_audio.py")),
     ("film_sapi.ps1", Path("tools_src/film_sapi.ps1"), Path("tools/film_sapi.ps1")),
     ("film_qwen.py", Path("tools_src/film_qwen.py"), Path("tools/film_qwen.py")),
