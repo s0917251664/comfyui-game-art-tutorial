@@ -1,14 +1,14 @@
 ---
 name: comfyui-face-swap-workflow
-description: 使用 ComfyUI ReActor 節點換臉並由本機 wrapper 整理影片與音訊。
+description: 以 ComfyUI server-side ReActor node 處理影片換臉及本機媒體輸出。
 ---
 
 # 影片換臉
 
-正式路線是 `tools_src/face_swap.py` ComfyUI API wrapper。所有模型推論都在 ComfyUI ReActor 節點；wrapper 只檢查安裝與 live schema、準備無損 PNG 影格、送固定 graph queue、取回結果並處理媒體。它是獨立工具 gate，不是 `generate.py` task，也不登記成既有影片 backend。
+正式能力由 `tools_src/face_swap.py` client 與 `tools_src/comfyui_face_swap_video/` custom node package 組成。影片解碼、批次、模型推論、音訊編碼、候選輸出與完整驗證全在 ComfyUI server；client 只執行 preflight、送 API queue、下載結果檔。這是獨立工具 gate，不新增 `generate.py` task 或 video backend。
 
-先讀 [CLI、部署與狀態](references/local-tool.md)。執行前從 `local_config.json` 取得 ComfyUI 路徑、Python 與 URL；執行 `preflight`，確認 ReActor pinned commit、core/model files 與即時 `/object_info` graph schema 都符合。gate 失敗時不可上傳或 queue。正式 smoke-v2 與 full-v1 技術流程已完成並通過完整解碼，但皆有 unchanged frame 的 warning；結果仍是 candidate，尚未經使用者美術驗收。
+先讀 [CLI、部署與狀態](references/local-tool.md)。preflight 會驗 ReActor pins、custom node package 部署 hash 與 live API schema；任一項失敗都在 queue 前停止。Server-smoke-v1 及 server-full-v2 均完整解碼通過，但因指定處理影格有 unchanged pixels，technical status 為 warning，content status 仍是 candidate。17 個 face/media/node 測試及 17 個 portable install 測試通過；輸出位置與完整 stats 見 [local-tool.md](references/local-tool.md)。
 
-處理前確認來源影片、donor 身份圖、edit range、每幀 face index、missing/unchanged 策略、音訊政策與新的 output directory。`face-index` 是 ReActor 每一幀依大至小排列的臉部索引，**不是身份追蹤**；多人物或臉部排序變化須特別檢查。換臉候選及 manifest 仍需人工逐鏡驗收身份、表情、遮擋、髮際線、連續性與音畫同步。
+輸入包含來源影片、donor 身份參考圖、clip bounds 與至少一個 edit range。`face-index` 依 ReActor 每幀由大到小排序選臉，**不做跨幀身份追蹤**；使用多人物或臉序可能變化的素材時需仔細看每幀結果。即使技術驗證通過，candidate 仍需人工檢查身份、表情、遮擋、髮際線、連續性和音畫同步，並由 Steve 決定是否接受。
 
-年齡調整、重新生成頭部表演或多鏡故事仍須分別規劃。Wan Animate 路線不由本 helper 執行，狀態見 [integration.md](references/integration.md)。停用的 standalone Core prototype 歷史見 [local-tool.md](references/local-tool.md)。
+年齡調整與重生成頭部表演不屬於此工具。`references/integration.md` 只記錄原始 Wan Animate 工作流的未接入狀態，不代表 ReActor 換臉不可用。舊 `cf61275` standalone prototype 已 deprecated，僅保留歷史，不使用其處理架構或結果作正式驗證。

@@ -1,17 +1,11 @@
-# ComfyUI ReActor graph 與執行契約
+# Server-side ReActor graph 與執行契約
 
-`face_swap.py` 會透過既有 `generate` facade 呼叫本機 ComfyUI API。換臉、偵測與模型運算只由 server 上的 `ReActorFaceSwap` node 執行；client 不 import ReActor core 或 ONNX runtime，也不載入模型。wrapper 的 preflight 是本工具獨立 gate，不會新增 `generate.py` task 或改動 `video_capabilities.json` backend catalog。
+正式 graph 僅有兩個 repo-owned node：`SteveLoadFaceSwapVideo` → `SteveReActorVideo`。第一個 node 在 ComfyUI server 驗證影片與 donor 參考圖都是絕對 local paths，並讀取來源 CFR metadata。第二個 node 在 server 端解碼影片、以最多 8 幀為一批處理 edit ranges，直接呼叫已註冊官方 `ReActorFaceSwap` node 的 `.execute()`。所有臉部偵測、swap 與模型執行都留在 ComfyUI server。
 
-## 固定 graph
+Server 節點保留官方 ReActor NSFW filter；不以自製 fallback 代替。若 ReActor 回傳 partial batch、黑畫面 fallback 或驗證失敗，server 拒絕發布結果。成功後 server 負責 H.264/AAC 編碼、comparison/frames/manifest、完整解碼驗證和 atomic publish。預設輸出位於 `<ComfyUI>/output/face_swap/<uuid>/`，使用新目錄、不覆寫。`workflow_ui.json` 是同一固定 graph 的可視化版本，可直接在 ComfyUI 開啟並 queue。
 
-每批最多 8 張影格：`LoadImage` 載入 donor 與逐幀輸入、`ImageBatch` 組成 batch、`ReActorFaceSwap` 使用 `inswapper_128.onnx` 與 `retinaface_resnet50`、face restoration 固定為 none；輸出分別經 `SaveImage` 與 `CreateVideo`/`SaveVideo`。上傳前 `preflight` 會讀即時 `/object_info`，核對所有節點與所需輸入，並驗證 swap model 和 no-restorer 選項仍存在；不符合即停止。
+Client `tools_src/face_swap.py` 僅含標準函式庫、既有 `generate` API facade 與共用 `comfyui_face_swap_video.contracts`；只做 preflight、queue、下載四個正式結果檔及保存 graph/history/receipt。Client 不解碼影片、不切影格、不上傳 PNG、不執行模型、不編碼音訊或組裝影片。
 
-wrapper 將來源片段解碼並以 lossless PNG 準備影格，上傳至 ComfyUI；ComfyUI 回傳影格及每批影片。client 核對輸出批次影格數與尺寸，再組裝整段候選影片及音訊。這裡的「本機媒體處理」只含解碼、PNG 準備、結果檢查、H.264/AAC 編碼與組裝，不含模型推論。
+`--face-index` 範圍 0–7，代表 ReActor 每幀大至小排序的人臉索引；不是跨幀 identity tracking。`--batch-size` 範圍 1–8，預設 4。未變更影格依 `--on-unchanged error|preserve` 停止或保留並產生 warning。所有節點、ReActor pins 與 server package 雜湊都由 preflight 檢查。
 
-`--face-index` 範圍 0–7，表示 ReActor 每幀按大至小排序的人臉索引；它不維持跨幀身份追蹤。索引排序變化可能令不同幀選到不同人，需人工檢查。`--batch-size` 範圍 1–8，預設 4。
-
-## 接入隔離
-
-影片來源能力快照不宣告此 wrapper backend。使用者明確要求換臉時，按本技能獨立執行 preflight；ComfyUI 節點缺失、模型缺失、pin 不符或 graph schema 改變，都必須在 upload/queue 前停止。不得由 H3/Wan available 推論 ReActor 可用。
-
-停用 standalone ReActor Core prototype 及其歷史 pin/smoke 見 [local-tool.md](local-tool.md)；Wan Animate 另見 [integration.md](integration.md)。
+此路徑是獨立 node/client gate，不是 `generate.py` task，亦不加入 `video_capabilities.json` backend catalog。能力快照重掃即使顯示 H3/Wan 可用，也不能替代 face-swap preflight。舊 `cf61275` client-side standalone prototype 已 deprecated；Wan Animate 原始工作流狀態見 [integration.md](integration.md)。

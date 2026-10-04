@@ -37,6 +37,11 @@ SYNC_SOURCE_FILES = (
     ("comfyui_pipeline/video_graphs.py", Path("tools_src/comfyui_pipeline/video_graphs.py"), Path("tools/comfyui_pipeline/video_graphs.py")),
     ("comfyui_pipeline/profiles.py", Path("tools_src/comfyui_pipeline/profiles.py"), Path("tools/comfyui_pipeline/profiles.py")),
     ("detect_image_capabilities.py", Path("tools_src/detect_image_capabilities.py"), Path("tools/detect_image_capabilities.py")),
+) + tuple(
+    (f"face-swap-video/{location}/{name}", Path("tools_src/comfyui_face_swap_video") / name,
+     Path(location) / name)
+    for location in ("tools/comfyui_face_swap_video", "custom_nodes/comfyui-face-swap-video")
+    for name in ("__init__.py", "contracts.py", "media.py", "nodes.py")
 )
 # 模型設定檔數量會增加,依 repo 實際檔案動態核對,不在這裡逐一列名。
 PROFILES_REPO_DIR = Path("tools_src/comfyui_pipeline/profiles")

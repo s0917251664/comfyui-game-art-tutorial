@@ -5,13 +5,16 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
+import json
 
 import av
 import numpy as np
 from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools_src'))
-import face_swap as tool
+from comfyui_face_swap_video import media as tool
+import face_swap as client
 
 
 class FakeClient:
@@ -94,21 +97,33 @@ class FaceSwapTests(unittest.TestCase):
             tool.render(self.args(),FakeClient(truncated=True),{})
         self.assertFalse((self.root/'result').exists())
 
-    def test_fixed_graph_routes_inference_and_video_to_comfy(self):
-        graph=tool.build_graph(['a.png','b.png'],'steve.png',60,'test',face_index=1)
-        self.assertEqual(graph['100']['class_type'],'ReActorFaceSwap')
-        self.assertEqual(graph['100']['inputs']['source_image'],['1',0])
-        self.assertEqual(graph['100']['inputs']['input_faces_index'],'1')
-        self.assertEqual(graph['201']['inputs']['images'],['100',0])
-        self.assertEqual(graph['202']['class_type'],'SaveVideo')
+    def test_fixed_graph_routes_entire_video_processing_to_comfy(self):
+        graph=client.build_graph('input.mkv','steve.png',0,-1,[(0,1)],1,8,'preserve','preserve','test')
+        self.assertEqual(graph['1']['class_type'],'SteveLoadFaceSwapVideo')
+        self.assertEqual(graph['2']['class_type'],'SteveReActorVideo')
+        self.assertEqual(graph['2']['inputs']['source'],['1',0])
+        self.assertEqual(graph['2']['inputs']['face_index'],1)
+        self.assertEqual(graph['2']['inputs']['audio'],'preserve')
         for node in graph.values():
             for value in node['inputs'].values():
                 if isinstance(value,list): self.assertIn(value[0],graph)
-        with self.assertRaises(ValueError): tool.build_graph(['a']*9,'b',24,'bad')
+        ui=client.build_ui_workflow(graph)
+        ids={n['id'] for n in ui['nodes']}
+        self.assertEqual(ui['last_link_id'],max(link[0] for link in ui['links']))
+        for node in ui['nodes']: self.assertEqual(len(node['pos']),2)
+        for link in ui['links']:
+            self.assertIn(link[1],ids); self.assertIn(link[3],ids)
+        self.assertFalse(hasattr(client,'render'))
+        self.assertFalse(hasattr(client,'processed_frames'))
+        self.assertFalse(hasattr(client,'audio_timeline'))
+        import ast
+        tree=ast.parse(Path(client.__file__).read_text(encoding='utf-8'))
+        imports=[n.names[0].name for n in ast.walk(tree) if isinstance(n,ast.Import)]
+        self.assertFalse(set(imports)&{'av','cv2','numpy','torch','PIL'})
 
     def test_pinned_hash_mismatch(self):
         with self.assertRaisesRegex(ValueError,'hash mismatch'):
-            tool.checked(self.root,'ref.png','0'*64)
+            client.checked(self.root,'ref.png','0'*64)
 
     def test_invalid_ranges_rejected(self):
         for value in ('nan:1','0:inf','2:1','-1:2','bad'):
@@ -116,10 +131,37 @@ class FaceSwapTests(unittest.TestCase):
         self.assertEqual(tool.parse_range('0:1.5'),(0.,1.5))
         with self.assertRaisesRegex(ValueError,'overlap'):
             tool.render(self.args(edit_range=[(0.,1.),(.5,1.5)]),FakeClient(),{})
+        with self.assertRaisesRegex(ValueError,'overlap'):
+            client.run(self.args(edit_range=[(0.,1.),(.5,1.5)]),'http://127.0.0.1:8188',{})
 
     def test_audio_drop_is_explicit(self):
         m = tool.render(self.args(audio='drop'),FakeClient(),{})
         self.assertEqual(m['actual']['audio_streams'],0)
+
+    def test_client_downloads_native_video_and_sidecars_without_media_work(self):
+        video_bytes=b'server-produced-video'
+        import hashlib
+        manifest={'processing_location':'ComfyUI server','technical_status':'pass',
+                  'counts':{'changed':1},'actual':{'frames':1},
+                  'output':{'sha256':hashlib.sha256(video_bytes).hexdigest()}}
+        files={'candidate.mp4':video_bytes,'candidate.mp4.json':json.dumps(manifest).encode(),
+               'frames.json':b'[]','comparison.jpg':b'server-produced-comparison'}
+        def item(name): return {'filename':name,'subfolder':'face_swap/test','type':'output'}
+        history={'_prompt_id':'test-server-job','outputs':{'2':{
+            'images':[item('candidate.mp4')],'animated':[True],
+            'files':[item(n) for n in files if n!='candidate.mp4']}}}
+        def download(entry,output_dir,**kwargs):
+            paths=[]
+            for desc in entry['outputs']['2']['images']:
+                path=Path(output_dir)/desc['filename']; path.write_bytes(files[path.name]); paths.append(str(path))
+            return paths
+        args=self.args(); args.timeout=60
+        with patch.object(client.generate,'submit_and_wait',return_value=history), \
+             patch.object(client.generate,'download_outputs',side_effect=download):
+            result=client.run(args,'http://127.0.0.1:8188',{})
+        self.assertEqual(result['prompt_id'],'test-server-job')
+        self.assertEqual((self.root/'result/candidate.mp4').read_bytes(),video_bytes)
+        self.assertTrue((self.root/'result/workflow_ui.json').exists())
 
 
 if __name__ == '__main__':
