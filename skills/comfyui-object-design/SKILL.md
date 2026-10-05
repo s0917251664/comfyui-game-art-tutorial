@@ -1,9 +1,11 @@
 ---
 name: comfyui-object-design
-description: 以既有 ComfyUI 圖片 task 和固定 Core 圖層組裝，規劃物件系列、展示場景、證明圖與簡單圖樣；不新增生成 task。
+description: 在選定 ComfyUI 路線時，以既有圖片 task 和 Core helper 執行物件系列、展示場景、檢視表與母圖樣重複；純規劃走 game-art-workflow，平台圖片執行另有技能。
 ---
 
 # ComfyUI 物件與平面素材流程
+
+物件系列、展示場景、檢視表與母圖樣重複的共用製作／驗收方法由[共用製作流程](../game-art-workflow/references/production.md)維護。本技能負責將已確認的需求接到現有 ComfyUI task 與 helper，不處理平台圖片執行。`scene`／`sheet`／`pattern` 為依賴 ComfyUI Core 的確定性合成，不能因不使用生成模型就宣稱免 ComfyUI。
 
 先讀[工具總表](../../docs/knowledge/TOOLS.md)和[流程評估與實測](../../docs/knowledge/art/object-design-workflows.md)。這份技能編排本機 ComfyUI 既有圖片 task、單件換色工具與 `comfyui_design.py` 固定 Core 合成流程。產生前仍依[產圖技能](../comfyui-art-gen/SKILL.md)做路由、能力檢查與人工驗收。
 
@@ -12,7 +14,7 @@ description: 以既有 ComfyUI 圖片 task 和固定 Core 圖層組裝，規劃�
 ## 工作流
 
 1. 先拆需求：要生成新物件，走既有 `icon_asset`（單一透明遊戲素材）或 `concept`（概念／背景）；有明確來源圖要局部改材質，才走 `guided_inpaint` 或 `inpaint`。檢查所需 task 在本機 `image_capabilities.json` 可用且驗證狀態允許試跑。
-2. 先產並檢查單一素材。保留每個候選與 prompt，確認各參考圖與輸出素材的用途。透明輸出要檢查 Alpha 與輪廓；若要送入組裝 helper，輸入物件／圖樣必須真的有透明區域。
+2. 單件先檢查、再展開系列的方法依共用製作流程；本機需保留候選與 prompt，並檢查 Alpha 與輪廓。若送入組裝 helper，輸入物件／圖樣必須真的有透明區域。
 3. 需要放置時，依情境用已部署的 `comfyui_design.py` 固定 Core graph：`scene` 把一張透明物件放進一張不透明背景；`sheet` 把 1–16 張透明素材排成檢視表；`pattern` 將同一張透明素材按格重複。這些是確定性合成，不會生成或修補輸入內容。
 4. 先從 `local_config.json` 取得 `comfyui_path`、`python_exe`、`generate_script`、`comfyui_url`、`output_dir`。helper 在 `<comfyui_path>\tools\comfyui_design.py`；同目錄需有既有 `generate.py` facade、`image_edit_tools.py` 與 `comfyui_pipeline/`。執行時明確傳 `--comfy-url <設定值>`、`--output-dir <新資料夾>`；輸出資料夾不得已存在。helper 會先檢查 Core node schema，通過後才上傳輸入及排程；遇錯不自動重試。
 5. 中文標題、品牌字、長文案和精細版面交給外部文字／向量排版工具；目前 helper 標題僅支援 ASCII，且只有固定頂端／底端位置。Comfy Core 合成輸出為不透明 RGB，不能當作透明資產交付。

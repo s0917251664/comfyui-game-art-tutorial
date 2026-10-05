@@ -33,6 +33,9 @@ status: current
 
 ## 遊戲美術工具參考
 
+- [共用工作流程](../../skills/game-art-workflow/SKILL.md)：需求、版本與內容驗收；[物件／VFX／角色動作方法](../../skills/game-art-workflow/references/production.md)按需讀相關小節；[職責與移植盤點](../../skills/game-art-workflow/references/responsibilities.md)只在維護／移植時讀。
+- [平台原生圖片執行](../../skills/platform-image-gen/SKILL.md)與[ComfyUI 有限參數比較](../../skills/comfyui-image-sweep/SKILL.md)：分開的執行責任，不新增平台影片或外部 API backend。
+
 - [遮罩格式、Simple Mask、GrabCut 與 SAM](art/masking.md)：準備局部修改或拆層選區時查閱，遮罩預覽仍需人工確認。
 - [本機圖片編修工具](art/edit-tools.md)：遮罩內 recolor、composite、compare、有限 sweep、參考圖板與 Alpha 稽核的契約及驗證。
 - [物件平面組裝流程](art/object-design-workflows.md)：`scene`／`sheet`／`pattern` 的使用範圍與限制。

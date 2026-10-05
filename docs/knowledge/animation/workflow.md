@@ -5,7 +5,7 @@ status: active
 
 # 單角色遊戲動畫工作流程
 
-本頁是單一角色多個遊戲動作的編排與交付規範；repo 入口技能為 `skills/comfyui-character-animation-workflow/SKILL.md`（由 [TOOLS.md](../TOOLS.md) 路由）。它只串接既有圖片、影片 task 與人工驗收，不增加模型參數或生成能力。
+本頁維護單角色動作組的 ComfyUI task 映射、技術 gate、抽幀與本機交付；repo 入口技能為 `skills/comfyui-character-animation-workflow/SKILL.md`（由 [TOOLS.md](../TOOLS.md) 路由）。角色母圖、代表動作、逐支選版與內容驗收方法統一由[共用製作流程](../../../skills/game-art-workflow/references/production.md#同一角色的動作集合)維護，不增加生成能力，也不把平台圖片工具當成影片工具。
 
 ## 決策前確認
 
@@ -27,7 +27,7 @@ status: active
 
 ## 製作與驗收
 
-整組先選最能暴露身份、動作或 loop 問題的代表動作，完成生成和驗收再展開其餘。保留每支原始 MP4 與同名 `.mp4.json` sidecar：
+代表動作與其餘動作的順序依共用製作流程；本機每支需保留原始 MP4 與同名 `.mp4.json` sidecar：
 
 - `fail`：技術契約不符，不進人工驗收或後製，先排查。
 - `warning`：保留影片，按 warning 人工檢查；不把它自行當成功或失敗。

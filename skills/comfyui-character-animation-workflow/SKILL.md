@@ -1,21 +1,23 @@
 ---
 name: comfyui-character-animation-workflow
-description: 編排同一角色的一整組遊戲動作，從定稿靜幀到逐支驗收與 frames 交付；只使用已接入的圖片和影片 task。
+description: 在選定 ComfyUI 執行路線時，編排角色動作組的既有圖片／影片 task、技術 gate 與 frames 交付；只有需求與驗收規劃時走 game-art-workflow。
 ---
 
 # 單角色動畫 workflow
+
+角色母圖、代表動作、動作表、逐支選版與內容驗收的共用方法由[共用製作流程](../game-art-workflow/references/production.md)維護。本技能保留已接入 ComfyUI 圖片／影片的編排、能力 gate、抽幀與交付技術步驟；不代表平台影片已整合。
 
 先查[工具範圍總表](../../docs/knowledge/TOOLS.md)，再按需求讀[單角色動畫製作與交付規範](../../docs/knowledge/animation/workflow.md)。它保存動作表、分階段驗收、既有抽幀 helper、付費界線及交付記錄。
 
 ## 何時使用
 
-當使用者要同一角色的一整組遊戲動作（如 Idle、Win、Expect、Fail、Attack），或從角色圖一路做到逐支驗收與交付時使用。單支「讓這張靜幀動起來」走 [`comfyui-video-gen`](../comfyui-video-gen/SKILL.md)；有劇情的多鏡過場走 [劇情影片流程](../comfyui-film-workflow/SKILL.md)。
+已選定 ComfyUI 執行同一角色的動作組（如 Idle、Win、Expect、Fail、Attack），或從角色圖做到逐支驗收與交付時使用。只整理動作需求／驗收表時走共用工作流程，不讀本機生成 gate。單支「讓這張靜幀動起來」走 [`comfyui-video-gen`](../comfyui-video-gen/SKILL.md)；有劇情的多鏡過場走 [劇情影片流程](../comfyui-film-workflow/SKILL.md)。
 
 ## 執行邊界
 
 - 本技能只編排流程與記錄使用者決定，不定義底層參數。角色靜幀、圖片 task 與圖片驗收走 `comfyui-art-gen`；影片 task、backend、sidecar 與影片驗收走 `comfyui-video-gen`。
 - 開始排動作前檢查本機 `image_capabilities.json` 與 `video_capabilities.json`。依知識頁處理不可用／`unverified` task；整條路線缺關鍵能力時先停下說明。不要猜 backend、改用不合需求的 task 或臨場組 ComfyUI graph。
-- 主參考角色靜幀先定稿；有 pose-driving 時，準備與動作片首幀姿勢／方向接近且已驗收的目標角色靜幀。先完成最能暴露身份、動作或 loop 問題的代表動作，再做其餘動作。
+- 母圖定稿與代表動作的順序依共用製作流程；本機 `pose_drive` 另須準備與動作片首幀姿勢／方向接近且已驗收的目標角色靜幀。
 - 保留原始 MP4 和同名 sidecar。`fail` 不交付；`warning` 要人工查明；`pass` 只表示技術契約通過。每支內容仍由使用者決定接受、調整或放棄，不能由指標自動推定。
 - 只有內容接受後，已準備的影格才是正式交付或合成來源。尚未抽幀可用知識頁列出的既有 `extract_video_frames(video_path, output_dir)` 從已接受 MP4 抽取，不重新生成，也不新增 CLI task。
 - 目前沒有透明影片、逐幀 AI 去背、APNG、sprite sheet 或第三方 provider。綠幕合成不是透明序列。未來付費 provider 每次需先列明費用與範圍，取得使用者確認後才送出；失敗不自動付費重試。

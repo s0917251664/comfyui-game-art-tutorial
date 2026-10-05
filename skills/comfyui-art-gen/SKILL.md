@@ -1,9 +1,15 @@
 ---
 name: comfyui-art-gen
-description: 將遊戲美術需求分類為既有圖片 task，依本機能力與必要輸入執行並驗收；不處理影片或未接入的生成能力。
+description: 執行 ComfyUI 遊戲圖片既有 task，負責本機能力檢查、模型與輸入契約、生成及技術驗證；平台生圖另走 platform-image-gen。
 ---
 
 # ComfyUI 遊戲美術產圖
+
+## 職責與交接
+
+需求、來源／參考用途、版本與內容驗收的共用規則由[遊戲美術工作流程](../game-art-workflow/SKILL.md)維護；本技能負責 ComfyUI 的 task 路由、輸入契約、本機能力 gate、執行與技術檢查。已有完整需求時直接沿用，不重做 brief。
+
+12 個圖片 task 中，`layer_split` 是 ComfyUI Core 遮罩裁切，不需生成底模，但仍依現有 task/gate/ComfyUI 執行。平台圖片生成由[平台圖片技能](../platform-image-gen/SKILL.md)負責，不讀本機 config、不套用本機參數。缺本機能力時不得自行切到平台；依使用者已選定的引擎交接。
 
 每次先看[工具範圍總表](../../docs/knowledge/TOOLS.md)，再按任務只查本技能與 vault 的相關頁面；不要讀入整個知識庫。把自然語言需求轉成 `generate.py` 的固定 task 與必要參數；目標是可重複產圖，不臨場組 graph。適用於概念圖、角色／姿勢圖、構圖控制、局部修改、材質變體、圖示與去背。
 
@@ -13,7 +19,7 @@ description: 將遊戲美術需求分類為既有圖片 task，依本機能力�
 
 使用者要先整理多參考圖、局部編修、角色／結構保留需求時，可按需讀[遊戲圖片編修需求整理](../game-art-edit-brief/SKILL.md)；該技能只整理 brief，task 選擇與能力 gate 仍依本技能。
 
-使用者要對本機 RGBA 圖片做遮罩合成或差異診斷，或明確要求固定來源／參考的有限參數比較時，另讀[本機圖片編修工具](../local-image-edit-tools/SKILL.md)。其 sweep 僅呼叫本技能既有 task，輸出仍須逐張人工驗收，不代替一般單次產圖流程。
+使用者要做 RGBA 遮罩合成、純換色、差異診斷或透明素材檢查，另讀[本機圖片編修工具](../local-image-edit-tools/SKILL.md)；其五個檔案操作不需 ComfyUI。明確要求固定來源／參考的有限參數比較時，讀[ComfyUI 圖片 sweep](../comfyui-image-sweep/SKILL.md)，仍只呼叫既有 task，不代替一般單次產圖流程。
 
 ## 每次任務的固定順序
 

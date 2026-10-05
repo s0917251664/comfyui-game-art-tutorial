@@ -2,21 +2,31 @@
 
 這是一個遊戲美術 AI 產圖產線專案。核心文件:
 
+## 產圖與特效的職責路由
+
+- 需求、參考圖用途、修改／保留項、版本與內容驗收由 `skills/game-art-workflow/SKILL.md` 維護。物件系列、靜態／短動態特效及角色動作方法只按需讀其 `references/production.md` 對應小節；完整職責盤點只在維護或移植時讀 `references/responsibilities.md`。
+- 使用者選 ComfyUI，才讀 `skills/comfyui-art-gen/SKILL.md` 的 config、模型、遮罩與 task gate；明確選平台圖片工具則讀 `skills/platform-image-gen/SKILL.md`。未指定引擎的本專案生成需求仍沿用既有 ComfyUI 入口。只整理需求不啟動生成；缺能力不自動切換引擎。
+- 平台原生圖片工具、外部付費 API／CLI、ComfyUI 是不同執行路線。本專案新增的是平台原生工具的技能指引，未新增外部 provider/backend 或 API client；不得由參考專案推定模型或參數可用。
+- `skills/local-image-edit-tools/SKILL.md` 只負責五個 Pillow／NumPy 圖片檔案操作，不需 GPU、ComfyUI 或 `local_config.json`；Agent 要能執行程式與讀寫原圖。ComfyUI 有限參數比較改讀 `skills/comfyui-image-sweep/SKILL.md`，實作／CLI 仍在 `image_edit_tools.py sweep`。
+- 動態特效執行仍走既有影片技能及 capability gate。平台圖片生成不等於影片生成；平台影片尚未整合。ComfyUI Core 合成／裁切、手繪遮罩服務、SAM 與本機純圖片工具也有不同依賴，不得統稱免 ComfyUI。
+
+## 核心文件
+
 - `教學.md` —— 完整的環境建置紀錄、功能地圖(哪種需求對應哪種技術)、設備/預算選型建議
-- `skills/comfyui-art-gen/SKILL.md` —— **當使用者用自然語言要求產生遊戲美術素材時,讀這份文件並照它的流程操作**
-- `skills/comfyui-object-design/SKILL.md` —— **當需求是物件系列檢視、透明物件放入平面背景、單一圖樣重複時讀取**；沿用既有生成 task 與固定 ComfyUI Core 合成 helper，不新增生成 task；部署 helper 單檔至 `<ComfyUI>/tools/comfyui_design.py`，依賴同目錄既有 `generate.py`、`image_edit_tools.py` 與 `comfyui_pipeline/`。狀態與限制見 `docs/knowledge/art/object-design-workflows.md`
-- `skills/game-art-edit-brief/SKILL.md` —— **當使用者要先整理多參考圖、指定部位編修、角色／結構保留等遊戲圖片編修需求時讀取**；只整理需求並映射到既有 task，不接 API、不執行生成。OpenAI 圖片指南僅作需求表達參考，能力仍依產圖技能檢查
-- `skills/local-image-edit-tools/SKILL.md` —— **當使用者要對本機圖片做 RGBA 遮罩合成、差異檢查、整理參考圖板、檢查透明素材 Alpha／邊界、使用既有遮罩局部換色，或明確要求固定輸入的有限參數 sweep 時讀取**；只包裝既有圖片 task，不新增生成 graph；情境見 `skills/game-art-edit-brief/references/scenarios.md`，實機驗證狀態見 `docs/knowledge/art/edit-tools.md` 與 `docs/knowledge/art/single-object-color.md`
-- `skills/comfyui-install/SKILL.md` —— **當要在新機器上設置這條產線、或 `local_config.json` 不存在時,讀這份文件並照它的流程操作**。這是一份目標清單而不是腳本,不同機器的 OS/硬體/既有安裝狀態交給 agent 臨場判斷怎麼達成
+- `skills/comfyui-art-gen/SKILL.md` —— **本專案預設或使用者選用 ComfyUI 的遊戲圖片生成入口**；平台生圖依前述職責路由，不套用本機 gate
+- `skills/comfyui-object-design/SKILL.md` —— **選定 ComfyUI 執行物件系列檢視、透明物件放入背景、單一圖樣重複時讀取**；沿用既有生成 task 與固定 ComfyUI Core 合成 helper，不新增生成 task；部署 helper 單檔至 `<ComfyUI>/tools/comfyui_design.py`，依賴同目錄既有 `generate.py`、`image_edit_tools.py` 與 `comfyui_pipeline/`。狀態與限制見 `docs/knowledge/art/object-design-workflows.md`
+- `skills/game-art-edit-brief/SKILL.md` —— **本專案編修 brief 的相容入口**；共用需求規則由 `game-art-workflow` 維護，本入口只保留 ComfyUI 輸入映射及引擎交接，不接 API、不執行生成
+- `skills/local-image-edit-tools/SKILL.md` —— **RGBA 遮罩合成、差異檢查、參考圖板、Alpha／邊界檢查及既有遮罩局部純換色**；不呼叫生成引擎，sweep 交 `skills/comfyui-image-sweep/SKILL.md`；既有情境與實測紀錄保留
+- `skills/comfyui-install/SKILL.md` —— **設置本機 ComfyUI 產線，或選定 ComfyUI 執行路線而缺 `local_config.json` 時讀取**。純需求整理、平台原生生圖及五個本機圖片操作不因缺此檔而要求安裝；不同機器安裝狀態依技能臨場判斷
 - `skills/comfyui-pipeline-review/SKILL.md` —— **只有使用者明確要求「評估/盤點產線有沒有新技術可以升級」時才讀這份文件**,平常不要主動觸發。負責盤點現有模型清單 + 查現況 + 給建議,不負責自己動手換模型
 - `skills/comfyui-new-tool-checklist/SKILL.md` —— **要幫這條產線新增任何新工具/新技術/新 task 時,讀這份文件並依能力類型勾選適用項目**。圖片、影片與本機工具各自檢查安裝、程式碼、實測與文件；`workflows/` 不是義務。純文件修正不套用完整新增能力流程。適用項目不要因改動小而省略。
 - `skills/comfyui-face-swap-workflow/SKILL.md` —— **既有影片換臉時讀取**；client + `comfyui_face_swap_video/` server custom node 完成整條 ComfyUI server-side 處理。部署契約、live gate、smoke/full 狀態與 deprecated client-media prototype 界線見 `references/local-tool.md`。此能力不新增 `generate.py` task/video backend；Wan Animate 狀態另見 `references/integration.md`。
 - `skills/comfyui-video-gen/SKILL.md` —— **當使用者要讓靜幀動起來、產短片、角色參考生影片時讀這份並照它的流程操作**。設計背景/還沒做的 task 見同資料夾 `DESIGN.md`。**不要把 `comfyui-art-gen` 的圖片 task 假裝成會產影片,也不要自己臨場組 ComfyUI 影片節點冒充產線;不要自動用系統播放器打開成品**
-- `skills/comfyui-character-animation-workflow/SKILL.md` —— **當使用者要同一角色的一整組遊戲動作，或要求從定稿靜幀一路做到逐支驗收與抽幀交付時讀這份文件**。它只編排既有產圖／產影片 task 與人工驗收點，不新增模型參數，不把尚未接入的第三方 provider、APNG 或透明影片假裝成現有能力
+- `skills/comfyui-character-animation-workflow/SKILL.md` —— **選定 ComfyUI 執行同一角色動作組，或從定稿靜幀做到逐支驗收與抽幀交付時讀取**。它只編排既有產圖／產影片 task 與人工驗收點，不新增模型參數，不把尚未接入的第三方 provider、APNG 或透明影片假裝成現有能力
 - `skills/comfyui-film-workflow/SKILL.md` —— **當使用者要劇情多鏡短片、長影片規劃、分鏡或從故事到逐鏡製作與剪接驗收時讀這份文件**。編排既有圖片／影片 task，保存鏡頭表與連續性紀錄；不新增一鍵長片、時間預視執行器或外部 provider。
 - `docs/knowledge/` —— repository 附帶的 Obsidian vault，可直接用標準 Markdown 閱讀。先看 `docs/knowledge/TOOLS.md` 選現有工具／技能，再按 task 讀對應知識；決策見 `DECISIONS.md`，適用範圍清楚的歷史觀察見 `experiences/`。不要把整個 vault 複製進 prompt，也不要讓經驗自動覆蓋 profile。Obsidian 本體不是必要依賴
 - `skills/project-knowledge/SKILL.md` —— 讀寫專案知識庫時使用；依 `docs/knowledge/TOOLS.md` 按需檢索和閱讀，不要整庫灌入 prompt。以標準 Markdown 和一般檔案讀寫方式更新既有筆記；草稿由小模型撰寫、root review。知識觀察不自動改寫 profile／能力驗收；不要把上游尚未完整接入的 ingest/query runtime 當作現有能力
-- `local_config.json` —— **這台機器的實際安裝路徑**(ComfyUI 裝在哪、python.exe 在哪),不進版控,每台機器內容都不一樣。不存在的話代表這台機器還沒裝好,照 `skills/comfyui-install/SKILL.md` 的流程走
+- `local_config.json` —— **這台機器的 ComfyUI 實際安裝路徑**(ComfyUI 裝在哪、python.exe 在哪),不進版控。只有選定 ComfyUI 執行路線而缺此檔時，才照安裝技能處理；純需求整理、平台原生生圖及五個本機圖片操作不需要此檔
 - `tools_src/generate.py` 與 `tools_src/comfyui_pipeline/` —— 實際執行產圖/產影片的原始碼(版本控管在這裡)。部署時要把 `generate.py` 與整個 `comfyui_pipeline/` 一起複製到 `<ComfyUI 安裝路徑>/tools/`；`generate.py` 是相容 facade，不可只部署單一檔案
 - 圖片 task 可選 `--result-json <新 JSON 路徑>` 產生技術追溯 manifest；不含美術驗收結論。需要保存素材版本時，在 `docs/knowledge/assets/<asset-id>.md` 按需建立 Markdown 記錄，明確寫 candidate／accepted／rejected 狀態、使用者決定與理由；不可捏造接受狀態或讓新輸出繼承舊版本驗收。格式與沿用規則見 `docs/knowledge/result-records.md`
 - `tools_src/mask_session.py` 與 `tools_src/simple_mask_tool/` —— 給不知道 ComfyUI 的使用者畫局部修改範圍；由本機 ComfyUI 提供極簡網址，部署時 client 要同步到 `<ComfyUI>/tools/`，同一套 package 也要同步到 `<ComfyUI>/custom_nodes/comfyui-simple-mask-tool/`。這是獨立的純手動畫遮罩工具，不含也不依賴 SAM。SAM 自動分割若後續新增，必須作為另一個獨立工具／能力開發；兩者只能透過標準遮罩檔案選配串接

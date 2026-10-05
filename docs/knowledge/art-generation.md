@@ -1,3 +1,7 @@
+## 職責範圍
+
+本頁只維護 ComfyUI 圖片 task、環境、輸入與執行契約；共用需求、版本與內容驗收由[共用工作流程](../../skills/game-art-workflow/SKILL.md)維護。平台原生生圖讀[平台圖片技能](../../skills/platform-image-gen/SKILL.md)，不讀本頁 config 或套用本機參數。純圖片檔案處理依其工具契約，不因缺本機生成環境而要求安裝。
+
 ## 環境
 
 **執行任何 task 之前,先讀 repo 根目錄的 `local_config.json`**,取得這台機器實際的路徑:
