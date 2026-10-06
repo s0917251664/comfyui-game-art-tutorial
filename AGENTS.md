@@ -2,6 +2,23 @@
 
 這是遊戲美術 AI 產線專案。先按需求選入口，再依其技能和能力 gate 操作；不要把不同執行路線合併推定。
 
+## 快速入口
+
+| 需求 | skill | 主要指令（`tools_src/`） |
+|---|---|---|
+| 初始化／選路線 | `game-art-initialize` | `detect_device.py`、`detect_image_capabilities.py`、`detect_video_capabilities.py` |
+| 概念圖、圖示、角色動作、姿勢、風格鎖 | `comfyui-art-gen` | `generate.py concept` / `icon_asset` / `character_action` / `pose_only` / `style_lock` |
+| 局部重繪、精修、放大、分層 | `comfyui-art-gen` | `generate.py inpaint` / `refine` / `upscale` / `layer_split` |
+| 物件系列、展示背景、圖樣重複 | `comfyui-object-design` | `comfyui_design.py scene` / `sheet` / `pattern` |
+| 本機像素合成與比較、參數掃描 | `local-image-edit-tools`、`comfyui-image-sweep` | `image_edit_tools.py composite` / `compare` / `recolor` / `sweep` / `asset-audit` / `reference-board` |
+| 靜幀轉短片、循環特效、接片、運鏡 | `comfyui-video-gen` | `generate.py img2video` / `fx_loop` / `video_concat` / `camera_move` / `character_video` |
+| 劇情多鏡、配音 | `comfyui-film-workflow` | `film_audio.py voices` / `tts` / `dub` |
+| 影片換臉 | `comfyui-face-swap-workflow` | `face_swap.py preflight` / `swap` |
+| 影片遮罩分層 | `comfyui-video-layers` | `video_layers.py preflight` / `run` |
+| 安裝 ComfyUI／模型 | `comfyui-install` | `verify_portable_install.py` |
+
+各 task 完整參數以 `generate.py <task> --help` 為準；其他入口見下方路由，指令不在表內者不要自行推定。
+
 ## 工作路由
 
 - 共用 brief、參考用途、修改／保留項、版本與美術驗收：[`skills/game-art-workflow/SKILL.md`](skills/game-art-workflow/SKILL.md)。物件系列、VFX、角色動作方法按需讀 `references/production.md`；完整職責盤點只在維護／移植時讀 `references/responsibilities.md`。
@@ -22,6 +39,7 @@
 
 ## 入口與參考
 
+- 技能分組（產線 vs. Obsidian 上游）見 [`skills/README.md`](skills/README.md)；產線工作不讀 wiki／obsidian 類技能。
 - 文件分工：README 說明開始方式，AGENTS 保留路由與必要原則，TOOLS 提供能力索引；精確操作契約留在技能 references，日期化實測與狀態留在對應知識頁。入口引用主要紀錄，避免複製整段測試狀態。
 - [`教學.md`](教學.md)：環境建置、功能地圖與設備／預算選型。
 - [`docs/knowledge/TOOLS.md`](docs/knowledge/TOOLS.md)：能力、執行方式、狀態及文件路由；[`docs/knowledge/INDEX.md`](docs/knowledge/INDEX.md)：知識庫導覽。

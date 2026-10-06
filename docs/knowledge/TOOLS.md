@@ -38,7 +38,7 @@ status: current
 | 新技能／工具／路線維護 | 依實際路線做相應 gate，不強制新增 Python 或 generate task | [`comfyui-new-tool-checklist`](../../skills/comfyui-new-tool-checklist/SKILL.md)、[checklist](maintenance/new-capability-checklist.md) |
 | 技能庫／產線審視 | repo 證據離線盤點；模型研究只查明確指定範圍，不自動下載／改 profile | [`comfyui-pipeline-review`](../../skills/comfyui-pipeline-review/SKILL.md)、[review reference](maintenance/pipeline-review.md)、[skill library](maintenance/skill-library.md) |
 | 專案知識庫讀寫：標準 Markdown | 小模型 draft、root review；按需閱讀，不把觀察自動升格為 profile／驗收 | [`project-knowledge`](../../skills/project-knowledge/SKILL.md)、[knowledge index](INDEX.md)、[Obsidian integration](maintenance/obsidian-integration.md) |
-| 上游 Obsidian skills | 按各自觸發條件；vault/runtime 支援有限，legacy vault 不代表 ingest/query 已就緒 | [Obsidian integration](maintenance/obsidian-integration.md)、[`skills/` 清單](../../skills/) |
+| 上游 Obsidian skills | 按各自觸發條件；vault/runtime 支援有限，legacy vault 不代表 ingest/query 已就緒 | [Obsidian integration](maintenance/obsidian-integration.md)、[`skills/README.md`](../../skills/README.md) |
 | ComfyUI 安裝／升級／初始化 | 安裝依賴硬體與已選路線；升級審視需明確要求；初次使用先走初始化 | [`comfyui-install`](../../skills/comfyui-install/SKILL.md)、[`game-art-initialize`](../../skills/game-art-initialize/SKILL.md)、[`pipeline-review`](../../skills/comfyui-pipeline-review/SKILL.md) |
 
 圖片、影片與本機工具各有自身依賴及狀態；`unverified` task 在執行前告知使用者。影片與動畫細節以各自 canonical page 為準。repo 尚無 ComfyUI MCP 生成入口；不可列作 fallback。能力目錄只記錄入口與證據，不能將不同 gate 壓成通用 `verified` 標籤。
