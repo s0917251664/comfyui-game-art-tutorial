@@ -2,6 +2,8 @@
 
 **本頁範圍只限原始 Wan Animate workflow 的接入評估與缺口。** 本頁所稱「本次交付不能列為可執行換臉工具」僅指該 Wan Animate workflow；不適用於已另行完成部署和 smoke 的 ComfyUI ReActor server-side wrapper。ReActor 狀態與驗證見 [local-tool.md](local-tool.md)。
 
+目前另有已安裝的 Wan2.2 Animate 固定原生 API graph（Mix／Move）；2026-10-06 Mix17／Move17 直接 HTTP 技術通過，內容仍 candidate，33 幀穩定性未由 17 幀結果證明，也未接入 `generate.py` task/backend。這不是本頁所述舊 WanVideoWrapper graph 的升級或驗收。使用目前 API 路徑時，讀 [comfyui-wan-animate 技能](../../comfyui-wan-animate/SKILL.md)及其[API reference](../../comfyui-wan-animate/references/comfyui-api.md)。
+
 確認日期：2026-10-04。狀態：blocked dependencies / unverified generation。
 
 來源：[介紹頁](https://comfy.org/workflows/93f286fbc2c8-93f286fbc2c8/) 與 [下載 JSON](https://comfy.org/workflows/download/93f286fbc2c8.json?filename=93f286fbc2c8)。本機原始下載存放 `output/face-swap-reference/upstream.json`，為忽略版控的參考產物；不是已部署的產線 graph。下載版本的 SHA256 與節點缺口見同目錄 `audit.json`。

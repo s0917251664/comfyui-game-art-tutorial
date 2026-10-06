@@ -1,98 +1,68 @@
 ---
-name: comfyui-new-tool-checklist
-description: 為新增圖片、影片或本機工具能力建立適用的安裝、程式、實測與文件檢查；依能力類型勾選，不把不相關流程強加進來。
+type: maintenance-checklist
+status: current
+last_updated: 2026-10-06
 ---
 
-# 新工具/新能力上線檢查清單
+# 新增能力與技能檢查清單
 
-給任何操作這個 repo 的 agent(Claude Code、Codex、Gemini CLI 等)使用的技能說明。
+此清單依執行路線檢查，而不是把 repo 現有 Python／ComfyUI 實作形式套用到每個新需求。先閱讀[技能庫路線與盤點](skill-library.md)，勾選本次適用路線；可以組合路線，但每項只核對實際受影響的層。
 
-## 何時使用
+## 每種能力共同要交代的內容
 
-當要幫這條產線新增工具、技術、task 或既有 task 的新參數時使用——包括圖片 task／模型、影片 task／backend，或 Simple Mask、SAM、合成等本機工具。先辨認本次受影響的能力類型，可同時涉及多類；逐項檢查適用性，不能因改動小而省略適用項目。既有能力的純文件修正不套用完整新增能力流程。
+- [ ] 觸發條件、目的、輸入／輸出、使用者如何操作及結果存在哪裡。
+- [ ] 明確選定路線、依賴、已知平台／版本與資產來源；不由相似能力推定可用。
+- [ ] 在 skill metadata 寫可被發現的名稱與描述，於 body 解釋觸發、不可跳過的 gate、最短操作和交付狀態；詳細欄位、錯誤與邊界放 references。
+- [ ] 分開記錄技術狀態、內容候選及使用者驗收。`pass` 不代表畫面 accepted；未實測標為 `unverified` 或 `pending`。
+- [ ] 更新相關技能、知識頁和專案入口；不是每份文件都要同步，只改實際路由依賴的頁面。
+- [ ] 保存可回溯的最小證據（版本／hash、請求或 CLI 設定、輸出 metadata、必要時抽幀或人工觀察）；避免把完整大型 log 複製進 skill。
 
-這份清單不是憑空想的,是把這個專案實際新增 ControlNet Pose/Depth、Upscale 這兩個能力時走過的完整流程整理出來的——過程中踩過的坑(文件跟程式碼講的不一樣、workflow JSON 手滑寫壞格式、模型寫死綁定 SDXL 卻沒講清楚)都變成了下面的檢查項目。
+## 執行路線檢查
 
-## 核心原則
+### A. 需求 brief 或工作流程規劃
 
-- 檢查要和能力類型及風險相稱：圖片生成才檢查圖片 graph／模型與 `comfyui-art-gen`，影片才檢查影片 backend／runtime 與 `comfyui-video-gen`，本機工具才檢查自己的 CLI、輸出與部署；不要一律要求 custom node、ComfyUI queue 或另一個 skill。
-- 適用的每一步都要真的做，跳過時寫明原因；文件/程式碼/部署不同步會讓接手的人看到矛盾資訊。
-- 完成後要能有信心回答這句話:「如果現在讓一個完全沒看過這次對話的人接手,他讀這些文件能不能正確理解、正確使用這個新工具?」
-- 不因為清單存在就增加沒有必要的流程、資料夾或 workflow；只留下能證明這項能力可用的最小證據。
+- [ ] 明確說明此階段只整理需求、輸入用途、保留／修改項目、交付及驗收條件。
+- [ ] 不要求 `local_config.json`、ComfyUI、Python 或圖片／影片能力快照；不偷偷執行生成。
+- [ ] 若後續要執行，交接到使用者選定且已知可用的執行路線，不猜 fallback。
 
-## 檢查清單
+### B. 平台原生工具
 
-### 1. 安裝面（依能力類型）
+- [ ] 直接檢查當下平台提供的工具 schema 與其輸入、參考圖、輸出限制。
+- [ ] 不要求 ComfyUI config、模型 profile、Python、local detector 或本機 GPU gate。
+- [ ] 只宣稱 schema 支援的實際功能。不得推測平台有影片、多參考、指定模型或未展示的 controls；外部付費工具的成本／同意流程依其路線處理。
+- [ ] 建立／變更平台生成能力時，只有當下有實際工具且任務要求生成才做一個有界呼叫並檢查返回資產與基本格式；純路由或 brief 文件依來源、工具 schema、觸發情境做檢查，不強制生成。工具不存在或 schema 不支援時明確回報，不暗中改走 ComfyUI。
+- [ ] 平台原生技能的執行路線不依賴 Python；維護者選用 Python quick validator 只是維護方式，不能當成終端使用者 runtime 或安裝要求。
 
-- [ ] **圖片模型／custom node：** 模型來源加進 `skills/comfyui-install/reference/models.md`，custom node 安裝步驟更新 `skills/comfyui-install/SKILL.md`，附用途、最後確認日期與底模家族；實際安裝或如實記錄尚未安裝。
-- [ ] **影片模型／runtime／node：** 更新影片安裝與 capability 說明，標明 backend 綁定與實際依賴；實際安裝或如實記錄尚未安裝。
-- [ ] **本機工具：** 檢查自己的 Python 套件、外部 runtime、本機路徑與部署契約；若工具包含 Simple Mask 這類 custom node，照其契約同步 `tools/` 與 `custom_nodes/`，沒有則不新增無關依賴。
+### C. 直接 ComfyUI HTTP API 與固定 graph assets
 
-### 2. 程式碼與部署面
+用於有穩定 workflow、但不需要新 Python wrapper、`generate.py` task 或 backend 的能力。agent 可直接呼叫 ComfyUI API。
 
-- [ ] **圖片／影片 task：** 保持必要輸入與參數最小化；圖片模型檔名、取樣參數、解析度與 task 範圍放在既有 image profile，影片能力放在 video catalog／capability config；FLUX.2 維持獨立路線，不套用 image profile。
-- [ ] **修改 `tools_src/generate.py` 或 `tools_src/comfyui_pipeline/` 時：** 至少檢查語法與受影響的測試；圖片 graph 有刻意變更才執行 `python tests/golden_image_graphs.py --write`，並審查 diff 確認只有預期節點變更。
-- [ ] **部署產線 facade／package 時：** 同步 `tools_src/generate.py` 與整個 `tools_src/comfyui_pipeline/` 到 `<ComfyUI 安裝路徑>/tools/`；只改本機工具時改走該工具自己的部署契約。
-- [ ] **本機工具程式碼：** 依其實際入口與 package 一起驗證、部署；若有 custom node，確認 `tools/` 與 `custom_nodes/` 的同步範圍。若 `verify_portable_install.py` 的 `SYNC_SOURCE_FILES` 有維護明確部署名單，也把新 source 加入並更新驗證 fixture，避免乾淨安裝漏部署後只在離線驗證才失敗。
-- [ ] 至少確認受影響 Python 檔案語法沒錯（例如 `python -c "import ast; ast.parse(open(...).read())"`）。
-- [ ] 非顯而易見的技術決策與已知限制寫在受影響的程式碼或文件中。
+- [ ] 固定且版控 API-format graph JSON；記錄來源、版本/hash、所有可替換欄位和不允許變動的參數。UI-format JSON 不能未轉換就當 API-format。
+- [ ] queue 前以目前 server `GET /object_info` 核對所有 node classes、input schema、模型 selectors；另檢查本機所需模型／sidecar assets 與版本。缺失即停止，不用同類名稱猜相容。
+- [ ] 先驗證輸入，再按 API 契約 upload；保存回傳的 server path，填入固定 graph。未解析 placeholder、未知 input、檔案限制不符時不能 submit。
+- [ ] 只提交一個可控、有界 prompt，立即保存 `prompt_id`；輪詢該 ID 的 history，以服務明確的 success／completed 狀態判定完成。Queue snapshot 或成功 submit 不算完成。
+- [ ] 依 outputs descriptors 下載並核對尺寸、格式、幀數／FPS／音訊、完整解碼及 graph 約定。逾時保存 ID、history 和失敗收據；不得自動重送、全域 interrupt 或下載不存在的輸出。
+- [ ] 有界實際 smoke 至少走過 preflight、輸入上傳、API submit/history、輸出下載與契約檢查，才可標技術 verified。離線 graph parse／node-list 存在或未真正呼叫的模板保持 pending。內容另列 candidate，等待人工驗收。
+- [ ] 不因為用了 ComfyUI API 就新增 Python client、CLI、`generate.py` task/backend 或 capability catalog。只有請求本身確實需要本機大量解碼、時間軸／批次處理、狀態管理或專案既有 pipeline 暫存時，才另評估 helper/custom node 路線。
 
-### 3. 實測驗證（依能力類型）
+### D. 既有 `generate.py` CLI、profile 或 capability catalog
 
-- [ ] **圖片：** 實際呼叫受影響的 task／參數，檢查 ComfyUI graph、輸出尺寸／格式／通道與主觀畫面驗收；模型設定檔的 `validation` 只有實機驗收後才能標 `verified` 或 `experimental`。
-- [ ] **影片：** 實際呼叫受影響的 task／backend，檢查 runtime、輸出契約、sidecar、音訊與畫面驗收。
-- [ ] **本機工具：** 直接執行工具的 smoke test，檢查輸出檔案、格式與錯誤處理；不要求 ComfyUI queue。
-- [ ] 沒有相符的實機環境時，如實記錄未驗證項目，不把離線檢查當成實測通過。
+- [ ] 僅在能力屬於既有 facade task 時沿用 `generate.py`。圖片依相應 image profile／FLUX 獨立 gate；影片依 backend 與 `video_capabilities.json`。不混用圖片／影片 snapshot。
+- [ ] 模型名稱、取樣、tier、支援 task 依既有 profile／catalog 契約更動；profile 代表經相容性驗證的組合，不是只改檔名。
+- [ ] 程式有改動時按影響範圍檢查 code、既有 tests、portable deploy 和 fixtures；只有故意改固定 image graph 才更新 golden fixtures。
+- [ ] 實測實際呼叫新增／修改 task 與指定 profile/backend，檢查 metadata、畫面／影片技術契約和內容品質。沒有對應機器時保留未驗證狀態。
 
-### 4. 文件面（只更新受影響入口）
+### E. 本機 helper、server custom node、媒體／批次／狀態處理
 
-- [ ] **圖片 task／參數：** 更新 `skills/comfyui-art-gen/SKILL.md` 的任務判斷、必要輸入與 CLI；參數細節放 `skills/comfyui-art-gen/reference/full-params.md`。
-- [ ] **影片 task／backend：** 更新 `skills/comfyui-video-gen/SKILL.md` 與必要的影片 reference。
-- [ ] **本機工具：** 更新該工具自己的 skill／reference、`AGENTS.md` 部署說明或 `教學.md` 受影響段落，不補無關圖片流程。
-- [ ] 新增技能時，在 `AGENTS.md` 核心文件清單加入入口與觸發條件；既有技能分工改變時同步更新。
-- [ ] `教學.md` 的功能地圖或操作段落只有在能力對外可用時才更新，並附實測證據；尚未實測就明確標示。
-- [ ] SKILL.md 保留每次都要走的判斷、必要輸入與指令；踩坑、完整參數與邊界情況放 reference，避免入口膨脹。
+- [ ] 確認功能確實需要本機 code，例如批次媒體解碼、長時間狀態、專案資產 staging、特定演算法或既有 CLI 自動化；可由固定 API graph 直做時，不額外包 Python。
+- [ ] 列出 client、server、依賴、模型／node pins、安裝路徑、輸入輸出契約與失敗清理；只部署受影響的程式，保留既有 source-of-truth。
+- [ ] 如果必須 custom node，說清楚 server 端處理責任與 client/API 邊界；若用既有 ComfyUI API helper，避免再實作重複 graph/transport。
+- [ ] 執行有界 smoke，驗證部署後真正執行、成功及失敗產物、完整解碼／像素契約及狀態記錄。需要 media/runtime 的測試依工具契約，不強迫跑不相干的 `generate.py` tests。
+- [ ] 僅當 code 維護／部署必要時才更新 portable install manifest、fixtures、同步清單、test suite；不為知識頁另增產品依賴。
 
-### 5. workflows/(選配,不是義務性同步)
+## 收尾與曝光
 
-`workflows/` 不進版控(見 `.gitignore`),是維護者(不是美術)本機除錯/開發用的視覺化參考,不是要交付給使用者的東西,**不要把「補 workflow JSON」當成每個新能力都一定要做的步驟**。
-
-- [ ] 真的有花時間在 ComfyUI 網頁介面手動組過對應節點圖(例如開發新能力時拿來驗證邏輯),順手存一份到 `workflows/*.json` 沒問題,命名跟現有檔案慣例(`ChN[字母]_描述.json`)對齊——但這是「剛好做了就留著」,不是額外再花時間去補
-- [ ] 如果真的手動寫或修改了這份 JSON(而不是從 ComfyUI 介面存出來的),**要寫程式驗證過**再交付:每個節點的 `pos` 是不是恰好 2 個數字、`last_link_id` 是否等於實際最大 link id、每條 link 兩端指到的節點 id 是否存在——這些是這個專案實際踩過的低級錯誤(手滑寫壞格式),不要重蹈覆轍
-
-### 6. 收尾
-
-- [ ] 跟使用者總結:裝了什麼、改了哪些檔案、測過什麼(附證據,例如輸出尺寸/格式)、還缺什麼——如實講,不要隱瞞
-- [ ] 過程中如果發現「寫的時候才發現」的既有問題(像這個專案發現 ControlNet/IPAdapter 寫死 SDXL 的技術債那樣),要明確講出來,不要悄悄繞過去當作沒看到
-
-## 情境 B：新增模型設定檔
-
-要讓同一組 task 跑在另一套模型上（例如輕量 SDXL 蒸餾版、補齊 SD1.5 版 ControlNet/IPAdapter）。**設定檔代表一組彼此相容的模型與參數，不是單換一個檔名**；上面的完整清單照走，另外確認：
-
-- [ ] 先用 `skills/comfyui-pipeline-review/SKILL.md` 或明確的使用者需求決定候選模型，不要臨場挑
-- [ ] 新增 `tools_src/comfyui_pipeline/profiles/<id>.json`：`family`、`tiers`（沒有對應 tier 就給空清單，只能用 `--profile` 選用）、`requirements`（後端／最低可用記憶體／精度）、`models`（每顆模型的 `dir`、`file`、`loader`、`nodes`，選配標 `optional`，實驗性標 `experimental`）、`sampling`、`resolution.by_memory`、`tasks`（只列實際支援的）
-- [ ] 同一個 tier 不能對應兩份設定檔（測試會擋）；若新設定檔要取代某個 tier 的預設，要同時改 `detect_device.py` 的 `TIERS` 並確認 `tests/test_image_profiles.py` 的一致性測試
-- [ ] 取樣參數與 graph 結構不同時（例如蒸餾版需要 4–8 步、低 cfg，或需要不同 loader node），先確認現有 builder 能否只靠設定檔表達；不能的話是程式碼變更，要補 golden fixture 並說明
-- [ ] 新增 `skills/comfyui-art-gen/reference/profiles/<id>.md`，設定檔的 `notes_ref` 指過去；內容只寫實測發現
-- [ ] `validation` 一開始保持空的（全部 `unverified`），實機驗證後才依情境 C 補
-- [ ] 安裝清單（`skills/comfyui-install/reference/models.md`）補上這份設定檔需要的模型、來源、大小、最後確認日期
-
-## 情境 C：在新平台或新記憶體級距驗證既有設定檔
-
-例如在 `macos-mps` 第一次跑 `sdxl_standard`，或在 8GB 的 `windows-cuda` 機器補驗。**不改程式碼**，只補證據與驗證紀錄：
-
-- [ ] 在該機器照 `skills/comfyui-install/SKILL.md` 完成安裝、`detect_image_capabilities.py` 與 `verify_portable_install.py --require-image`
-- [ ] 逐 task 實際產圖並做人工驗收（`skills/comfyui-art-gen/SKILL.md` 的產後驗收），記下指令、輸出尺寸／格式、耗時與發現的問題；只跑出檔案、沒看過內容的不算
-- [ ] 更新設定檔 JSON 的 `validation.<platform_key>`：
-  - `status`：全部驗收通過才用 `verified`；能出圖但品質或穩定性有疑慮用 `experimental`；確認跑不起來（OOM、精度不支援、node 不相容）用 `unsupported`
-  - `tasks`：只列實際驗收過的 task
-  - `min_verified_memory_mb`：這台機器 `device_config.json` 的 `usable_memory_mb`
-  - `evidence`：指向證據位置
-- [ ] 證據寫進 `docs/tested-versions.md`（該機器的 commit、套件版本、模型 SHA-256、smoke 紀錄），不可捏造或沿用其他機器的數字
-- [ ] 同一平台已有紀錄時，新的 `min_verified_memory_mb` 只能在實測較低記憶體級距通過後才往下調
-- [ ] 平台特有的發現（例如 MPS 某個 task 很慢、某精度不支援）補進 `reference/profiles/<id>.md`
-- [ ] 設定檔 JSON 變了，部署端也要同步；`verify_portable_install.py` 會把內容不同判為 FAIL。重新執行 `detect_image_capabilities.py --overwrite` 更新快照中的驗證狀態，帶回原本的路徑選項與 `--default-profile <原 id>`，保留使用者選定的設定檔
-
-## 已知限制
-
-這份清單本身也會過時。如果之後這條產線的架構有大幅變動(例如真的換了另一套生成引擎,不只是 ComfyUI 裡加新節點),這份清單要跟著重新檢視,不要當成永遠不變的教條。
+- [ ] `AGENTS.md` 補 repo 核心路由，`TOOLS.md` 說明現況與觸發，`INDEX.md` 導覽知識文件；只改與新增能力有關的入口。
+- [ ] 全域技能路由副本只應在使用者明確要其他 repo／全域也能發現時建立；全域副本指向唯一 canonical skill，不另維護第二份操作規則。
+- [ ] `教學.md` 或 install files 只在產品能力與使用者操作有實際變動時更新，狀態根據實測，不把 pending graph 說成正式支援。
+- [ ] 使用者交付包含路線、檔案、執行證據、技術／內容狀態及仍未驗證事項。

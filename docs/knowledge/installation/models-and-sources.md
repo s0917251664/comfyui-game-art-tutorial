@@ -86,6 +86,10 @@ Union 是額外的實驗權重，**不會取代**上面三顆正式模型。ProM
 
 **不是每台機器的基本配備,只有使用者明確要產短片才裝。** 跟 SDXL 底模/ControlNet/IPAdapter **完全不相容**,是另一組 UNET/VAE/文字編碼器,不要塞進上面的 SDXL 表格、也不要假設 `CKPT` 能拿來產影片。
 
+### ComfyUI Video Layers 使用的 SAM 2.1 small（不是影片生成 backend）
+
+Video Layers 使用的 `facebook/sam2.1-hiera-small` 為短影片遮罩傳播模型，來源為 [Meta 官方 Hugging Face model repository](https://huggingface.co/facebook/sam2.1-hiera-small)，模型程式／文件見 [facebookresearch/sam2](https://github.com/facebookresearch/sam2)。本工具固定 revision `ee5bba1d82bb8749febdf90f45e84b687142ba03`，只讀取既有 Hugging Face cache 並核對 `config.json`、`model.safetensors`、`preprocessor_config.json` 的 hash；不自動下載，也不加入 `video_capabilities.json` 的生成 backend/task。本機實際 runtime pins 見 [Video Layers reference](../../../skills/comfyui-video-layers/references/local-tool.md) 和 [tested-versions](../../tested-versions.md)；它們是此機 preflight gate，未宣稱其他平台相容。新機若沒有快取，按需回到安裝技能及使用者授權流程，勿由日常 preflight 觸發下載。
+
 以下是 Windows / RTX 4080 的歷史安裝與實測紀錄(路徑相對於 `<ComfyUI 安裝路徑>/models/`)，不是目前 repository 可直接重建的鎖定檔。當時的檔名、大小與日期可作為辨識線索；XU-Nano-PC 的實際版本、hash 與 smoke 已填入 `docs/tested-versions.md` 的 `verified` manifest，其他已安裝機器仍須自行擷取並從 `pending_on_installed_machine` 完成 smoke 後再改為 `verified`:
 
 | 用途 | 子資料夾 | 檔名 | 下載來源 | 實際大小 | 最後確認日期 |
@@ -124,3 +128,19 @@ Wan I2V + H3 FL2VA 約 56.4 GiB；加上 Ref2VA 約 76 GiB；若再安裝表內 
 | 4x-UltraSharp 放大模型 | `upscale_models` | `4x-UltraSharp.pth` | ~67MB（同 SDXL 表格） | 選配；`upscale` 需要 |
 
 合計 = DreamShaper 8 實際大小 + 最多約 1GB。實際下載後把確認的大小與日期補回這張表。
+
+## Wan2.2 Animate 原生 workflow（本機已安裝）
+
+此模型組只供 ComfyUI 官方 Wan2.2 Animate UI workflow，不加入 `generate.py` model profile/backend。模型下載由 `output/wan-animate-install/download_models.py` 固定 Hugging Face revision、檔案大小及 SHA-256；2026-10-06 七個新增檔案皆完成 size／SHA-256 驗證，合計 22,634,628,209 bytes（21.08 GiB）。Mix／Move 短片技術 smoke 已通過，內容有身份漂移，仍待人工驗收。已安裝的 UMT5 encoder 依官方 workflow 重用，未由本次腳本下載。
+
+| 用途 | Repository @ 固定 revision | 上游檔案 → ComfyUI 路徑 | Bytes | SHA-256 |
+|---|---|---|---:|---|
+| Animate 14B FP8 主模型 | `Kijai/WanVideo_comfy_fp8_scaled` @ `033a4e487f60220b3d6e469599a6aebc46e13cee` | `Wan22Animate/Wan2_2-Animate-14B_fp8_e4m3fn_scaled_KJ.safetensors` → `models/diffusion_models/Wan2_2-Animate-14B_fp8_e4m3fn_scaled_KJ.safetensors` | 18,401,760,586 | `2936b31473a967e7a429a6646bba60e7862d0938e178b58b2a140f391dd5b8e6` |
+| Wan2.1 VAE | `Comfy-Org/Wan_2.1_ComfyUI_repackaged` @ `123acf1cc74bccbb9bfff8ac1ee72edc08c2341d` | `split_files/vae/wan_2.1_vae.safetensors` → `models/vae/wan_2.1_vae.safetensors` | 253,815,318 | `2fc39d31359a4b0a64f55876d8ff7fa8d780956ae2cb13463b0223e15148976b` |
+| LightX2V 加速 LoRA | `Kijai/WanVideo_comfy` @ `8260d429d19fd7a72304cad059160b95d843913f` | `Lightx2v/lightx2v_I2V_14B_480p_cfg_step_distill_rank64_bf16.safetensors` → `models/loras/lightx2v_I2V_14B_480p_cfg_step_distill_rank64_bf16.safetensors` | 738,005,744 | `85c4a61c30e0497aa44b91d93a893b624708461a56fe5485183b28fa07e2dfb3` |
+| DWPose 使用之 YOLOX | `yzd-v/DWPose` @ `1a7144101628d69ee7a3768d1ee3a094070dc388` | `yolox_l.onnx` → `custom_nodes/comfyui_controlnet_aux/ckpts/yzd-v/DWPose/yolox_l.onnx` | 216,746,733 | `7860ae79de6c89a3c1eb72ae9a2756c0ccfbe04b7791bb5880afabd97855a411` |
+| Relight LoRA | `Kijai/WanVideo_comfy` @ `8260d429d19fd7a72304cad059160b95d843913f` | `LoRAs/Wan22_relight/WanAnimate_relight_lora_fp16.safetensors` → `models/loras/WanAnimate_relight_lora_fp16.safetensors` | 1,436,672,440 | `fc646c74c73f4b251f5fd9bc440ef21b03b27305f499966c68b2b3aa31498561` |
+| SAM 2 base-plus | `Kijai/sam2-safetensors` @ `f885607d88bb3f9145efa49c3e3c50a9e5bf13eb` | `sam2_hiera_base_plus.safetensors` → `models/sam2/sam2_hiera_base_plus.safetensors` | 323,407,992 | `fa02d9028dcc4859c191f1d3f1ca1f7eefdb85f3b5e746c9ad738f322f3e89e2` |
+| CLIP Vision H (FP16) | `Comfy-Org/Wan_2.1_ComfyUI_repackaged` @ `123acf1cc74bccbb9bfff8ac1ee72edc08c2341d` | `split_files/clip_vision/clip_vision_h.safetensors` → `models/clip_vision/clip_vision_h.safetensors` | 1,264,219,396 | `64a7ef761bfccbadbaa3da77366aac4185a6c58fa5de5f589b42a65bcc21f161` |
+
+UMT5 依官方 workflow 使用現有 text encoder；實際檔案由環境檢查確認，並非上述下載腳本的固定 hash 清單。ComfyUI 固定為 `12d5279438bfefc058a269eae805ceab6047777f`；新增 KJNodes `d3cfe21625e5170126ce06fbfcfe1d88108688c3` 與 `ComfyUI-segment-anything-2` `0c35fff5f382803e2310103357b5e985f5437f32`。既有 `comfyui_controlnet_aux` 不變。Python 3.13.9、PyTorch 2.13.0+cu130、RTX 4080 16,376 MiB VRAM／31.1 GiB RAM。詳細安裝與驗證狀態見 [Wan2.2 Animate 安裝紀錄](../video/wan-animate-install.md)。

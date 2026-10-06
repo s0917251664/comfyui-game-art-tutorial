@@ -5,7 +5,7 @@ status: active
 
 # 影片產線知識
 
-這頁是影片 task 的工具範圍、backend 選擇、技術契約與歷史驗收紀錄。repo 入口技能為 `skills/comfyui-video-gen/SKILL.md`（由 [TOOLS.md](../TOOLS.md) 路由）；要規劃單一角色多動作則改讀 [`animation/workflow.md`](../animation/workflow.md)。設計稿保留在 [`design.md`](design.md)，其中尚未接入的能力仍是規劃，不是可呼叫 task。
+這頁是影片 task 的工具範圍、backend 選擇、技術契約與歷史驗收紀錄。repo 入口技能為 `skills/comfyui-video-gen/SKILL.md`（由 [TOOLS.md](../TOOLS.md) 路由）；ComfyUI server-side SAM 遮罩與 ordered layer 合成是獨立工具，規格與狀態見 [`layers.md`](layers.md) 及 `skills/comfyui-video-layers/SKILL.md`。要規劃單一角色多動作則改讀 [`animation/workflow.md`](../animation/workflow.md)。設計稿保留在 [`design.md`](design.md)，其中尚未接入的能力仍是規劃，不是可呼叫 task。
 
 ## 狀態與工具範圍
 
@@ -116,3 +116,5 @@ timeout 會保存 `prompt_id` 及精確 queue/running ownership；只有確認�
 ## 可靠範圍盤點
 
 - [2026-10-03 本機影片可靠範圍盤點](reliability-audit-2026-10-03.md)：環境快照、MP4/sidecar 追溯、有限內容抽樣與下一階段基準缺口。
+
+Wan Animate 為獨立固定 API 路徑，未接入 `generate.py` task/backend；使用／查詢依[專用技能](../../../skills/comfyui-wan-animate/SKILL.md)，安裝及歷史測試見[安裝紀錄](wan-animate-install.md)。本頁不取代執行前 live preflight。

@@ -72,12 +72,15 @@ class VerifyPortableInstallTests(unittest.TestCase):
         self._copy_source(tools_dir / "sam_segment.py", self.sam_segment_bytes)
         self._copy_source(tools_dir / "image_edit_tools.py", self.image_edit_tools_bytes)
         self._copy_source(tools_dir / "comfyui_design.py", (ROOT / "tools_src/comfyui_design.py").read_bytes())
-        for name in ("film_audio.py", "film_sapi.ps1", "film_qwen.py", "film_lipsync.py", "face_swap.py"):
+        for name in ("film_audio.py", "film_sapi.ps1", "film_qwen.py", "film_lipsync.py", "face_swap.py", "video_layers.py"):
             self._copy_source(tools_dir / name, (ROOT / "tools_src" / name).read_bytes())
         for name in ("__init__.py", "contracts.py", "media.py", "nodes.py"):
             for location in (tools_dir / "comfyui_face_swap_video", comfyui_path / "custom_nodes/comfyui-face-swap-video"):
                 self._copy_source(location / name, (ROOT / "tools_src/comfyui_face_swap_video" / name).read_bytes())
         self._copy_source(tools_dir / "mask_refine.py", self.mask_refine_bytes)
+        for name in ("__init__.py", "contracts.py", "media.py", "nodes.py"):
+            for location in (tools_dir / "comfyui_video_layers", comfyui_path / "custom_nodes/comfyui-video-layers"):
+                self._copy_source(location / name, (ROOT / "tools_src/comfyui_video_layers" / name).read_bytes())
         self._copy_source(tools_dir / "comfyui_pipeline" / "__init__.py", self.pipeline_init_bytes)
         self._copy_source(tools_dir / "comfyui_pipeline" / "image_graphs.py", self.pipeline_image_bytes)
         self._copy_source(tools_dir / "comfyui_pipeline" / "image_results.py", self.pipeline_image_results_bytes)

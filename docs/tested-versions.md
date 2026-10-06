@@ -518,3 +518,19 @@ workflows/ 依 AGENTS.md 規範不進版控；本輪沒有實際手動開發 wor
 只有在同一個 manifest 內的 ComfyUI commit、custom node commits、Python/PyTorch/Pillow/PyAV 版本與使用到的模型 SHA-256（包含影片 diffusion_models、text_encoders、vae）都已擷取，並且至少完成一次最小產圖與影片 smoke test、輸出檔驗收後，才把 capture_status 改成 verified。只更新其中一項時，保留 pending_on_installed_machine，避免把未驗證的混合環境誤當成可重現版本。
 
 本筆 XU-Nano-PC capture 已滿足上述門檻；其他機器仍應各自重新偵測、計算 hash 與 smoke test，不可直接套用本機絕對路徑或假設 backend。
+
+## 2026-10-04 本機增補：ComfyUI server-side Video Layers（局部能力記錄）
+
+本節只記 XU-Nano-PC／本機正式 ComfyUI 8188 的 Video Layers 增補驗證，不改上述通用 capture 狀態，也不代表跨平台 `verified`。正式 8188 已於 queue 空時重啟；`output/steve-kabuto-upper-body/video-layers/production-current-preflight.json` 記錄 fresh production preflight pass，runtime 為 PyAV 18.1.0、OpenCV 5.0.0.93、PyTorch 2.13.0+cu130、Transformers 5.15.0。SAM 2.1 small revision `ee5bba1d82bb8749febdf90f45e84b687142ba03` 的模型檔 SHA-256 由 `tools_src/comfyui_video_layers/contracts.py` 固定並在 preflight 核對；權重原已快取，本次沒有下載模型或套件。安裝來源與用途見 [模型來源頁](knowledge/installation/models-and-sources.md)。
+
+Current 版本為唯一最新記錄；舊 `v1`／`v4`／`final` 均保留為歷史。正式 server PID 14020 的 `production-segment-current`：39 幀、960×540、60 FPS、0.65 秒、H.264/AAC，decoded samples 31,744，full decode pass，兩物件共 78 masks 且 empty=0，耗時 10.615 秒。`production-compose-current`：39 幀、1024 square、60 FPS、H.264/AAC、31,744 samples、full decode pass，耗時 8.389 秒、technical warning/content candidate。`prop-occlusion-current` 與 `belt-occlusion-current` 分別耗時 8.338 與 7.903 秒，同為 39 幀、1024 square、60 FPS、H.264/AAC、31,744 samples、full decode pass，technical warning/content candidate。
+
+獨立 PNG QA 由 3 個 current zip 各解出並檢查全部 39 張實際 PNG：production compose head/collar matte 每幀 666,624 px、total changed 0；prop fingers matte 每幀 14,785 px、total changed 0；belt jacket matte 每幀 958,351 px、total changed 0，manifest outside-mask changed max 均為 0。這不代表 MP4 無損或畫面合格。20 個 Video Layers tests（含 image track-to-destination mapping regression）和 17 個 portable tests pass；最新 `portable-verification-current.txt` 為 43 passed、0 failed，tools exit 0。`video-capability-rescan-current.json` 記錄原有 video generation default H3、H3/Wan available；和此工具無關。`face-swap-preflight-after.json` 的獨立 ReActor gate pass，pinned commit `a12c5b19dcac9ae8b47e592da39c9711c8f8c756`。四個 current MP4 均完成嚴格 FPS、逐幀 PTS grid、H.264、AAC 48 kHz stereo 及 full-decode gate。測試 server 8189 已關閉。工程 gates 已完成；真實 Kabuto LK frame 1 失敗， armor 位置／mask、手部接觸和 belt 3D 繞身仍不合格，完整影片未完成，content 狀態皆 candidate。本機 Windows/runtime 技術驗證不代表跨平台 verified 或美術 accepted。
+
+Windows ACL issue：Python 3.13 `tempfile.mkdtemp()` 私有 mode-0700 DACL 在 rename 後仍阻止其他 desktop/tool identity 讀取。新 Video Layers client/server 現用 output parent 下隨機 UUID stage dir 和一般 `mkdir()` 繼承父 ACL，仍拒絕覆寫及 atomic rename。一般與核准程序跨身份讀取測試通過，current artifacts 已可由預設 tools 跨呼叫存取。此變更只在 Video Layers，沒有改 face-swap media 或 generation source。最終使用者 scope、圖像 QA 與未完成目標詳見 [completion audit](../output/steve-kabuto-upper-body/video-layers/completion-audit.md)。
+
+## Wan2.2 Animate 原生 workflow 狀態（2026-10-06）
+
+後續已完成專用技能內 Mix17／Move17 固定 templates 的直接 HTTP API 實测：384×384、17 幀、16 FPS、1.0625 秒、H.264 無音訊，完整解碼與 PTS grid 通過；內容仍有肩膀／手臂／手部變形，未美術接受。本次沒有新增 Python client、CLI 或 `generate.py` task。實際 prompt ID、template hash、graph、上傳回應、history、耗時與限制見[API 操作與實測紀錄](../skills/comfyui-wan-animate/references/comfyui-api.md)。
+
+截至 2026-10-06 已完成安裝，正式 8188 的 31 個官方 UI 節點齊備；Mix／Move 的 33 幀 API smoke 技術通過。抽幀發現角色身份漂移，Move 多出吉他，內容仍為 candidate，未獲使用者驗收。 此能力為獨立原生 UI workflow，未接入 `generate.py` task/backend；H3/Wan 5B detector 不涵蓋 Animate。既有預設 h3 保持不變。詳細 pins、操作與實測見[安裝紀錄](knowledge/video/wan-animate-install.md)。SCAIL-2 僅列為參考，權重未安裝／未實測。

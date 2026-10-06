@@ -19,6 +19,7 @@ import sys
 from urllib.parse import urlparse
 
 SYNC_SOURCE_FILES = (
+    ("video_layers.py", Path("tools_src/video_layers.py"), Path("tools/video_layers.py")),
     ("face_swap.py", Path("tools_src/face_swap.py"), Path("tools/face_swap.py")),
     ("film_audio.py", Path("tools_src/film_audio.py"), Path("tools/film_audio.py")),
     ("film_sapi.ps1", Path("tools_src/film_sapi.ps1"), Path("tools/film_sapi.ps1")),
@@ -41,6 +42,10 @@ SYNC_SOURCE_FILES = (
     (f"face-swap-video/{location}/{name}", Path("tools_src/comfyui_face_swap_video") / name,
      Path(location) / name)
     for location in ("tools/comfyui_face_swap_video", "custom_nodes/comfyui-face-swap-video")
+    for name in ("__init__.py", "contracts.py", "media.py", "nodes.py")
+) + tuple(
+    (f"video-layers/{location}/{name}", Path("tools_src/comfyui_video_layers") / name, Path(location) / name)
+    for location in ("tools/comfyui_video_layers", "custom_nodes/comfyui-video-layers")
     for name in ("__init__.py", "contracts.py", "media.py", "nodes.py")
 )
 # 模型設定檔數量會增加,依 repo 實際檔案動態核對,不在這裡逐一列名。

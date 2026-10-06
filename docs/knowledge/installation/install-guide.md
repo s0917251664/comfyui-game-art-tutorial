@@ -9,7 +9,7 @@ description: 在新機器上依硬體與既有狀態完成 ComfyUI 遊戲美術�
 
 ## 何時使用
 
-當使用者要在一台新機器上設置這條產線(不管是自己的電腦、還是要幫美術同事的電腦裝),或 `local_config.json` 不存在時使用。
+只有使用者明確要求安裝本機 ComfyUI，或已選定需本機 CLI／helper 且其依賴缺失時才進入安裝。初次使用但尚未選路線，先讀[初始化與路線選擇](initialization.md)；缺少 `local_config.json` 本身不代表要安裝。直接 ComfyUI API 方式只由明確支援的 executor 按自己的 URL／loopback、模型與 schema gate 使用；agent 呼叫端是否需要 Python 也依該 executor 契約決定。平台圖片技能與需求整理不需本文件的 runtime。
 
 ## 核心原則
 

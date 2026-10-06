@@ -8,12 +8,12 @@
 
 1. **說明要做的事**：例如從文字做概念圖、修改一張既有圖片、製作同系列物件、做短動態特效，或處理本機圖片檔。
 2. **說明來源與保留項**：指出哪張是編修目標，其他圖各自提供角色、姿勢、材質、結構或背景資訊；列出本輪要改什麼、哪些細節要保留，以及如何判斷結果可用。
-3. **選執行路線**：若未指定引擎，專案生成工作的預設入口是本機 ComfyUI，會先檢查該機器的設定與能力。若選平台原生圖片工具，agent 只使用當下會話實際提供的圖片功能，按工具支援欄位執行；這條路線不需要本機 GPU 或 ComfyUI 設定。兩者不能互相代替實測結果。
+3. **選執行路線**：初次使用或尚未選引擎時，先依[初始化技能](skills/game-art-initialize/SKILL.md)整理需求並盤點能力；不由舊預設推定安裝意圖。若明確選 ComfyUI，已配置專案的日常工作沿用該引擎，按 task 核對其能力 gate；若選平台原生圖片工具，只使用當下會話實際提供的功能與欄位，不需本機 GPU 或 ComfyUI 設定。兩者不能互相代替實測結果。
 4. **逐項檢查並選版本**：確認內容、格式和素材規格，再由美術決定接受、退回修改或停止。技術檢查通過不等於美術接受。
 
 | 工作情境 | 共用方法 | 執行路線與界線 |
 |---|---|---|
-| 概念圖、道具、圖示、角色圖 | 釐清用途、主體、參考來源與交付條件 | 未指定引擎時走 ComfyUI 圖片 task；平台圖片工具只在會話中實際可用時執行。平台不需本機 GPU/config，能力依即時工具輸入確認。 |
+| 概念圖、道具、圖示、角色圖 | 釐清用途、主體、參考來源與交付條件 | 初次使用或尚未選引擎先走[初始化技能](skills/game-art-initialize/SKILL.md)；已選／已配置路線依其 gate 執行。平台圖片能力依當下工具 schema 確認，不需本機 GPU/config。 |
 | 編修既有圖片、多參考圖、指定局部或保留角色結構 | 標示每張參考圖職責，寫清修改與保留項及版本 | 先讀[共用工作流程](skills/game-art-workflow/SKILL.md)，再選 [ComfyUI 圖片技能](skills/comfyui-art-gen/SKILL.md)或[平台圖片技能](skills/platform-image-gen/SKILL.md)。工具不支援的輸入要列明，不能只靠提示文字假裝可控。 |
 | 物件系列、展示圖、檢視表或重複圖樣 | 先驗收單件，再依規則擴展系列；`scene`、`sheet`、`pattern` 是不同展示目的 | 製作方法見[共用 production reference](skills/game-art-workflow/references/production.md)；現有 `comfyui_design.py` 是依賴 ComfyUI Core 的固定合成 helper，不生成物件，輸出為不透明 RGB。 |
 | 本機 PNG 素材處理 | 對齊尺寸和遮罩契約，保留來源並人工檢查輸出 | `image_edit_tools.py` 的 `composite`、`recolor`、`compare`、`reference-board`、`asset-audit` 五個操作使用 Pillow／NumPy，不需 GPU、ComfyUI server 或 `local_config.json`；需要可執行 Python 並取得實際圖片檔。 |
@@ -24,6 +24,7 @@
 
 ## 新增技能導覽
 
+- [本專案初始化與路線選擇](skills/game-art-initialize/SKILL.md)：初次使用先整理需求與盤點能力；不預設安裝或啟動生成。
 - [遊戲美術共用工作流程](skills/game-art-workflow/SKILL.md)：共用需求、參考用途、修改／保留、分階段、版本和驗收規則，不執行生成。
 - [職責盤點](skills/game-art-workflow/references/responsibilities.md)：按需查看 ComfyUI task、本機工具、平台路線、影片處理的職責與依賴。
 - [製作方法](skills/game-art-workflow/references/production.md)：物件系列、靜態／短動態 VFX、角色動作編排的共用工作方法。
@@ -97,6 +98,7 @@ python -m unittest discover -s tests -p 'test_*.py'
 | CLI 真正接受的參數、輸出與錯誤處理 | `tools_src/` parser 與實作；reference 應與它一致 |
 | SDXL／SD1.5 模型、預設參數與平台驗證狀態 | `tools_src/comfyui_pipeline/profiles/*.json` |
 | 當前機器的路徑與已安裝能力 | 本機 config／capability 快照及執行時 preflight |
+| 固定 ComfyUI API-format graph 的輸入契約、request／response 和輸出檢查 | 對應技能的 API reference 與固定 assets；live schema／模型依該路線 preflight 核對 |
 | 某次實測的版本、hash 與結果 | `docs/tested-versions.md` 與已追蹤的日期化實測紀錄；`output/` 下的本機檔案不會隨 repository 發布 |
 | 架構理由與未實作構想 | 設計稿、歷史升級評估；不能據此宣稱能力已可用 |
 

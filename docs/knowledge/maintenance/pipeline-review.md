@@ -1,44 +1,48 @@
-# ComfyUI 產線技術盤點與升級評估
+---
+type: maintenance-playbook
+status: current
+last_updated: 2026-10-06
+---
 
-給任何操作這個 repo 的 agent(Claude Code、Codex、Gemini CLI 等)使用的技能說明。
+# 專案技能、執行路線與產線審視流程
 
-## 何時使用
+本流程涵蓋技能庫、使用者路由、ComfyUI／平台／本機工具分工及技術基準。審視本身以只讀盤點和具體建議為主，不自動產生素材、改檔、下載或替換模型。開始時先從[總工具庫](../TOOLS.md)找到目前路由；再用[技能庫路線與盤點](skill-library.md)辨認已實作／待評估路線。只按本次範圍讀必要技能、相關 source、案例和驗證紀錄。
 
-當使用者明確要求「評估/盤點/檢查產線有沒有新技術可以升級」時使用(例如:「幫我看一下現在模型是不是落後了」「有沒有更好的 ControlNet」「這條產線該不該換底模」)。
+## 選擇審視模式
 
-**不要自動觸發。** 這是團隊主動決定要花時間評估時才做的事,不屬於 `skills/comfyui-install/SKILL.md`(安裝)或 `skills/comfyui-art-gen/SKILL.md`(產圖)的正常流程。裝機、產圖時看到模型清單「舊」也不代表要順便升級——那是刻意維持的安裝基準；精確可重現版本以 `docs/tested-versions.md` manifest 為準，manifest 仍 pending 時不要把表格內容宣稱成已鎖定版本。
+| 使用者要求 | 做法 | 不應默認執行 |
+|---|---|---|
+| 「審視／盤點技能庫」、「這條線應怎麼用 API」、「工具或 agent workflow 有沒有更簡單」 | 離線檢查現行 skill、路由、入口、固定 graph、程式和已存實測；整理路線責任、摩擦、缺口與是否值得另評估。 | 不需要先查最新論文／模型，不掃描所有模型類別，不改檔或執行生成。 |
+| 「查新的模型／技術」、「評估要不要升級某個模型／能力」 | 依明確範圍核對現行基準，查相關一手來源，記錄查詢日期、兼容性、需求和風險並建議。 | 不下載、安裝、替換 profile／參數、queue 產圖或把候選說成 verified。 |
+| 明確授權某份 skill／維護文件的具體編修 | 依同一要求或先前上下文中已授權的範圍直接實作，再做來源與路由情境檢查。 | 不因「review」字眼要求使用者重複授權已明確指定的文件工作。 |
 
-## 核心原則
+若使用者只要 review，即使結果顯示應改也先提交具體方案與影響；審視授權本身不等於實作或外部付費。若同一要求已明確要整理文件／技能，依其原授權修改，不重問。技術能力新增流程只有當實際新增／改變可執行能力時才套用[新增能力清單](new-capability-checklist.md)；純技能治理、brief 路由更新不強制生圖或跑生成 smoke。
 
-> **這個 skill 存在的目的,是把「要不要追新技術」變成一次經過深思、留下紀錄的決定,而不是讓產線的模型清單被隨性、頻繁地一直改動。** 盤點跟研究可以隨時做,但「動手換模型」這個動作本身要盡量少發生、每次發生都要慎重——不是查到有更好的東西就換,是團隊真的決定要換才換。如果發現自己在短時間內一直被叫來換這個換那個,提醒使用者這樣做會讓「哪批圖是哪個版本模型產的」變得難以追溯,建議先確認清楚要不要真的定下來再改。
+## 離線技能庫／路線審視
 
-- **這個 skill 只負責「盤點 + 研究 + 建議」,不負責自己動手換模型。** 換底模/ControlNet/IPAdapter 會改變美術產出的基準,新舊產出的風格可能不一致——這是團隊要做的決定,不是 agent 可以自己判斷「反正比較好就換」的事
-- 只有在使用者針對某個具體項目明確說「好,換這個」之後,才動手改文件、下載新模型
-- 每次盤點/升級都要留下痕跡(最後確認日期、異動紀錄),讓下次盤點知道從哪裡開始比對,也讓「這批圖是哪個版本的模型產的」可以追溯——這是這條產線「可回溯」精神的延伸,不能為了追新技術犧牲掉
+1. **界定問題：** 確認要審查的使用者流程、技能家族或具體卡點。若已有可沿用 brief 就不重做需求收集。
+2. **對照現況：** 根據 skill description/body、`AGENTS.md`、TOOLS、INDEX、reference、code source 和當前案例確認觸發條件、依賴、設定／schema gate、呼叫方式、輸出位置與內容驗收。按需核對小範圍，不載入整個 vault。
+3. **分類路線：** brief／需求規劃、平台原生、直接 ComfyUI HTTP API 固定 graph、既有 `generate.py` CLI/profile、需要本機 helper/custom node 的媒體或狀態處理。考慮操作步驟、當前工具 schema、版本／asset 重用、server support、runtime、狀態恢復、output contract 和可追溯性。
+4. **標明證據等級：** 區分程式存在、文件描述、offline structure/schema check、當前 live preflight、實際 bounded execution、技術 contract、內容人工觀察和 Steve 接受決定。只成功 queue 不算完成；技術 pass 也不等同美術 accepted。
+5. **評估 API 適配時：** 逐能力說明 direct API 是否可用固定 assets 取代現有 CLI、Python 是不是必要於批次 media/state、哪些 profile/backend gate 要保留、哪些 caller 尚未改走。結論標記「已實作」、「候選可研究」、「目前不適合」或「證據不足」。不以非 Python 作為所有路線目標，也不將建議寫成已遷移。
 
-## 流程
+此模式無需 web research；若現有資料無法確認遠端當前狀態，標記未知。需執行 API 或平台原生路線以確認當前實作能力時，需有明確任務／授權，並依該 executor 的輸入限制實際操作；離線 read-only review 不得 queue。
 
-### 1. 盤點現有產線(讀文件跟程式碼,不要憑印象)
+## 模型／當前技術研究（只在明確要求時）
 
-列出目前鎖定的每一項技術跟它的「最後確認日期」:
+1. 列出本機 profile、task/backend、模型和實測證據的最後確認日期。對照需要研究的特定類別；不要把整張模型表全部重查。
+2. 使用官方文件、論文、release notes、model card 或 upstream source 核對候選的任務、版本、license、硬體／VRAM、精度、ComfyUI integration、缺依賴及已知限制。比較應包含本機實際 workflow 是否能用，不以 benchmark 一項推定適用。
+3. 報告目前做法及限制、候選差異、未解問題、可行測試和建議狀態。每個結論區分來源明載、目前專案實測及推論；給 source link 和查詢日期。
+4. 不下載模型、不改 profiles／預設、不部署、不 queue。使用者若選一項實作，再按新增能力流程做可檢視的計畫和實作，不擴大到其他未授權項目。
 
-- `docs/knowledge/installation/models-and-sources.md` 的模型表格(底模、ControlNet canny/pose/depth、IPAdapter、CLIP Vision、去背模型)—— 每一列都有「最後確認日期」欄位
-- `tools_src/generate.py` 裡的 `CONTROLNET_MODELS` 常數、`build_character_action`/`build_style_lock` 裡硬編碼的 `ipadapter_file`/`clip_name`
-- `tools_src/detect_device.py` 的 `TIERS` 表(每個 tier 對應的底模選擇跟 torch 版本)
-- `教學.md` 第 0.5 章 B 段(設備/底模選型建議)、第 0.5 章 C 段(付費雲端 API 選項)
+## 報告內容
 
-### 2. 針對每一類技術做現況掃描
+按照工作大小擇要列：
 
-用 WebSearch/WebFetch 查目前(以今天日期為準)每個類別公認的最佳選項。要涵蓋的類別清單(SDXL 底模、ControlNet、IPAdapter、去背模型、FLUX 系列等)見 `docs/knowledge/maintenance/scan-categories.md`。使用者有提到具體技術名稱時,優先查那個,不要自己另外發散去查一堆使用者沒問的東西。
+- 審視範圍、日期與看過的專案來源。
+- 現況分類：每條路線做什麼、需要什麼、已實測到哪裡。
+- 卡點或風險，需有 repo 文件、源碼或實測依據。
+- direct API／CLI／helper 哪些已實作，哪些只適合後續比較、哪些尚無證據；清楚寫明「未遷移」狀態。
+- 可選方案、變更範圍、所需 gate 和尚待證據；建議不得直接改寫 project defaults。
 
-### 3. 產出比較報告,不要自己決定
-
-每個類別列出:目前用什麼(含最後確認日期,讓使用者知道隔了多久沒看過)→ 現在有什麼候選 → 差異在哪(畫質/速度/VRAM 需求/生態成熟度)→ 你的建議(維持現狀 / 值得考慮 / 強烈建議換),**明確標記這些都是建議,還沒有任何檔案被改動**。查不到明確資訊的類別,如實說「不確定,建議使用者自己再確認」,不要編造一個聽起來合理的模型名稱或版本號。
-
-### 4. 使用者針對某一項核准升級後才動手
-
-- 更新 `docs/knowledge/installation/models-and-sources.md` 對應那一列(檔名、下載來源、**最後確認日期改成今天**)
-- 如果 `tools_src/generate.py` 有寫死對應的模型檔名常數,一併更新,改完部署到 `<ComfyUI 安裝路徑>/tools/generate.py`(照 `AGENTS.md` 說的,不要繞過 `tools_src/` 這份原始碼直接改部署副本)
-- 在 `教學.md` 留一筆簡短的異動紀錄(日期 + 換了什麼 + 為什麼換),讓之後回頭看的人知道從什麼時候開始美術基準換了
-- **只改使用者核准的那一項**,不要因為「順便都查了」就連帶調整其他沒被要求的東西
-- 如果這台機器已經裝了舊版模型,舊檔案要不要刪除、要不要保留給還在用舊基準的既有專案比對,跟使用者確認,不要自己判斷該不該刪
+對技能庫整體 review，引用[技能庫現況表](skill-library.md)並按任務需要深入，不複製全部文件進報告。若發現 metadata、AGENTS、TOOLS、INDEX 或跨技能 handoff 錯誤，只作為問題／具體差異記錄；除非使用者同一要求已授權文件修正，不自行改動。

@@ -17,6 +17,8 @@ description: 將短片、循環特效與鏡頭需求路由到已接入的影片 
 
 影片、過場、循環特效、讓靜幀動起來或單支多鏡短片使用本技能。單張靜態圖走 `comfyui-art-gen`。需要同一角色一整組遊戲動作與分階段人工驗收，改走[單角色動畫 workflow](../comfyui-character-animation-workflow/SKILL.md)。
 
+若需求明確是已安裝的 Wan2.2 Animate 固定原生 API graph（Mix 原影片角色替換或 Move 參考角色動作驅動），改讀[Wan Animate 技能](../comfyui-wan-animate/SKILL.md)：它未接入本技能列出的 `generate.py` task/backend，不能由本技能的 H3/Wan capability gate 推定可用。
+
 劇情多鏡製作、長影片規劃與分鏡，先走 [劇情影片流程](../comfyui-film-workflow/SKILL.md) 建立鏡頭表與連續性紀錄，再回本技能逐鏡執行。單支影片仍直接使用本技能。
 
 不以 `transition` 做傳統硬切／疊化／擦除；Logo 或中文字效果不可靠，直接說明限制。成品不自動以系統播放器開啟，只回報檔案路徑。
@@ -68,3 +70,5 @@ description: 將短片、循環特效與鏡頭需求路由到已接入的影片 
 人工核對角色身份、prompt 動作、構圖/運鏡方向、起訖幀或多輪 loop 接縫，以及 concat/composite 的順序、縮放、音訊和綠幕邊緣。連續性指標只找候選問題，未跨題材校準，不判定角色品質。由使用者決定接受、調整或放棄；未接受仍保留供比較。報告檔案路徑與待判斷點，不自動開播放器、不自動重送或覆寫。
 
 目前未接入第三方付費 provider、透明影片、逐幀 AI 去背、APNG 或 sprite-sheet 打包。若將來接入付費 provider，每次付費前先列 provider/backend、輸入素材、時長、輸出數量與估價，取得使用者確認後才送出；失敗不自動付費重試。外部輸出若沒有本機 sidecar，不能宣稱有相同追溯性。
+
+Wan Animate 的固定原生 API 路徑獨立於本技能列出的 `generate.py` task/backend；日常使用依[專用技能](../comfyui-wan-animate/SKILL.md)，安裝與歷史測試見[安裝紀錄](../../docs/knowledge/video/wan-animate-install.md)。
