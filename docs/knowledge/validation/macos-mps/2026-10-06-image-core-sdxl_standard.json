@@ -1,0 +1,604 @@
+{
+  "schema_version": 1,
+  "kind": "smoke_report",
+  "technical_only": true,
+  "note": "僅技術檢查(能否執行、輸出可讀、尺寸/hash 記錄),不代表美術接受;content_review 未進行。",
+  "content_review": "not_performed",
+  "suite": {
+    "id": "image-core",
+    "sha256": "d6c98f8e0482e4e13ef05221aabcfd719f6f3580b68c14956af15e7d2ae6ec66",
+    "selected_tasks": null
+  },
+  "started": "2026-10-06T07:55:05+00:00",
+  "finished": "2026-10-06T08:01:42+00:00",
+  "platform_key": "macos-mps",
+  "device": {
+    "platform_key": "macos-mps",
+    "os": "Darwin",
+    "machine": "arm64",
+    "backend": "mps",
+    "gpu_name": "Apple Silicon (MPS)",
+    "vram_mb": null,
+    "unified_memory_mb": 36864,
+    "usable_memory_mb": 18432,
+    "tier": "sdxl"
+  },
+  "fingerprint": {
+    "platform": {
+      "os": "Darwin",
+      "machine": "arm64"
+    },
+    "comfyui": {
+      "commit": "12d5279438bfefc058a269eae805ceab6047777f",
+      "version": "0.34.0"
+    },
+    "custom_nodes": {
+      "count": 6,
+      "hash": "f39b53a33e54198a"
+    },
+    "models": {
+      "count": 52,
+      "hash": "a5a07b7c651557ed"
+    }
+  },
+  "profile_id": "sdxl_standard",
+  "profile_sha256": "499e05a697e22561827d02059cb621a66534488bb9f7db6429c3ab79a75e62c0",
+  "summary": {
+    "overall": "pass",
+    "counts": {
+      "pass": 10,
+      "fail": 0,
+      "skipped": 0,
+      "not_installed": 0
+    },
+    "runnable": 10,
+    "note": "整體判定只看實際執行的 task;not_installed/skipped 不計入失敗。"
+  },
+  "tasks": [
+    {
+      "id": "concept",
+      "task": "concept",
+      "status": "pass",
+      "reason": null,
+      "duration_s": 36.43,
+      "seed_requested": 1001,
+      "seeds_resolved": {
+        "5": {
+          "seed": 1001
+        }
+      },
+      "seed_note": null,
+      "command": [
+        "/Users/xu/ComfyUI/.venv/bin/python",
+        "/Users/xu/ComfyUI/tools/generate.py",
+        "--profile",
+        "sdxl_standard",
+        "--config",
+        "/Users/xu/tools/comfyui-game-art-tutorial/local_config.json",
+        "--result-json",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/concept.result.json",
+        "concept",
+        "--prompt",
+        "a lone wooden treasure chest on a stone floor, game concept art, simple background",
+        "--width",
+        "768",
+        "--height",
+        "768",
+        "--output-dir",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/concept",
+        "--seed",
+        "1001"
+      ],
+      "exit_code": 0,
+      "log": "logs/concept.log",
+      "outputs": [
+        {
+          "path": "concept/concept_00008_.png",
+          "sha256": "55deda60b7f47a972249e2ea48ea84eeb319caf192f3cc36c72a08b4103b3270",
+          "size": 791963,
+          "mode": "RGB",
+          "width": 768,
+          "height": 768
+        }
+      ],
+      "result_json": "concept.result.json",
+      "missing": [],
+      "dependency_only": false,
+      "technical_validation": "pass",
+      "profile_id_in_result": "sdxl_standard",
+      "profile_sha256_in_result": "499e05a697e22561827d02059cb621a66534488bb9f7db6429c3ab79a75e62c0"
+    },
+    {
+      "id": "icon_asset",
+      "task": "icon_asset",
+      "status": "pass",
+      "reason": null,
+      "duration_s": 23.41,
+      "seed_requested": 1002,
+      "seeds_resolved": {
+        "5": {
+          "seed": 1002
+        }
+      },
+      "seed_note": null,
+      "command": [
+        "/Users/xu/ComfyUI/.venv/bin/python",
+        "/Users/xu/ComfyUI/tools/generate.py",
+        "--profile",
+        "sdxl_standard",
+        "--config",
+        "/Users/xu/tools/comfyui-game-art-tutorial/local_config.json",
+        "--result-json",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/icon_asset.result.json",
+        "icon_asset",
+        "--prompt",
+        "a red health potion bottle, game inventory icon, centered",
+        "--width",
+        "512",
+        "--height",
+        "512",
+        "--output-dir",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/icon_asset",
+        "--seed",
+        "1002"
+      ],
+      "exit_code": 0,
+      "log": "logs/icon_asset.log",
+      "outputs": [
+        {
+          "path": "icon_asset/transparent_00003_.png",
+          "sha256": "67b7f4008d85dce8d94fb02ebfe325d6f299da88d79f0dec8783cb1cae981710",
+          "size": 438392,
+          "mode": "RGBA",
+          "width": 512,
+          "height": 512
+        }
+      ],
+      "result_json": "icon_asset.result.json",
+      "missing": [],
+      "dependency_only": false,
+      "technical_validation": "pass",
+      "profile_id_in_result": "sdxl_standard",
+      "profile_sha256_in_result": "499e05a697e22561827d02059cb621a66534488bb9f7db6429c3ab79a75e62c0"
+    },
+    {
+      "id": "refine",
+      "task": "refine",
+      "status": "pass",
+      "reason": null,
+      "duration_s": 30.4,
+      "seed_requested": 1003,
+      "seeds_resolved": {
+        "6": {
+          "seed": 1003
+        }
+      },
+      "seed_note": null,
+      "command": [
+        "/Users/xu/ComfyUI/.venv/bin/python",
+        "/Users/xu/ComfyUI/tools/generate.py",
+        "--profile",
+        "sdxl_standard",
+        "--config",
+        "/Users/xu/tools/comfyui-game-art-tutorial/local_config.json",
+        "--result-json",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/refine.result.json",
+        "refine",
+        "--prompt",
+        "a lone wooden treasure chest on a stone floor, detailed, game concept art",
+        "--image",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/concept/concept_00008_.png",
+        "--denoise",
+        "0.45",
+        "--output-dir",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/refine",
+        "--seed",
+        "1003"
+      ],
+      "exit_code": 0,
+      "log": "logs/refine.log",
+      "outputs": [
+        {
+          "path": "refine/refine_00003_.png",
+          "sha256": "5f2ef005b4ab605f6602e03a091487ed0995e6152239494af0b6e5021b535797",
+          "size": 767483,
+          "mode": "RGB",
+          "width": 768,
+          "height": 768
+        }
+      ],
+      "result_json": "refine.result.json",
+      "missing": [],
+      "dependency_only": false,
+      "technical_validation": "pass",
+      "profile_id_in_result": "sdxl_standard",
+      "profile_sha256_in_result": "499e05a697e22561827d02059cb621a66534488bb9f7db6429c3ab79a75e62c0"
+    },
+    {
+      "id": "upscale",
+      "task": "upscale",
+      "status": "pass",
+      "reason": null,
+      "duration_s": 64.56,
+      "seed_requested": 1004,
+      "seeds_resolved": {
+        "9": {
+          "seed": 1004
+        }
+      },
+      "seed_note": null,
+      "command": [
+        "/Users/xu/ComfyUI/.venv/bin/python",
+        "/Users/xu/ComfyUI/tools/generate.py",
+        "--profile",
+        "sdxl_standard",
+        "--config",
+        "/Users/xu/tools/comfyui-game-art-tutorial/local_config.json",
+        "--result-json",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/upscale.result.json",
+        "upscale",
+        "--prompt",
+        "a red health potion bottle, game inventory icon, centered",
+        "--image",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/icon_asset/transparent_00003_.png",
+        "--scale",
+        "2",
+        "--denoise",
+        "0.3",
+        "--output-dir",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/upscale",
+        "--seed",
+        "1004"
+      ],
+      "exit_code": 0,
+      "log": "logs/upscale.log",
+      "outputs": [
+        {
+          "path": "upscale/upscale_00002_.png",
+          "sha256": "aecf514cec1391c459da976f5cbcad38378ea3b5b86714d0ca1bb0eb0e151eca",
+          "size": 1272377,
+          "mode": "RGB",
+          "width": 1024,
+          "height": 1024
+        }
+      ],
+      "result_json": "upscale.result.json",
+      "missing": [],
+      "dependency_only": false,
+      "technical_validation": "pass",
+      "profile_id_in_result": "sdxl_standard",
+      "profile_sha256_in_result": "499e05a697e22561827d02059cb621a66534488bb9f7db6429c3ab79a75e62c0"
+    },
+    {
+      "id": "pose_only_canny",
+      "task": "pose_only",
+      "status": "pass",
+      "reason": null,
+      "duration_s": 46.62,
+      "seed_requested": 1005,
+      "seeds_resolved": {
+        "9": {
+          "seed": 1005
+        }
+      },
+      "seed_note": null,
+      "command": [
+        "/Users/xu/ComfyUI/.venv/bin/python",
+        "/Users/xu/ComfyUI/tools/generate.py",
+        "--profile",
+        "sdxl_standard",
+        "--config",
+        "/Users/xu/tools/comfyui-game-art-tutorial/local_config.json",
+        "--result-json",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/pose_only_canny.result.json",
+        "pose_only",
+        "--prompt",
+        "a lone wooden treasure chest on a stone floor, game concept art",
+        "--pose-ref",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/concept/concept_00008_.png",
+        "--control-type",
+        "canny",
+        "--width",
+        "768",
+        "--height",
+        "768",
+        "--output-dir",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/pose_only_canny",
+        "--seed",
+        "1005"
+      ],
+      "exit_code": 0,
+      "log": "logs/pose_only_canny.log",
+      "outputs": [
+        {
+          "path": "pose_only_canny/pose_only_00005_.png",
+          "sha256": "9e67dcf489cc6a6ef0db52963e9b30a6c535b07e970910c301a4ec9c4cd8a15b",
+          "size": 748387,
+          "mode": "RGB",
+          "width": 768,
+          "height": 768
+        }
+      ],
+      "result_json": "pose_only_canny.result.json",
+      "missing": [],
+      "dependency_only": false,
+      "technical_validation": "pass",
+      "profile_id_in_result": "sdxl_standard",
+      "profile_sha256_in_result": "499e05a697e22561827d02059cb621a66534488bb9f7db6429c3ab79a75e62c0"
+    },
+    {
+      "id": "style_lock",
+      "task": "style_lock",
+      "status": "pass",
+      "reason": null,
+      "duration_s": 38.53,
+      "seed_requested": 1006,
+      "seeds_resolved": {
+        "9": {
+          "seed": 1006
+        }
+      },
+      "seed_note": null,
+      "command": [
+        "/Users/xu/ComfyUI/.venv/bin/python",
+        "/Users/xu/ComfyUI/tools/generate.py",
+        "--profile",
+        "sdxl_standard",
+        "--config",
+        "/Users/xu/tools/comfyui-game-art-tutorial/local_config.json",
+        "--result-json",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/style_lock.result.json",
+        "style_lock",
+        "--prompt",
+        "a lone wooden treasure chest on a stone floor, game concept art",
+        "--character-ref",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/concept/concept_00008_.png",
+        "--width",
+        "768",
+        "--height",
+        "768",
+        "--output-dir",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/style_lock",
+        "--seed",
+        "1006"
+      ],
+      "exit_code": 0,
+      "log": "logs/style_lock.log",
+      "outputs": [
+        {
+          "path": "style_lock/style_lock_00005_.png",
+          "sha256": "291de910718fc0b344bed8c8f1179214d7286a0e7d20e3a285707e9ba2424bb0",
+          "size": 785395,
+          "mode": "RGB",
+          "width": 768,
+          "height": 768
+        }
+      ],
+      "result_json": "style_lock.result.json",
+      "missing": [],
+      "dependency_only": false,
+      "technical_validation": "pass",
+      "profile_id_in_result": "sdxl_standard",
+      "profile_sha256_in_result": "499e05a697e22561827d02059cb621a66534488bb9f7db6429c3ab79a75e62c0"
+    },
+    {
+      "id": "character_action_canny",
+      "task": "character_action",
+      "status": "pass",
+      "reason": null,
+      "duration_s": 54.65,
+      "seed_requested": 1007,
+      "seeds_resolved": {
+        "12": {
+          "seed": 1007
+        }
+      },
+      "seed_note": null,
+      "command": [
+        "/Users/xu/ComfyUI/.venv/bin/python",
+        "/Users/xu/ComfyUI/tools/generate.py",
+        "--profile",
+        "sdxl_standard",
+        "--config",
+        "/Users/xu/tools/comfyui-game-art-tutorial/local_config.json",
+        "--result-json",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/character_action_canny.result.json",
+        "character_action",
+        "--prompt",
+        "a lone wooden treasure chest on a stone floor, game concept art",
+        "--character-ref",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/concept/concept_00008_.png",
+        "--pose-ref",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/concept/concept_00008_.png",
+        "--control-type",
+        "canny",
+        "--width",
+        "768",
+        "--height",
+        "768",
+        "--output-dir",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/character_action_canny",
+        "--seed",
+        "1007"
+      ],
+      "exit_code": 0,
+      "log": "logs/character_action_canny.log",
+      "outputs": [
+        {
+          "path": "character_action_canny/character_action_00002_.png",
+          "sha256": "faada105c6c332f132ba638dbc5c9de8151d5ff9d7058c805f102106b0190602",
+          "size": 787902,
+          "mode": "RGB",
+          "width": 768,
+          "height": 768
+        }
+      ],
+      "result_json": "character_action_canny.result.json",
+      "missing": [],
+      "dependency_only": false,
+      "technical_validation": "pass",
+      "profile_id_in_result": "sdxl_standard",
+      "profile_sha256_in_result": "499e05a697e22561827d02059cb621a66534488bb9f7db6429c3ab79a75e62c0"
+    },
+    {
+      "id": "inpaint",
+      "task": "inpaint",
+      "status": "pass",
+      "reason": null,
+      "duration_s": 37.49,
+      "seed_requested": 1008,
+      "seeds_resolved": {
+        "7": {
+          "seed": 1008
+        }
+      },
+      "seed_note": null,
+      "command": [
+        "/Users/xu/ComfyUI/.venv/bin/python",
+        "/Users/xu/ComfyUI/tools/generate.py",
+        "--profile",
+        "sdxl_standard",
+        "--config",
+        "/Users/xu/tools/comfyui-game-art-tutorial/local_config.json",
+        "--result-json",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/inpaint.result.json",
+        "inpaint",
+        "--prompt",
+        "a golden coin pile",
+        "--image",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/concept/concept_00008_.png",
+        "--mask",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/smoke-mask.png",
+        "--denoise",
+        "1.0",
+        "--output-dir",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/inpaint",
+        "--seed",
+        "1008"
+      ],
+      "exit_code": 0,
+      "log": "logs/inpaint.log",
+      "outputs": [
+        {
+          "path": "inpaint/inpaint_00005_.png",
+          "sha256": "0e362b60f3d12a4b6b1a34d878d183a7e768346bed896dd33cf104b54434b59c",
+          "size": 785849,
+          "mode": "RGB",
+          "width": 768,
+          "height": 768
+        }
+      ],
+      "result_json": "inpaint.result.json",
+      "missing": [],
+      "dependency_only": false,
+      "technical_validation": "pass",
+      "profile_id_in_result": "sdxl_standard",
+      "profile_sha256_in_result": "499e05a697e22561827d02059cb621a66534488bb9f7db6429c3ab79a75e62c0"
+    },
+    {
+      "id": "guided_inpaint",
+      "task": "guided_inpaint",
+      "status": "pass",
+      "reason": null,
+      "duration_s": 63.51,
+      "seed_requested": 1009,
+      "seeds_resolved": {
+        "12": {
+          "seed": 1009
+        }
+      },
+      "seed_note": null,
+      "command": [
+        "/Users/xu/ComfyUI/.venv/bin/python",
+        "/Users/xu/ComfyUI/tools/generate.py",
+        "--profile",
+        "sdxl_standard",
+        "--config",
+        "/Users/xu/tools/comfyui-game-art-tutorial/local_config.json",
+        "--result-json",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/guided_inpaint.result.json",
+        "guided_inpaint",
+        "--prompt",
+        "a golden coin pile",
+        "--image",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/concept/concept_00008_.png",
+        "--mask",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/smoke-mask.png",
+        "--control-type",
+        "canny",
+        "--denoise",
+        "1.0",
+        "--output-dir",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/guided_inpaint",
+        "--seed",
+        "1009"
+      ],
+      "exit_code": 0,
+      "log": "logs/guided_inpaint.log",
+      "outputs": [
+        {
+          "path": "guided_inpaint/guided_inpaint_00002_.png",
+          "sha256": "e1f598ccc789f1204ca5021f710a27118721b85282ee6cf2ac5230c75b7b1c49",
+          "size": 778306,
+          "mode": "RGB",
+          "width": 768,
+          "height": 768
+        }
+      ],
+      "result_json": "guided_inpaint.result.json",
+      "missing": [],
+      "dependency_only": false,
+      "technical_validation": "pass",
+      "profile_id_in_result": "sdxl_standard",
+      "profile_sha256_in_result": "499e05a697e22561827d02059cb621a66534488bb9f7db6429c3ab79a75e62c0"
+    },
+    {
+      "id": "layer_split",
+      "task": "layer_split",
+      "status": "pass",
+      "reason": null,
+      "duration_s": 1.24,
+      "seed_requested": null,
+      "seeds_resolved": {},
+      "seed_note": "layer_split 沒有 --seed(不做取樣),manifest 的 resolved_seeds 為空",
+      "command": [
+        "/Users/xu/ComfyUI/.venv/bin/python",
+        "/Users/xu/ComfyUI/tools/generate.py",
+        "--profile",
+        "sdxl_standard",
+        "--config",
+        "/Users/xu/tools/comfyui-game-art-tutorial/local_config.json",
+        "--result-json",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/layer_split.result.json",
+        "layer_split",
+        "--image",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/concept/concept_00008_.png",
+        "--mask",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/smoke-mask.png",
+        "--layer-name",
+        "smoke_layer",
+        "--output-dir",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/layer_split"
+      ],
+      "exit_code": 0,
+      "log": "logs/layer_split.log",
+      "outputs": [
+        {
+          "path": "layer_split/layer_smoke_layer_00001_.png",
+          "sha256": "5de981c393ae74db38a077066c1a978fec44f2ca4710caf88de57b3d995716b9",
+          "size": 918817,
+          "mode": "RGBA",
+          "width": 768,
+          "height": 768
+        }
+      ],
+      "result_json": "layer_split.result.json",
+      "missing": [],
+      "dependency_only": false,
+      "technical_validation": "pass",
+      "profile_id_in_result": "sdxl_standard",
+      "profile_sha256_in_result": "499e05a697e22561827d02059cb621a66534488bb9f7db6429c3ab79a75e62c0"
+    }
+  ],
+  "contact_sheet": "smoke-contact-sheet.jpg"
+}
