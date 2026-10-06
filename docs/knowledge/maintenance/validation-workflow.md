@@ -57,3 +57,23 @@ profile 的 `validation[<platform_key>]` 是證據項目清單：
 ## 固定內容
 
 套件定義在 `tools_src/comfyui_pipeline/smoke_suites/image-core.json`：提示詞、種子、尺寸固定，輸入由套件自己產生（concept 輸出與 smoke 產生的中央矩形 RGBA 遮罩）。除 `layer_split`（無 `--seed`）外每個 task 都明確傳 `--seed`，報告同時記錄要求的與 manifest 解析出的種子。改套件內容會改變 `suite.sha256`，舊報告不可與新套件直接比較。
+
+## 規劃中（尚未實作）
+
+以下兩項已討論設計，2026-10-06 決定**暫不實作**。目前沒有對應工具，不要假設已存在或自行臨場拼湊；要做時從這裡的設計接續。
+
+### 變化偵測（`smoke compare`，未實作）
+
+不是品質評分——品質只由人判斷。實測顯示同平台、同環境、同 seed 的 smoke 輸出 bit-identical，因此可比較兩份**同平台**報告：列出每個 task 為相同／已變更／未安裝，並把已變更者新舊並排成總覽圖給人看。不評分、不寫驗收紀錄；跨平台（如 MPS 與 CUDA）hash 本來就不同，不可比較。用途：升級 ComfyUI、換模型或改 graph 後，只需人工查看輸出有變的 task。
+
+### 模型迭代流程（`gameart experiment`，未實作）
+
+適用調整 profile 預設參數，或換模型／新增 profile。原則：工具只收集證據、讓比較容易，決定一律由人做；不自動評分、不自動改 profile、不跨平台比較 A/B。
+
+1. profile 加 `stage: experimental | candidate | stable`；`experimental` 永不成為預設，需明確 `--profile`（FLUX.2 PoC 可用此表達）。stage 是採用決策，validation 是平台技術驗證，兩者分開。
+2. `experiment new <名稱>`：在 `docs/knowledge/experiments/<日期>-<名稱>/` 建 `plan.json`（假設、baseline、candidate、task、固定 prompt／seed，預設沿用 smoke 套件輸入）。
+3. `experiment run`：A／B 同 prompt、同 seed 各跑一次，每組並排總覽圖（即把 sweep 擴充為可比較 profile／模型）；自動產生實驗筆記草稿，事實欄位（環境、hash、耗時、未安裝項目）自動填，結論留空。
+4. `experiment judge`：人逐組選 A 較好／B 較好／差不多／無法判斷，綁定兩邊輸出 hash、需 `--by`；彙整進筆記。這是人的判斷紀錄，不是工具分數。
+5. 採用時由實驗筆記產生 `decisions/` ADR 草稿，人確認後才改 profile（commit 引用 ADR）。profile 內容 hash 改變會使各平台驗證自動失效，需各平台重跑 smoke → `validation propose` → 使用者同意後 `approve`。
+
+追溯鏈：假設 → experiment run → 人工判斷 → 實驗筆記 → ADR → profile 變更 → 各平台 smoke／validation。
