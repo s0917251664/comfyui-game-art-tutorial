@@ -32,6 +32,10 @@ SYNC_SOURCE_FILES = (
     ("comfyui_design.py", Path("tools_src/comfyui_design.py"), Path("tools/comfyui_design.py")),
     ("mask_refine.py", Path("tools_src/mask_refine.py"), Path("tools/mask_refine.py")),
     ("detect_image_capabilities.py", Path("tools_src/detect_image_capabilities.py"), Path("tools/detect_image_capabilities.py")),
+    ("detect_video_capabilities.py", Path("tools_src/detect_video_capabilities.py"), Path("tools/detect_video_capabilities.py")),
+    ("gameart.py", Path("tools_src/gameart.py"), Path("tools/gameart.py")),
+    ("doctor.py", Path("tools_src/doctor.py"), Path("tools/doctor.py")),
+    ("asset_review.py", Path("tools_src/asset_review.py"), Path("tools/asset_review.py")),
 ) + tuple(
     (f"face-swap-video/{location}/{name}", Path("tools_src/comfyui_face_swap_video") / name,
      Path(location) / name)
