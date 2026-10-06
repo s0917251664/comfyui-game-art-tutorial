@@ -6,6 +6,7 @@ task 專屬的參數、驗證與 graph 組裝都在 ``tasks/`` 各模組;這裡�
 """
 import argparse
 import os
+import sys
 import time
 
 from . import fingerprint as _fingerprint
@@ -131,6 +132,33 @@ def _write_image_result(args, paths, history, result_graph, result_input_records
         _image_results.write_manifest_atomic(args.result_json, manifest)
     except (OSError, ValueError) as exc:
         raise SystemExit(str(exc)) from exc
+
+
+def default_manifest_path(paths):
+    """未指定 --result-json 時的預設 manifest 路徑:<第一個 PNG 輸出>.result.json 同資料夾。"""
+    pngs = [p for p in paths if str(p).lower().endswith(".png")]
+    if not pngs:
+        return None
+    base = os.path.splitext(os.path.abspath(pngs[0]))[0]
+    return base + ".result.json"
+
+
+def _write_default_image_result(args, paths, history, result_graph, result_input_records):
+    """預設一律寫技術 manifest;盡力而為,失敗只在 stderr 警告,不影響生成結果與 stdout。"""
+    dest = default_manifest_path(paths)
+    if dest is None or result_input_records is None:
+        return
+    if os.path.lexists(dest):
+        print(f"[manifest] 略過,已存在: {dest}", file=sys.stderr)
+        return
+    previous = getattr(args, "result_json", None)
+    args.result_json = dest
+    try:
+        _write_image_result(args, paths, history, result_graph, result_input_records)
+    except SystemExit as exc:
+        print(f"[manifest] 未寫入預設技術 manifest: {exc}", file=sys.stderr)
+    finally:
+        args.result_json = previous
 
 
 def _verify_video_output(args, plan, path, history, video_started, video_prompt, video_negative):
@@ -259,15 +287,19 @@ def run(argv=None):
         return rt.upload_image(path, comfy_url=comfy_url, request_timeout=request_timeout)
 
     if args.task in tasks.IMAGE_TASKS:
-        if getattr(args, "result_json", None):
+        try:
             result_input_records = _image_result_inputs(args)
+        except SystemExit:
+            if getattr(args, "result_json", None):
+                raise
+            result_input_records = None  # 預設 manifest 為盡力而為,不擋生成
         if args.task in rt.IMAGE_PROFILE_TASKS:
             try:
                 rt.preflight_image_task(args, style_checkpoint, comfy_url, request_timeout=request_timeout)
             except RuntimeError as exc:
                 raise SystemExit(str(exc)) from exc
         prompt, out_id = rt._build_image_task_graph(args, style_checkpoint, upload)
-        result_graph = prompt if getattr(args, "result_json", None) else None
+        result_graph = prompt
     elif args.task in tasks.VIDEO_TASKS:
         plan = tasks.owner(args.task).prepare(args, upload)
         prompt, out_id = plan.graph, plan.out_id
@@ -327,6 +359,8 @@ def run(argv=None):
     )
     if getattr(args, "result_json", None):
         _write_image_result(args, paths, history, result_graph, result_input_records)
+    elif args.task in tasks.IMAGE_TASKS:
+        _write_default_image_result(args, paths, history, result_graph, result_input_records)
     if plan is not None:
         video_paths = [path for path in paths if path.lower().endswith(".mp4")]
         if not video_paths:

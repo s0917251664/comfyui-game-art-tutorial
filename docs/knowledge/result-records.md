@@ -1,10 +1,17 @@
 # 圖片結果與素材版本／驗收紀錄
 
-圖片生成 JSON manifest 是選用的技術追溯資料；要保存素材版本與人工決定時，使用 `docs/knowledge/assets/<asset-id>.md` 按需新增一頁 Markdown。一般出圖不需要建立素材頁。這套紀錄不改生成參數、不自動學習，也不取代能力檢查或看圖驗收。
+圖片生成 task 預設會在輸出旁寫技術 manifest（見下節）；要保存素材版本與人工決定時，使用 `docs/knowledge/assets/<asset-id>.md` 按需新增一頁 Markdown。一般出圖不需要建立素材頁。這套紀錄不改生成參數、不自動學習，也不取代能力檢查或看圖驗收。
 
-## 生成 manifest（選用）
+## 預設 manifest 與人工決定紀錄（asset_review）
 
-在圖片 task 命令加上 `--result-json <新 JSON 檔路徑>`。此旗標選用且僅支援圖片 task。目的路徑需以 `.json` 結尾，父資料夾必須已存在，不能覆寫既有檔案；生成成功且 PNG 技術檢查通過後才會建立 manifest。需 Pillow 讀取 PNG。路徑可以放在本次 `--output-dir`，不必改變預設圖片輸出位置。
+- 圖片 task 未給 `--result-json` 時，生成成功後會盡力在第一個 PNG 輸出旁寫 `<輸出檔名去副檔名>.result.json`（schema 與下節相同）。此為盡力而為：已存在、缺 Pillow 或技術檢查失敗時只在 stderr 警告，不影響生成與 stdout；明確給 `--result-json` 時行為不變（失敗即中止，且不再寫預設檔）。影片 task 已有 `<影片>.json` sidecar（見 `video_contract.py`），不重複產生。
+- 人工決定用 `python tools_src/gameart.py review ...`（`asset_review.py`，stdlib only）：`list <資料夾|manifest>` 列候選、技術狀態與決定（預設 pending）；`show <sha256 前綴>`；`accept|reject <manifest 或輸出檔> --by <誰> [--note ...] [--output ...]`。
+- 決定寫在 manifest 旁的 `<名稱>.decisions.json`（append-only，`schema_version` 1、`kind` `asset_decisions`，每筆含 `output_path`、`sha256`、`decision`、`by`、`note`、`decided_at`）。技術 manifest 不被修改，`content_review` 仍固定為 `pending`。
+- 決定綁輸出檔 SHA-256：同名檔被重新生成或改動後，舊決定不適用，`list` 顯示 `mismatch`（視同 pending）；檔案內容與 manifest 記錄不符時拒絕記錄決定。
+- **agent 不得自行呼叫 accept／reject**；只有使用者在對話中明確給出決定，才可代為記錄，`--by` 填使用者、`--note` 忠實摘要其理由。此紀錄與下方素材 Markdown 頁並行，需要長期追蹤版本時再建素材頁。
+
+## 生成 manifest
+要自訂路徑時在圖片 task 命令加上 `--result-json <新 JSON 檔路徑>`（否則用預設路徑）。此旗標選用且僅支援圖片 task。目的路徑需以 `.json` 結尾，父資料夾必須已存在，不能覆寫既有檔案；生成成功且 PNG 技術檢查通過後才會建立 manifest。需 Pillow 讀取 PNG。路徑可以放在本次 `--output-dir`，不必改變預設圖片輸出位置。
 
 Schema v1 的頂層欄位：
 
