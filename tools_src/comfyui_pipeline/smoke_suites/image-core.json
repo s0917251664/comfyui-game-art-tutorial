@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "id": "image-core",
+  "description": "圖片核心 task 固定煙霧測試:提示詞、種子、尺寸全部固定,輸入全部由本套件自己產生(concept 輸出與 smoke 產生的矩形遮罩),不需要任何外部素材。只做技術檢查,不評美術。",
+  "mask": {"size": [768, 768], "rect": [0.25, 0.25, 0.75, 0.75], "note": "RGBA PNG;中央矩形 alpha=0(要重繪/要保留進圖層的區域),其餘 alpha=255,符合 inpaint/layer_split 遮罩慣例"},
+  "tasks": [
+    {"id": "concept", "task": "concept", "seed": 1001, "needs": [],
+     "args": ["--prompt", "a lone wooden treasure chest on a stone floor, game concept art, simple background", "--width", "768", "--height", "768"]},
+    {"id": "icon_asset", "task": "icon_asset", "seed": 1002, "needs": [],
+     "args": ["--prompt", "a red health potion bottle, game inventory icon, centered", "--width", "512", "--height", "512"]},
+    {"id": "refine", "task": "refine", "seed": 1003, "needs": ["concept"],
+     "args": ["--prompt", "a lone wooden treasure chest on a stone floor, detailed, game concept art", "--image", "{out:concept}", "--denoise", "0.45"]},
+    {"id": "upscale", "task": "upscale", "seed": 1004, "needs": ["icon_asset"],
+     "args": ["--prompt", "a red health potion bottle, game inventory icon, centered", "--image", "{out:icon_asset}", "--scale", "2", "--denoise", "0.3"]},
+    {"id": "pose_only_canny", "task": "pose_only", "seed": 1005, "needs": ["concept"],
+     "args": ["--prompt", "a lone wooden treasure chest on a stone floor, game concept art", "--pose-ref", "{out:concept}", "--control-type", "canny", "--width", "768", "--height", "768"]},
+    {"id": "style_lock", "task": "style_lock", "seed": 1006, "needs": ["concept"],
+     "args": ["--prompt", "a lone wooden treasure chest on a stone floor, game concept art", "--character-ref", "{out:concept}", "--width", "768", "--height", "768"]},
+    {"id": "character_action_canny", "task": "character_action", "seed": 1007, "needs": ["concept"],
+     "args": ["--prompt", "a lone wooden treasure chest on a stone floor, game concept art", "--character-ref", "{out:concept}", "--pose-ref", "{out:concept}", "--control-type", "canny", "--width", "768", "--height", "768"]},
+    {"id": "inpaint", "task": "inpaint", "seed": 1008, "needs": ["concept"],
+     "args": ["--prompt", "a golden coin pile", "--image", "{out:concept}", "--mask", "{mask}", "--denoise", "1.0"]},
+    {"id": "guided_inpaint", "task": "guided_inpaint", "seed": 1009, "needs": ["concept"],
+     "args": ["--prompt", "a golden coin pile", "--image", "{out:concept}", "--mask", "{mask}", "--control-type", "canny", "--denoise", "1.0"]},
+    {"id": "layer_split", "task": "layer_split", "seed": null, "needs": ["concept"],
+     "seed_note": "layer_split 沒有 --seed(不做取樣),manifest 的 resolved_seeds 為空",
+     "args": ["--image", "{out:concept}", "--mask", "{mask}", "--layer-name", "smoke_layer"]}
+  ]
+}

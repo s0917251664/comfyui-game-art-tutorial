@@ -112,6 +112,41 @@ class DetectImageCapabilitiesTests(unittest.TestCase):
         self.assertEqual("unverified", concept["validation"])
         self.assertIn("macos-mps", concept["validation_reason"])
 
+    def test_legacy_verified_reports_basis_and_evidence(self):
+        self._install_sdxl_base()
+        self._device(CUDA_DEVICE)
+        concept = detector.detect(self._args())["profiles"]["sdxl_standard"]["tasks"]["concept"]
+        self.assertEqual(("verified", "legacy", "docs/tested-versions.md"),
+                         (concept["validation"], concept["validation_basis"], concept["validation_evidence"]))
+
+    def test_evidence_state_follows_current_environment(self):
+        import copy
+        from comfyui_pipeline import fingerprint as fp
+        from comfyui_pipeline import profiles
+        self._install_sdxl_base()
+        self._device(MPS_DEVICE)
+        env = profiles.env_from_components(fp.compute_components(self.comfyui, [os.path.join(self.comfyui, "models")]))
+        profile = copy.deepcopy(profiles.load_profile("sdxl_standard"))
+        evidence = {"report": "docs/knowledge/validation/macos-mps/r.json", "report_sha256": "a" * 64,
+                    "tasks": ["concept"], "profile_sha256": profiles.profile_content_sha256(profile),
+                    "env": dict(env), "min_memory_mb": 18000, "approved_by": "user",
+                    "approved_at": "2026-10-06T10:00:00+00:00"}
+        profile["validation"]["macos-mps"] = [evidence]
+
+        def task_state():
+            with mock.patch.dict(profiles._cache, {"sdxl_standard": profile}):
+                return detector.detect(self._args())["profiles"]["sdxl_standard"]["tasks"]
+
+        tasks = task_state()
+        self.assertEqual(("verified", "evidence"), (tasks["concept"]["validation"], tasks["concept"]["validation_basis"]))
+        self.assertEqual("unverified", tasks["refine"]["validation"])
+
+        self._model("checkpoints", "another.safetensors")  # 模型庫內容改變
+        tasks = task_state()
+        self.assertEqual("verified_other_env", tasks["concept"]["validation"])
+        self.assertIn("目前環境不同", tasks["concept"]["validation_reason"])
+        self.assertIn("已在 2026-10-06", tasks["concept"]["validation_reason"])
+
     def test_ineligible_platform_blocks_tasks_even_when_models_exist(self):
         self._install_sdxl_base()
         self._device(dict(CUDA_DEVICE, backend="cpu", platform_key="linux-cpu", usable_memory_mb=0,

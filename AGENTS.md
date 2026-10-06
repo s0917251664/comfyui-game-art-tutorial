@@ -19,6 +19,8 @@
 | 影片換臉 | `comfyui-face-swap-workflow` | `face_swap.py preflight` / `swap` |
 | 影片遮罩分層 | `comfyui-video-layers` | `video_layers.py preflight` / `run` |
 | 安裝 ComfyUI／模型 | `comfyui-install` | `verify_portable_install.py` |
+| 部署 repo 工具到 ComfyUI | `comfyui-install` | `gameart.py deploy`（dry run）／ `deploy --yes` ／ `deploy --rollback` |
+| 固定煙霧測試與驗證紀錄 | `comfyui-install` | `gameart.py smoke [run] --output-dir DIR [--tasks ..] [--record <repo>]` ／ `smoke record <report>` ／ `validation propose|status`（技術檢查，見 `docs/knowledge/maintenance/validation-workflow.md`） |
 
 各 task 完整參數以 `generate.py <task> --help` 為準；其他入口見下方路由，指令不在表內者不要自行推定。
 
@@ -37,6 +39,7 @@
 - `tools_src/generate.py` 只是 CLI 入口（`main()` 與少數唯讀 re-export）；邏輯在 `comfyui_pipeline/`（task 在 `tasks/`，執行期狀態用明確傳入的 `RunContext`，不用全域），部署時須連同整個 `tools_src/comfyui_pipeline/`。固定流程按既有契約使用，不臨場改 graph。API-format assets、CLI 與 server-side helper/custom node 是不同執行方式，不能把 CLI 假寫為 API。
 - SDXL／SD1.5 模型檔名、取樣參數與平台驗證狀態由 `tools_src/comfyui_pipeline/profiles/*.json` 管理，不改 `image_graphs.py`；FLUX.2 使用獨立 preflight。大機器指定較小 profile 用 `--profile` 或 detector 選項，不手改 `device_config.json`。profile 驗證以 `platform_key` 為準。
 - 生成前按路線查能力：圖片查 `image_capabilities.json`，影片查 `video_capabilities.json`；FLUX.2、遮罩、抽幀、合成等依各自 gate。`unverified` 先告知；能力不足在 upload／queue 前停止。換機／換 GPU、ComfyUI／node／模型／runtime 改變後，先 `python tools_src/gameart.py doctor` 看快照是否過期，再用 `doctor --refresh` 重跑三個 detector 並更新指紋（生成時若偵測到過期會在 stderr 提醒，不阻擋）。detector 只掃描，不下載；不能從圖片 tier 推定影片 backend。
+- 平台驗證升格（`gameart.py validation approve --by <使用者>`，寫入 profile 的 `validation`）是使用者的決定：agent 不得在使用者沒有明確要求時執行 approve；`propose`／`status`／`smoke record` 可自行執行。證據綁報告與環境，環境不同顯示 `verified_other_env`（只提醒）。
 - 技術檢查不等於美術接受。候選素材需由使用者決定；不可捏造 accepted/rejected，也不可讓新輸出繼承舊版本驗收。圖片預設寫技術 manifest（`*.result.json`），使用者明確決定後才可用 `gameart.py review accept|reject --by <使用者>` 記錄，agent 不得自行決定；素材紀錄格式見 [`docs/knowledge/result-records.md`](docs/knowledge/result-records.md)。
 - 本專案目前無預算，使用本機免費模型；日後外部雲端服務須依使用者明確選擇的路線處理，參考 [`教學.md`](教學.md) 第 0.5 章 C 段。新增 `.ps1` 必須使用帶 BOM 的 UTF-8，以支援 Windows PowerShell 5.1。
 

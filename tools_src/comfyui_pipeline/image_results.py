@@ -81,7 +81,9 @@ def profile_digest(profile_id):
     path = PROFILE_DIR / f"{profile_id}.json"
     if not path.is_file():
         raise ValueError(f"無法找到實際選用的圖片 profile: {path}")
-    return _sha256_file(str(path))
+    # 內容雜湊(不含 validation 區塊):記錄驗證證據不會讓既有 manifest 綁的 profile hash 失效。
+    from . import profiles as _profiles
+    return _profiles.profile_content_sha256(json.loads(path.read_text(encoding="utf-8")))
 
 
 def effective_conditioning(graph):

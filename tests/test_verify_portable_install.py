@@ -47,6 +47,9 @@ class VerifyPortableInstallTests(unittest.TestCase):
         cls.profile_json_bytes = {
             path.name: path.read_bytes() for path in sorted((PIPELINE_PKG / "profiles").glob("*.json"))
         }
+        cls.suite_json_bytes = {
+            path.name: path.read_bytes() for path in sorted((PIPELINE_PKG / "smoke_suites").glob("*.json"))
+        }
 
     def _write_json(self, path, payload):
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -72,12 +75,17 @@ class VerifyPortableInstallTests(unittest.TestCase):
         self._copy_source(tools_dir / "image_edit_tools.py", self.image_edit_tools_bytes)
         self._copy_source(tools_dir / "comfyui_design.py", (ROOT / "tools_src/comfyui_design.py").read_bytes())
         for name in ("film_audio.py", "film_sapi.ps1", "film_qwen.py", "film_lipsync.py", "face_swap.py", "video_layers.py",
-                     "detect_video_capabilities.py", "gameart.py", "doctor.py", "asset_review.py"):
+                     "detect_video_capabilities.py", "gameart.py", "doctor.py", "asset_review.py", "smoke.py"):
             self._copy_source(tools_dir / name, (ROOT / "tools_src" / name).read_bytes())
         for name in ("__init__.py", "contracts.py", "media.py", "nodes.py"):
             for location in (tools_dir / "comfyui_face_swap_video", comfyui_path / "custom_nodes/comfyui-face-swap-video"):
                 self._copy_source(location / name, (ROOT / "tools_src/comfyui_face_swap_video" / name).read_bytes())
         self._copy_source(tools_dir / "mask_refine.py", self.mask_refine_bytes)
+        self._copy_source(tools_dir / "mask_session.py", (ROOT / "tools_src/mask_session.py").read_bytes())
+        smt = ROOT / "tools_src/simple_mask_tool"
+        for src in sorted(p for p in smt.rglob("*") if p.is_file() and "__pycache__" not in p.parts):
+            for location in (tools_dir / "simple_mask_tool", comfyui_path / "custom_nodes/comfyui-simple-mask-tool"):
+                self._copy_source(location / src.relative_to(smt), src.read_bytes())
         for name in ("__init__.py", "contracts.py", "media.py", "nodes.py"):
             for location in (tools_dir / "comfyui_video_layers", comfyui_path / "custom_nodes/comfyui-video-layers"):
                 self._copy_source(location / name, (ROOT / "tools_src/comfyui_video_layers" / name).read_bytes())
@@ -86,6 +94,8 @@ class VerifyPortableInstallTests(unittest.TestCase):
         self._copy_source(tools_dir / "detect_image_capabilities.py", self.detect_image_bytes)
         for name, source in self.profile_json_bytes.items():
             self._copy_source(tools_dir / "comfyui_pipeline" / "profiles" / name, source)
+        for name, source in self.suite_json_bytes.items():
+            self._copy_source(tools_dir / "comfyui_pipeline" / "smoke_suites" / name, source)
         if include_video:
             self._copy_source(tools_dir / "detect_video_capabilities.py", self.detect_video_bytes)
 
@@ -376,7 +386,9 @@ class VerifyPortableInstallTests(unittest.TestCase):
                       for name, source in self.pipeline_source_bytes.items()),
                     ("detect_image_capabilities.py", self.detect_image_bytes),
                     *((f"comfyui_pipeline/profiles/{name}", source)
-                      for name, source in self.profile_json_bytes.items())):
+                      for name, source in self.profile_json_bytes.items()),
+                    *((f"comfyui_pipeline/smoke_suites/{name}", source)
+                      for name, source in self.suite_json_bytes.items())):
                 text = source.decode("utf-8").replace("\r\n", "\n").replace("\n", "\r\n")
                 target = tools_dir / name
                 target.parent.mkdir(parents=True, exist_ok=True)
@@ -486,3 +498,17 @@ class VerifyPortableInstallTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class OptionalCustomNodeTests(unittest.TestCase):
+    def test_absent_custom_node_dirs_are_info_not_fail(self):
+        import tempfile
+        from pathlib import Path as _P
+        sys.path.insert(0, str(ROOT / "tools_src"))
+        import verify_portable_install as v
+        with tempfile.TemporaryDirectory() as d:
+            results = []
+            v._check_source_sync(ROOT, _P(d), results)
+            node_rows = [r for r in results if "custom_nodes/" in r[1]]
+            self.assertTrue(node_rows)
+            self.assertTrue(all(r[0] == "info" for r in node_rows), node_rows[:3])

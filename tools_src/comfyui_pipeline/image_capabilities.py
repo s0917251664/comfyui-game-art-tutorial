@@ -139,6 +139,18 @@ def load_image_capabilities(runtime_config_path=None, image_config_path=None):
     return _read_runtime_config(source), source
 
 
+def _current_env(capabilities):
+    """目前機器的環境指紋(供比對驗證證據);沒有快照路徑資訊或讀取失敗時回傳 None(不比對)。"""
+    if not capabilities or not capabilities.get("comfyui_path"):
+        return None
+    try:
+        from . import fingerprint as _fp
+        return _profiles.env_from_components(
+            _fp.compute_components(capabilities["comfyui_path"], capabilities.get("model_roots")))
+    except Exception:
+        return None
+
+
 def resolve_image_profile(task, device, cli_profile=None, capabilities=None, capabilities_source=None):
     """決定這次圖片 task 用哪份模型設定檔;回傳 profile id,或 None 代表沿用 tier 對應。
 
@@ -170,10 +182,13 @@ def resolve_image_profile(task, device, cli_profile=None, capabilities=None, cap
         raise RuntimeError(
             f"模型設定檔 {chosen!r} 不提供 {task}；這個設定檔可用的 task：{', '.join(sorted(profile['tasks']))}"
         )
+    env = _current_env(capabilities) if _profiles.needs_env(profile, device.get("platform_key")) else None
     status, reason = _profiles.effective_validation(
-        profile, device.get("platform_key"), device.get("usable_memory_mb"), task,
+        profile, device.get("platform_key"), device.get("usable_memory_mb"), task, env,
     )
-    if status != "verified":
+    if status == "verified_other_env":
+        print(f"[提醒] 模型設定檔 {chosen} 的 {task}:{reason}。結果可能與驗證時不同(不阻擋)。", file=sys.stderr)
+    elif status != "verified":
         print(
             f"[提醒] 模型設定檔 {chosen} 的 {task} 在這台機器的驗證狀態是 {status}"
             f"（{reason or '沒有額外說明'}），結果可能與已驗證平台不同。",

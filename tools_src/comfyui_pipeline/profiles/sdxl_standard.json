@@ -73,11 +73,15 @@
   "notes_ref": "skills/comfyui-art-gen/reference/profiles/sdxl_standard.md",
 
   "validation": {
-    "windows-cuda": {
-      "status": "verified",
-      "tasks": ["concept", "icon_asset", "character_action", "pose_only", "style_lock", "inpaint", "guided_inpaint", "refine", "upscale", "layer_split"],
-      "min_verified_memory_mb": 16000,
-      "evidence": "docs/tested-versions.md"
-    }
+    "windows-cuda": [
+      {
+        "legacy": true,
+        "report": null,
+        "status": "verified",
+        "tasks": ["concept", "icon_asset", "character_action", "pose_only", "style_lock", "inpaint", "guided_inpaint", "refine", "upscale", "layer_split"],
+        "min_memory_mb": 16000,
+        "evidence": "docs/tested-versions.md"
+      }
+    ]
   }
 }

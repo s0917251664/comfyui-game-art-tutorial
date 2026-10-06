@@ -329,7 +329,7 @@ def check_runtime(config, task, profile=None, allow_unverified=False):
     if not capability.get("available"):
         raise ValueError(f"Task unavailable in capability snapshot: {capability}")
     validation = capability.get("validation")
-    if validation not in {"verified", "experimental", "unverified"}:
+    if validation not in {"verified", "verified_other_env", "experimental", "unverified"}:
         raise ValueError(f"Unsupported task validation state: {validation}")
     if validation != "verified" and not allow_unverified:
         raise ValueError("Task is not verified; explicit approved trial needs --allow-unverified")

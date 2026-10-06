@@ -84,6 +84,10 @@ def summarize_image(snap):
             "missing": {t: v.get("missing_files") or v.get("missing_nodes")
                         for t, v in tasks.items() if not v.get("available")},
             "unverified": sorted(t for t, v in tasks.items() if v.get("validation") == "unverified"),
+            "verified_other_env": {t: v.get("validation_reason") for t, v in sorted(tasks.items())
+                                   if v.get("validation") == "verified_other_env"},
+            "verified_legacy": sorted(t for t, v in tasks.items()
+                                      if v.get("validation") == "verified" and v.get("validation_basis") == "legacy"),
         }
     return result
 
@@ -154,7 +158,7 @@ def collect_status(args):
     if video:
         status["video"] = summarize_video(video)
     else:
-        status["notes"].append("沒有 video_capabilities.json:影片 task 不可用,且不能從圖片 tier 推定影片 backend。")
+        status["notes"].append("沒有 video_capabilities.json:視為未選用影片功能;若要使用請先安裝並執行 detect_video_capabilities.py(不能從圖片 tier 推定影片 backend)。")
     if not loaded.get("device"):
         status["notes"].append("沒有 device_config.json:請先執行 detect_device.py(或 doctor --refresh)。")
     return status
@@ -164,7 +168,7 @@ def format_status(status):
     lines = [f"ComfyUI: {status['comfyui_path'] or '(未設定)'}", f"快照目錄: {status['snapshot_dir']}", ""]
     for name, entry in status["snapshots"].items():
         if not entry["exists"]:
-            lines.append(f"[缺少] {name}: {os.path.basename(entry['file'])}")
+            lines.append(f"[未建立] {name}: {os.path.basename(entry['file'])}")
             continue
         flag = "過期?" if entry.get("stale") else "存在"
         lines.append(f"[{flag}] {name}: {os.path.basename(entry['file'])}  偵測於 {_human_age(entry['age_seconds'])}")
@@ -181,19 +185,23 @@ def format_status(status):
         image = status["image"]
         lines += ["", f"圖片能力(預設設定檔: {image['default_profile'] or '無'})"]
         for pid, p in image["profiles"].items():
-            lines.append(f"  {pid}: 底模{'已裝' if p['installed'] else '未裝'};可用 {len(p['available'])} 個 task;"
+            lines.append(f"  {pid}: 底模{'已裝' if p['installed'] else '未安裝(未選用)'};可用 {len(p['available'])} 個 task;"
                          f"unverified {len(p['unverified'])} 個")
             if p["unverified"]:
                 lines.append(f"    unverified: {', '.join(p['unverified'])}")
+            for task, reason in p.get("verified_other_env", {}).items():
+                lines.append(f"    {task}: {reason}")
+            if p.get("verified_legacy"):
+                lines.append(f"    已驗證但無環境紀錄(舊式紀錄): {', '.join(p['verified_legacy'])}")
             if p["missing"] and not p["installed"]:
-                lines.append(f"    缺少能力的 task: {', '.join(p['missing'])}")
+                lines.append(f"    未安裝所需模型/節點的 task(未選用): {', '.join(p['missing'])}")
     if "video" in status:
         video = status["video"]
         lines += ["", f"影片能力(預設 backend: {video['default_backend'] or '無'})"]
         for name, b in video["backends"].items():
-            lines.append(f"  {name}: {'可用 ' + ','.join(b['capabilities']) if b['available'] else '不可用'}")
+            lines.append(f"  {name}: {'可用 ' + ','.join(b['capabilities']) if b['available'] else '未安裝(未選用)'}")
             for cap, reason in b["unavailable"].items():
-                lines.append(f"    {cap}: {json.dumps(reason, ensure_ascii=False)}")
+                lines.append(f"    {cap} 未安裝: {json.dumps(reason, ensure_ascii=False)}")
     if status["notes"]:
         lines.append("")
         lines += [f"[提醒] {note}" for note in status["notes"]]
