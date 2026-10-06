@@ -179,8 +179,9 @@ def _check_source_sync(repo_root, comfyui_path, results, require_video=False):
         repo_file = repo_root / entry.src
         deployed_file = comfyui_path / entry.dst
         node_dir = entry.custom_node_dir
-        if node_dir is not None and not (comfyui_path / node_dir).is_dir() and "simple-mask-tool" in label:
-            results.append(("info", f"{label} 略過:未安裝 {node_dir.as_posix()}(Simple Mask custom node 為選配)"))
+        if node_dir is not None and not (comfyui_path / node_dir).is_dir():
+            # custom node 是否安裝屬於安裝決策;未安裝的機器與 deploy 一致視為略過,不算同步失敗。
+            results.append(("info", f"{label} 略過:未安裝 {node_dir.as_posix()}(選配 custom node)"))
             continue
         if not repo_file.is_file():
             results.append(("fail", f"{label} source sync", "repo source 不存在"))

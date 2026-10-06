@@ -491,3 +491,17 @@ class VerifyPortableInstallTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class OptionalCustomNodeTests(unittest.TestCase):
+    def test_absent_custom_node_dirs_are_info_not_fail(self):
+        import tempfile
+        from pathlib import Path as _P
+        sys.path.insert(0, str(ROOT / "tools_src"))
+        import verify_portable_install as v
+        with tempfile.TemporaryDirectory() as d:
+            results = []
+            v._check_source_sync(ROOT, _P(d), results)
+            node_rows = [r for r in results if "custom_nodes/" in r[1]]
+            self.assertTrue(node_rows)
+            self.assertTrue(all(r[0] == "info" for r in node_rows), node_rows[:3])
