@@ -1,3 +1,7 @@
+import optional_deps
+
+optional_deps.require("PIL", "numpy")
+
 import unittest
 import numpy as np
 from PIL import Image, ImageDraw

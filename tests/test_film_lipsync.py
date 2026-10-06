@@ -1,3 +1,7 @@
+import optional_deps
+
+optional_deps.require("PIL", "numpy", "av")
+
 import json
 from pathlib import Path
 from types import SimpleNamespace

@@ -1,4 +1,8 @@
 """Contract tests: identity, occlusion, tracking failure, provenance, media output."""
+import optional_deps
+
+optional_deps.require("PIL", "numpy", "cv2", "torch")
+
 import json
 import importlib.util
 from pathlib import Path
