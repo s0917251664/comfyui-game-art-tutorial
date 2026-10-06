@@ -199,7 +199,7 @@ tier 不刪除，降格成「這台最多建議到哪個設定檔」的提示，
 
 - task 的狀態由證據推導：有項目涵蓋且記憶體足夠 → `verified`。目前環境（ComfyUI 版本／commit、模型庫、custom_nodes）或設定檔內容與證據不同 → `verified_other_env`（顯示「已在 <日期> 的環境驗證；目前環境不同（…）」，只提醒、不阻擋）。
 - 既有 `windows-cuda` 手寫紀錄遷移成 `legacy: true, report: null` 項目（證據仍是 `docs/tested-versions.md`）：沒有環境紀錄，視同 `verified`（能力快照 `validation_basis: "legacy"`；`doctor` 註明無環境紀錄），沒有失敗證據不降級。
-- `profile_sha256` 改為設定檔 canonical JSON **排除 `validation`** 的雜湊（`profiles.profile_content_sha256`）：記錄證據不會使自己失效；舊 smoke 報告／manifest 的整檔雜湊，`propose` 會到 git 歷史找出該版本再比對內容雜湊。`min_verified_memory_mb` 在新式項目稱 `min_memory_mb`。
+- `profile_sha256` 改為設定檔 canonical JSON **排除 `validation`** 的雜湊（`profiles.profile_content_sha256`）：記錄證據不會使自己失效；舊 smoke 報告（無 `profile_hash_scheme`，整檔雜湊）會被 `propose`／`approve` 拒絕，需用目前版本重跑 smoke。`min_verified_memory_mb` 在新式項目稱 `min_memory_mb`。
 
 未列出的 `platform_key` 一律視為 `unverified`。驗證狀態以 **task 為單位**：同一設定檔在 `macos-mps` 可以 `concept` 已驗證、`pose_only` 仍未驗證。
 

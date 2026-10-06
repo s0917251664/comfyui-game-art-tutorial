@@ -12,7 +12,6 @@ deploy → smoke → smoke record(報告進 repo)→ validation propose(唯讀,�
 import argparse
 import hashlib
 import json
-import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -92,37 +91,15 @@ def resolve_report(repo_root, report_arg):
     return path, rel.as_posix(), report
 
 
-def _git_blob_content_hashes(repo_root, profile_id, raw_sha):
-    """舊報告(沒有 profile_hash_scheme)用整檔雜湊:到 git 歷史找出該版本,回傳它的內容雜湊;找不到回傳 None。"""
-    rel = (PROFILES_SUBDIR / f"{profile_id}.json").as_posix()
-    try:
-        revs = subprocess.run(["git", "-C", str(repo_root), "log", "--format=%H", "--", rel],
-                              capture_output=True, text=True, timeout=30, check=True).stdout.split()
-        for rev in revs:
-            blob = subprocess.run(["git", "-C", str(repo_root), "show", f"{rev}:{rel}"],
-                                  capture_output=True, timeout=30, check=True).stdout
-            if _sha256_bytes(blob) == raw_sha:
-                return _profiles.profile_content_sha256(json.loads(blob.decode("utf-8")))
-    except (OSError, subprocess.SubprocessError, ValueError):
-        return None
-    return None
-
-
 def check_profile_binding(repo_root, report, profile):
     """報告綁的設定檔內容必須與 repo 現在的一致。回傳 (ok, 說明)。"""
     current = _profiles.profile_content_sha256(profile)
     recorded = report["profile_sha256"]
-    if report.get("profile_hash_scheme") == "content-v1":
-        if recorded == current:
-            return True, "設定檔內容雜湊一致"
-        return False, f"報告的 profile_sha256 {recorded[:12]} 與目前設定檔內容 {current[:12]} 不一致"
-    # 舊報告:整檔原始雜湊。到 git 歷史比對當時版本的內容雜湊
-    legacy = _git_blob_content_hashes(repo_root, report["profile_id"], recorded)
-    if legacy is None:
-        return False, ("舊式報告(整檔雜湊)無法在 git 歷史找到對應版本,無法確認設定檔內容;請在目前版本重跑 smoke")
-    if legacy == current:
-        return True, "舊式報告(整檔雜湊):對應的歷史版本內容與目前設定檔一致(僅 validation 區塊不同)"
-    return False, "舊式報告對應的設定檔版本與目前內容不同(模型/取樣/task 定義已變動);請重跑 smoke"
+    if report.get("profile_hash_scheme") != "content-v1":
+        return False, "舊格式報告(無 profile_hash_scheme),請用目前版本重跑 smoke 產生新報告"
+    if recorded == current:
+        return True, "設定檔內容雜湊一致"
+    return False, f"報告的 profile_sha256 {recorded[:12]} 與目前設定檔內容 {current[:12]} 不一致"
 
 
 def promotable_tasks(report, profile):

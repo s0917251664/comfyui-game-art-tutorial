@@ -38,7 +38,7 @@ profile 的 `validation[<platform_key>]` 是證據項目清單：
 - task 在該平台是 `verified`：有證據項目涵蓋它，且可用記憶體不低於 `min_memory_mb`。
 - **環境綁定**：`detect_image_capabilities`、`doctor`、`generate` 會用目前的環境指紋（ComfyUI 版本／commit、`models_hash`、`custom_nodes_hash`）與設定檔內容雜湊比對證據。證據存在但不一致 → `verified_other_env`，說明「已在 <日期> 的環境驗證；目前環境不同（comfyui 版本 x→y）」。這只是提醒，生成不阻擋；`edit`（image_edit_tools）仍須明確同意才跑非 verified 的 task。環境未知（讀不到指紋）時不比對、不降級。
 - **legacy 項目**：舊式手寫紀錄（`legacy: true`、`report: null`，證據是 `docs/tested-versions.md`）沒有環境紀錄，視同 `verified`（能力快照的 `validation_basis: "legacy"`，`doctor` 註明「已驗證但無環境紀錄」）。沒有失敗證據前不降級；有新報告證據後會優先採用。舊式 dict 寫法仍可讀。
-- **設定檔雜湊 `profile_sha256`** 是 `profiles.profile_content_sha256`：對 canonical JSON 取雜湊，**不含 `validation` 區塊**，所以記錄證據不會讓自己綁的雜湊失效；改模型、取樣、解析度或 task 需求則會變。新報告帶 `profile_hash_scheme: "content-v1"`。舊報告（沒有此欄位）是整檔原始位元組雜湊，`propose` 會到 git 歷史找出該版本、比對其內容雜湊與目前是否一致。`image_results` manifest 的 `profile_sha256` 同樣改用內容雜湊（舊 manifest 是整檔雜湊）。
+- **設定檔雜湊 `profile_sha256`** 是 `profiles.profile_content_sha256`：對 canonical JSON 取雜湊，**不含 `validation` 區塊**，所以記錄證據不會讓自己綁的雜湊失效；改模型、取樣、解析度或 task 需求則會變。新報告帶 `profile_hash_scheme: "content-v1"`。舊報告（沒有此欄位）是整檔原始位元組雜湊，`propose`／`approve` 一律拒絕，請用目前版本重跑 smoke 產生新報告。`image_results` manifest 的 `profile_sha256` 同樣改用內容雜湊（舊 manifest 是整檔雜湊）。
 - `validation status [--profile] [--platform]` 列出 task × 平台的 `verified`／`legacy`／`unverified` 與證據連結。
 
 ## 狀態語意

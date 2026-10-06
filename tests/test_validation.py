@@ -101,12 +101,18 @@ class ProposeTests(RepoCase):
         self.assertEqual(1, code)
         self.assertIn("不一致", out)
 
-    def test_legacy_report_without_scheme_and_unknown_hash_cannot_be_checked(self):
-        report = make_report(self.profile, profile_sha256="0" * 64)
+    def test_old_format_report_without_scheme_is_refused(self):
+        report = make_report(self.profile)
         report.pop("profile_hash_scheme")
-        ok, note = validation.check_profile_binding(self.repo, report, self.profile)
-        self.assertFalse(ok)
-        self.assertIn("無法", note)
+        path = self.write_report(report)
+        code, out, _ = self.run_cli("propose", str(path))
+        self.assertEqual(1, code)
+        self.assertIn("舊格式報告(無 profile_hash_scheme),請用目前版本重跑 smoke 產生新報告", out)
+        before = self.profile_text()
+        code, _, err = self.run_cli("approve", str(path), "--by", "steve")
+        self.assertEqual(2, code)
+        self.assertIn("舊格式報告", err)
+        self.assertEqual(before, self.profile_text())
 
     def test_zero_passing_tasks_is_not_approvable(self):
         report = make_report(self.profile, {t: "not_installed" for t in self.profile["tasks"]})
@@ -178,17 +184,6 @@ class ApproveTests(RepoCase):
         self.assertIn(str(path.relative_to(self.repo).as_posix()), out)
         code, out, _ = self.run_cli("status", "--profile", "sdxl_standard", "--platform", "linux-cuda")
         self.assertIn("unverified", out)
-
-
-class RealRepoTests(unittest.TestCase):
-    def test_recorded_mac_report_binds_to_current_profile_via_git_history(self):
-        report = ROOT / "docs/knowledge/validation/macos-mps/2026-10-06-image-core-sdxl_standard.json"
-        if not report.is_file() or not (ROOT / ".git").exists():
-            self.skipTest("需要 repo 內的 Mac 報告與 git 歷史")
-        plan = validation.build_plan(ROOT, str(report))
-        if not plan["binding_ok"] and "無法在 git 歷史" in plan["binding_note"]:
-            self.skipTest("git 歷史不完整(淺層 clone)")
-        self.assertTrue(plan["binding_ok"], plan["binding_note"])
 
 
 class OtherEnvReminderTests(unittest.TestCase):
