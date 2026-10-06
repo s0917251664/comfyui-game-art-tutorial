@@ -26,6 +26,7 @@ TOOLS = {
     "detect-device": ("detect_device.py", "偵測硬體並寫 device_config.json"),
     "detect-image": ("detect_image_capabilities.py", "偵測圖片能力並寫 image_capabilities.json"),
     "detect-video": ("detect_video_capabilities.py", "偵測影片能力並寫 video_capabilities.json"),
+    "doctor": ("doctor.py", "檢查三份機器快照是否過期;--refresh 重跑 detector"),
     "verify-install": ("verify_portable_install.py", "驗證可攜式安裝與部署副本是否同步"),
     "benchmark-birefnet": ("benchmark_birefnet.py", "BiRefNet 各版本 A/B 基準測試"),
 }

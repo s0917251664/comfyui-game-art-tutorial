@@ -32,6 +32,7 @@ status: current
 | 設備偵測：`detect_device.py` | 掃 GPU／VRAM／OS，產生機器專用 `device_config.json`；換設備重跑 | [`comfyui-install`](../../skills/comfyui-install/SKILL.md)、[installation guide](installation/install-guide.md) |
 | 圖片能力偵測：`detect_image_capabilities.py` | 只掃 profiles、已裝模型／nodes 與驗證狀態，不下載；FLUX.2 不在 snapshot | [`comfyui-art-gen`](../../skills/comfyui-art-gen/SKILL.md)、[art generation gate](art-generation.md)、[模型設定設計](../model-profiles-design.md) |
 | 影片能力偵測：`detect_video_capabilities.py` | 只掃現有模型、runtime、nodes，不下載；不能從圖片 tier 猜影片 backend | [`comfyui-video-gen`](../../skills/comfyui-video-gen/SKILL.md)、[video overview](video/README.md) |
+| 快照健檢：`gameart.py doctor` | 唯讀列出三份快照是否存在／過期（比對 ComfyUI commit、custom_nodes、模型清單指紋，存於 `capability_fingerprint.json`）與 unverified 摘要；`--refresh` 重跑三個 detector 並更新指紋，`--json` 供程式讀取 | [`game-art-initialize`](../../skills/game-art-initialize/SKILL.md) |
 | 可攜部署驗證：`verify_portable_install.py` | 核對部署 facade、package、profiles 等安裝內容；依安裝設定執行 | [`comfyui-install`](../../skills/comfyui-install/SKILL.md) |
 | BiRefNet benchmark：`benchmark_birefnet.py` | 維護者去背模型 A/B，不是日常 task；現有證據不足以取代正式模型 | [`comfyui-pipeline-review`](../../skills/comfyui-pipeline-review/SKILL.md)、[`comfyui-new-tool-checklist`](../../skills/comfyui-new-tool-checklist/SKILL.md) |
 | 外部 kohya_ss／sd-scripts LoRA 訓練 | repo 無訓練程式；RTX 4080 單次 smoke 不證明其他機器可用 | [`comfyui-install` LoRA reference](../../skills/comfyui-install/reference/lora-training.md)、[LoRA knowledge](installation/lora-training.md) |

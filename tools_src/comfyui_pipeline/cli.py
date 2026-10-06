@@ -5,8 +5,10 @@ task 專屬的參數、驗證與 graph 組裝都在 ``tasks/`` 各模組;這裡�
 讓 ``mock.patch.object(generate, ...)`` 與 ``generate.DEVICE = ...`` 這類舊用法照常生效。
 """
 import argparse
+import os
 import time
 
+from . import fingerprint as _fingerprint
 from . import image_results as _image_results
 from . import profiles as _profiles
 from . import tasks
@@ -204,6 +206,8 @@ def run(argv=None):
     except RuntimeError as exc:
         raise SystemExit(str(exc)) from exc
     rt._sync_image_runtime()
+    # 只在 sidecar 存在且過期時印一行 stderr 提醒;不阻擋、不影響結束碼。
+    _fingerprint.reminder_if_stale(os.path.dirname(os.path.abspath(rt.DEVICE_CONFIG_PATH)))
 
     style_checkpoint = _resolve_style_checkpoint(args)
 
