@@ -8,7 +8,8 @@
 |---|---|---|
 | 初始化／選路線 | `game-art-initialize` | `detect_device.py`、`detect_image_capabilities.py`、`detect_video_capabilities.py` |
 | 概念圖、圖示、角色動作、姿勢、風格鎖 | `comfyui-art-gen` | `generate.py concept` / `icon_asset` / `character_action` / `pose_only` / `style_lock` |
-| 局部重繪、精修、放大、分層 | `comfyui-art-gen` | `generate.py inpaint` / `refine` / `upscale` / `layer_split` |
+| 局部重繪、精修、放大、分層 | `comfyui-art-gen` | `generate.py inpaint` / `guided_inpaint` / `refine` / `upscale` / `layer_split` |
+| FLUX.2 概念與編修（獨立 preflight） | `comfyui-art-gen` | `generate.py flux2_concept` / `flux2_edit` |
 | 物件系列、展示背景、圖樣重複 | `comfyui-object-design` | `comfyui_design.py scene` / `sheet` / `pattern` |
 | 本機像素合成與比較、參數掃描 | `local-image-edit-tools`、`comfyui-image-sweep` | `image_edit_tools.py composite` / `compare` / `recolor` / `sweep` / `asset-audit` / `reference-board` |
 | 靜幀轉短片、循環特效、接片、運鏡 | `comfyui-video-gen` | `generate.py img2video` / `fx_loop` / `video_concat` / `camera_move` / `character_video` |
