@@ -65,14 +65,20 @@ $artConfig = Get-Content -Raw -Encoding UTF8 .\local_config.json | ConvertFrom-J
 
 換電腦或換顯卡時，不要複製舊機器的 `local_config.json`、`device_config.json`、`image_capabilities.json` 或 `video_capabilities.json`；要在新機器重新偵測。以上 `<...>` 是指令模板，需替換為實際設定值。
 
-## 開發檢查
+## 測試
 
-在 repository 根目錄執行；先讓 Python 找到 `tools_src/` 的工具模組：
+測試以標準庫 `unittest` 為主，也可用 pytest；設定在 `pyproject.toml`（該檔只宣告相依與測試設定，不是可安裝套件，不要 `pip install .`）。需要第三方套件的測試模組在缺套件時會自動 skip，不會報錯。
 
-```powershell
-$env:PYTHONPATH = "tools_src"
-python -m unittest discover -s tests -p 'test_*.py'
+```bash
+# 安裝開發相依（對應 pyproject.toml 的 image / video / dev 群組）
+python -m pip install pillow numpy av opencv-python pytest
+
+# 在 repository 根目錄執行；unittest 需讓 Python 找到 tools_src/
+PYTHONPATH=tools_src python -m unittest discover -s tests
+python -m pytest
 ```
+
+要跑完整測試（含 av／cv2／torch 相關），建議直接用 ComfyUI 的 venv，例如 `<ComfyUI>/.venv/bin/python -m unittest discover -s tests`（Windows 為 `.venv\Scripts\python.exe`），其中已有這些套件。用系統 Python 時缺套件的模組會被 skip。Graph golden fixture 在 `tests/fixtures/image_graphs_golden/<tier>.json`，只在刻意改 graph 時以 `python tests/golden_image_graphs.py --write` 重產。
 
 測試會 mock 掉 ComfyUI 與模型，不能取代實機 smoke test。
 

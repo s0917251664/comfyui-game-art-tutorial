@@ -1,4 +1,8 @@
 """Node isolation, upstream filter handling and output boundary tests."""
+import optional_deps
+
+optional_deps.require("PIL", "numpy", "torch")
+
 import importlib.util
 from pathlib import Path
 import sys

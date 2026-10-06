@@ -1,4 +1,8 @@
 """Media contract tests with generated video/audio and a deterministic fake engine."""
+import optional_deps
+
+optional_deps.require("PIL", "numpy", "av")
+
 import argparse
 from fractions import Fraction
 from pathlib import Path

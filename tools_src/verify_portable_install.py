@@ -31,13 +31,11 @@ SYNC_SOURCE_FILES = (
     ("image_edit_tools.py", Path("tools_src/image_edit_tools.py"), Path("tools/image_edit_tools.py")),
     ("comfyui_design.py", Path("tools_src/comfyui_design.py"), Path("tools/comfyui_design.py")),
     ("mask_refine.py", Path("tools_src/mask_refine.py"), Path("tools/mask_refine.py")),
-    ("comfyui_pipeline/__init__.py", Path("tools_src/comfyui_pipeline/__init__.py"), Path("tools/comfyui_pipeline/__init__.py")),
-    ("comfyui_pipeline/image_graphs.py", Path("tools_src/comfyui_pipeline/image_graphs.py"), Path("tools/comfyui_pipeline/image_graphs.py")),
-    ("comfyui_pipeline/image_results.py", Path("tools_src/comfyui_pipeline/image_results.py"), Path("tools/comfyui_pipeline/image_results.py")),
-    ("comfyui_pipeline/video_catalog.py", Path("tools_src/comfyui_pipeline/video_catalog.py"), Path("tools/comfyui_pipeline/video_catalog.py")),
-    ("comfyui_pipeline/video_graphs.py", Path("tools_src/comfyui_pipeline/video_graphs.py"), Path("tools/comfyui_pipeline/video_graphs.py")),
-    ("comfyui_pipeline/profiles.py", Path("tools_src/comfyui_pipeline/profiles.py"), Path("tools/comfyui_pipeline/profiles.py")),
     ("detect_image_capabilities.py", Path("tools_src/detect_image_capabilities.py"), Path("tools/detect_image_capabilities.py")),
+    ("detect_video_capabilities.py", Path("tools_src/detect_video_capabilities.py"), Path("tools/detect_video_capabilities.py")),
+    ("gameart.py", Path("tools_src/gameart.py"), Path("tools/gameart.py")),
+    ("doctor.py", Path("tools_src/doctor.py"), Path("tools/doctor.py")),
+    ("asset_review.py", Path("tools_src/asset_review.py"), Path("tools/asset_review.py")),
 ) + tuple(
     (f"face-swap-video/{location}/{name}", Path("tools_src/comfyui_face_swap_video") / name,
      Path(location) / name)
@@ -48,7 +46,9 @@ SYNC_SOURCE_FILES = (
     for location in ("tools/comfyui_video_layers", "custom_nodes/comfyui-video-layers")
     for name in ("__init__.py", "contracts.py", "media.py", "nodes.py")
 )
-# 模型設定檔數量會增加,依 repo 實際檔案動態核對,不在這裡逐一列名。
+# comfyui_pipeline/ 底下的 .py(含 tasks/)與模型設定檔數量都會增加,依 repo 實際檔案動態核對,不在這裡逐一列名。
+PIPELINE_REPO_DIR = Path("tools_src/comfyui_pipeline")
+PIPELINE_DEPLOYED_DIR = Path("tools/comfyui_pipeline")
 PROFILES_REPO_DIR = Path("tools_src/comfyui_pipeline/profiles")
 PROFILES_DEPLOYED_DIR = Path("tools/comfyui_pipeline/profiles")
 
@@ -199,8 +199,16 @@ def _load_live_device_snapshot(repo_root, detector=None):
     return snapshot
 
 
+def _pipeline_sync_entries(repo_root):
+    base = repo_root / PIPELINE_REPO_DIR
+    for path in sorted(base.rglob("*.py")):
+        relative = path.relative_to(base)
+        yield (f"comfyui_pipeline/{relative.as_posix()}", PIPELINE_REPO_DIR / relative,
+               PIPELINE_DEPLOYED_DIR / relative)
+
+
 def _check_source_sync(repo_root, comfyui_path, results, require_video=False):
-    for label, repo_relative, deployed_relative in SYNC_SOURCE_FILES:
+    for label, repo_relative, deployed_relative in (*SYNC_SOURCE_FILES, *_pipeline_sync_entries(repo_root)):
         repo_file = repo_root / repo_relative
         deployed_file = comfyui_path / deployed_relative
         if not repo_file.is_file():

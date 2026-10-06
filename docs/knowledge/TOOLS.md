@@ -11,7 +11,7 @@ status: current
 | 共用 brief、參考責任、分階段與美術驗收；不執行生成 | 方法文件，不代表任何 executor 可用；物件系列、VFX、動作方法按需查 production reference | [`game-art-workflow`](../../skills/game-art-workflow/SKILL.md)、[production](../../skills/game-art-workflow/references/production.md)、[responsibilities](../../skills/game-art-workflow/references/responsibilities.md) |
 | 初次使用／路線初始化與需求盤點 | 不安裝、不生成；明確選路線後交給相應入口 | [`game-art-initialize`](../../skills/game-art-initialize/SKILL.md)、[初始化說明](installation/initialization.md) |
 | 平台原生圖片工具 | 依本次會話 schema；2026-10-05 單張文字生圖及編修技術完成，均候選待驗收；多參考、其他平台、影片未測 | [`platform-image-gen`](../../skills/platform-image-gen/SKILL.md)、[本地測試範圍](../../README.md#平台圖片工具的實測範圍) |
-| ComfyUI 固定圖片 task：`generate.py` facade + `comfyui_pipeline/` | 12 個現有 task；SDXL／SD1.5 依 image capability/profile gate；FLUX.2 獨立 preflight。沿用固定 graph，不臨場組圖 | [`comfyui-art-gen`](../../skills/comfyui-art-gen/SKILL.md)、[圖片路由與 gate](art-generation.md)、[參數](../../skills/comfyui-art-gen/reference/full-params.md) |
+| ComfyUI 固定圖片 task：`generate.py` facade + `comfyui_pipeline/`（task 在 `tasks/`，ComfyUI client 在 `client.py`，流程在 `cli.py`） | 12 個現有 task；SDXL／SD1.5 依 image capability/profile gate；FLUX.2 獨立 preflight。沿用固定 graph，不臨場組圖 | [`comfyui-art-gen`](../../skills/comfyui-art-gen/SKILL.md)、[圖片路由與 gate](art-generation.md)、[參數](../../skills/comfyui-art-gen/reference/full-params.md) |
 | ComfyUI brief 輸入映射 | 相容入口，只映射已存在 task，不執行生成 | [`game-art-edit-brief`](../../skills/game-art-edit-brief/SKILL.md)、[情境](../../skills/game-art-edit-brief/references/scenarios.md) |
 | 固定來源有限參數 sweep：`image_edit_tools.py sweep` | 包裝四個既有 task，最多 16 個候選；不新增 task／graph，也不是自動重試 | [`comfyui-image-sweep`](../../skills/comfyui-image-sweep/SKILL.md)、[計畫格式](../../skills/comfyui-image-sweep/reference/plan-format.md) |
 | 本機像素處理：`image_edit_tools.py` | Pillow／NumPy；composite、HSV recolor、RGBA compare、reference-board、asset-audit。只技術檢查，不做語意／美術評分 | [`local-image-edit-tools`](../../skills/local-image-edit-tools/SKILL.md)、[契約與驗證](art/edit-tools.md)、[換色案例](art/single-object-color.md) |
@@ -32,13 +32,22 @@ status: current
 | 設備偵測：`detect_device.py` | 掃 GPU／VRAM／OS，產生機器專用 `device_config.json`；換設備重跑 | [`comfyui-install`](../../skills/comfyui-install/SKILL.md)、[installation guide](installation/install-guide.md) |
 | 圖片能力偵測：`detect_image_capabilities.py` | 只掃 profiles、已裝模型／nodes 與驗證狀態，不下載；FLUX.2 不在 snapshot | [`comfyui-art-gen`](../../skills/comfyui-art-gen/SKILL.md)、[art generation gate](art-generation.md)、[模型設定設計](../model-profiles-design.md) |
 | 影片能力偵測：`detect_video_capabilities.py` | 只掃現有模型、runtime、nodes，不下載；不能從圖片 tier 猜影片 backend | [`comfyui-video-gen`](../../skills/comfyui-video-gen/SKILL.md)、[video overview](video/README.md) |
+| 素材決定紀錄：`gameart.py review` | `list` 列出 `*.result.json` 候選與 pending/accepted/rejected/mismatch；`accept|reject --by` 僅在使用者明確決定後記錄到 `*.decisions.json`（綁輸出 SHA-256，重生成不繼承）；技術 manifest 不被改動 | [result-records](result-records.md) |
+| 快照健檢：`gameart.py doctor` | 唯讀列出三份快照是否存在／過期（比對 ComfyUI commit、custom_nodes、模型清單指紋，存於 `capability_fingerprint.json`）與 unverified 摘要；`--refresh` 重跑三個 detector 並更新指紋，`--json` 供程式讀取 | [`game-art-initialize`](../../skills/game-art-initialize/SKILL.md) |
 | 可攜部署驗證：`verify_portable_install.py` | 核對部署 facade、package、profiles 等安裝內容；依安裝設定執行 | [`comfyui-install`](../../skills/comfyui-install/SKILL.md) |
 | BiRefNet benchmark：`benchmark_birefnet.py` | 維護者去背模型 A/B，不是日常 task；現有證據不足以取代正式模型 | [`comfyui-pipeline-review`](../../skills/comfyui-pipeline-review/SKILL.md)、[`comfyui-new-tool-checklist`](../../skills/comfyui-new-tool-checklist/SKILL.md) |
 | 外部 kohya_ss／sd-scripts LoRA 訓練 | repo 無訓練程式；RTX 4080 單次 smoke 不證明其他機器可用 | [`comfyui-install` LoRA reference](../../skills/comfyui-install/reference/lora-training.md)、[LoRA knowledge](installation/lora-training.md) |
 | 新技能／工具／路線維護 | 依實際路線做相應 gate，不強制新增 Python 或 generate task | [`comfyui-new-tool-checklist`](../../skills/comfyui-new-tool-checklist/SKILL.md)、[checklist](maintenance/new-capability-checklist.md) |
 | 技能庫／產線審視 | repo 證據離線盤點；模型研究只查明確指定範圍，不自動下載／改 profile | [`comfyui-pipeline-review`](../../skills/comfyui-pipeline-review/SKILL.md)、[review reference](maintenance/pipeline-review.md)、[skill library](maintenance/skill-library.md) |
 | 專案知識庫讀寫：標準 Markdown | 小模型 draft、root review；按需閱讀，不把觀察自動升格為 profile／驗收 | [`project-knowledge`](../../skills/project-knowledge/SKILL.md)、[knowledge index](INDEX.md)、[Obsidian integration](maintenance/obsidian-integration.md) |
-| 上游 Obsidian skills | 按各自觸發條件；vault/runtime 支援有限，legacy vault 不代表 ingest/query 已就緒 | [Obsidian integration](maintenance/obsidian-integration.md)、[`skills/` 清單](../../skills/) |
+| 上游 Obsidian skills | 按各自觸發條件；vault/runtime 支援有限，legacy vault 不代表 ingest/query 已就緒 | [Obsidian integration](maintenance/obsidian-integration.md)、[`skills/README.md`](../../skills/README.md) |
 | ComfyUI 安裝／升級／初始化 | 安裝依賴硬體與已選路線；升級審視需明確要求；初次使用先走初始化 | [`comfyui-install`](../../skills/comfyui-install/SKILL.md)、[`game-art-initialize`](../../skills/game-art-initialize/SKILL.md)、[`pipeline-review`](../../skills/comfyui-pipeline-review/SKILL.md) |
 
 圖片、影片與本機工具各有自身依賴及狀態；`unverified` task 在執行前告知使用者。影片與動畫細節以各自 canonical page 為準。repo 尚無 ComfyUI MCP 生成入口；不可列作 fallback。能力目錄只記錄入口與證據，不能將不同 gate 壓成通用 `verified` 標籤。
+
+## 統一入口 `gameart.py`
+
+`tools_src/gameart.py` 是薄 dispatcher：`python gameart.py <tool> [args...]` 以 `runpy` 轉發到既有腳本，argv、`--help`、結束碼與直接執行相同，只載入被選工具的相依套件。`python gameart.py list` 列出對應：`gen`(generate.py)、`design`、`edit`(image_edit_tools.py)、`face-swap`、`video-layers`、`film-audio`、`film-lipsync`、`film-qwen`、`sam`、`mask-refine`、`mask-session`、`detect-device`、`detect-image`、`detect-video`、`review`(asset_review.py)、`verify-install`、`benchmark-birefnet`。
+
+- 它是 repo 端便利入口，不列入 `verify_portable_install.py` 的部署同步清單；部署副本（`<ComfyUI>/tools/`）仍直接呼叫各腳本。
+- 輸出位置慣例（現況，未統一）：多數工具的 `--output-dir` 為必填且要求新資料夾／空資料夾；`generate.py` 省略時預設 `<腳本所在資料夾>/generated`；`face_swap.py`／`video_layers.py` 的 `--output-dir` 只在 swap／run 必填；偵測工具用 `--out`（JSON 路徑）；`film_audio.py`／`film_lipsync.py` 用 `--output`（檔案）。技能文件要求圖片生成明確帶 `--output-dir <output_dir>`（`local_config.json`，即 repo 的 `output/`）。

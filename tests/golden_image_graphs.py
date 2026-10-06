@@ -13,7 +13,7 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TOOLS_SRC = os.path.join(ROOT, "tools_src")
-FIXTURE_PATH = os.path.join(ROOT, "tests", "fixtures", "image_graphs_golden.json")
+FIXTURE_DIR = os.path.join(ROOT, "tests", "fixtures", "image_graphs_golden")  # one <tier>.json per device tier
 
 # Mirrors tools_src/detect_device.py TIERS (checkpoint and default resolution).
 TIER_DEVICES = {
@@ -97,16 +97,34 @@ def load_image_graphs():
     return image_graphs
 
 
+def tier_path(tier):
+    return os.path.join(FIXTURE_DIR, f"{tier}.json")
+
+
+def load_fixture():
+    """Return {tier: {case: [graph, output_node]}} read from the per-tier files."""
+    data = {}
+    for tier in TIER_DEVICES:
+        with open(tier_path(tier), encoding="utf-8") as handle:
+            data[tier] = json.load(handle)
+    return data
+
+
+def write_fixture(data):
+    os.makedirs(FIXTURE_DIR, exist_ok=True)
+    for tier, cases in data.items():
+        with open(tier_path(tier), "w", encoding="utf-8", newline="\n") as handle:
+            json.dump(cases, handle, ensure_ascii=False, indent=1, sort_keys=True)
+            handle.write("\n")
+
+
 def main(argv):
     if "--write" not in argv:
-        print("用 --write 覆寫 golden fixture；只在刻意改變 graph 時執行。", file=sys.stderr)
+        print("用 --write 覆寫 golden fixture(tests/fixtures/image_graphs_golden/<tier>.json)；只在刻意改變 graph 時執行。", file=sys.stderr)
         return 2
     data = build_all(load_image_graphs())
-    os.makedirs(os.path.dirname(FIXTURE_PATH), exist_ok=True)
-    with open(FIXTURE_PATH, "w", encoding="utf-8", newline="\n") as handle:
-        json.dump(data, handle, ensure_ascii=False, indent=1, sort_keys=True)
-        handle.write("\n")
-    print(f"wrote {FIXTURE_PATH}")
+    write_fixture(data)
+    print(f"wrote {FIXTURE_DIR}")
     return 0
 
 

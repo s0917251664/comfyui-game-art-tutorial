@@ -1,0 +1,24 @@
+# 這個檔案只宣告專案中繼資料、選用相依與 pytest 設定。
+# 它不是可安裝套件:tools_src/ 的腳本由 verify_portable_install.py 複製到 ComfyUI/tools,
+# 沒有 [build-system],也不要 `pip install .`。
+[project]
+name = "comfyui-game-art-tutorial"
+version = "0.0.0"
+description = "遊戲美術 AI 協作與產線(ComfyUI 圖片/影片生成與本機素材處理)"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []  # 核心流程只用標準庫;其餘依功能放在下列選用群組
+
+[project.optional-dependencies]
+# 本機像素工具(image_edit_tools、comfyui_design、mask_refine、sam_segment 等)
+image = ["pillow", "numpy"]
+# 影片/音訊處理(face_swap、film_audio、film_lipsync、video_layers)
+video = ["pillow", "numpy", "av", "opencv-python"]
+# ComfyUI 自訂節點與模型相關測試(通常已由 ComfyUI 的 venv 提供)
+nodes = ["torch"]
+dev = ["pytest"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["tools_src", "tests", "."]
+python_files = ["test_*.py"]

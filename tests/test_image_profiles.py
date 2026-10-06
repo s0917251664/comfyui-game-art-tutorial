@@ -68,8 +68,7 @@ class ImageProfileTests(unittest.TestCase):
                 self.assertEqual("sd_xl_base_1.0.safetensors", graph["1"]["inputs"]["ckpt_name"])
 
     def test_graphs_match_pre_profile_golden_fixture(self):
-        with open(golden_image_graphs.FIXTURE_PATH, encoding="utf-8") as handle:
-            expected = json.load(handle)
+        expected = golden_image_graphs.load_fixture()
         actual = json.loads(json.dumps(golden_image_graphs.build_all(self.ig)))
         self.assertEqual(sorted(expected), sorted(actual))
         for tier, cases in expected.items():
@@ -129,8 +128,7 @@ class ImageProfileTests(unittest.TestCase):
     FLUX_CASES = frozenset(("flux2_concept", "flux2_edit"))
 
     def test_every_graph_node_is_core_or_declared_by_profile_models(self):
-        with open(golden_image_graphs.FIXTURE_PATH, encoding="utf-8") as handle:
-            fixture = json.load(handle)
+        fixture = golden_image_graphs.load_fixture()
         for tier, cases in fixture.items():
             profile = self.profiles.load_profile(self.profiles.profile_id_for_tier(tier))
             declared = set(self.CORE_NODES)

@@ -13,6 +13,7 @@ __pycache__/
 device_config.json
 image_capabilities.json
 video_capabilities.json
+capability_fingerprint.json
 reports
 
 # Obsidian vault machine-specific layout/cache; keep app.json and core-plugins.json tracked

@@ -1,3 +1,7 @@
+import optional_deps
+
+optional_deps.require("PIL", "numpy", "torch")
+
 import argparse
 import importlib.util
 import unittest

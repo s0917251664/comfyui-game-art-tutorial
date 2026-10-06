@@ -1,3 +1,7 @@
+import optional_deps
+
+optional_deps.require("PIL", "numpy")
+
 import io
 import tempfile
 import unittest

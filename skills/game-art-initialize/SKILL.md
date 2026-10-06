@@ -16,6 +16,8 @@ description: 協助第一次使用本專案的使用者開始遊戲美術工作�
 - 本機檔案處理與遮罩等 helper 是獨立路線，按任務讀 `skills/local-image-edit-tools/SKILL.md`、`skills/comfyui-object-design/SKILL.md` 或相符工具技能；逐項檢查其自身依賴，不由「使用 ComfyUI」推定需要 server、GPU 或 repo Python。
 - 只有使用者明確要求安裝／初始化本機 ComfyUI，或明確選擇需本機安裝的既有 CLI／helper 且其自身依賴缺失時，才讀 `skills/comfyui-install/SKILL.md` 和安裝知識。安裝前遵照安裝流程說明容量與範圍。各工具依自己的契約判斷依賴；不得假設所有 ComfyUI 路線都需要相同 Python 或本機設定。
 
+已有本機 ComfyUI 路線時，盤點用 `python tools_src/gameart.py doctor`（唯讀）看三份機器快照是否缺少或過期；換機或環境變動才跑 `doctor --refresh`（只掃描，不下載）。
+
 路線概念速查：需求 brief／平台圖片／支援的直接 ComfyUI API／既有本機 CLI／本機檔案處理，各自是不同執行方式。尚未選路線時採需求整理與盤點、不安裝；已有 ComfyUI 專案則沿用已選 executor，不重問引擎。能力不足時回報實際缺口，不靜默切換平台、外部付費服務或另一種工具。平台圖片能力不代表影片能力。
 
 ## 執行邊界

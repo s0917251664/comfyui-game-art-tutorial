@@ -1,3 +1,7 @@
+import optional_deps
+
+optional_deps.require("PIL", "numpy", "av")
+
 import importlib.util
 import json
 from pathlib import Path

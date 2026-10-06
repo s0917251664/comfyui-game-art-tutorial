@@ -1,11 +1,18 @@
+import optional_deps
+
+optional_deps.require("PIL", "numpy")
+
 import argparse
+import sys
 import tempfile
 from pathlib import Path
 import unittest
 from unittest.mock import patch
 
 from PIL import Image, ImageDraw
-import comfyui_design as d
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools_src'))
+import comfyui_design as d  # noqa: E402
 
 
 class DesignTests(unittest.TestCase):

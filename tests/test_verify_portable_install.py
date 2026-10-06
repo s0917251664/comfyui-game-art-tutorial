@@ -38,12 +38,11 @@ class VerifyPortableInstallTests(unittest.TestCase):
         cls.sam_segment_bytes = SAM_SEGMENT_PATH.read_bytes()
         cls.image_edit_tools_bytes = (ROOT / "tools_src/image_edit_tools.py").read_bytes()
         cls.mask_refine_bytes = (ROOT / "tools_src/mask_refine.py").read_bytes()
-        cls.pipeline_init_bytes = (PIPELINE_PKG / "__init__.py").read_bytes()
-        cls.pipeline_image_bytes = (PIPELINE_PKG / "image_graphs.py").read_bytes()
-        cls.pipeline_image_results_bytes = (PIPELINE_PKG / "image_results.py").read_bytes()
-        cls.pipeline_video_bytes = (PIPELINE_PKG / "video_catalog.py").read_bytes()
-        cls.pipeline_video_graphs_bytes = (PIPELINE_PKG / "video_graphs.py").read_bytes()
-        cls.pipeline_profiles_bytes = (PIPELINE_PKG / "profiles.py").read_bytes()
+        # comfyui_pipeline/ 底下所有 .py(含 tasks/)都要同步到部署副本;驗證器依 repo 實際檔案核對。
+        cls.pipeline_source_bytes = {
+            path.relative_to(PIPELINE_PKG).as_posix(): path.read_bytes()
+            for path in sorted(PIPELINE_PKG.rglob("*.py"))
+        }
         cls.detect_image_bytes = (ROOT / "tools_src" / "detect_image_capabilities.py").read_bytes()
         cls.profile_json_bytes = {
             path.name: path.read_bytes() for path in sorted((PIPELINE_PKG / "profiles").glob("*.json"))
@@ -72,7 +71,8 @@ class VerifyPortableInstallTests(unittest.TestCase):
         self._copy_source(tools_dir / "sam_segment.py", self.sam_segment_bytes)
         self._copy_source(tools_dir / "image_edit_tools.py", self.image_edit_tools_bytes)
         self._copy_source(tools_dir / "comfyui_design.py", (ROOT / "tools_src/comfyui_design.py").read_bytes())
-        for name in ("film_audio.py", "film_sapi.ps1", "film_qwen.py", "film_lipsync.py", "face_swap.py", "video_layers.py"):
+        for name in ("film_audio.py", "film_sapi.ps1", "film_qwen.py", "film_lipsync.py", "face_swap.py", "video_layers.py",
+                     "detect_video_capabilities.py", "gameart.py", "doctor.py", "asset_review.py"):
             self._copy_source(tools_dir / name, (ROOT / "tools_src" / name).read_bytes())
         for name in ("__init__.py", "contracts.py", "media.py", "nodes.py"):
             for location in (tools_dir / "comfyui_face_swap_video", comfyui_path / "custom_nodes/comfyui-face-swap-video"):
@@ -81,12 +81,8 @@ class VerifyPortableInstallTests(unittest.TestCase):
         for name in ("__init__.py", "contracts.py", "media.py", "nodes.py"):
             for location in (tools_dir / "comfyui_video_layers", comfyui_path / "custom_nodes/comfyui-video-layers"):
                 self._copy_source(location / name, (ROOT / "tools_src/comfyui_video_layers" / name).read_bytes())
-        self._copy_source(tools_dir / "comfyui_pipeline" / "__init__.py", self.pipeline_init_bytes)
-        self._copy_source(tools_dir / "comfyui_pipeline" / "image_graphs.py", self.pipeline_image_bytes)
-        self._copy_source(tools_dir / "comfyui_pipeline" / "image_results.py", self.pipeline_image_results_bytes)
-        self._copy_source(tools_dir / "comfyui_pipeline" / "video_catalog.py", self.pipeline_video_bytes)
-        self._copy_source(tools_dir / "comfyui_pipeline" / "video_graphs.py", self.pipeline_video_graphs_bytes)
-        self._copy_source(tools_dir / "comfyui_pipeline" / "profiles.py", self.pipeline_profiles_bytes)
+        for name, source in self.pipeline_source_bytes.items():
+            self._copy_source(tools_dir / "comfyui_pipeline" / name, source)
         self._copy_source(tools_dir / "detect_image_capabilities.py", self.detect_image_bytes)
         for name, source in self.profile_json_bytes.items():
             self._copy_source(tools_dir / "comfyui_pipeline" / "profiles" / name, source)
@@ -376,11 +372,8 @@ class VerifyPortableInstallTests(unittest.TestCase):
                     ("detect_device.py", self.detect_device_bytes),
                     ("sam_segment.py", self.sam_segment_bytes),
                     ("image_edit_tools.py", self.image_edit_tools_bytes),
-                    ("comfyui_pipeline/__init__.py", self.pipeline_init_bytes),
-                    ("comfyui_pipeline/image_graphs.py", self.pipeline_image_bytes),
-                    ("comfyui_pipeline/video_catalog.py", self.pipeline_video_bytes),
-                    ("comfyui_pipeline/video_graphs.py", self.pipeline_video_graphs_bytes),
-                    ("comfyui_pipeline/profiles.py", self.pipeline_profiles_bytes),
+                    *((f"comfyui_pipeline/{name}", source)
+                      for name, source in self.pipeline_source_bytes.items()),
                     ("detect_image_capabilities.py", self.detect_image_bytes),
                     *((f"comfyui_pipeline/profiles/{name}", source)
                       for name, source in self.profile_json_bytes.items())):
