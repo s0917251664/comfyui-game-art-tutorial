@@ -1,5 +1,6 @@
 """放大精修圖片 task:upscale(放大模型 + 二次取樣補細節)。"""
-from ..runtime import facade as rt
+from .. import image_runtime
+from ..image_graphs import validate_scale, validate_unit_interval
 
 TASKS = ("upscale",)
 
@@ -22,15 +23,15 @@ def add_parser(sub, parents, task):
 
 
 def validate(args):
-    rt.validate_unit_interval(args.denoise, "denoise")
-    rt.validate_scale(args.scale)
+    validate_unit_interval(args.denoise, "denoise")
+    validate_scale(args.scale)
 
 
-def build_graph(args, style_checkpoint, upload):
+def build_graph(ctx, args, style_checkpoint, upload):
     """組圖片 task 的 graph;``upload`` 回傳 ComfyUI 端檔名。"""
     if args.task == "upscale":
         img_fn = upload(args.image)
-        prompt, out_id = rt.build_upscale(args.prompt, img_fn, args.negative,
+        prompt, out_id = image_runtime.build_upscale(ctx, args.prompt, img_fn, args.negative,
                                         scale=args.scale, denoise=args.denoise, seed=args.seed,
                                         checkpoint=style_checkpoint)
     else:

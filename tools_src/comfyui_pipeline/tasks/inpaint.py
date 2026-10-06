@@ -1,5 +1,6 @@
 """局部重繪圖片 task:inpaint、guided_inpaint(可選結構鎖定/外觀參考)。"""
-from ..runtime import facade as rt
+from .. import image_runtime
+from ..image_graphs import validate_unit_interval
 
 TASKS = ("inpaint", "guided_inpaint")
 
@@ -41,26 +42,26 @@ def add_parser(sub, parents, task):
 
 
 def validate(args):
-    rt.validate_unit_interval(args.denoise, "denoise")
+    validate_unit_interval(args.denoise, "denoise")
     if args.task == "guided_inpaint":
-        rt.validate_unit_interval(args.control_strength, "control_strength")
-        rt.validate_unit_interval(args.appearance_weight, "appearance_weight")
+        validate_unit_interval(args.control_strength, "control_strength")
+        validate_unit_interval(args.appearance_weight, "appearance_weight")
 
 
-def check_capabilities(args):
+def check_capabilities(ctx, args):
     if args.task == "guided_inpaint":
         if args.control_type:
-            rt.require_sdxl_capability("guided_inpaint 的 ControlNet")
+            image_runtime.require_sdxl_capability(ctx, "guided_inpaint 的 ControlNet")
         if args.appearance_ref:
-            rt.require_sdxl_capability("guided_inpaint 的 IPAdapter")
+            image_runtime.require_sdxl_capability(ctx, "guided_inpaint 的 IPAdapter")
 
 
-def build_graph(args, style_checkpoint, upload):
+def build_graph(ctx, args, style_checkpoint, upload):
     """組圖片 task 的 graph;``upload`` 回傳 ComfyUI 端檔名。"""
     if args.task == "inpaint":
         img_fn = upload(args.image)
         mask_fn = upload(args.mask)
-        prompt, out_id = rt.build_inpaint(args.prompt, img_fn, mask_fn, args.negative,
+        prompt, out_id = image_runtime.build_inpaint(ctx, args.prompt, img_fn, mask_fn, args.negative,
                                         denoise=args.denoise, seed=args.seed, checkpoint=style_checkpoint)
     elif args.task == "guided_inpaint":
         img_fn = upload(args.image)
@@ -69,7 +70,7 @@ def build_graph(args, style_checkpoint, upload):
         if args.control_type:
             control_fn = upload(args.control_ref) if args.control_ref else img_fn
         appearance_fn = upload(args.appearance_ref) if args.appearance_ref else None
-        prompt, out_id = rt.build_guided_inpaint(
+        prompt, out_id = image_runtime.build_guided_inpaint(ctx,
             args.prompt, img_fn, mask_fn, args.negative,
             control_ref_filename=control_fn, control_type=args.control_type, control_strength=args.control_strength,
             appearance_ref_filename=appearance_fn, appearance_weight=args.appearance_weight,

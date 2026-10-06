@@ -1,7 +1,7 @@
 """ComfyUI HTTP client:URL 解析、上傳、排隊/輪詢、下載輸出。
 
-從 generate.py 抽出。會被舊呼叫端或測試改值/打補丁的名稱(``resolve_comfy_url``、``COMFY_URL``、``OUTPUT_DIR``)
-一律透過 ``runtime.facade``(也就是 generate 模組)解析,行為與原本放在 generate.py 時相同。
+從 generate.py 抽出。不依賴任何全域可變狀態:嵌入時的預設 URL 由呼叫端經 ``default_url`` 傳入
+(cli 傳 ``RunContext.comfy_url``)。
 """
 import json
 import math
@@ -14,7 +14,9 @@ import urllib.parse
 import urllib.request
 import uuid
 
-from .runtime import facade as rt
+
+# 成品預設輸出資料夾:部署時為 <tools>/generated(與 comfyui_pipeline 同層)。
+OUTPUT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "generated")
 
 COMFY_URL_ENV_VARS = ("COMFY_URL", "COMFYUI_URL")
 COMFY_CONFIG_ENV_VARS = (
@@ -51,13 +53,15 @@ def _read_runtime_config(config_path):
     return config
 
 
-def resolve_comfy_url(cli_url=None, config_path=None):
+def resolve_comfy_url(cli_url=None, config_path=None, default_url=None):
     """Resolve the ComfyUI URL with CLI > environment > explicit config priority.
 
     There is deliberately no automatic ``local_config.json`` lookup: a copied
     script must not accidentally connect to a path relative to the source repo.
+    ``default_url`` is the embedding override (formerly ``generate.COMFY_URL``); it ranks
+    after the environment variables, before the config file.
     """
-    for candidate in (cli_url, *(os.environ.get(name) for name in COMFY_URL_ENV_VARS), rt.COMFY_URL):
+    for candidate in (cli_url, *(os.environ.get(name) for name in COMFY_URL_ENV_VARS), default_url):
         if candidate:
             return _normalise_comfy_url(candidate)
 
@@ -77,7 +81,7 @@ def resolve_comfy_url(cli_url=None, config_path=None):
 
 
 def _comfy_endpoint(path, comfy_url=None):
-    base = _normalise_comfy_url(comfy_url) if comfy_url else rt.resolve_comfy_url()
+    base = _normalise_comfy_url(comfy_url) if comfy_url else resolve_comfy_url()
     return f"{base}/{path.lstrip('/')}"
 
 
@@ -340,7 +344,7 @@ def download_outputs(history_entry, output_dir=None, node_ids=None, comfy_url=No
     validate_timeout(request_timeout)
     if not isinstance(history_entry, dict) or not isinstance(history_entry.get("outputs"), dict):
         raise RuntimeError("ComfyUI history 沒有有效的 outputs")
-    output_dir = output_dir or rt.OUTPUT_DIR
+    output_dir = output_dir or OUTPUT_DIR
     paths = []
     os.makedirs(output_dir, exist_ok=True)
     selected_ids = {str(node_id) for node_id in node_ids} if node_ids is not None else None

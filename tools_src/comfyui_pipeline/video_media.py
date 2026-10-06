@@ -9,7 +9,7 @@ import shutil
 import tempfile
 from fractions import Fraction
 
-from .runtime import facade as rt
+from .image_graphs import PILImage, _require_pillow
 from .video_catalog import (
     VIDEO_AUDIO_DRIFT_TOLERANCE, VIDEO_DURATION_MAX, VIDEO_DURATION_MIN, VIDEO_FPS,
     VIDEO_FPS_TOLERANCE, VIDEO_INPUT_MIN_DURATION, VIDEO_MAX_SIDE,
@@ -31,13 +31,13 @@ def _require_wh_pair(args):
 
 
 def video_canvas(image_path, width=None, height=None):
-    rt._require_pillow()
+    _require_pillow()
     """把輸出畫布收到 VIDEO_MAX_SIDE 以內、且寬高都是 32 的倍數。
     不給寬高就跟來源圖比例走(先縮最長邊)。16GB 實測只鎖到 768,再大要另測。"""
     if width and height:
         src_w, src_h = width, height
     else:
-        with rt.PILImage.open(image_path) as im:
+        with PILImage.open(image_path) as im:
             src_w, src_h = im.size
     long_side = max(src_w, src_h)
     scale = min(1.0, VIDEO_MAX_SIDE / float(long_side))
@@ -47,9 +47,9 @@ def video_canvas(image_path, width=None, height=None):
 
 
 def _image_size(image_path):
-    rt._require_pillow()
+    _require_pillow()
     try:
-        with rt.PILImage.open(image_path) as image:
+        with PILImage.open(image_path) as image:
             return image.size
     except (OSError, ValueError) as exc:
         raise ValueError(f"無法讀取影片輸入圖片: {image_path}") from exc
@@ -57,8 +57,8 @@ def _image_size(image_path):
 
 def validate_transition_images(start_path, end_path):
     """Reject incompatible A/B aspect ratios before either image is uploaded."""
-    start_width, start_height = rt._image_size(start_path)
-    end_width, end_height = rt._image_size(end_path)
+    start_width, start_height = _image_size(start_path)
+    end_width, end_height = _image_size(end_path)
     start_ratio = start_width / float(start_height)
     end_ratio = end_width / float(end_height)
     if not math.isclose(start_ratio, end_ratio, rel_tol=0.0, abs_tol=0.01):
@@ -293,18 +293,18 @@ def _resize_video_image(image, width, height, mode):
     if image.size == (width, height):
         return image
     if mode == "stretch":
-        return image.resize((width, height), rt.PILImage.Resampling.LANCZOS)
+        return image.resize((width, height), PILImage.Resampling.LANCZOS)
     source_ratio = image.width / float(image.height)
     target_ratio = width / float(height)
     if mode == "fit":
         scale = min(width / image.width, height / image.height)
-        resized = image.resize((max(1, round(image.width * scale)), max(1, round(image.height * scale))), rt.PILImage.Resampling.LANCZOS)
-        canvas = rt.PILImage.new("RGB", (width, height), (0, 0, 0))
+        resized = image.resize((max(1, round(image.width * scale)), max(1, round(image.height * scale))), PILImage.Resampling.LANCZOS)
+        canvas = PILImage.new("RGB", (width, height), (0, 0, 0))
         canvas.paste(resized, ((width - resized.width) // 2, (height - resized.height) // 2))
         return canvas
     if mode == "fill":
         scale = max(width / image.width, height / image.height)
-        resized = image.resize((max(1, round(image.width * scale)), max(1, round(image.height * scale))), rt.PILImage.Resampling.LANCZOS)
+        resized = image.resize((max(1, round(image.width * scale)), max(1, round(image.height * scale))), PILImage.Resampling.LANCZOS)
         left = max(0, (resized.width - width) // 2)
         top = max(0, (resized.height - height) // 2)
         return resized.crop((left, top, left + width, top + height))
@@ -331,7 +331,7 @@ def concat_videos(video_paths, dest_path, allow_overwrite=False, resize_mode="st
             f"拒絕覆寫既有 video_concat 輸出: {dest_path!r}；"
             "請換 --name，或明確使用 --overwrite"
         )
-    rt._require_pillow()
+    _require_pillow()
     import av
 
     stream_specs = []
@@ -531,7 +531,7 @@ def composite_videos(foreground_path, background_path, dest_path, chroma_color="
             f"拒絕覆寫既有 video_composite 輸出: {dest_path!r}；"
             "請換 --name，或明確使用 --overwrite"
         )
-    rt._require_pillow()
+    _require_pillow()
     import numpy as np
     import av
 
@@ -577,7 +577,7 @@ def composite_videos(foreground_path, background_path, dest_path, chroma_color="
             raise
     else:
         try:
-            with rt.PILImage.open(background_path) as im:
+            with PILImage.open(background_path) as im:
                 bg_image = im.convert("RGB")
                 bg_size = bg_image.size
         except Exception as exc:

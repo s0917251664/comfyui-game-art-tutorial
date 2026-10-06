@@ -1,5 +1,6 @@
 """基本圖片 task:concept(文生圖)、icon_asset(去背小圖示)、refine(圖生圖精修)。"""
-from ..runtime import facade as rt
+from .. import image_runtime
+from ..image_graphs import validate_unit_interval
 from ._common import validate_explore_args
 
 TASKS = ("concept", "icon_asset", "refine")
@@ -46,35 +47,35 @@ def validate(args):
     if args.task in ("concept", "icon_asset"):
         validate_explore_args(args)
     if args.task == "icon_asset":
-        rt.validate_unit_interval(args.appearance_weight, "appearance_weight")
+        validate_unit_interval(args.appearance_weight, "appearance_weight")
     if args.task == "refine":
-        rt.validate_unit_interval(args.denoise, "denoise")
+        validate_unit_interval(args.denoise, "denoise")
 
 
-def check_capabilities(args):
+def check_capabilities(ctx, args):
     if args.task == "icon_asset":
         if args.structure_ref:
-            rt.require_sdxl_capability("icon_asset 的 structure-ref/ControlNet")
+            image_runtime.require_sdxl_capability(ctx, "icon_asset 的 structure-ref/ControlNet")
         if args.appearance_ref:
-            rt.require_sdxl_capability("icon_asset 的 appearance-ref/IPAdapter")
+            image_runtime.require_sdxl_capability(ctx, "icon_asset 的 appearance-ref/IPAdapter")
 
 
-def build_graph(args, style_checkpoint, upload):
+def build_graph(ctx, args, style_checkpoint, upload):
     """組圖片 task 的 graph;``upload`` 回傳 ComfyUI 端檔名。"""
     if args.task == "concept":
-        prompt, out_id = rt.build_concept(args.prompt, args.negative, args.width, args.height, args.seed,
+        prompt, out_id = image_runtime.build_concept(ctx, args.prompt, args.negative, args.width, args.height, args.seed,
                                         batch_size=args.batch, lora_name=args.lora, lora_strength=args.lora_strength,
                                         checkpoint=style_checkpoint)
     elif args.task == "icon_asset":
         structure_fn = upload(args.structure_ref) if args.structure_ref else None
         appearance_fn = upload(args.appearance_ref) if args.appearance_ref else None
-        prompt, out_id = rt.build_icon_asset(args.prompt, args.negative, args.width, args.height, args.seed,
+        prompt, out_id = image_runtime.build_icon_asset(ctx, args.prompt, args.negative, args.width, args.height, args.seed,
                                            batch_size=args.batch, lora_name=args.lora, lora_strength=args.lora_strength,
                                            structure_ref_filename=structure_fn, checkpoint=style_checkpoint,
                                            appearance_ref_filename=appearance_fn, appearance_weight=args.appearance_weight)
     elif args.task == "refine":
         img_fn = upload(args.image)
-        prompt, out_id = rt.build_refine(args.prompt, img_fn, args.negative,
+        prompt, out_id = image_runtime.build_refine(ctx, args.prompt, img_fn, args.negative,
                                        denoise=args.denoise, seed=args.seed, checkpoint=style_checkpoint)
     else:
         raise ValueError(f"不是這個模組的圖片 task: {args.task}")

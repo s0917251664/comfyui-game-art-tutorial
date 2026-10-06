@@ -11,7 +11,7 @@ from .client import (
     DEFAULT_HTTP_TIMEOUT, _read_runtime_config, _relative_config_path, _runtime_config_path_from_env,
 )
 from .image_graphs import DEVICE_CONFIG_PATH
-from .runtime import facade as rt
+from .client import _fetch_comfy_object_info
 
 
 FLUX2_REQUIRED_NODES = (
@@ -139,14 +139,13 @@ def load_image_capabilities(runtime_config_path=None, image_config_path=None):
     return _read_runtime_config(source), source
 
 
-def resolve_image_profile(task, cli_profile=None, capabilities=None, capabilities_source=None, device=None):
+def resolve_image_profile(task, device, cli_profile=None, capabilities=None, capabilities_source=None):
     """決定這次圖片 task 用哪份模型設定檔;回傳 profile id,或 None 代表沿用 tier 對應。
 
     來源優先序:--profile → image_capabilities.json 的 default_profile → 無(tier 對應)。
     明確選用時一律檢查:設定檔存在、符合這台平台(後端/記憶體/精度)、提供這個 task;
     來自 capability 快照時再確認快照的設備指紋沒有過期。驗證狀態不是 verified 時只提醒、不阻擋。
     """
-    device = rt.DEVICE if device is None else device
     if task not in IMAGE_PROFILE_TASKS:
         if cli_profile:
             raise RuntimeError(f"--profile 只適用於使用圖片模型設定檔的 task；{task} 不使用設定檔")
@@ -183,36 +182,12 @@ def resolve_image_profile(task, cli_profile=None, capabilities=None, capabilitie
     return chosen
 
 
-def preflight_image_task(args, style_checkpoint, comfy_url, request_timeout=DEFAULT_HTTP_TIMEOUT):
-    """在上傳/排隊前確認 ComfyUI 有這次 graph 需要的全部 node 與模型檔。
-
-    不另外維護「哪個 task 需要哪些模型」的規則:用佔位檔名把實際要送出的 graph(含去背)
-    空組一次,再逐節點比對 /object_info。缺任何一項就停止,不上傳參考圖、不觸發下載。
-    """
-    graph, out_id = rt._build_image_task_graph(
-        args, style_checkpoint, lambda _path: PREFLIGHT_IMAGE_PLACEHOLDER,
-    )
-    if args.task == "icon_asset" or getattr(args, "remove_bg", False):
-        rt.attach_bg_removal(graph, out_id)
-    payload = rt._fetch_comfy_object_info(comfy_url, request_timeout=request_timeout)
-    missing_nodes, missing_models = check_image_graph_against_object_info(graph, payload)
-    if not missing_nodes and not missing_models:
-        return True
-    parts = [f"ComfyUI 缺少 {args.task} 需要的內容，已在上傳/排隊前停止"]
-    if missing_nodes:
-        parts.append("缺少 node（通常是 custom node 未安裝）: " + ", ".join(missing_nodes))
-    if missing_models:
-        parts.append("缺少模型檔: " + ", ".join(missing_models))
-    parts.append("可執行 detect_image_capabilities.py 查看這台機器可用的 task，缺的模型/node 依 comfyui-install 流程補齊")
-    raise RuntimeError("；".join(parts))
-
-
 def validate_flux2_capability(task, comfy_url, request_timeout=DEFAULT_HTTP_TIMEOUT):
     """Fail before image upload/queue when FLUX.2 nodes or models are absent."""
     required = list(FLUX2_REQUIRED_NODES)
     if task == "flux2_edit":
         required.extend(FLUX2_EDIT_REQUIRED_NODES)
-    payload = rt._fetch_comfy_object_info(comfy_url, request_timeout=request_timeout)
+    payload = _fetch_comfy_object_info(comfy_url, request_timeout=request_timeout)
     missing_nodes = sorted(set(required) - set(payload))
     if missing_nodes:
         raise RuntimeError(
@@ -243,7 +218,7 @@ def validate_flux2_capability(task, comfy_url, request_timeout=DEFAULT_HTTP_TIME
 
 def validate_controlnet_union_capability(comfy_url, request_timeout=DEFAULT_HTTP_TIMEOUT):
     """Fail before reference upload when the experimental Union path is absent."""
-    payload = rt._fetch_comfy_object_info(comfy_url, request_timeout=request_timeout)
+    payload = _fetch_comfy_object_info(comfy_url, request_timeout=request_timeout)
     required_nodes = {"ControlNetLoader", "SetUnionControlNetType"}
     missing_nodes = sorted(required_nodes - set(payload))
     if missing_nodes:

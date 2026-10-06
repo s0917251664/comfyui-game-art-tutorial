@@ -1,5 +1,5 @@
 """圖層拆分 task:layer_split(依遮罩從定稿圖切出單一圖層,不重新生成)。"""
-from ..runtime import facade as rt
+from .. import image_runtime
 
 TASKS = ("layer_split",)
 
@@ -24,12 +24,12 @@ def add_parser(sub, parents, task):
     _ADDERS[task](sub, parents)
 
 
-def build_graph(args, style_checkpoint, upload):
+def build_graph(ctx, args, style_checkpoint, upload):
     """組圖片 task 的 graph;``upload`` 回傳 ComfyUI 端檔名。"""
     if args.task == "layer_split":
         img_fn = upload(args.image)
         mask_fn = upload(args.mask)
-        prompt, out_id = rt.build_layer_split(img_fn, mask_fn, args.layer_name)
+        prompt, out_id = image_runtime.build_layer_split(ctx, img_fn, mask_fn, args.layer_name)
     else:
         raise ValueError(f"不是這個模組的圖片 task: {args.task}")
     return prompt, out_id

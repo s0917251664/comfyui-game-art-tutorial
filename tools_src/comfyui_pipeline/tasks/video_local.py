@@ -2,7 +2,15 @@
 import os
 import time
 
-from ..runtime import facade as rt
+from ..client import OUTPUT_DIR, _safe_output_path
+from ..video_catalog import VIDEO_FPS, VIDEO_FRAME_TOLERANCE
+from ..video_contract import (
+    VideoContractError, _safe_identifier, make_video_contract, report_video_output,
+    resume_video_output, video_filename_prefix, write_video_sidecar,
+)
+from ..video_media import (
+    VIDEO_COMPOSITE_BACKGROUND_EXTS, composite_videos, concat_videos, validate_video_input,
+)
 
 TASKS = ("video_concat", "video_composite")
 
@@ -80,8 +88,8 @@ def add_parser(sub, parents, task):
 
 
 def validate(args):
-    rt._safe_identifier(args.name, "--name")
-    rt._safe_identifier(getattr(args, "shot_id", None), "--shot-id")
+    _safe_identifier(args.name, "--name")
+    _safe_identifier(getattr(args, "shot_id", None), "--shot-id")
 
 
 def run_local(args, video_started):
@@ -95,11 +103,11 @@ def run_local(args, video_started):
 
 
 def _run_video_concat(args, video_started):
-    out_dir = getattr(args, "output_dir", None) or rt.OUTPUT_DIR
+    out_dir = getattr(args, "output_dir", None) or OUTPUT_DIR
     try:
         if all(os.path.isfile(os.path.abspath(os.fspath(path))) for path in args.video):
             input_metadata = [
-                rt.validate_video_input(path, label=f"video_concat input[{index}]")
+                validate_video_input(path, label=f"video_concat input[{index}]")
                 for index, path in enumerate(args.video)
             ]
         else:
@@ -108,7 +116,7 @@ def _run_video_concat(args, video_started):
             # real media while still failing safely in production.
             input_metadata = [{
                 "path": os.path.abspath(os.fspath(path)), "width": 0, "height": 0,
-                "fps": rt.VIDEO_FPS, "frames": 0, "duration_seconds": 0.0, "audio": False,
+                "fps": VIDEO_FPS, "frames": 0, "duration_seconds": 0.0, "audio": False,
             } for path in args.video]
     except (RuntimeError, ValueError) as exc:
         raise SystemExit(str(exc)) from exc
@@ -124,28 +132,28 @@ def _run_video_concat(args, video_started):
         any(item["audio"] for item in input_metadata)
     )
     video_inputs = list(args.video)
-    video_prefix = rt.video_filename_prefix(args.task, args.shot_id, args.name)
+    video_prefix = video_filename_prefix(args.task, args.shot_id, args.name)
     total_frames = sum(item["frames"] for item in input_metadata)
     total_duration = sum(item["duration_seconds"] for item in input_metadata)
-    video_contract = rt.make_video_contract(
+    video_contract = make_video_contract(
         args.task, "local", input_metadata[0]["width"], input_metadata[0]["height"],
         duration=total_duration, audio_expected=expected_audio,
-        expected_frames=total_frames, frame_tolerance=rt.VIDEO_FRAME_TOLERANCE,
+        expected_frames=total_frames, frame_tolerance=VIDEO_FRAME_TOLERANCE,
         input_metadata=input_metadata,
     )
     video_contract["resize_mode"] = args.resize_mode
     video_contract["audio_policy"] = args.audio_policy
     try:
-        dest = rt._safe_output_path(out_dir, f"{video_prefix}.mp4")
+        dest = _safe_output_path(out_dir, f"{video_prefix}.mp4")
     except (TypeError, ValueError) as exc:
         raise SystemExit(str(exc)) from exc
     os.makedirs(out_dir, exist_ok=True)
     if args.resume:
         try:
-            metadata = rt.resume_video_output(
+            metadata = resume_video_output(
                 dest, args.task, "local", None, video_inputs, None, video_contract,
             )
-        except (RuntimeError, rt.VideoContractError) as exc:
+        except (RuntimeError, VideoContractError) as exc:
             raise SystemExit(str(exc)) from exc
         print(f"[恢復] {dest}")
         return
@@ -154,15 +162,15 @@ def _run_video_concat(args, video_started):
         concat_kwargs["resize_mode"] = args.resize_mode
     if args.audio_policy != "require-consistent":
         concat_kwargs["audio_policy"] = args.audio_policy
-    rt.concat_videos(args.video, dest, **concat_kwargs)
+    concat_videos(args.video, dest, **concat_kwargs)
     print(f"[完成] {dest}")
     elapsed = time.monotonic() - video_started if video_started else None
     report_contract = None if any(item["width"] == 0 for item in input_metadata) else video_contract
-    metadata = rt.report_video_output(
+    metadata = report_video_output(
         dest, task="video_concat", backend="local", elapsed_seconds=elapsed,
         **({"expected_contract": report_contract} if report_contract is not None else {}),
     )
-    rt.write_video_sidecar(
+    write_video_sidecar(
         dest, args.task, "local", None, "", "", video_inputs, None,
         video_contract, metadata, elapsed_seconds=elapsed,
     )
@@ -170,31 +178,31 @@ def _run_video_concat(args, video_started):
 
 
 def _run_video_composite(args, video_started):
-    out_dir = getattr(args, "output_dir", None) or rt.OUTPUT_DIR
+    out_dir = getattr(args, "output_dir", None) or OUTPUT_DIR
     background_is_video = (
-        os.path.splitext(args.background)[1].lower() in rt.VIDEO_COMPOSITE_BACKGROUND_EXTS
+        os.path.splitext(args.background)[1].lower() in VIDEO_COMPOSITE_BACKGROUND_EXTS
     )
     try:
         if os.path.isfile(os.path.abspath(os.fspath(args.foreground))):
-            fg_metadata = rt.validate_video_input(args.foreground, label="video_composite --foreground")
+            fg_metadata = validate_video_input(args.foreground, label="video_composite --foreground")
         else:
             # composite_videos performs the authoritative open/decode check;
             # this fallback only keeps mocked local callers from needing
             # real media while still failing safely in production.
             fg_metadata = {
                 "path": os.path.abspath(os.fspath(args.foreground)), "width": 0, "height": 0,
-                "fps": rt.VIDEO_FPS, "frames": 0, "duration_seconds": 0.0, "audio": False,
+                "fps": VIDEO_FPS, "frames": 0, "duration_seconds": 0.0, "audio": False,
             }
         if background_is_video and os.path.isfile(os.path.abspath(os.fspath(args.background))):
-            rt.validate_video_input(args.background, label="video_composite --background")
+            validate_video_input(args.background, label="video_composite --background")
     except (RuntimeError, ValueError) as exc:
         raise SystemExit(str(exc)) from exc
     video_inputs = [args.foreground, args.background]
-    video_prefix = rt.video_filename_prefix(args.task, args.shot_id, args.name)
-    video_contract = rt.make_video_contract(
+    video_prefix = video_filename_prefix(args.task, args.shot_id, args.name)
+    video_contract = make_video_contract(
         args.task, "local", fg_metadata["width"], fg_metadata["height"],
         duration=fg_metadata["duration_seconds"], audio_expected=fg_metadata["audio"],
-        expected_frames=fg_metadata["frames"], frame_tolerance=rt.VIDEO_FRAME_TOLERANCE,
+        expected_frames=fg_metadata["frames"], frame_tolerance=VIDEO_FRAME_TOLERANCE,
         input_metadata=[fg_metadata],
     )
     video_contract["resize_mode"] = args.resize_mode
@@ -202,12 +210,12 @@ def _run_video_composite(args, video_started):
     video_contract["tolerance"] = args.tolerance
     video_contract["softness"] = args.softness
     try:
-        dest = rt._safe_output_path(out_dir, f"{video_prefix}.mp4")
+        dest = _safe_output_path(out_dir, f"{video_prefix}.mp4")
     except (TypeError, ValueError) as exc:
         raise SystemExit(str(exc)) from exc
     os.makedirs(out_dir, exist_ok=True)
     try:
-        rt.composite_videos(
+        composite_videos(
             args.foreground, args.background, dest,
             chroma_color=args.chroma_color, tolerance=args.tolerance, softness=args.softness,
             resize_mode=args.resize_mode, allow_overwrite=args.overwrite,
@@ -217,11 +225,11 @@ def _run_video_composite(args, video_started):
     print(f"[完成] {dest}")
     elapsed = time.monotonic() - video_started if video_started else None
     report_contract = None if fg_metadata["width"] == 0 else video_contract
-    metadata = rt.report_video_output(
+    metadata = report_video_output(
         dest, task="video_composite", backend="local", elapsed_seconds=elapsed,
         **({"expected_contract": report_contract} if report_contract is not None else {}),
     )
-    rt.write_video_sidecar(
+    write_video_sidecar(
         dest, args.task, "local", None, "", "", video_inputs, None,
         video_contract, metadata, elapsed_seconds=elapsed,
     )

@@ -1,5 +1,7 @@
 """角色/姿勢控制圖片 task:character_action(角色參考 + 姿勢)、pose_only(只控姿勢)、style_lock(只鎖角色/風格)。"""
-from ..runtime import facade as rt
+from .. import image_runtime
+from ..image_capabilities import validate_controlnet_union_capability
+from ..image_graphs import validate_unit_interval
 from ._common import validate_explore_args
 
 TASKS = ("character_action", "pose_only", "style_lock")
@@ -59,32 +61,32 @@ def add_parser(sub, parents, task):
 def validate(args):
     validate_explore_args(args)
     if args.task in ("character_action", "style_lock"):
-        rt.validate_unit_interval(args.ip_weight, "ip_weight")
+        validate_unit_interval(args.ip_weight, "ip_weight")
     if args.task in ("character_action", "pose_only"):
-        rt.validate_unit_interval(args.pose_strength, "pose_strength")
+        validate_unit_interval(args.pose_strength, "pose_strength")
 
 
-def check_capabilities(args):
+def check_capabilities(ctx, args):
     if args.task == "character_action":
-        rt.require_sdxl_capability("character_action (ControlNet/IPAdapter)")
+        image_runtime.require_sdxl_capability(ctx, "character_action (ControlNet/IPAdapter)")
     elif args.task == "pose_only":
-        rt.require_sdxl_capability("pose_only (ControlNet)")
+        image_runtime.require_sdxl_capability(ctx, "pose_only (ControlNet)")
     elif args.task == "style_lock":
-        rt.require_sdxl_capability("style_lock (IPAdapter)")
+        image_runtime.require_sdxl_capability(ctx, "style_lock (IPAdapter)")
 
 
 def preflight(args, comfy_url, request_timeout):
     """送出前確認實驗性 ControlNet Union 後端的 node/模型都在。"""
     if args.task == "pose_only" and args.control_backend == "union":
-        rt.validate_controlnet_union_capability(comfy_url, request_timeout=request_timeout)
+        validate_controlnet_union_capability(comfy_url, request_timeout=request_timeout)
 
 
-def build_graph(args, style_checkpoint, upload):
+def build_graph(ctx, args, style_checkpoint, upload):
     """組圖片 task 的 graph;``upload`` 回傳 ComfyUI 端檔名。"""
     if args.task == "character_action":
         char_fn = upload(args.character_ref)
         pose_fn = upload(args.pose_ref)
-        prompt, out_id = rt.build_character_action(
+        prompt, out_id = image_runtime.build_character_action(ctx,
             args.prompt, char_fn, pose_fn, args.negative,
             width=args.width, height=args.height,
             seed=args.seed, ip_weight=args.ip_weight, pose_strength=args.pose_strength,
@@ -93,7 +95,7 @@ def build_graph(args, style_checkpoint, upload):
         )
     elif args.task == "pose_only":
         pose_fn = upload(args.pose_ref)
-        prompt, out_id = rt.build_pose_only(args.prompt, pose_fn, args.negative,
+        prompt, out_id = image_runtime.build_pose_only(ctx, args.prompt, pose_fn, args.negative,
                                           width=args.width, height=args.height,
                                           seed=args.seed, pose_strength=args.pose_strength,
                                           batch_size=args.batch, control_type=args.control_type,
@@ -102,7 +104,7 @@ def build_graph(args, style_checkpoint, upload):
                                           control_backend=args.control_backend)
     elif args.task == "style_lock":
         char_fn = upload(args.character_ref)
-        prompt, out_id = rt.build_style_lock(args.prompt, char_fn, args.negative,
+        prompt, out_id = image_runtime.build_style_lock(ctx, args.prompt, char_fn, args.negative,
                                            width=args.width, height=args.height,
                                            seed=args.seed, ip_weight=args.ip_weight,
                                            batch_size=args.batch,

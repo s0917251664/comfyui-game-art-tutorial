@@ -16,7 +16,7 @@ from . import profiles as _profiles
 
 DEFAULT_NEGATIVE = "blurry, low quality, extra fingers, deformed, watermark"
 # 模型檔名與取樣參數的單一來源是 profiles/*.json(全平台共用、隨 comfyui_pipeline/ 部署)。
-# 下面的模組常數只是從 sdxl_standard 設定檔衍生出來的相容別名(generate.py facade 與舊呼叫端仍在用),
+# 下面的模組常數只是從 sdxl_standard 設定檔衍生出來的相容別名(舊呼叫端與測試仍在用),
 # 不要在這裡直接改檔名——改設定檔,並更新 tests/fixtures/image_graphs_golden/<tier>.json。
 DEFAULT_PROFILE_ID = "sdxl_standard"
 _SDXL_PROFILE = _profiles.load_profile(DEFAULT_PROFILE_ID)
