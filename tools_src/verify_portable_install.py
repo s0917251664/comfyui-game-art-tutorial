@@ -18,39 +18,11 @@ from pathlib import Path
 import sys
 from urllib.parse import urlparse
 
-SYNC_SOURCE_FILES = (
-    ("video_layers.py", Path("tools_src/video_layers.py"), Path("tools/video_layers.py")),
-    ("face_swap.py", Path("tools_src/face_swap.py"), Path("tools/face_swap.py")),
-    ("film_audio.py", Path("tools_src/film_audio.py"), Path("tools/film_audio.py")),
-    ("film_sapi.ps1", Path("tools_src/film_sapi.ps1"), Path("tools/film_sapi.ps1")),
-    ("film_qwen.py", Path("tools_src/film_qwen.py"), Path("tools/film_qwen.py")),
-    ("film_lipsync.py", Path("tools_src/film_lipsync.py"), Path("tools/film_lipsync.py")),
-    ("generate.py", Path("tools_src/generate.py"), Path("tools/generate.py")),
-    ("detect_device.py", Path("tools_src/detect_device.py"), Path("tools/detect_device.py")),
-    ("sam_segment.py", Path("tools_src/sam_segment.py"), Path("tools/sam_segment.py")),
-    ("image_edit_tools.py", Path("tools_src/image_edit_tools.py"), Path("tools/image_edit_tools.py")),
-    ("comfyui_design.py", Path("tools_src/comfyui_design.py"), Path("tools/comfyui_design.py")),
-    ("mask_refine.py", Path("tools_src/mask_refine.py"), Path("tools/mask_refine.py")),
-    ("detect_image_capabilities.py", Path("tools_src/detect_image_capabilities.py"), Path("tools/detect_image_capabilities.py")),
-    ("detect_video_capabilities.py", Path("tools_src/detect_video_capabilities.py"), Path("tools/detect_video_capabilities.py")),
-    ("gameart.py", Path("tools_src/gameart.py"), Path("tools/gameart.py")),
-    ("doctor.py", Path("tools_src/doctor.py"), Path("tools/doctor.py")),
-    ("asset_review.py", Path("tools_src/asset_review.py"), Path("tools/asset_review.py")),
-) + tuple(
-    (f"face-swap-video/{location}/{name}", Path("tools_src/comfyui_face_swap_video") / name,
-     Path(location) / name)
-    for location in ("tools/comfyui_face_swap_video", "custom_nodes/comfyui-face-swap-video")
-    for name in ("__init__.py", "contracts.py", "media.py", "nodes.py")
-) + tuple(
-    (f"video-layers/{location}/{name}", Path("tools_src/comfyui_video_layers") / name, Path(location) / name)
-    for location in ("tools/comfyui_video_layers", "custom_nodes/comfyui-video-layers")
-    for name in ("__init__.py", "contracts.py", "media.py", "nodes.py")
-)
-# comfyui_pipeline/ 底下的 .py(含 tasks/)與模型設定檔數量都會增加,依 repo 實際檔案動態核對,不在這裡逐一列名。
-PIPELINE_REPO_DIR = Path("tools_src/comfyui_pipeline")
-PIPELINE_DEPLOYED_DIR = Path("tools/comfyui_pipeline")
-PROFILES_REPO_DIR = Path("tools_src/comfyui_pipeline/profiles")
-PROFILES_DEPLOYED_DIR = Path("tools/comfyui_pipeline/profiles")
+# 部署清單由 deploy_manifest.py 提供(與 deploy.py 共用,兩者不會分歧)。
+_HERE = str(Path(__file__).resolve().parent)
+if _HERE not in sys.path:
+    sys.path.insert(0, _HERE)
+from deploy_manifest import PROFILES_DEPLOYED_DIR, PROFILES_REPO_DIR, deploy_manifest  # noqa: E402
 
 
 class VerificationError(RuntimeError):
@@ -199,18 +171,17 @@ def _load_live_device_snapshot(repo_root, detector=None):
     return snapshot
 
 
-def _pipeline_sync_entries(repo_root):
-    base = repo_root / PIPELINE_REPO_DIR
-    for path in sorted(base.rglob("*.py")):
-        relative = path.relative_to(base)
-        yield (f"comfyui_pipeline/{relative.as_posix()}", PIPELINE_REPO_DIR / relative,
-               PIPELINE_DEPLOYED_DIR / relative)
-
-
 def _check_source_sync(repo_root, comfyui_path, results, require_video=False):
-    for label, repo_relative, deployed_relative in (*SYNC_SOURCE_FILES, *_pipeline_sync_entries(repo_root)):
-        repo_file = repo_root / repo_relative
-        deployed_file = comfyui_path / deployed_relative
+    for entry in deploy_manifest(repo_root):
+        if entry.profile:
+            continue  # 模型設定檔由 _check_profile_sync 專屬檢查
+        label = entry.label
+        repo_file = repo_root / entry.src
+        deployed_file = comfyui_path / entry.dst
+        node_dir = entry.custom_node_dir
+        if node_dir is not None and not (comfyui_path / node_dir).is_dir() and "simple-mask-tool" in label:
+            results.append(("info", f"{label} 略過:未安裝 {node_dir.as_posix()}(Simple Mask custom node 為選配)"))
+            continue
         if not repo_file.is_file():
             results.append(("fail", f"{label} source sync", "repo source 不存在"))
             continue

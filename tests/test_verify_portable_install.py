@@ -78,6 +78,11 @@ class VerifyPortableInstallTests(unittest.TestCase):
             for location in (tools_dir / "comfyui_face_swap_video", comfyui_path / "custom_nodes/comfyui-face-swap-video"):
                 self._copy_source(location / name, (ROOT / "tools_src/comfyui_face_swap_video" / name).read_bytes())
         self._copy_source(tools_dir / "mask_refine.py", self.mask_refine_bytes)
+        self._copy_source(tools_dir / "mask_session.py", (ROOT / "tools_src/mask_session.py").read_bytes())
+        smt = ROOT / "tools_src/simple_mask_tool"
+        for src in sorted(p for p in smt.rglob("*") if p.is_file() and "__pycache__" not in p.parts):
+            for location in (tools_dir / "simple_mask_tool", comfyui_path / "custom_nodes/comfyui-simple-mask-tool"):
+                self._copy_source(location / src.relative_to(smt), src.read_bytes())
         for name in ("__init__.py", "contracts.py", "media.py", "nodes.py"):
             for location in (tools_dir / "comfyui_video_layers", comfyui_path / "custom_nodes/comfyui-video-layers"):
                 self._copy_source(location / name, (ROOT / "tools_src/comfyui_video_layers" / name).read_bytes())
