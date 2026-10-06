@@ -48,6 +48,7 @@ last_updated: 2026-10-06
 ### D. 既有 `generate.py` CLI、profile 或 capability catalog
 
 - [ ] 僅在能力屬於既有 facade task 時沿用 `generate.py`。圖片依相應 image profile／FLUX 獨立 gate；影片依 backend 與 `video_capabilities.json`。不混用圖片／影片 snapshot。
+- [ ] 新增或改 task 時改 `tools_src/comfyui_pipeline/tasks/` 的 task 模組（`add_parser`／`validate`／`build_graph` 或 `prepare`／`run_local`），並登記到 `tasks/__init__.py` 的 `MODULES` 與 `TASK_ORDER`；不要把 task 邏輯寫回 `generate.py`，它只做相容匯出與 `main()`。上傳／排隊／下載在 `client.py`，共用流程在 `cli.py`。
 - [ ] 模型名稱、取樣、tier、支援 task 依既有 profile／catalog 契約更動；profile 代表經相容性驗證的組合，不是只改檔名。
 - [ ] 程式有改動時按影響範圍檢查 code、既有 tests、portable deploy 和 fixtures；只有故意改固定 image graph 才更新 golden fixtures。
 - [ ] 實測實際呼叫新增／修改 task 與指定 profile/backend，檢查 metadata、畫面／影片技術契約和內容品質。沒有對應機器時保留未驗證狀態。

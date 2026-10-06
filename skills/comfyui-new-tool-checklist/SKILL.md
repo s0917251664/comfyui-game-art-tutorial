@@ -5,7 +5,7 @@ description: 新增或擴充本專案技能、平台執行路線、ComfyUI API g
 
 # 新能力與技能變更檢查
 
-使用者要求新增一種能力、技能入口、執行路線，或改變既有能力契約時使用。本技能涵蓋平台原生、直接 ComfyUI API、既有 `generate.py`、本機 helper/custom node 及純規劃路線。純文件修訂若沒有改變能力或規則，不套用生成能力實測；但仍檢查引用與狀態描述。
+使用者要求新增一種能力、技能入口、執行路線，或改變既有能力契約時使用。新增 `generate.py` task 時，程式放在 `tools_src/comfyui_pipeline/tasks/` 的 task 模組，不寫進 `generate.py`（見 checklist D）。本技能涵蓋平台原生、直接 ComfyUI API、既有 `generate.py`、本機 helper/custom node 及純規劃路線。純文件修訂若沒有改變能力或規則，不套用生成能力實測；但仍檢查引用與狀態描述。
 
 開始前讀[總工具庫](../../docs/knowledge/TOOLS.md)、[維護索引](../../docs/knowledge/maintenance/README.md)、[技能庫路線與盤點](../../docs/knowledge/maintenance/skill-library.md)及[路線化新增能力檢查清單](../../docs/knowledge/maintenance/new-capability-checklist.md)。先識別路線與需求，不從「ComfyUI 專案」推定必須新增 Python、CLI、task、custom node 或模型 profile。
 
