@@ -42,3 +42,10 @@ status: current
 | ComfyUI 安裝／升級／初始化 | 安裝依賴硬體與已選路線；升級審視需明確要求；初次使用先走初始化 | [`comfyui-install`](../../skills/comfyui-install/SKILL.md)、[`game-art-initialize`](../../skills/game-art-initialize/SKILL.md)、[`pipeline-review`](../../skills/comfyui-pipeline-review/SKILL.md) |
 
 圖片、影片與本機工具各有自身依賴及狀態；`unverified` task 在執行前告知使用者。影片與動畫細節以各自 canonical page 為準。repo 尚無 ComfyUI MCP 生成入口；不可列作 fallback。能力目錄只記錄入口與證據，不能將不同 gate 壓成通用 `verified` 標籤。
+
+## 統一入口 `gameart.py`
+
+`tools_src/gameart.py` 是薄 dispatcher：`python gameart.py <tool> [args...]` 以 `runpy` 轉發到既有腳本，argv、`--help`、結束碼與直接執行相同，只載入被選工具的相依套件。`python gameart.py list` 列出對應：`gen`(generate.py)、`design`、`edit`(image_edit_tools.py)、`face-swap`、`video-layers`、`film-audio`、`film-lipsync`、`film-qwen`、`sam`、`mask-refine`、`mask-session`、`detect-device`、`detect-image`、`detect-video`、`verify-install`、`benchmark-birefnet`。
+
+- 它是 repo 端便利入口，不列入 `verify_portable_install.py` 的部署同步清單；部署副本（`<ComfyUI>/tools/`）仍直接呼叫各腳本。
+- 輸出位置慣例（現況，未統一）：多數工具的 `--output-dir` 為必填且要求新資料夾／空資料夾；`generate.py` 省略時預設 `<腳本所在資料夾>/generated`；`face_swap.py`／`video_layers.py` 的 `--output-dir` 只在 swap／run 必填；偵測工具用 `--out`（JSON 路徑）；`film_audio.py`／`film_lipsync.py` 用 `--output`（檔案）。技能文件要求圖片生成明確帶 `--output-dir <output_dir>`（`local_config.json`，即 repo 的 `output/`）。

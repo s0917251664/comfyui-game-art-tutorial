@@ -4,6 +4,8 @@
 
 ## 快速入口
 
+> 也可用統一入口 `python tools_src/gameart.py <tool> [args...]`（`gameart.py list` 列出工具對應，如 `gen`、`design`、`edit`）；argv 原樣轉發，各腳本仍可直接執行。
+
 | 需求 | skill | 主要指令（`tools_src/`） |
 |---|---|---|
 | 初始化／選路線 | `game-art-initialize` | `detect_device.py`、`detect_image_capabilities.py`、`detect_video_capabilities.py` |
