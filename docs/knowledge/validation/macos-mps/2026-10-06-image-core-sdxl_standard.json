@@ -9,8 +9,8 @@
     "sha256": "d6c98f8e0482e4e13ef05221aabcfd719f6f3580b68c14956af15e7d2ae6ec66",
     "selected_tasks": null
   },
-  "started": "2026-10-06T07:55:05+00:00",
-  "finished": "2026-10-06T08:01:42+00:00",
+  "started": "2026-10-06T08:10:53+00:00",
+  "finished": "2026-10-06T08:17:16+00:00",
   "platform_key": "macos-mps",
   "device": {
     "platform_key": "macos-mps",
@@ -42,7 +42,8 @@
     }
   },
   "profile_id": "sdxl_standard",
-  "profile_sha256": "499e05a697e22561827d02059cb621a66534488bb9f7db6429c3ab79a75e62c0",
+  "profile_sha256": "6dbd988bd88cfe17aed83b488137f7569967c54fe403564d41d367eedb38a167",
+  "profile_hash_scheme": "content-v1",
   "summary": {
     "overall": "pass",
     "counts": {
@@ -60,7 +61,7 @@
       "task": "concept",
       "status": "pass",
       "reason": null,
-      "duration_s": 36.43,
+      "duration_s": 34.39,
       "seed_requested": 1001,
       "seeds_resolved": {
         "5": {
@@ -76,7 +77,7 @@
         "--config",
         "/Users/xu/tools/comfyui-game-art-tutorial/local_config.json",
         "--result-json",
-        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/concept.result.json",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-v2-20261006/concept.result.json",
         "concept",
         "--prompt",
         "a lone wooden treasure chest on a stone floor, game concept art, simple background",
@@ -85,7 +86,7 @@
         "--height",
         "768",
         "--output-dir",
-        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/concept",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-v2-20261006/concept",
         "--seed",
         "1001"
       ],
@@ -93,7 +94,7 @@
       "log": "logs/concept.log",
       "outputs": [
         {
-          "path": "concept/concept_00008_.png",
+          "path": "concept/concept_00010_.png",
           "sha256": "55deda60b7f47a972249e2ea48ea84eeb319caf192f3cc36c72a08b4103b3270",
           "size": 791963,
           "mode": "RGB",
@@ -106,14 +107,14 @@
       "dependency_only": false,
       "technical_validation": "pass",
       "profile_id_in_result": "sdxl_standard",
-      "profile_sha256_in_result": "499e05a697e22561827d02059cb621a66534488bb9f7db6429c3ab79a75e62c0"
+      "profile_sha256_in_result": "6dbd988bd88cfe17aed83b488137f7569967c54fe403564d41d367eedb38a167"
     },
     {
       "id": "icon_asset",
       "task": "icon_asset",
       "status": "pass",
       "reason": null,
-      "duration_s": 23.41,
+      "duration_s": 22.3,
       "seed_requested": 1002,
       "seeds_resolved": {
         "5": {
@@ -129,7 +130,7 @@
         "--config",
         "/Users/xu/tools/comfyui-game-art-tutorial/local_config.json",
         "--result-json",
-        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/icon_asset.result.json",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-v2-20261006/icon_asset.result.json",
         "icon_asset",
         "--prompt",
         "a red health potion bottle, game inventory icon, centered",
@@ -138,7 +139,7 @@
         "--height",
         "512",
         "--output-dir",
-        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/icon_asset",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-v2-20261006/icon_asset",
         "--seed",
         "1002"
       ],
@@ -146,7 +147,7 @@
       "log": "logs/icon_asset.log",
       "outputs": [
         {
-          "path": "icon_asset/transparent_00003_.png",
+          "path": "icon_asset/transparent_00004_.png",
           "sha256": "67b7f4008d85dce8d94fb02ebfe325d6f299da88d79f0dec8783cb1cae981710",
           "size": 438392,
           "mode": "RGBA",
@@ -159,14 +160,14 @@
       "dependency_only": false,
       "technical_validation": "pass",
       "profile_id_in_result": "sdxl_standard",
-      "profile_sha256_in_result": "499e05a697e22561827d02059cb621a66534488bb9f7db6429c3ab79a75e62c0"
+      "profile_sha256_in_result": "6dbd988bd88cfe17aed83b488137f7569967c54fe403564d41d367eedb38a167"
     },
     {
       "id": "refine",
       "task": "refine",
       "status": "pass",
       "reason": null,
-      "duration_s": 30.4,
+      "duration_s": 29.38,
       "seed_requested": 1003,
       "seeds_resolved": {
         "6": {
@@ -182,16 +183,16 @@
         "--config",
         "/Users/xu/tools/comfyui-game-art-tutorial/local_config.json",
         "--result-json",
-        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/refine.result.json",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-v2-20261006/refine.result.json",
         "refine",
         "--prompt",
         "a lone wooden treasure chest on a stone floor, detailed, game concept art",
         "--image",
-        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/concept/concept_00008_.png",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-v2-20261006/concept/concept_00010_.png",
         "--denoise",
         "0.45",
         "--output-dir",
-        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/refine",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-v2-20261006/refine",
         "--seed",
         "1003"
       ],
@@ -199,8 +200,8 @@
       "log": "logs/refine.log",
       "outputs": [
         {
-          "path": "refine/refine_00003_.png",
-          "sha256": "5f2ef005b4ab605f6602e03a091487ed0995e6152239494af0b6e5021b535797",
+          "path": "refine/refine_00004_.png",
+          "sha256": "4f389fecaf871c68c4396c7e57e14cd49454ec1585514651328031df5617ef42",
           "size": 767483,
           "mode": "RGB",
           "width": 768,
@@ -212,14 +213,14 @@
       "dependency_only": false,
       "technical_validation": "pass",
       "profile_id_in_result": "sdxl_standard",
-      "profile_sha256_in_result": "499e05a697e22561827d02059cb621a66534488bb9f7db6429c3ab79a75e62c0"
+      "profile_sha256_in_result": "6dbd988bd88cfe17aed83b488137f7569967c54fe403564d41d367eedb38a167"
     },
     {
       "id": "upscale",
       "task": "upscale",
       "status": "pass",
       "reason": null,
-      "duration_s": 64.56,
+      "duration_s": 62.54,
       "seed_requested": 1004,
       "seeds_resolved": {
         "9": {
@@ -235,18 +236,18 @@
         "--config",
         "/Users/xu/tools/comfyui-game-art-tutorial/local_config.json",
         "--result-json",
-        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/upscale.result.json",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-v2-20261006/upscale.result.json",
         "upscale",
         "--prompt",
         "a red health potion bottle, game inventory icon, centered",
         "--image",
-        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/icon_asset/transparent_00003_.png",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-v2-20261006/icon_asset/transparent_00004_.png",
         "--scale",
         "2",
         "--denoise",
         "0.3",
         "--output-dir",
-        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/upscale",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-v2-20261006/upscale",
         "--seed",
         "1004"
       ],
@@ -254,8 +255,8 @@
       "log": "logs/upscale.log",
       "outputs": [
         {
-          "path": "upscale/upscale_00002_.png",
-          "sha256": "aecf514cec1391c459da976f5cbcad38378ea3b5b86714d0ca1bb0eb0e151eca",
+          "path": "upscale/upscale_00003_.png",
+          "sha256": "a4ae7d99d22180f6d30f8ea430400697743ea195a5bcd90bf0df81cca400db3e",
           "size": 1272377,
           "mode": "RGB",
           "width": 1024,
@@ -267,14 +268,14 @@
       "dependency_only": false,
       "technical_validation": "pass",
       "profile_id_in_result": "sdxl_standard",
-      "profile_sha256_in_result": "499e05a697e22561827d02059cb621a66534488bb9f7db6429c3ab79a75e62c0"
+      "profile_sha256_in_result": "6dbd988bd88cfe17aed83b488137f7569967c54fe403564d41d367eedb38a167"
     },
     {
       "id": "pose_only_canny",
       "task": "pose_only",
       "status": "pass",
       "reason": null,
-      "duration_s": 46.62,
+      "duration_s": 44.45,
       "seed_requested": 1005,
       "seeds_resolved": {
         "9": {
@@ -290,12 +291,12 @@
         "--config",
         "/Users/xu/tools/comfyui-game-art-tutorial/local_config.json",
         "--result-json",
-        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/pose_only_canny.result.json",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-v2-20261006/pose_only_canny.result.json",
         "pose_only",
         "--prompt",
         "a lone wooden treasure chest on a stone floor, game concept art",
         "--pose-ref",
-        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/concept/concept_00008_.png",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-v2-20261006/concept/concept_00010_.png",
         "--control-type",
         "canny",
         "--width",
@@ -303,7 +304,7 @@
         "--height",
         "768",
         "--output-dir",
-        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/pose_only_canny",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-v2-20261006/pose_only_canny",
         "--seed",
         "1005"
       ],
@@ -311,8 +312,8 @@
       "log": "logs/pose_only_canny.log",
       "outputs": [
         {
-          "path": "pose_only_canny/pose_only_00005_.png",
-          "sha256": "9e67dcf489cc6a6ef0db52963e9b30a6c535b07e970910c301a4ec9c4cd8a15b",
+          "path": "pose_only_canny/pose_only_00006_.png",
+          "sha256": "e62c025f58fa5212941dcfa56565b802a1f5149e6e2344550ebc5923232ed00d",
           "size": 748387,
           "mode": "RGB",
           "width": 768,
@@ -324,14 +325,14 @@
       "dependency_only": false,
       "technical_validation": "pass",
       "profile_id_in_result": "sdxl_standard",
-      "profile_sha256_in_result": "499e05a697e22561827d02059cb621a66534488bb9f7db6429c3ab79a75e62c0"
+      "profile_sha256_in_result": "6dbd988bd88cfe17aed83b488137f7569967c54fe403564d41d367eedb38a167"
     },
     {
       "id": "style_lock",
       "task": "style_lock",
       "status": "pass",
       "reason": null,
-      "duration_s": 38.53,
+      "duration_s": 38.38,
       "seed_requested": 1006,
       "seeds_resolved": {
         "9": {
@@ -347,18 +348,18 @@
         "--config",
         "/Users/xu/tools/comfyui-game-art-tutorial/local_config.json",
         "--result-json",
-        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/style_lock.result.json",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-v2-20261006/style_lock.result.json",
         "style_lock",
         "--prompt",
         "a lone wooden treasure chest on a stone floor, game concept art",
         "--character-ref",
-        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/concept/concept_00008_.png",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-v2-20261006/concept/concept_00010_.png",
         "--width",
         "768",
         "--height",
         "768",
         "--output-dir",
-        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/style_lock",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-v2-20261006/style_lock",
         "--seed",
         "1006"
       ],
@@ -366,8 +367,8 @@
       "log": "logs/style_lock.log",
       "outputs": [
         {
-          "path": "style_lock/style_lock_00005_.png",
-          "sha256": "291de910718fc0b344bed8c8f1179214d7286a0e7d20e3a285707e9ba2424bb0",
+          "path": "style_lock/style_lock_00006_.png",
+          "sha256": "cd2098a53be57f7a04b1c010b970d58bcc49bb94701a8c6956b640787fa13ec2",
           "size": 785395,
           "mode": "RGB",
           "width": 768,
@@ -379,14 +380,14 @@
       "dependency_only": false,
       "technical_validation": "pass",
       "profile_id_in_result": "sdxl_standard",
-      "profile_sha256_in_result": "499e05a697e22561827d02059cb621a66534488bb9f7db6429c3ab79a75e62c0"
+      "profile_sha256_in_result": "6dbd988bd88cfe17aed83b488137f7569967c54fe403564d41d367eedb38a167"
     },
     {
       "id": "character_action_canny",
       "task": "character_action",
       "status": "pass",
       "reason": null,
-      "duration_s": 54.65,
+      "duration_s": 57.52,
       "seed_requested": 1007,
       "seeds_resolved": {
         "12": {
@@ -402,14 +403,14 @@
         "--config",
         "/Users/xu/tools/comfyui-game-art-tutorial/local_config.json",
         "--result-json",
-        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/character_action_canny.result.json",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-v2-20261006/character_action_canny.result.json",
         "character_action",
         "--prompt",
         "a lone wooden treasure chest on a stone floor, game concept art",
         "--character-ref",
-        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/concept/concept_00008_.png",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-v2-20261006/concept/concept_00010_.png",
         "--pose-ref",
-        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/concept/concept_00008_.png",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-v2-20261006/concept/concept_00010_.png",
         "--control-type",
         "canny",
         "--width",
@@ -417,7 +418,7 @@
         "--height",
         "768",
         "--output-dir",
-        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/character_action_canny",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-v2-20261006/character_action_canny",
         "--seed",
         "1007"
       ],
@@ -425,8 +426,8 @@
       "log": "logs/character_action_canny.log",
       "outputs": [
         {
-          "path": "character_action_canny/character_action_00002_.png",
-          "sha256": "faada105c6c332f132ba638dbc5c9de8151d5ff9d7058c805f102106b0190602",
+          "path": "character_action_canny/character_action_00003_.png",
+          "sha256": "50f5eb4469ded82827bf3cc767d3b5e76991b8e5b03b985fd59b7971f712b0c4",
           "size": 787902,
           "mode": "RGB",
           "width": 768,
@@ -438,14 +439,14 @@
       "dependency_only": false,
       "technical_validation": "pass",
       "profile_id_in_result": "sdxl_standard",
-      "profile_sha256_in_result": "499e05a697e22561827d02059cb621a66534488bb9f7db6429c3ab79a75e62c0"
+      "profile_sha256_in_result": "6dbd988bd88cfe17aed83b488137f7569967c54fe403564d41d367eedb38a167"
     },
     {
       "id": "inpaint",
       "task": "inpaint",
       "status": "pass",
       "reason": null,
-      "duration_s": 37.49,
+      "duration_s": 36.47,
       "seed_requested": 1008,
       "seeds_resolved": {
         "7": {
@@ -461,18 +462,18 @@
         "--config",
         "/Users/xu/tools/comfyui-game-art-tutorial/local_config.json",
         "--result-json",
-        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/inpaint.result.json",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-v2-20261006/inpaint.result.json",
         "inpaint",
         "--prompt",
         "a golden coin pile",
         "--image",
-        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/concept/concept_00008_.png",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-v2-20261006/concept/concept_00010_.png",
         "--mask",
-        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/smoke-mask.png",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-v2-20261006/smoke-mask.png",
         "--denoise",
         "1.0",
         "--output-dir",
-        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/inpaint",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-v2-20261006/inpaint",
         "--seed",
         "1008"
       ],
@@ -480,8 +481,8 @@
       "log": "logs/inpaint.log",
       "outputs": [
         {
-          "path": "inpaint/inpaint_00005_.png",
-          "sha256": "0e362b60f3d12a4b6b1a34d878d183a7e768346bed896dd33cf104b54434b59c",
+          "path": "inpaint/inpaint_00006_.png",
+          "sha256": "7cf74a520da76a7a191735c5e6df4c1563302238cadde409d57228953c8bb5c8",
           "size": 785849,
           "mode": "RGB",
           "width": 768,
@@ -493,14 +494,14 @@
       "dependency_only": false,
       "technical_validation": "pass",
       "profile_id_in_result": "sdxl_standard",
-      "profile_sha256_in_result": "499e05a697e22561827d02059cb621a66534488bb9f7db6429c3ab79a75e62c0"
+      "profile_sha256_in_result": "6dbd988bd88cfe17aed83b488137f7569967c54fe403564d41d367eedb38a167"
     },
     {
       "id": "guided_inpaint",
       "task": "guided_inpaint",
       "status": "pass",
       "reason": null,
-      "duration_s": 63.51,
+      "duration_s": 56.5,
       "seed_requested": 1009,
       "seeds_resolved": {
         "12": {
@@ -516,20 +517,20 @@
         "--config",
         "/Users/xu/tools/comfyui-game-art-tutorial/local_config.json",
         "--result-json",
-        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/guided_inpaint.result.json",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-v2-20261006/guided_inpaint.result.json",
         "guided_inpaint",
         "--prompt",
         "a golden coin pile",
         "--image",
-        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/concept/concept_00008_.png",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-v2-20261006/concept/concept_00010_.png",
         "--mask",
-        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/smoke-mask.png",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-v2-20261006/smoke-mask.png",
         "--control-type",
         "canny",
         "--denoise",
         "1.0",
         "--output-dir",
-        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/guided_inpaint",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-v2-20261006/guided_inpaint",
         "--seed",
         "1009"
       ],
@@ -537,8 +538,8 @@
       "log": "logs/guided_inpaint.log",
       "outputs": [
         {
-          "path": "guided_inpaint/guided_inpaint_00002_.png",
-          "sha256": "e1f598ccc789f1204ca5021f710a27118721b85282ee6cf2ac5230c75b7b1c49",
+          "path": "guided_inpaint/guided_inpaint_00003_.png",
+          "sha256": "673bd54f54ca89dd4a4f66f50cdae4be97d7ab5164a8d760b39663cde80f01a6",
           "size": 778306,
           "mode": "RGB",
           "width": 768,
@@ -550,14 +551,14 @@
       "dependency_only": false,
       "technical_validation": "pass",
       "profile_id_in_result": "sdxl_standard",
-      "profile_sha256_in_result": "499e05a697e22561827d02059cb621a66534488bb9f7db6429c3ab79a75e62c0"
+      "profile_sha256_in_result": "6dbd988bd88cfe17aed83b488137f7569967c54fe403564d41d367eedb38a167"
     },
     {
       "id": "layer_split",
       "task": "layer_split",
       "status": "pass",
       "reason": null,
-      "duration_s": 1.24,
+      "duration_s": 1.23,
       "seed_requested": null,
       "seeds_resolved": {},
       "seed_note": "layer_split 沒有 --seed(不做取樣),manifest 的 resolved_seeds 為空",
@@ -569,23 +570,23 @@
         "--config",
         "/Users/xu/tools/comfyui-game-art-tutorial/local_config.json",
         "--result-json",
-        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/layer_split.result.json",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-v2-20261006/layer_split.result.json",
         "layer_split",
         "--image",
-        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/concept/concept_00008_.png",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-v2-20261006/concept/concept_00010_.png",
         "--mask",
-        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/smoke-mask.png",
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-v2-20261006/smoke-mask.png",
         "--layer-name",
         "smoke_layer",
         "--output-dir",
-        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-20261006/layer_split"
+        "/Users/xu/tools/comfyui-game-art-tutorial/output/experiments/smoke-mac-v2-20261006/layer_split"
       ],
       "exit_code": 0,
       "log": "logs/layer_split.log",
       "outputs": [
         {
-          "path": "layer_split/layer_smoke_layer_00001_.png",
-          "sha256": "5de981c393ae74db38a077066c1a978fec44f2ca4710caf88de57b3d995716b9",
+          "path": "layer_split/layer_smoke_layer_00002_.png",
+          "sha256": "38be5727ac5e977781b7a769810182e2c71954ceb1910e36396beb2421a5046d",
           "size": 918817,
           "mode": "RGBA",
           "width": 768,
@@ -597,7 +598,7 @@
       "dependency_only": false,
       "technical_validation": "pass",
       "profile_id_in_result": "sdxl_standard",
-      "profile_sha256_in_result": "499e05a697e22561827d02059cb621a66534488bb9f7db6429c3ab79a75e62c0"
+      "profile_sha256_in_result": "6dbd988bd88cfe17aed83b488137f7569967c54fe403564d41d367eedb38a167"
     }
   ],
   "contact_sheet": "smoke-contact-sheet.jpg"
