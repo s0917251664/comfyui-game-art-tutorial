@@ -117,4 +117,4 @@ timeout 會保存 `prompt_id` 及精確 queue/running ownership；只有確認�
 
 - [2026-10-03 本機影片可靠範圍盤點](reliability-audit-2026-10-03.md)：環境快照、MP4/sidecar 追溯、有限內容抽樣與下一階段基準缺口。
 
-Wan Animate 為獨立固定 API 路徑，未接入 `generate.py` task/backend；使用／查詢依[專用技能](../../../skills/comfyui-wan-animate/SKILL.md)，安裝及歷史測試見[安裝紀錄](wan-animate-install.md)。本頁不取代執行前 live preflight。
+Wan Animate 為獨立固定 API 路徑，未接入 `generate.py` task/backend；現已涵蓋 61 幀延伸段、來源音訊保留、寬高調整及 SCAIL-2；使用／查詢依[專用技能](../../../skills/comfyui-wan-animate/SKILL.md)，安裝見[安裝紀錄](wan-animate-install.md)、實驗記錄見 [2026-10-06 實驗紀錄](wan-animate-scail2-experiments-2026-10-06.md)。本頁不取代執行前 live preflight。

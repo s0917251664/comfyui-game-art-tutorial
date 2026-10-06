@@ -121,7 +121,7 @@
         0
       ],
       "batch_index": 0,
-      "length": 17
+      "length": 61
     }
   },
   "212": {
@@ -249,7 +249,7 @@
       ],
       "width": 384,
       "height": 384,
-      "length": 17,
+      "length": 33,
       "batch_size": 1,
       "clip_vision_output": [
         "9",
@@ -350,7 +350,7 @@
     "class_type": "CreateVideo",
     "inputs": {
       "images": [
-        "230",
+        "405",
         0
       ],
       "fps": 16.0
@@ -366,6 +366,140 @@
       "filename_prefix": "__OUTPUT_PREFIX__",
       "format": "mp4",
       "codec": "h264"
+    }
+  },
+  "400": {
+    "class_type": "WanAnimateToVideo",
+    "inputs": {
+      "positive": [
+        "21",
+        0
+      ],
+      "negative": [
+        "1",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ],
+      "width": 384,
+      "height": 384,
+      "length": 33,
+      "batch_size": 1,
+      "clip_vision_output": [
+        "9",
+        0
+      ],
+      "reference_image": [
+        "10",
+        0
+      ],
+      "face_video": [
+        "100",
+        0
+      ],
+      "pose_video": [
+        "101",
+        0
+      ],
+      "background_video": [
+        "275",
+        0
+      ],
+      "character_mask": [
+        "276",
+        0
+      ],
+      "continue_motion_max_frames": 5,
+      "video_frame_offset": [
+        "62",
+        5
+      ],
+      "continue_motion": [
+        "230",
+        0
+      ]
+    }
+  },
+  "401": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": [
+        "60",
+        0
+      ],
+      "positive": [
+        "400",
+        0
+      ],
+      "negative": [
+        "400",
+        1
+      ],
+      "latent_image": [
+        "400",
+        2
+      ],
+      "seed": -1,
+      "steps": 6,
+      "cfg": 1.0,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1.0
+    }
+  },
+  "402": {
+    "class_type": "TrimVideoLatent",
+    "inputs": {
+      "samples": [
+        "401",
+        0
+      ],
+      "trim_amount": [
+        "400",
+        3
+      ]
+    }
+  },
+  "403": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "402",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    }
+  },
+  "404": {
+    "class_type": "ImageFromBatch",
+    "inputs": {
+      "image": [
+        "403",
+        0
+      ],
+      "batch_index": [
+        "400",
+        4
+      ],
+      "length": 4096
+    }
+  },
+  "405": {
+    "class_type": "ImageBatch",
+    "inputs": {
+      "image1": [
+        "230",
+        0
+      ],
+      "image2": [
+        "404",
+        0
+      ]
     }
   }
 }

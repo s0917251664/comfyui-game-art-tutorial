@@ -144,3 +144,13 @@ Wan I2V + H3 FL2VA 約 56.4 GiB；加上 Ref2VA 約 76 GiB；若再安裝表內 
 | CLIP Vision H (FP16) | `Comfy-Org/Wan_2.1_ComfyUI_repackaged` @ `123acf1cc74bccbb9bfff8ac1ee72edc08c2341d` | `split_files/clip_vision/clip_vision_h.safetensors` → `models/clip_vision/clip_vision_h.safetensors` | 1,264,219,396 | `64a7ef761bfccbadbaa3da77366aac4185a6c58fa5de5f589b42a65bcc21f161` |
 
 UMT5 依官方 workflow 使用現有 text encoder；實際檔案由環境檢查確認，並非上述下載腳本的固定 hash 清單。ComfyUI 固定為 `12d5279438bfefc058a269eae805ceab6047777f`；新增 KJNodes `d3cfe21625e5170126ce06fbfcfe1d88108688c3` 與 `ComfyUI-segment-anything-2` `0c35fff5f382803e2310103357b5e985f5437f32`。既有 `comfyui_controlnet_aux` 不變。Python 3.13.9、PyTorch 2.13.0+cu130、RTX 4080 16,376 MiB VRAM／31.1 GiB RAM。詳細安裝與驗證狀態見 [Wan2.2 Animate 安裝紀錄](../video/wan-animate-install.md)。
+
+## SCAIL-2（本機已安裝，2026-10-06）
+
+供 [comfyui-wan-animate 技能](../../../skills/comfyui-wan-animate/SKILL.md)的 SCAIL-2 固定 API templates 使用，不加入 `generate.py` profile/backend。三個檔案皆完成 size／SHA-256 驗證；其餘依賴重用上方 Wan Animate 檔案（VAE 以 `wan_2.1_vae.safetensors` 替代官方範本的 `Wan2_1_VAE_bf16`）。
+
+| 用途 | Repository @ 固定 revision | 上游檔案 → ComfyUI 路徑 | Bytes | SHA-256 |
+|---|---|---|---:|---|
+| SCAIL-2 14B FP8 主模型 | `Comfy-Org/SCAIL-2` @ `fe3c728bc793ba21ca674688f822afb709ad44fb` | `diffusion_models/wan2.1_14B_SCAIL_2_fp8_scaled.safetensors` → `models/diffusion_models/` 同名 | 17,694,586,857 | `11513b4697ecf566de0cb74660c478f301fb6699a62b10369e91a6ed0fd6b083` |
+| SCAIL-2 DPO LoRA | `Comfy-Org/SCAIL-2` @ `fe3c728bc793ba21ca674688f822afb709ad44fb` | `loras/wan2.1_SCAIL_2_DPO_lora_bf16.safetensors` → `models/loras/` 同名 | 1,226,936,552 | `b106522036f64e50f5f8ae3b808973515ff442cc2fac27b65d875eafb95b89e2` |
+| SAM3.1 multiplex | `Comfy-Org/sam3.1` @ `7bb8374780a725b4353ed31f3a9395c9742b5621` | `checkpoints/sam3.1_multiplex_fp16.safetensors` → `models/checkpoints/` 同名 | 1,745,546,848 | `9ba99c92703c2e8b4f47de2d34a539bb8e18923049e238b780d70dbe6368eb03` |

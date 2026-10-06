@@ -50,7 +50,7 @@ Repo 內新增、改名或責任變更的技能，應更新 `AGENTS.md` 核心�
 | `comfyui-image-sweep` | `image_edit_tools.py sweep` 包裝既有圖片 CLI task 的有限參數比較。 | 依賴既有 task 語意與 sweep orchestration；不適合把 wrapper 當單個 graph API，目前未遷移。 |
 | `comfyui-object-design` | Python helper 組合既有 ComfyUI Core graph 和圖片 task，處理 scene／sheet／pattern。 | graph 可否直接 API 呼叫需按各模式另評估；helper 現仍提供現行合成／CLI，未遷移。 |
 | `comfyui-video-gen` | `generate.py` 影片 task/backend、`video_capabilities.json`、本機 concat/composite。 | 固定已接入 backend 仍走 CLI；不可由 API node 存在取代 backend gate，目前未遷移。 |
-| `comfyui-wan-animate` | 以固定 API-format JSON 直接呼叫 ComfyUI HTTP API；Mix17／Move17 近期直接 HTTP 技術 smoke 通過，內容仍 candidate，未接 `generate.py`。 | 已有 API 路線；33 幀新模板及輸出品質不能由 17 幀測試推定，依專用 skill／evidence 管理。 |
+| `comfyui-wan-animate` | 以固定 API-format JSON 直接呼叫 ComfyUI HTTP API；Mix17／Move17、兩段延伸 Mix61／Move61、音訊保留與 384×640 直接 HTTP 技術 smoke 通過；SCAIL-2 templates 同在此技能。內容仍 candidate，未接 `generate.py`。 | 已有 API 路線；三段以上、未測尺寸與輸出品質不能由現有測試推定，依專用 skill／evidence 管理。 |
 | `comfyui-character-animation-workflow` | 編排既有圖片／影片 task、階段和人工驗收，不另加模型參數。 | 作 workflow orchestrator，可在明確支援後委派 API skill；本身沒有遷移。 |
 | `comfyui-film-workflow` | 劇情多鏡規劃與影音 helper；依實際需要用本機音訊／片段工具和既有生成 task。 | 規劃部分可跨路線；時間線、音訊／解碼狀態處理仍依各 helper，未遷移為 API-only。 |
 | `comfyui-face-swap-workflow` | 薄 client、共享 media/contracts 與 server-side ReActor custom node；完整影片處理在 ComfyUI server。 | Queue 可由 API 發起，但輸入 gate、chunked media／輸出契約依賴現有 code，非只替換請求 transport；未遷移。 |
