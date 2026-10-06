@@ -90,7 +90,7 @@ class EditToolsTests(unittest.TestCase):
         self.assertTrue(preserve)
         self.assertEqual([0.4, 0.6], [run["denoise"] for run in runs])
         self.assertEqual({42}, {run["seed"] for run in runs})
-        self.assertEqual({str(self.source)}, {run["image"] for run in runs})
+        self.assertEqual({str(self.source.resolve())}, {run["image"] for run in runs})
 
     def test_plan_rejects_unsupported_axes_over_budget_duplicates_and_bad_values(self):
         for axes in ({"seed": [1, 2]}, {"image": ["source.png"]}, {"prompt": ["x"]},
