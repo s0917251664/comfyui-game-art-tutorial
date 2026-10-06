@@ -17,7 +17,29 @@ status: current
    ```
 
    預設套件 `image-core`；`--tasks` 只跑子集（上游依賴自動補入）。輸出：`smoke-report.json`、`smoke-contact-sheet.jpg`、各 task 輸出、`logs/<task>.log`、`<task>.result.json`。
-4. 記錄進 repo：加 `--record <repo_root>`（可再加 `--record-images` 一併複製總覽圖 JPG），報告會複製到 `docs/knowledge/validation/<platform_key>/<日期>-<suite>-<profile>.json`，同名不覆寫。這一步不改任何 profile 的 `validation`；是否升級驗證狀態是另外的人工決定。
+4. 記錄進 repo：跑的時候加 `--record <repo_root>`（可再加 `--record-images` 一併複製總覽圖 JPG），或事後對既有報告執行 `python tools_src/gameart.py smoke record <report.json> [--repo-root .] [--with-images]`。報告會複製到 `docs/knowledge/validation/<platform_key>/<日期>-<suite>-<profile>.json`，同名不覆寫，內容相同的報告不重複記錄。這一步不改任何 profile 的 `validation`。（`smoke run --output-dir ...` 是明確形式，與裸 `smoke --output-dir ...` 相同。）
+5. 提案（唯讀）：`python tools_src/gameart.py validation propose <repo 內的報告>`。檢查報告在 `docs/knowledge/validation/` 內、報告綁的設定檔雜湊與目前設定檔一致，列出哪些 task 會升為 `verified`（只有 `pass`；`not_installed`／`skipped` 只是沒有證據，中性略過）與將寫入的證據項目。不寫任何檔案。
+6. **使用者決定**：把 propose 輸出與總覽圖給使用者；美術與是否採信由使用者判斷。
+7. 核准：`python tools_src/gameart.py validation approve <報告> --by <使用者>`，把證據項目附加到 profile 的 `validation`。報告不在 repo 內、設定檔雜湊不符、沒有任何 pass task、同一報告已核准過都會拒絕。之後檢視 `git diff` 並由使用者決定是否 commit。
+
+> **agent 不得自行執行 `validation approve`。** 只有使用者在對話中明確要求核准，才可代為執行，`--by` 填使用者；不可替使用者決定，也不可為了讓狀態變綠而核准。propose／status 與 `smoke record` 可自行執行。
+
+## 驗證證據綁定報告與環境
+
+profile 的 `validation[<platform_key>]` 是證據項目清單：
+
+```json
+{"report": "docs/knowledge/validation/macos-mps/2026-10-06-image-core-sdxl_standard.json",
+ "report_sha256": "...", "tasks": ["concept", "..."], "profile_sha256": "...",
+ "env": {"comfyui_version": "0.34.0", "comfyui_commit": "...", "models_hash": "...", "custom_nodes_hash": "..."},
+ "min_memory_mb": 18432, "approved_by": "steve", "approved_at": "2026-10-07T10:00:00+00:00"}
+```
+
+- task 在該平台是 `verified`：有證據項目涵蓋它，且可用記憶體不低於 `min_memory_mb`。
+- **環境綁定**：`detect_image_capabilities`、`doctor`、`generate` 會用目前的環境指紋（ComfyUI 版本／commit、`models_hash`、`custom_nodes_hash`）與設定檔內容雜湊比對證據。證據存在但不一致 → `verified_other_env`，說明「已在 <日期> 的環境驗證；目前環境不同（comfyui 版本 x→y）」。這只是提醒，生成不阻擋；`edit`（image_edit_tools）仍須明確同意才跑非 verified 的 task。環境未知（讀不到指紋）時不比對、不降級。
+- **legacy 項目**：舊式手寫紀錄（`legacy: true`、`report: null`，證據是 `docs/tested-versions.md`）沒有環境紀錄，視同 `verified`（能力快照的 `validation_basis: "legacy"`，`doctor` 註明「已驗證但無環境紀錄」）。沒有失敗證據前不降級；有新報告證據後會優先採用。舊式 dict 寫法仍可讀。
+- **設定檔雜湊 `profile_sha256`** 是 `profiles.profile_content_sha256`：對 canonical JSON 取雜湊，**不含 `validation` 區塊**，所以記錄證據不會讓自己綁的雜湊失效；改模型、取樣、解析度或 task 需求則會變。新報告帶 `profile_hash_scheme: "content-v1"`。舊報告（沒有此欄位）是整檔原始位元組雜湊，`propose` 會到 git 歷史找出該版本、比對其內容雜湊與目前是否一致。`image_results` manifest 的 `profile_sha256` 同樣改用內容雜湊（舊 manifest 是整檔雜湊）。
+- `validation status [--profile] [--platform]` 列出 task × 平台的 `verified`／`legacy`／`unverified` 與證據連結。
 
 ## 狀態語意
 

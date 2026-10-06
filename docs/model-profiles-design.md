@@ -193,6 +193,14 @@ tier 不刪除，降格成「這台最多建議到哪個設定檔」的提示，
 | `unverified` | 規格上相容，沒有任何實機紀錄 | 預設不列為選項；使用者明確要求才可試，並告知風險 |
 | `unsupported` | 已知不相容（精度、node、OOM） | 不列、不可強制 |
 
+### 4.2 驗證證據綁報告與環境（第 5 階段）
+
+`validation[<platform_key>]` 由手寫 dict 改為**證據項目清單**（舊式 dict 仍可讀）。每個項目：`{report, report_sha256, tasks, profile_sha256, env{comfyui_version, comfyui_commit, models_hash, custom_nodes_hash}, min_memory_mb, approved_by, approved_at}`。項目只能由 `gameart.py validation approve <報告> --by <使用者>` 在檢查「報告已記錄在 `docs/knowledge/validation/`、設定檔內容雜湊一致、至少一個 task pass」後附加；`propose` 唯讀預覽，**agent 不得自行 approve**。流程見 [validation-workflow](knowledge/maintenance/validation-workflow.md)。
+
+- task 的狀態由證據推導：有項目涵蓋且記憶體足夠 → `verified`。目前環境（ComfyUI 版本／commit、模型庫、custom_nodes）或設定檔內容與證據不同 → `verified_other_env`（顯示「已在 <日期> 的環境驗證；目前環境不同（…）」，只提醒、不阻擋）。
+- 既有 `windows-cuda` 手寫紀錄遷移成 `legacy: true, report: null` 項目（證據仍是 `docs/tested-versions.md`）：沒有環境紀錄，視同 `verified`（能力快照 `validation_basis: "legacy"`；`doctor` 註明無環境紀錄），沒有失敗證據不降級。
+- `profile_sha256` 改為設定檔 canonical JSON **排除 `validation`** 的雜湊（`profiles.profile_content_sha256`）：記錄證據不會使自己失效；舊 smoke 報告／manifest 的整檔雜湊，`propose` 會到 git 歷史找出該版本再比對內容雜湊。`min_verified_memory_mb` 在新式項目稱 `min_memory_mb`。
+
 未列出的 `platform_key` 一律視為 `unverified`。驗證狀態以 **task 為單位**：同一設定檔在 `macos-mps` 可以 `concept` 已驗證、`pose_only` 仍未驗證。
 
 `min_verified_memory_mb`：驗證時使用的最低可用記憶體。偵測時若這台機器的 `usable_memory_mb` 低於此值，該平台的 `verified`／`experimental` 一律降為 `unverified` 並註明原因，避免把 16GB 的驗證結果套到 8GB 機器（可能 OOM）。目前唯一驗證機是 16GB，所以 8–12GB 機器使用 `sdxl_standard` 時會顯示為未驗證，直到補上該記憶體級距的實測紀錄。

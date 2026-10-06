@@ -24,6 +24,14 @@ def load_detect_device():
     return module
 
 
+EVIDENCE = {
+    "report": "docs/knowledge/validation/macos-mps/r.json", "report_sha256": "a" * 64, "tasks": ["concept"],
+    "profile_sha256": "b" * 64,
+    "env": {"comfyui_version": "0.34.0", "comfyui_commit": "c" * 40, "models_hash": "m1", "custom_nodes_hash": "n1"},
+    "min_memory_mb": 16000, "approved_by": "user", "approved_at": "2026-10-06T10:00:00+00:00",
+}
+
+
 class ImageProfileTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -164,6 +172,77 @@ class ImageProfileTests(unittest.TestCase):
         self.assertTrue(self.profiles.platform_eligibility(profile, dict(ok, precision_support=["fp32"])))
         self.assertTrue(self.profiles.platform_eligibility(profile, {"backend": "mps"}))
 
+    def test_profile_hash_excludes_validation_block(self):
+        profile = copy.deepcopy(self.profiles.load_profile("sdxl_standard"))
+        base = self.profiles.profile_content_sha256(profile)
+        profile["validation"]["macos-mps"] = [dict(EVIDENCE)]
+        self.assertEqual(base, self.profiles.profile_content_sha256(profile), "記錄證據不能讓自己綁的雜湊失效")
+        profile["sampling"]["steps"] += 1
+        self.assertNotEqual(base, self.profiles.profile_content_sha256(profile))
+
+    def test_legacy_windows_entry_migrated_and_still_verified(self):
+        profile = self.profiles.load_profile("sdxl_standard")
+        entry = self.profiles.validation_entries(profile, "windows-cuda")[0]
+        self.assertTrue(entry["legacy"])
+        self.assertIsNone(entry["report"])
+        self.assertEqual("docs/tested-versions.md", entry["evidence"])
+        outcome = self.profiles.evaluate_validation(profile, "windows-cuda", 16376, "concept", env={"models_hash": "any"})
+        self.assertEqual(("verified", "legacy"), (outcome["status"], outcome["basis"]))
+
+    def test_old_dict_form_is_still_read(self):
+        profile = copy.deepcopy(self.profiles.load_profile("sdxl_standard"))
+        profile["validation"]["windows-cuda"] = {
+            "status": "verified", "tasks": ["concept"], "min_verified_memory_mb": 16000, "evidence": "docs/tested-versions.md"}
+        self.profiles.validate_profile(profile)
+        self.assertEqual(("verified", None), self.profiles.effective_validation(profile, "windows-cuda", 16376, "concept"))
+        self.assertEqual("unverified", self.profiles.effective_validation(profile, "windows-cuda", 16376, "refine")[0])
+        self.assertEqual("unverified", self.profiles.effective_validation(profile, "windows-cuda", 8000, "concept")[0])
+
+    def _profile_with_evidence(self, **overrides):
+        profile = copy.deepcopy(self.profiles.load_profile("sdxl_standard"))
+        entry = dict(EVIDENCE, profile_sha256=self.profiles.profile_content_sha256(profile), **overrides)
+        profile["validation"]["macos-mps"] = [entry]
+        self.profiles.validate_profile(profile)
+        return profile
+
+    def test_evidence_verified_when_environment_matches(self):
+        profile = self._profile_with_evidence()
+        env = dict(EVIDENCE["env"])
+        outcome = self.profiles.evaluate_validation(profile, "macos-mps", 18432, "concept", env)
+        self.assertEqual(("verified", "evidence"), (outcome["status"], outcome["basis"]))
+        self.assertEqual("unverified", self.profiles.effective_validation(profile, "macos-mps", 18432, "refine", env)[0])
+        self.assertEqual("unverified", self.profiles.effective_validation(profile, "macos-mps", 8000, "concept", env)[0])
+        # 目前環境未知時不比對,不降級
+        self.assertEqual("verified", self.profiles.effective_validation(profile, "macos-mps", 18432, "concept", None)[0])
+
+    def test_evidence_in_other_environment_is_verified_other_env(self):
+        profile = self._profile_with_evidence()
+        env = dict(EVIDENCE["env"], comfyui_version="0.35.0")
+        status, reason = self.profiles.effective_validation(profile, "macos-mps", 18432, "concept", env)
+        self.assertEqual("verified_other_env", status)
+        self.assertIn("已在 2026-10-06 的環境驗證", reason)
+        self.assertIn("目前環境不同", reason)
+        self.assertIn("comfyui 版本 0.34.0→0.35.0", reason)
+        status, reason = self.profiles.effective_validation(
+            profile, "macos-mps", 18432, "concept", dict(EVIDENCE["env"], models_hash="m2"))
+        self.assertEqual("verified_other_env", status)
+        self.assertIn("模型庫內容已變動", reason)
+
+    def test_profile_content_change_makes_evidence_other_env(self):
+        profile = self._profile_with_evidence()
+        profile["sampling"]["steps"] += 1
+        status, reason = self.profiles.effective_validation(profile, "macos-mps", 18432, "concept", dict(EVIDENCE["env"]))
+        self.assertEqual("verified_other_env", status)
+        self.assertIn("設定檔內容已變動", reason)
+
+    def test_legacy_entry_beats_other_env_evidence(self):
+        profile = self._profile_with_evidence()
+        profile["validation"]["macos-mps"].append(
+            {"legacy": True, "report": None, "status": "verified", "tasks": ["concept"], "evidence": "docs/x.md"})
+        env = dict(EVIDENCE["env"], comfyui_version="9")
+        outcome = self.profiles.evaluate_validation(profile, "macos-mps", 18432, "concept", env)
+        self.assertEqual(("verified", "legacy"), (outcome["status"], outcome["basis"]))
+
     def test_sd15_profile_has_no_sdxl_addons(self):
         self.ig.DEVICE = dict(golden_image_graphs.TIER_DEVICES["sd15"])
         for key in ("ipadapter", "clip_vision", "controlnet.canny", "controlnet.union"):
@@ -179,9 +258,10 @@ class ImageProfileTests(unittest.TestCase):
     def test_validation_tasks_are_declared_tasks(self):
         for profile_id in self.profiles.list_profile_ids():
             profile = self.profiles.load_profile(profile_id)
-            for platform_key, record in profile["validation"].items():
-                with self.subTest(profile=profile_id, platform=platform_key):
-                    self.assertLessEqual(set(record.get("tasks", ())), set(profile["tasks"]))
+            for platform_key in profile["validation"]:
+                for entry in self.profiles.validation_entries(profile, platform_key):
+                    with self.subTest(profile=profile_id, platform=platform_key):
+                        self.assertLessEqual(set(entry.get("tasks") or ()), set(profile["tasks"]))
 
     def _broken(self, mutate):
         profile = copy.deepcopy(self.profiles.load_profile("sdxl_standard"))
@@ -195,8 +275,14 @@ class ImageProfileTests(unittest.TestCase):
         self._broken(lambda p: p["resolution"]["by_memory"][0].update(default=[1000, 1001]))
         self._broken(lambda p: p["tasks"]["concept"]["requires"].append("missing_model"))
         self._broken(lambda p: p["tasks"]["pose_only"]["requires"].append("lora.*"))
-        self._broken(lambda p: p["validation"]["windows-cuda"].update(status="probably"))
-        self._broken(lambda p: p["validation"]["windows-cuda"]["tasks"].append("img2video"))
+        self._broken(lambda p: p["validation"]["windows-cuda"][0].update(status="probably"))
+        self._broken(lambda p: p["validation"]["windows-cuda"][0]["tasks"].append("img2video"))
+        # 舊式 dict 寫法仍可讀,且同樣被驗證
+        self._broken(lambda p: p["validation"].update({"x": {"status": "probably"}}))
+        self._broken(lambda p: p["validation"].update({"x": {"status": "verified", "tasks": ["img2video"]}}))
+        # 新式證據項目缺必要欄位/env 含未知欄位
+        self._broken(lambda p: p["validation"].update({"x": [{"tasks": ["concept"], "report": "r.json"}]}))
+        self._broken(lambda p: p["validation"].update({"x": [dict(EVIDENCE, env={"gpu": "x"})]}))
         self._broken(lambda p: p["models"].pop("checkpoint"))
 
 

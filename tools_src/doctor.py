@@ -84,6 +84,10 @@ def summarize_image(snap):
             "missing": {t: v.get("missing_files") or v.get("missing_nodes")
                         for t, v in tasks.items() if not v.get("available")},
             "unverified": sorted(t for t, v in tasks.items() if v.get("validation") == "unverified"),
+            "verified_other_env": {t: v.get("validation_reason") for t, v in sorted(tasks.items())
+                                   if v.get("validation") == "verified_other_env"},
+            "verified_legacy": sorted(t for t, v in tasks.items()
+                                      if v.get("validation") == "verified" and v.get("validation_basis") == "legacy"),
         }
     return result
 
@@ -185,6 +189,10 @@ def format_status(status):
                          f"unverified {len(p['unverified'])} 個")
             if p["unverified"]:
                 lines.append(f"    unverified: {', '.join(p['unverified'])}")
+            for task, reason in p.get("verified_other_env", {}).items():
+                lines.append(f"    {task}: {reason}")
+            if p.get("verified_legacy"):
+                lines.append(f"    已驗證但無環境紀錄(舊式紀錄): {', '.join(p['verified_legacy'])}")
             if p["missing"] and not p["installed"]:
                 lines.append(f"    未安裝所需模型/節點的 task(未選用): {', '.join(p['missing'])}")
     if "video" in status:

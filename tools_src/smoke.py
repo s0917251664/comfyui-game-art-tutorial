@@ -1,4 +1,5 @@
-"""固定煙霧測試套件:`python gameart.py smoke --output-dir DIR [--suite image-core] [--tasks a,b] [--profile ID]`。
+"""固定煙霧測試套件:`python gameart.py smoke [run] --output-dir DIR [--suite image-core] [--tasks a,b] [--profile ID]`。
+事後記錄既有報告:`python gameart.py smoke record <report.json> [--repo-root .] [--with-images]`。
 
 依 ``comfyui_pipeline/smoke_suites/<suite>.json`` 的固定提示詞/種子/尺寸,逐一以子程序呼叫同資料夾的
 ``generate.py``(各 task 都帶明確 ``--result-json``),收集結果後寫 ``<output-dir>/smoke-report.json``
@@ -31,6 +32,7 @@ from comfyui_pipeline import profiles as _profiles  # noqa: E402
 
 REPORT_SCHEMA_VERSION = 1
 REPORT_KIND = "smoke_report"
+PROFILE_HASH_SCHEME = "content-v1"  # profiles.profile_content_sha256:不含 validation 區塊;舊報告沒有此欄位(整檔原始雜湊)
 REPORT_NAME = "smoke-report.json"
 SHEET_NAME = "smoke-contact-sheet.jpg"
 SUITE_DIR = HERE / "comfyui_pipeline" / "smoke_suites"
@@ -352,7 +354,7 @@ def build_report(suite, env, task_records, started, finished, selection=None):
     profile_id = env.get("profile_id")
     try:
         profile_sha = _profiles_sha(profile_id)
-    except OSError:
+    except (OSError, _profiles.ProfileError):
         profile_sha = None
     return {
         "schema_version": REPORT_SCHEMA_VERSION,
@@ -368,6 +370,7 @@ def build_report(suite, env, task_records, started, finished, selection=None):
         "fingerprint": fp.compute_components(env.get("comfyui_path"), env.get("model_roots"), include_hardware=False),
         "profile_id": profile_id,
         "profile_sha256": profile_sha,
+        "profile_hash_scheme": PROFILE_HASH_SCHEME,
         "summary": summarize(task_records),
         "tasks": task_records,
     }
@@ -376,7 +379,7 @@ def build_report(suite, env, task_records, started, finished, selection=None):
 def _profiles_sha(profile_id):
     if not profile_id:
         return None
-    return sha256_file(os.path.join(_profiles.PROFILES_DIR, f"{profile_id}.json"))
+    return _profiles.profile_content_sha256(_profiles.load_profile(profile_id))
 
 
 def write_report(out_dir, report):
@@ -538,7 +541,45 @@ def build_parser():
     return ap
 
 
+def build_record_parser():
+    ap = argparse.ArgumentParser(
+        prog="smoke record", description="把已存在的 smoke-report.json 記錄進 repo 知識庫(不重跑測試)")
+    ap.add_argument("report", help="smoke-report.json 路徑")
+    ap.add_argument("--repo-root", default=".", help="repo 根目錄(預設目前目錄)")
+    ap.add_argument("--with-images", action="store_true", help="一併複製報告旁的總覽圖 JPG(不複製原圖)")
+    return ap
+
+
+def record_main(argv):
+    """`smoke record <report.json> [--repo-root .] [--with-images]`:事後記錄既有報告。"""
+    args = build_record_parser().parse_args(argv)
+    report_path = Path(os.path.abspath(os.path.expanduser(args.report)))
+    report = read_json(report_path)
+    if report is None or report.get("kind") != REPORT_KIND:
+        print(f"smoke record: {report_path} 不是 smoke_report", file=sys.stderr)
+        return 2
+    if not report.get("started") or not report.get("platform_key") or not report.get("suite", {}).get("id"):
+        print("smoke record: 報告缺少 started / platform_key / suite.id,無法決定記錄路徑", file=sys.stderr)
+        return 2
+    target_dir = record_path(args.repo_root, report).parent
+    digest = sha256_file(report_path)
+    if target_dir.is_dir():
+        for existing in sorted(target_dir.glob("*.json")):
+            if sha256_file(existing) == digest:
+                print(f"[smoke] 此報告已記錄: {existing}(不重複寫入)")
+                return 0
+    sheet = report_path.parent / (report.get("contact_sheet") or SHEET_NAME)
+    for path in record_report(args.repo_root, report_path, sheet, report, args.with_images):
+        print(f"[smoke] 已記錄: {path}")
+    return 0
+
+
 def main(argv=None):
+    argv = list(sys.argv[1:] if argv is None else argv)
+    if argv and argv[0] == "record":
+        return record_main(argv[1:])
+    if argv and argv[0] == "run":  # 明確形式;裸 `smoke --output-dir ...` 仍照舊可用
+        argv = argv[1:]
     args = build_parser().parse_args(argv)
     out_dir = Path(os.path.abspath(os.path.expanduser(args.output_dir)))
     try:

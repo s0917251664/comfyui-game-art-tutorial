@@ -18,6 +18,7 @@ from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+from comfyui_pipeline import fingerprint as fp  # noqa: E402
 from comfyui_pipeline import profiles  # noqa: E402
 
 SCHEMA_VERSION = 1
@@ -85,7 +86,7 @@ def _missing_nodes(profile, keys, object_classes):
     return sorted(needed - object_classes)
 
 
-def evaluate_profile(profile, device, model_roots, object_classes):
+def evaluate_profile(profile, device, model_roots, object_classes, env=None):
     platform_key = device.get("platform_key")
     usable = device.get("usable_memory_mb")
     models = {key: _model_entry(entry, model_roots) for key, entry in profile["models"].items()}
@@ -118,15 +119,18 @@ def evaluate_profile(profile, device, model_roots, object_classes):
                 "missing_nodes": feature_nodes,
                 "experimental": models[key]["experimental"],
             }
-        status, reason = profiles.effective_validation(profile, platform_key, usable, task)
+        outcome = profiles.evaluate_validation(profile, platform_key, usable, task, env)
         tasks[task] = {
             "available": not eligibility and not missing_models and not missing_nodes,
             "missing_models": missing_models,
             "missing_files": missing_files,
             "missing_nodes": missing_nodes,
             "features": features,
-            "validation": status,
-            "validation_reason": reason,
+            "validation": outcome["status"],
+            "validation_reason": outcome["reason"],
+            # evidence=有報告證據且環境一致;legacy=舊式手寫紀錄(無環境紀錄,視同 verified);other_env=證據環境與目前不同
+            "validation_basis": outcome["basis"],
+            "validation_evidence": outcome["evidence"],
         }
 
     return {
@@ -156,8 +160,9 @@ def detect(args):
     node_check = query_object_info(_normalise_url(args.comfy_url), args.http_timeout)
     object_classes = set(node_check["classes"]) if node_check["status"] == "available" else None
 
+    env = profiles.env_from_components(fp.compute_components(comfyui_path, model_roots))
     evaluated = {
-        profile_id: evaluate_profile(profiles.load_profile(profile_id), device, model_roots, object_classes)
+        profile_id: evaluate_profile(profiles.load_profile(profile_id), device, model_roots, object_classes, env)
         for profile_id in profiles.list_profile_ids()
     }
     requested = getattr(args, "default_profile", None)

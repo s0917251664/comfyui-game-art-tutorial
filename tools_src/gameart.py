@@ -29,12 +29,13 @@ TOOLS = {
     "review": ("asset_review.py", "素材候選清單與人工 accept/reject 決定紀錄(綁輸出 hash)"),
     "doctor": ("doctor.py", "檢查三份機器快照是否過期;--refresh 重跑 detector"),
     "deploy": ("deploy.py", "把 repo 的 tools_src/ 部署到 ComfyUI(預設 dry run;--yes 寫入,含備份/驗證/自動還原)"),
-    "smoke": ("smoke.py", "固定煙霧測試套件:跑固定 task 並寫技術驗證報告(--record 存入 repo)"),
+    "smoke": ("smoke.py", "固定煙霧測試套件:跑固定 task 並寫技術驗證報告(--record 存入 repo;`smoke record` 事後記錄)"),
+    "validation": ("validation.py", "驗證證據升格:propose 列出、approve(僅使用者決定)寫入 profile、status 看 task×平台"),
     "verify-install": ("verify_portable_install.py", "驗證可攜式安裝與部署副本是否同步"),
     "benchmark-birefnet": ("benchmark_birefnet.py", "BiRefNet 各版本 A/B 基準測試"),
 }
 # 只能從 repo 的 tools_src/ 執行的工具(需要 repo 原始碼作比對基準,部署端可能只留有舊副本)
-REPO_ONLY = {"deploy", "verify-install", "benchmark-birefnet"}
+REPO_ONLY = {"deploy", "validation", "verify-install", "benchmark-birefnet"}
 
 
 def _print_tools(stream):

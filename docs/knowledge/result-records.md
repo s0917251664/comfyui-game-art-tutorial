@@ -19,7 +19,7 @@ Schema v1 的頂層欄位：
 | 欄位 | 說明 |
 |---|---|
 | `schema_version`, `kind`, `status` | 固定為 `1`、`image_generation_result`、`completed` |
-| `task`, `profile_id`, `profile_sha256` | task 與所選 profile；FLUX.2 的 profile 欄位為 null，profile hash 是 profile JSON 檔內容 SHA-256 |
+| `task`, `profile_id`, `profile_sha256` | task 與所選 profile；FLUX.2 的 profile 欄位為 null，profile hash 是 profile JSON 內容 SHA-256(canonical JSON,**不含 `validation` 區塊**,見 `profiles.profile_content_sha256`;2026-10 前的 manifest 是整檔原始位元組雜湊) |
 | `backend`, `prompt_id` | 執行 backend 與 ComfyUI prompt id |
 | `resolved_seeds`, `graph_output_dimensions`, `graph_sha256`, `selected_models`, `effective_conditioning` | 實際送出的 seed、尺寸、graph 摘要、模型檔名與文字編碼節點內容 |
 | `task_parameters` | 非機密 task 參數、原始 prompt、實際 seed（可唯一判斷時）與實際輸出尺寸 |
