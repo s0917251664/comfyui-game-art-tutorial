@@ -118,3 +118,31 @@ class DoctorStatusTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RefreshPreservesDefaultsTests(unittest.TestCase):
+    def test_refresh_passes_previous_default_profile_and_backend(self):
+        from types import SimpleNamespace
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as root:
+            comfy, models, tools = make_env(root)
+            Path(tools, fp.SNAPSHOT_FILES["image"]).write_text(
+                json.dumps({"default_profile": "sd15_light", "model_roots": [models]}), encoding="utf-8")
+            Path(tools, fp.SNAPSHOT_FILES["video"]).write_text(
+                json.dumps({"default_backend": "h3"}), encoding="utf-8")
+            calls = {}
+
+            def fake(label, script, extra, stream):
+                calls[label] = extra
+                return True
+
+            args = SimpleNamespace(config=None, comfyui_path=comfy, snapshot_dir=tools, json=True, refresh=True)
+            with mock.patch.object(doctor, "_run_detector", side_effect=fake), \
+                    mock.patch.object(doctor, "resolve_context", return_value=({}, comfy, tools)), \
+                    mock.patch.object(doctor.fp, "write_fingerprint"), \
+                    contextlib.redirect_stderr(io.StringIO()):
+                self.assertEqual(0, doctor.refresh(args))
+            self.assertIn("sd15_light", calls["image"])
+            self.assertEqual(calls["image"][calls["image"].index("--default-profile") + 1], "sd15_light")
+            self.assertEqual(calls["video"][calls["video"].index("--default-backend") + 1], "h3")
+            self.assertNotIn("--default-backend", calls["image"])

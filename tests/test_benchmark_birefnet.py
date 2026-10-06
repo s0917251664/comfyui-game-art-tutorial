@@ -1,6 +1,6 @@
 import optional_deps
 
-optional_deps.require("PIL", "numpy")
+optional_deps.require("PIL", "numpy", "torch")
 
 import argparse
 import importlib.util

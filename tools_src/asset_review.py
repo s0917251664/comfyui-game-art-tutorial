@@ -28,7 +28,16 @@ def _sha256(path):
 
 
 def _decisions_path(manifest_path):
-    return manifest_path[:-len(MANIFEST_SUFFIX)] + DECISIONS_SUFFIX
+    if manifest_path.endswith(MANIFEST_SUFFIX):
+        return manifest_path[:-len(MANIFEST_SUFFIX)] + DECISIONS_SUFFIX
+    return os.path.splitext(manifest_path)[0] + DECISIONS_SUFFIX
+
+
+def _is_result_manifest(path):
+    try:
+        return _load_json(path).get("kind") == "image_generation_result"
+    except (OSError, ValueError, AttributeError):
+        return False
 
 
 def _load_json(path):
@@ -43,8 +52,9 @@ def _find_manifests(target):
         for root, _dirs, files in os.walk(target):
             found.extend(os.path.join(root, n) for n in files if n.endswith(MANIFEST_SUFFIX))
         return sorted(found)
-    if target.endswith(MANIFEST_SUFFIX) and os.path.isfile(target):
-        return [target]
+    if target.lower().endswith(".json") and os.path.isfile(target):
+        # 預設 *.result.json,或 --result-json 指定的任意檔名
+        return [target] if _is_result_manifest(target) else []
     if os.path.isfile(target):  # 輸出檔:找同資料夾中記錄了它的 manifest
         return [m for m in _find_manifests(os.path.dirname(target))
                 if os.path.dirname(m) == os.path.dirname(target)
@@ -190,7 +200,7 @@ def build_parser():
     ap = argparse.ArgumentParser(description="素材候選的人工決定紀錄(accept/reject 僅限使用者明確決定後)")
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("list", help="列出候選與決定狀態")
-    p.add_argument("target", help="資料夾或 *.result.json")
+    p.add_argument("target", help="資料夾、*.result.json 或 --result-json 指定的 manifest")
     p.set_defaults(func=cmd_list)
     p = sub.add_parser("show", help="顯示單一候選與決定歷史")
     p.add_argument("id", help="sha256 前綴(>=6 碼)或輸出檔路徑")

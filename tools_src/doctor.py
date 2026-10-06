@@ -226,6 +226,10 @@ def refresh(args):
     common = ["--comfyui-path", comfyui_path, "--device-config", device_path, "--overwrite"]
     for root in model_roots:
         common += ["--model-root", root]
+    previous_video = _read_json(os.path.join(snapshot_dir, fp.SNAPSHOT_FILES["video"])) or {}
+    # detector 不給旗標時會把預設值寫成 null;沿用使用者先前選定的預設,避免 refresh 默默清掉偏好。
+    image_extra = ["--default-profile", previous["default_profile"]] if previous.get("default_profile") else []
+    video_extra = ["--default-backend", previous_video["default_backend"]] if previous_video.get("default_backend") else []
     if config.get("comfyui_url"):
         common += ["--comfy-url", config["comfyui_url"], "--http-timeout", "3"]
     results = [
@@ -234,10 +238,10 @@ def refresh(args):
     if results[0]:
         results.append(_run_detector(
             "image", "detect_image_capabilities.py",
-            [*common, "--out", os.path.join(snapshot_dir, fp.SNAPSHOT_FILES["image"])], log))
+            [*common, *image_extra, "--out", os.path.join(snapshot_dir, fp.SNAPSHOT_FILES["image"])], log))
         results.append(_run_detector(
             "video", "detect_video_capabilities.py",
-            [*common, "--out", os.path.join(snapshot_dir, fp.SNAPSHOT_FILES["video"])], log))
+            [*common, *video_extra, "--out", os.path.join(snapshot_dir, fp.SNAPSHOT_FILES["video"])], log))
     if any(r is False for r in results) or results[0] is None:
         print("doctor: 有 detector 失敗,未更新指紋。", file=sys.stderr)
         return 1

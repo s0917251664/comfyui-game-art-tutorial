@@ -7,6 +7,7 @@
 - 圖片 task 未給 `--result-json` 時，生成成功後會盡力在第一個 PNG 輸出旁寫 `<輸出檔名去副檔名>.result.json`（schema 與下節相同）。此為盡力而為：已存在、缺 Pillow 或技術檢查失敗時只在 stderr 警告，不影響生成與 stdout；明確給 `--result-json` 時行為不變（失敗即中止，且不再寫預設檔）。影片 task 已有 `<影片>.json` sidecar（見 `video_contract.py`），不重複產生。
 - 人工決定用 `python tools_src/gameart.py review ...`（`asset_review.py`，stdlib only）：`list <資料夾|manifest>` 列候選、技術狀態與決定（預設 pending）；`show <sha256 前綴>`；`accept|reject <manifest 或輸出檔> --by <誰> [--note ...] [--output ...]`。
 - 決定寫在 manifest 旁的 `<名稱>.decisions.json`（append-only，`schema_version` 1、`kind` `asset_decisions`，每筆含 `output_path`、`sha256`、`decision`、`by`、`note`、`decided_at`）。技術 manifest 不被修改，`content_review` 仍固定為 `pending`。
+- 資料夾掃描只認 `*.result.json`；用 `--result-json` 指定其他檔名時，`review list/accept` 直接傳該 manifest 路徑（例如 `explicit.json` 的決定寫在 `explicit.decisions.json`）。
 - 決定綁輸出檔 SHA-256：同名檔被重新生成或改動後，舊決定不適用，`list` 顯示 `mismatch`（視同 pending）；檔案內容與 manifest 記錄不符時拒絕記錄決定。
 - **agent 不得自行呼叫 accept／reject**；只有使用者在對話中明確給出決定，才可代為記錄，`--by` 填使用者、`--note` 忠實摘要其理由。此紀錄與下方素材 Markdown 頁並行，需要長期追蹤版本時再建素材頁。
 

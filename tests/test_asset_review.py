@@ -77,5 +77,25 @@ class DefaultManifestPathTests(unittest.TestCase):
         sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools_src"))
         from comfyui_pipeline import cli
         self.assertEqual(cli.default_manifest_path(["/o/x_00001_.png", "/o/x_00002_.png"]),
-                         "/o/x_00001_.result.json")
+                         os.path.abspath("/o/x_00001_.result.json"))
         self.assertIsNone(cli.default_manifest_path(["/o/v.mp4"]))
+
+
+class ExplicitManifestTests(unittest.TestCase):
+    def test_list_accepts_custom_named_manifest(self):
+        with tempfile.TemporaryDirectory() as d:
+            _out, manifest = _make(d)
+            custom = os.path.join(d, "explicit.json")
+            os.replace(manifest, custom)
+            code, listing = run("list", custom)
+            self.assertEqual(0, code)
+            self.assertIn("pending", listing)
+            run("accept", custom, "--by", "Steve")
+            self.assertTrue(os.path.isfile(os.path.join(d, "explicit.decisions.json")))
+            self.assertIn("accepted", run("list", custom)[1])
+
+    def test_unrelated_json_is_not_a_candidate(self):
+        with tempfile.TemporaryDirectory() as d:
+            other = os.path.join(d, "other.json")
+            Path(other).write_text('{"kind": "something_else"}', encoding="utf-8")
+            self.assertNotIn("pending", run("list", other)[1])

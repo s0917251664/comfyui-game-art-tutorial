@@ -31,6 +31,8 @@ TOOLS = {
     "verify-install": ("verify_portable_install.py", "驗證可攜式安裝與部署副本是否同步"),
     "benchmark-birefnet": ("benchmark_birefnet.py", "BiRefNet 各版本 A/B 基準測試"),
 }
+# 只能從 repo 的 tools_src/ 執行的工具(需要 repo 原始碼作比對基準,部署端可能只留有舊副本)
+REPO_ONLY = {"verify-install", "benchmark-birefnet"}
 
 
 def _print_tools(stream):
@@ -50,6 +52,10 @@ def main(argv=None):
     if tool not in TOOLS:
         print(f"gameart: 未知工具 {tool!r}\n可用工具:", file=sys.stderr)
         _print_tools(sys.stderr)
+        return 2
+    if tool in REPO_ONLY and HERE.name != "tools_src":
+        print(f"gameart: {tool} 只能從 repo 的 tools_src/gameart.py 執行(例如 python tools_src/gameart.py {tool} ...)",
+              file=sys.stderr)
         return 2
     script = HERE / TOOLS[tool][0]
     if not script.is_file():

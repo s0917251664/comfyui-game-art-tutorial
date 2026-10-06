@@ -38,3 +38,13 @@ class GameartDispatcherTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RepoOnlyToolTests(unittest.TestCase):
+    def test_repo_only_tool_refused_outside_tools_src(self):
+        from unittest import mock
+        err = io.StringIO()
+        with mock.patch.object(gameart, "HERE", Path("/somewhere/ComfyUI/tools")), \
+                mock.patch("sys.stderr", err):
+            self.assertEqual(2, gameart.main(["verify-install"]))
+        self.assertIn("tools_src", err.getvalue())
