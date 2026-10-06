@@ -9,7 +9,7 @@ import os
 import re
 import tempfile
 
-from .runtime import facade as rt
+from .image_graphs import PILImage, _require_pillow
 from .video_catalog import (
     VIDEO_CONTRACT_SCHEMA_VERSION, VIDEO_DURATION_TOLERANCE, VIDEO_FPS, VIDEO_FPS_TOLERANCE,
     VIDEO_FRAME_TOLERANCE, VIDEO_SEAM_WARNING_THRESHOLD, VIDEO_SIDECAR_SCHEMA_VERSION,
@@ -144,9 +144,9 @@ def _input_records(paths):
 
 
 def _continuity_metric(image_a, image_b):
-    rt._require_pillow()
-    a = image_a.convert("RGB").resize((64, 64), rt.PILImage.Resampling.BILINEAR)
-    b = image_b.convert("RGB").resize((64, 64), rt.PILImage.Resampling.BILINEAR)
+    _require_pillow()
+    a = image_a.convert("RGB").resize((64, 64), PILImage.Resampling.BILINEAR)
+    b = image_b.convert("RGB").resize((64, 64), PILImage.Resampling.BILINEAR)
     total = 0
     for y in range(64):
         for x in range(64):
@@ -176,19 +176,19 @@ def _continuity_warnings(video_path, task, references=None):
     """Warning-only pixel continuity diagnostics; never judge character identity."""
     if task == "pose_drive" or task == "character_video":
         return []
-    first, last = rt._first_last_video_images(video_path)
+    first, last = _first_last_video_images(video_path)
     refs = references or {}
     pairs = []
     if task == "fx_loop":
         pairs.append(("seam", first, last))
     if refs.get("start") is not None:
-        with rt.PILImage.open(refs["start"]) as image:
+        with PILImage.open(refs["start"]) as image:
             pairs.append(("start", image.copy(), first))
     if refs.get("end") is not None:
-        with rt.PILImage.open(refs["end"]) as image:
+        with PILImage.open(refs["end"]) as image:
             pairs.append(("end", last, image.copy()))
     if refs.get("source") is not None:
-        with rt.PILImage.open(refs["source"]) as image:
+        with PILImage.open(refs["source"]) as image:
             pairs.append(("source", image.copy(), first))
     warnings = []
     for label, left, right in pairs:
@@ -433,7 +433,7 @@ def resume_video_output(video_path, expected_task, expected_backend, expected_se
     }
     if _resume_signature(payload) != expected:
         raise RuntimeError(f"--resume sidecar 契約/輸入/config 不完全相符，拒絕跳過: {sidecar}")
-    metadata = rt.report_video_output(
+    metadata = report_video_output(
         video_path, task=expected_task, backend=expected_backend,
         expected_contract=contract,
     )

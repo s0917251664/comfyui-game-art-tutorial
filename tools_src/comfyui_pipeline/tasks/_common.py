@@ -2,7 +2,9 @@
 import argparse
 from dataclasses import dataclass, field
 
-from ..runtime import facade as rt
+from ..client import DEFAULT_TIMEOUT, OUTPUT_DIR
+from ..image_graphs import STYLE_CHECKPOINTS, validate_batch, validate_dimensions, validate_lora_strength
+from ..video_catalog import DEFAULT_VIDEO_TIMEOUT, VIDEO_BACKENDS
 
 
 def add_runtime_arguments(parser):
@@ -31,8 +33,8 @@ def add_runtime_arguments(parser):
     )
     parser.add_argument(
         "--timeout", type=float, default=argparse.SUPPRESS,
-        help=(f"prompt 送達後輪詢生成結果的秒數上限；圖片預設 {rt.DEFAULT_TIMEOUT:g}，"
-              f"影片預設 {rt.DEFAULT_VIDEO_TIMEOUT:g}。"),
+        help=(f"prompt 送達後輪詢生成結果的秒數上限；圖片預設 {DEFAULT_TIMEOUT:g}，"
+              f"影片預設 {DEFAULT_VIDEO_TIMEOUT:g}。"),
     )
     parser.add_argument(
         "--result-json", dest="result_json", default=argparse.SUPPRESS,
@@ -43,13 +45,13 @@ def add_runtime_arguments(parser):
 def build_parents():
     """建立各 task 子命令共用的 argparse parent(不可直接當子命令用)。"""
     common = argparse.ArgumentParser(add_help=False)
-    common.add_argument("--output-dir", help=f"成品存放資料夾,預設 {rt.OUTPUT_DIR}")
+    common.add_argument("--output-dir", help=f"成品存放資料夾,預設 {OUTPUT_DIR}")
     add_runtime_arguments(common)
 
     # 會用到底模 checkpoint 的 task 額外共用 --style(layer_split 純裁切、不吃底模,不套用這組)
     model_common = argparse.ArgumentParser(add_help=False, parents=[common])
     model_common.add_argument(
-        "--style", choices=list(rt.STYLE_CHECKPOINTS),
+        "--style", choices=list(STYLE_CHECKPOINTS),
         help="換一顆風格底模(選配,不給就用這台機器裝機時鎖定的預設 checkpoint)。"
              "realistic=寫實(Juggernaut XL)、illustration=插畫/概念藝術(Illustrious XL)、"
              "anime=二次元/動漫(Pony Diffusion V6 XL)。需要先在這台機器裝好對應 checkpoint,"
@@ -77,7 +79,7 @@ def build_parents():
 
     video_common = argparse.ArgumentParser(add_help=False, parents=[common])
     video_common.add_argument(
-        "--backend", choices=list(rt.VIDEO_BACKENDS), default=argparse.SUPPRESS,
+        "--backend", choices=list(VIDEO_BACKENDS), default=argparse.SUPPRESS,
         help=("影片實作後端；不給時只使用 capability config 明確設定的 default_backend，"
               "不會無條件預設 H3。某個 task 若還沒接這個 backend，會直接報錯。"),
     )
@@ -115,12 +117,12 @@ class VideoPlan:
 
 def validate_explore_args(args):
     """concept/icon_asset/character_action/pose_only/style_lock 共用:批次、LoRA 強度、明確給的尺寸。"""
-    rt.validate_batch(args.batch)
-    rt.validate_lora_strength(args.lora_strength)
+    validate_batch(args.batch)
+    validate_lora_strength(args.lora_strength)
     # 沒給尺寸時由 builder 依選用的設定檔/device_config 補預設值,這裡只驗證使用者明確給的值。
     # validate_dimensions 需要兩個值;未給的那一邊用合法佔位值 8,讓錯誤訊息只指向真正給錯的欄位。
     if args.width is not None or args.height is not None:
-        rt.validate_dimensions(
+        validate_dimensions(
             8 if args.width is None else args.width,
             8 if args.height is None else args.height,
         )

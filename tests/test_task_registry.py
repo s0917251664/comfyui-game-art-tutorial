@@ -27,7 +27,7 @@ class TaskRegistryTests(unittest.TestCase):
         cls.cli = cli
         cls.tasks = tasks
 
-    def test_task_sets_match_facade_constants(self):
+    def test_task_sets_match_generate_constants(self):
         self.assertEqual(self.generate.IMAGE_GRAPH_TASKS, self.tasks.IMAGE_TASKS)
         self.assertEqual(self.generate.VIDEO_TASKS, self.tasks.VIDEO_TASKS)
         self.assertEqual(
@@ -44,20 +44,25 @@ class TaskRegistryTests(unittest.TestCase):
             self.assertIn(task, module.TASKS)
 
     def test_subcommands_follow_task_order(self):
-        self.generate._runtime.bind(vars(self.generate))
         parser = self.cli.build_parser()
         choices = next(
             action.choices for action in parser._actions if getattr(action, "dest", None) == "task"
         )
         self.assertEqual(list(self.tasks.TASK_ORDER), list(choices))
 
-    def test_facade_keeps_legacy_entry_points(self):
-        for name in ("main", "_build_image_task_graph", "_validate_cli_args",
-                     "_validate_task_capabilities", "_add_runtime_arguments",
-                     "resolve_comfy_url", "validate_timeout", "submit_and_wait",
+    def test_generate_keeps_entry_points_and_pipeline_modules_hold_the_rest(self):
+        for name in ("main", "resolve_comfy_url", "validate_timeout", "submit_and_wait",
                      "download_outputs", "upload_image", "_fetch_comfy_object_info",
                      "check_image_graph_against_object_info"):
             self.assertTrue(callable(getattr(self.generate, name)), name)
+        for module, name in ((self.tasks, "build_image_task_graph"),
+                             (self.tasks, "preflight_image_task"),
+                             (self.cli, "validate_cli_args"),
+                             (self.cli, "validate_task_capabilities"),
+                             (self.cli, "run")):
+            self.assertTrue(callable(getattr(module, name)), name)
+        from comfyui_pipeline.tasks import _common
+        self.assertTrue(callable(_common.add_runtime_arguments))
 
 
 if __name__ == "__main__":

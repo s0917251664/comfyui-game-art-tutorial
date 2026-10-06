@@ -1,5 +1,7 @@
 """實驗性 FLUX.2 圖片 task:flux2_concept、flux2_edit。不走 SDXL 的 --style/--rating/LoRA,也不走模型設定檔。"""
-from ..runtime import facade as rt
+from .. import image_runtime
+from ..image_capabilities import validate_flux2_capability
+from ..image_graphs import validate_flux2_dimensions
 
 TASKS = ("flux2_concept", "flux2_edit")
 
@@ -42,23 +44,23 @@ def add_parser(sub, parents, task):
 
 def validate(args):
     if args.task == "flux2_concept":
-        rt.validate_flux2_dimensions(args.width, args.height)
+        validate_flux2_dimensions(args.width, args.height)
 
 
 def preflight(args, comfy_url, request_timeout):
     """送出前確認 ComfyUI 有 FLUX.2 需要的 node 與模型。"""
-    rt.validate_flux2_capability(args.task, comfy_url, request_timeout=request_timeout)
+    validate_flux2_capability(args.task, comfy_url, request_timeout=request_timeout)
 
 
-def build_graph(args, style_checkpoint, upload):
+def build_graph(ctx, args, style_checkpoint, upload):
     """組圖片 task 的 graph;``upload`` 回傳 ComfyUI 端檔名。"""
     if args.task == "flux2_concept":
-        prompt, out_id = rt.build_flux2_concept(
+        prompt, out_id = image_runtime.build_flux2_concept(ctx,
             args.prompt, width=args.width, height=args.height, seed=args.seed,
         )
     elif args.task == "flux2_edit":
         img_fn = upload(args.image)
-        prompt, out_id = rt.build_flux2_edit(args.prompt, img_fn, seed=args.seed)
+        prompt, out_id = image_runtime.build_flux2_edit(ctx, args.prompt, img_fn, seed=args.seed)
     else:
         raise ValueError(f"不是這個模組的圖片 task: {args.task}")
     return prompt, out_id

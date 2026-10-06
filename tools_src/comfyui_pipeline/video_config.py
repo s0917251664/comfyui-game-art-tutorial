@@ -1,6 +1,6 @@
 """影片 capability 設定:載入/正規化 video_capabilities.json、模型與 node 預檢、backend 選擇。
 
-從 generate.py 抽出;``ACTIVE_VIDEO_CONFIG`` 仍是 generate 模組上的狀態,這裡透過 ``runtime.facade`` 讀寫。
+從 generate.py 抽出。選用的 capability config 存在 ``RunContext.active_video_config``,由呼叫端明確傳入。
 """
 import os
 import re
@@ -10,7 +10,8 @@ from . import video_catalog as _video_catalog
 from .client import (
     DEFAULT_HTTP_TIMEOUT, _read_runtime_config, _relative_config_path, _runtime_config_path_from_env,
 )
-from .runtime import facade as rt
+from .client import _fetch_comfy_object_info
+from .image_graphs import PILImage
 from .video_catalog import (
     VIDEO_BACKEND_CAPS, VIDEO_BACKEND_SPECS, VIDEO_BACKENDS, VIDEO_CAPABILITY_CONFIG_ENV_VARS,
     VIDEO_CAPABILITY_CONFIG_FILENAME, VIDEO_CAPABILITY_SCHEMA_VERSION, VIDEO_CONTROL_NODES,
@@ -158,14 +159,14 @@ def _configured_capabilities(config, backend):
     return set(spec.get("capabilities", ()))
 
 
-def _video_model_file_name(backend, model_key):
-    """Resolve the graph-visible model name from the active machine config."""
-    if rt.ACTIVE_VIDEO_CONFIG is None:
+def _video_model_file_name(backend, model_key, video_config=None):
+    """Resolve the graph-visible model name from the active machine config(沒有就用內建預設)。"""
+    if video_config is None:
         try:
             return VIDEO_BACKEND_SPECS[backend]["models"][model_key]
         except KeyError as exc:
             raise RuntimeError(f"內建影片 backend {backend!r} 缺少模型欄位 {model_key!r}") from exc
-    spec = _configured_backend_spec(rt.ACTIVE_VIDEO_CONFIG, backend)
+    spec = _configured_backend_spec(video_config, backend)
     entry = spec.get("models", {}).get(model_key)
     if isinstance(entry, str):
         name = entry
@@ -289,7 +290,7 @@ def _node_schema_fingerprint(payload, required_nodes=None):
 def validate_comfy_video_nodes(comfy_url, required_nodes, request_timeout=DEFAULT_HTTP_TIMEOUT,
                                expected_schema_fingerprint=None):
     required = tuple(dict.fromkeys(required_nodes))
-    payload = rt._fetch_comfy_object_info(comfy_url, request_timeout=request_timeout)
+    payload = _fetch_comfy_object_info(comfy_url, request_timeout=request_timeout)
     available = set(payload)
     missing = sorted(set(required) - available)
     if missing:
@@ -309,7 +310,7 @@ def validate_comfy_video_nodes(comfy_url, required_nodes, request_timeout=DEFAUL
 
 def _runtime_versions_for_video():
     versions = {"python": ".".join(str(part) for part in sys.version_info[:3])}
-    if rt.PILImage is None:
+    if PILImage is None:
         raise RuntimeError("影片 task 需要 Pillow，但目前執行 Python 沒有 Pillow")
     try:
         import PIL
@@ -361,10 +362,10 @@ def validate_video_runtime(config):
     return actual
 
 
-def configure_video_capability(task, requested_backend=None, runtime_config_path=None,
+def configure_video_capability(ctx, task, requested_backend=None, runtime_config_path=None,
                                video_config_path=None, comfy_url=None,
                                request_timeout=DEFAULT_HTTP_TIMEOUT, control_type=None):
-    """Select and validate one configured backend before any input upload."""
+    """Select and validate one configured backend before any input upload;選中的 config 寫進 ``ctx.active_video_config``。"""
     config = load_video_capabilities(runtime_config_path, video_config_path)
     backend = requested_backend or config.get("default_backend")
     if not backend:
@@ -382,7 +383,7 @@ def configure_video_capability(task, requested_backend=None, runtime_config_path
             f"task {task} 在 backend {backend} 沒有完整 capability: "
             f"缺 {', '.join(missing_caps)}；不會靜默改用另一個 backend"
         )
-    rt.validate_video_runtime(config)
+    validate_video_runtime(config)
     _validate_video_models(config, backend, required)
     if not comfy_url:
         raise RuntimeError("影片生成需要 ComfyUI URL 以驗證 /object_info")
@@ -391,16 +392,16 @@ def configure_video_capability(task, requested_backend=None, runtime_config_path
     node_check = config.get("node_check")
     if isinstance(node_check, dict):
         expected_fingerprint = node_check.get("schema_fingerprint")
-    rt.validate_comfy_video_nodes(
+    validate_comfy_video_nodes(
         comfy_url, nodes, request_timeout=request_timeout,
         expected_schema_fingerprint=expected_fingerprint,
     )
-    rt.ACTIVE_VIDEO_CONFIG = config
+    ctx.active_video_config = config
     return backend
 
 
 def backend_has(backend, cap, capability_config=None):
-    config = capability_config or rt.ACTIVE_VIDEO_CONFIG
+    config = capability_config
     if config is not None:
         try:
             return cap in _configured_capabilities(config, backend)

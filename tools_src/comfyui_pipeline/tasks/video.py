@@ -6,7 +6,20 @@
 import os
 import sys
 
-from ..runtime import facade as rt
+from ..client import OUTPUT_DIR
+from ..image_graphs import validate_dimensions
+from ..video_builders import run_character_video, run_i2v, run_pose_drive
+from ..video_catalog import (
+    CAMERA_MOVES, CHARACTER_REF_MAX, VIDEO_FPS, VIDEO_INPUT_MIN_DURATION, VIDEO_LOOP_SUFFIX,
+)
+from ..video_config import backend_has, require_video_backend
+from ..video_contract import _safe_identifier, make_video_contract, video_filename_prefix
+from ..video_graphs import build_camera_end_still, camera_move_prompt
+from ..video_media import (
+    _make_temp_image_path, _remove_temp_file, _require_video_duration, _require_wh_pair,
+    extract_last_frame, validate_motion_reference_fps, validate_transition_images,
+    validate_video_input, video_canvas,
+)
 from ._common import VideoPlan
 
 TASKS = ("img2video", "fx_loop", "transition", "clip_extend", "camera_move", "character_video", "pose_drive")
@@ -88,7 +101,7 @@ def _add_camera_move(sub, parents):
     )
     p_cam.add_argument("--image", required=True, help="已過關的靜幀")
     p_cam.add_argument(
-        "--camera", required=True, choices=list(rt.CAMERA_MOVES),
+        "--camera", required=True, choices=list(CAMERA_MOVES),
         help="運鏡:static/pan_up/pan_down/pan_left/pan_right/zoom_in/zoom_out/orbit_cw/orbit_ccw",
     )
     p_cam.add_argument(
@@ -159,161 +172,167 @@ def add_parser(sub, parents, task):
 
 def validate(args):
     if args.width is not None and args.height is not None:
-        rt.validate_dimensions(args.width, args.height)
-    rt._safe_identifier(getattr(args, "shot_id", None), "--shot-id")
-    rt._safe_identifier(getattr(args, "name", None), "--name")
+        validate_dimensions(args.width, args.height)
+    _safe_identifier(getattr(args, "shot_id", None), "--shot-id")
+    _safe_identifier(getattr(args, "name", None), "--name")
     if getattr(args, "resume", False) and not (
             getattr(args, "shot_id", None) or getattr(args, "name", None)):
         raise ValueError("--resume 需要 --name 或 --shot-id 才能精確定位輸出")
 
 
-def prepare(args, upload):
+def prepare(ctx, args, upload):
     """驗證輸入、上傳參考檔並組好影片 graph,回傳 VideoPlan。"""
     continuity_refs = {}
     video_prompt = None
     if args.task == "img2video":
-        backend = rt.require_video_backend(args.task, args.backend, rt.ACTIVE_VIDEO_CONFIG)
-        duration = rt._require_video_duration(args.duration)
-        rt._require_wh_pair(args)
-        width, height = rt.video_canvas(args.image, args.width, args.height)
+        backend = require_video_backend(args.task, args.backend, ctx.active_video_config)
+        duration = _require_video_duration(args.duration)
+        _require_wh_pair(args)
+        width, height = video_canvas(args.image, args.width, args.height)
         img_fn = upload(args.image)
         video_inputs = [args.image]
         continuity_refs = {"source": args.image}
-        video_prefix = rt.video_filename_prefix(args.task, args.shot_id, args.name)
-        prompt, out_id = rt.run_i2v(
+        video_prefix = video_filename_prefix(args.task, args.shot_id, args.name)
+        prompt, out_id = run_i2v(
             backend, args.prompt, img_fn, width, height, args.seed, duration,
             filename_prefix=video_prefix, negative=args.negative,
+            video_config=ctx.active_video_config,
         )
-        video_contract = rt.make_video_contract(args.task, backend, width, height, duration,
+        video_contract = make_video_contract(args.task, backend, width, height, duration,
                                              audio_expected=(backend == "h3"))
     elif args.task == "fx_loop":
-        backend = rt.require_video_backend(args.task, args.backend, rt.ACTIVE_VIDEO_CONFIG)
-        duration = rt._require_video_duration(args.duration)
-        rt._require_wh_pair(args)
-        width, height = rt.video_canvas(args.image, args.width, args.height)
+        backend = require_video_backend(args.task, args.backend, ctx.active_video_config)
+        duration = _require_video_duration(args.duration)
+        _require_wh_pair(args)
+        width, height = video_canvas(args.image, args.width, args.height)
         img_fn = upload(args.image)
-        loop_prompt = args.prompt if "loop" in args.prompt.lower() else f"{args.prompt}, {rt.VIDEO_LOOP_SUFFIX}"
+        loop_prompt = args.prompt if "loop" in args.prompt.lower() else f"{args.prompt}, {VIDEO_LOOP_SUFFIX}"
         video_prompt = loop_prompt
         video_inputs = [args.image]
         continuity_refs = {"source": args.image}
-        video_prefix = rt.video_filename_prefix(args.task, args.shot_id, args.name)
-        prompt, out_id = rt.run_i2v(
+        video_prefix = video_filename_prefix(args.task, args.shot_id, args.name)
+        prompt, out_id = run_i2v(
             backend, loop_prompt, img_fn, width, height, args.seed, duration,
             last_image_filename=img_fn, filename_prefix=video_prefix, negative=args.negative,
+            video_config=ctx.active_video_config,
         )
-        video_contract = rt.make_video_contract(args.task, backend, width, height, duration,
+        video_contract = make_video_contract(args.task, backend, width, height, duration,
                                              audio_expected=(backend == "h3"))
     elif args.task == "transition":
-        backend = rt.require_video_backend(args.task, args.backend, rt.ACTIVE_VIDEO_CONFIG)
-        duration = rt._require_video_duration(args.duration)
+        backend = require_video_backend(args.task, args.backend, ctx.active_video_config)
+        duration = _require_video_duration(args.duration)
         if (args.width is None) ^ (args.height is None):
             raise SystemExit("--width 跟 --height 要一起給,或兩個都不給。")
         try:
-            rt.validate_transition_images(args.start, args.end)
+            validate_transition_images(args.start, args.end)
         except (OSError, ValueError) as exc:
             raise SystemExit(str(exc)) from exc
-        width, height = rt.video_canvas(args.start, args.width, args.height)
+        width, height = video_canvas(args.start, args.width, args.height)
         start_fn = upload(args.start)
         end_fn = upload(args.end)
         video_inputs = [args.start, args.end]
         continuity_refs = {"start": args.start, "end": args.end}
-        video_prefix = rt.video_filename_prefix(args.task, args.shot_id, args.name)
-        prompt, out_id = rt.run_i2v(
+        video_prefix = video_filename_prefix(args.task, args.shot_id, args.name)
+        prompt, out_id = run_i2v(
             backend, args.prompt, start_fn, width, height, args.seed, duration,
             last_image_filename=end_fn, filename_prefix=video_prefix,
+            video_config=ctx.active_video_config,
         )
-        video_contract = rt.make_video_contract(args.task, backend, width, height, duration,
+        video_contract = make_video_contract(args.task, backend, width, height, duration,
                                              audio_expected=(backend == "h3"))
     elif args.task == "clip_extend":
         if bool(args.video) == bool(args.image):
             raise SystemExit("clip_extend 要 --video 上一支 mp4,或 --image 上一鏡尾幀,只能給一個。")
-        backend = rt.require_video_backend(args.task, args.backend, rt.ACTIVE_VIDEO_CONFIG)
-        duration = rt._require_video_duration(args.duration)
-        rt._require_wh_pair(args)
+        backend = require_video_backend(args.task, args.backend, ctx.active_video_config)
+        duration = _require_video_duration(args.duration)
+        _require_wh_pair(args)
         still = args.image
         temp_still = None
         if args.video:
             if os.path.isfile(os.path.abspath(os.fspath(args.video))):
                 try:
-                    rt.validate_video_input(args.video, label="clip_extend --video", min_duration=rt.VIDEO_INPUT_MIN_DURATION)
+                    validate_video_input(args.video, label="clip_extend --video", min_duration=VIDEO_INPUT_MIN_DURATION)
                 except (RuntimeError, ValueError) as exc:
                     raise SystemExit(str(exc)) from exc
-            out_dir = getattr(args, "output_dir", None) or rt.OUTPUT_DIR
-            temp_still = rt._make_temp_image_path(out_dir, "_clip_extend_last_")
+            out_dir = getattr(args, "output_dir", None) or OUTPUT_DIR
+            temp_still = _make_temp_image_path(out_dir, "_clip_extend_last_")
             try:
-                rt.extract_last_frame(args.video, temp_still)
+                extract_last_frame(args.video, temp_still)
                 print(f"[連戲] 上一鏡尾幀 -> {temp_still}")
                 still = temp_still
-                width, height = rt.video_canvas(still, args.width, args.height)
+                width, height = video_canvas(still, args.width, args.height)
                 img_fn = upload(still)
             finally:
-                rt._remove_temp_file(temp_still)
+                _remove_temp_file(temp_still)
         else:
-            width, height = rt.video_canvas(still, args.width, args.height)
+            width, height = video_canvas(still, args.width, args.height)
             img_fn = upload(still)
         video_inputs = [args.video] if args.video else [args.image]
         continuity_refs = {"source": still} if args.image else {}
-        video_prefix = rt.video_filename_prefix(args.task, args.shot_id, args.name)
-        prompt, out_id = rt.run_i2v(
+        video_prefix = video_filename_prefix(args.task, args.shot_id, args.name)
+        prompt, out_id = run_i2v(
             backend, args.prompt, img_fn, width, height, args.seed, duration,
             filename_prefix=video_prefix, negative=args.negative,
+            video_config=ctx.active_video_config,
         )
-        video_contract = rt.make_video_contract(args.task, backend, width, height, duration,
+        video_contract = make_video_contract(args.task, backend, width, height, duration,
                                              audio_expected=(backend == "h3"))
     elif args.task == "camera_move":
-        backend = rt.require_video_backend(args.task, args.backend, rt.ACTIVE_VIDEO_CONFIG)
-        duration = rt._require_video_duration(args.duration)
-        rt._require_wh_pair(args)
-        width, height = rt.video_canvas(args.image, args.width, args.height)
+        backend = require_video_backend(args.task, args.backend, ctx.active_video_config)
+        duration = _require_video_duration(args.duration)
+        _require_wh_pair(args)
+        width, height = video_canvas(args.image, args.width, args.height)
         img_fn = upload(args.image)
         video_inputs = [args.image]
         continuity_refs = {"source": args.image}
-        video_prefix = rt.video_filename_prefix(args.task, args.shot_id, args.name)
-        cam_prompt = rt.camera_move_prompt(args.camera, args.prompt)
+        video_prefix = video_filename_prefix(args.task, args.shot_id, args.name)
+        cam_prompt = camera_move_prompt(args.camera, args.prompt)
         last_fn = None
         end_path = None
         try:
-            if rt.backend_has(backend, "last_frame"):
+            if backend_has(backend, "last_frame", ctx.active_video_config):
                 if args.camera == "static":
                     last_fn = img_fn
                 elif args.camera not in ("orbit_cw", "orbit_ccw"):
-                    out_dir = getattr(args, "output_dir", None) or rt.OUTPUT_DIR
-                    end_path = rt._make_temp_image_path(out_dir, "_camera_end_")
-                    rt.build_camera_end_still(args.image, args.camera, width, height, end_path)
+                    out_dir = getattr(args, "output_dir", None) or OUTPUT_DIR
+                    end_path = _make_temp_image_path(out_dir, "_camera_end_")
+                    build_camera_end_still(args.image, args.camera, width, height, end_path)
                     print(f"[運鏡] 終點靜幀 -> {end_path}")
                     last_fn = upload(end_path)
-            prompt, out_id = rt.run_i2v(
+            prompt, out_id = run_i2v(
                 backend, cam_prompt, img_fn, width, height, args.seed, duration,
                 last_image_filename=last_fn, filename_prefix=video_prefix,
                 negative=args.negative,
-            )
+            video_config=ctx.active_video_config,
+        )
         finally:
-            rt._remove_temp_file(end_path)
-        video_contract = rt.make_video_contract(args.task, backend, width, height, duration,
+            _remove_temp_file(end_path)
+        video_contract = make_video_contract(args.task, backend, width, height, duration,
                                              audio_expected=(backend == "h3"))
     elif args.task == "character_video":
-        backend = rt.require_video_backend(args.task, args.backend, rt.ACTIVE_VIDEO_CONFIG)
+        backend = require_video_backend(args.task, args.backend, ctx.active_video_config)
         refs = args.character_ref
-        if len(refs) > rt.CHARACTER_REF_MAX:
+        if len(refs) > CHARACTER_REF_MAX:
             raise SystemExit(
-                f"--character-ref 最多 {rt.CHARACTER_REF_MAX} 張,目前 {len(refs)}"
+                f"--character-ref 最多 {CHARACTER_REF_MAX} 張,目前 {len(refs)}"
             )
-        duration = rt._require_video_duration(args.duration)
-        rt._require_wh_pair(args)
-        width, height = rt.video_canvas(refs[0], args.width, args.height)
+        duration = _require_video_duration(args.duration)
+        _require_wh_pair(args)
+        width, height = video_canvas(refs[0], args.width, args.height)
         ref_fns = [upload(p) for p in refs]
         video_inputs = list(refs)
-        video_prefix = rt.video_filename_prefix(args.task, args.shot_id, args.name)
-        prompt, out_id = rt.run_character_video(
+        video_prefix = video_filename_prefix(args.task, args.shot_id, args.name)
+        prompt, out_id = run_character_video(
             backend, args.prompt, ref_fns, width, height, args.seed, duration,
             filename_prefix=video_prefix,
+            video_config=ctx.active_video_config,
         )
-        video_contract = rt.make_video_contract(args.task, backend, width, height, duration,
+        video_contract = make_video_contract(args.task, backend, width, height, duration,
                                              audio_expected=(backend == "h3"))
     elif args.task == "pose_drive":
-        backend = rt.require_video_backend(args.task, args.backend, rt.ACTIVE_VIDEO_CONFIG)
-        duration = rt._require_video_duration(args.duration)
-        rt._require_wh_pair(args)
+        backend = require_video_backend(args.task, args.backend, ctx.active_video_config)
+        duration = _require_video_duration(args.duration)
+        _require_wh_pair(args)
         print(
             "[提醒] pose_drive 的角色靜幀姿勢/朝向要接近動作片第一幀;"
             "對不上(例如站姿去套走路)會雙人/重影。",
@@ -322,24 +341,25 @@ def prepare(args, upload):
         try:
             # Keep the cheap FPS-specific diagnostic first; the full decode
             # preflight follows and catches empty/truncated references.
-            rt.validate_motion_reference_fps(args.motion_ref)
-            rt.validate_video_input(
+            validate_motion_reference_fps(args.motion_ref)
+            validate_video_input(
                 args.motion_ref, label="pose_drive --motion-ref",
-                min_duration=duration, require_fps=rt.VIDEO_FPS,
+                min_duration=duration, require_fps=VIDEO_FPS,
             )
         except (RuntimeError, ValueError) as exc:
             raise SystemExit(str(exc)) from exc
-        width, height = rt.video_canvas(args.image, args.width, args.height)
+        width, height = video_canvas(args.image, args.width, args.height)
         img_fn = upload(args.image)
         motion_fn = upload(args.motion_ref)
         video_inputs = [args.image, args.motion_ref]
-        video_prefix = rt.video_filename_prefix(args.task, args.shot_id, args.name)
-        prompt, out_id = rt.run_pose_drive(
+        video_prefix = video_filename_prefix(args.task, args.shot_id, args.name)
+        prompt, out_id = run_pose_drive(
             backend, args.prompt, img_fn, motion_fn, width, height, args.seed, duration,
             control_type=args.control_type, filename_prefix=video_prefix,
             negative=args.negative,
+            video_config=ctx.active_video_config,
         )
-        video_contract = rt.make_video_contract(args.task, backend, width, height, duration,
+        video_contract = make_video_contract(args.task, backend, width, height, duration,
                                              audio_expected=(backend == "h3"))
     else:
         raise ValueError(f"不是這個模組的影片 task: {args.task}")
