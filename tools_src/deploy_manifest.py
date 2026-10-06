@@ -26,7 +26,7 @@ _TOOL_FILES = (
     "video_layers.py", "face_swap.py", "film_audio.py", "film_sapi.ps1", "film_qwen.py", "film_lipsync.py",
     "generate.py", "detect_device.py", "sam_segment.py", "image_edit_tools.py", "comfyui_design.py",
     "mask_refine.py", "mask_session.py", "detect_image_capabilities.py", "detect_video_capabilities.py",
-    "gameart.py", "doctor.py", "asset_review.py",
+    "gameart.py", "doctor.py", "asset_review.py", "smoke.py",
 )
 _NODE_PACKAGE_FILES = ("__init__.py", "contracts.py", "media.py", "nodes.py")
 # (label 前綴, repo 套件資料夾, 部署位置們)。第二個位置是 custom_nodes,安裝與否由使用者決定。

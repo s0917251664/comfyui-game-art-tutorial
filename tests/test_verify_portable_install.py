@@ -47,6 +47,9 @@ class VerifyPortableInstallTests(unittest.TestCase):
         cls.profile_json_bytes = {
             path.name: path.read_bytes() for path in sorted((PIPELINE_PKG / "profiles").glob("*.json"))
         }
+        cls.suite_json_bytes = {
+            path.name: path.read_bytes() for path in sorted((PIPELINE_PKG / "smoke_suites").glob("*.json"))
+        }
 
     def _write_json(self, path, payload):
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -72,7 +75,7 @@ class VerifyPortableInstallTests(unittest.TestCase):
         self._copy_source(tools_dir / "image_edit_tools.py", self.image_edit_tools_bytes)
         self._copy_source(tools_dir / "comfyui_design.py", (ROOT / "tools_src/comfyui_design.py").read_bytes())
         for name in ("film_audio.py", "film_sapi.ps1", "film_qwen.py", "film_lipsync.py", "face_swap.py", "video_layers.py",
-                     "detect_video_capabilities.py", "gameart.py", "doctor.py", "asset_review.py"):
+                     "detect_video_capabilities.py", "gameart.py", "doctor.py", "asset_review.py", "smoke.py"):
             self._copy_source(tools_dir / name, (ROOT / "tools_src" / name).read_bytes())
         for name in ("__init__.py", "contracts.py", "media.py", "nodes.py"):
             for location in (tools_dir / "comfyui_face_swap_video", comfyui_path / "custom_nodes/comfyui-face-swap-video"):
@@ -91,6 +94,8 @@ class VerifyPortableInstallTests(unittest.TestCase):
         self._copy_source(tools_dir / "detect_image_capabilities.py", self.detect_image_bytes)
         for name, source in self.profile_json_bytes.items():
             self._copy_source(tools_dir / "comfyui_pipeline" / "profiles" / name, source)
+        for name, source in self.suite_json_bytes.items():
+            self._copy_source(tools_dir / "comfyui_pipeline" / "smoke_suites" / name, source)
         if include_video:
             self._copy_source(tools_dir / "detect_video_capabilities.py", self.detect_video_bytes)
 
@@ -381,7 +386,9 @@ class VerifyPortableInstallTests(unittest.TestCase):
                       for name, source in self.pipeline_source_bytes.items()),
                     ("detect_image_capabilities.py", self.detect_image_bytes),
                     *((f"comfyui_pipeline/profiles/{name}", source)
-                      for name, source in self.profile_json_bytes.items())):
+                      for name, source in self.profile_json_bytes.items()),
+                    *((f"comfyui_pipeline/smoke_suites/{name}", source)
+                      for name, source in self.suite_json_bytes.items())):
                 text = source.decode("utf-8").replace("\r\n", "\n").replace("\n", "\r\n")
                 target = tools_dir / name
                 target.parent.mkdir(parents=True, exist_ok=True)

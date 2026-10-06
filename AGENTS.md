@@ -20,6 +20,7 @@
 | 影片遮罩分層 | `comfyui-video-layers` | `video_layers.py preflight` / `run` |
 | 安裝 ComfyUI／模型 | `comfyui-install` | `verify_portable_install.py` |
 | 部署 repo 工具到 ComfyUI | `comfyui-install` | `gameart.py deploy`（dry run）／ `deploy --yes` ／ `deploy --rollback` |
+| 固定煙霧測試與驗證紀錄 | `comfyui-install` | `gameart.py smoke --output-dir DIR [--tasks ..] [--record <repo>]`（技術檢查，見 `docs/knowledge/maintenance/validation-workflow.md`） |
 
 各 task 完整參數以 `generate.py <task> --help` 為準；其他入口見下方路由，指令不在表內者不要自行推定。
 
