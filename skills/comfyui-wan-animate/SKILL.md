@@ -11,10 +11,12 @@ Wan Animate 是已安裝的獨立 ComfyUI 原生能力：Mix 將參考角色置�
 
 ## 選 template
 
-- 一般角色替換／動作驅動，片長 ≤ 33 幀：`mix-api.json`／`move-api.json`。
-- 需要 61 幀（約 3.8 秒）：`mix-extend-api.json`／`move-extend-api.json`。更長的片段沒有固定 template，停止並告知，不要臨場複製延伸節點。
+固定 graph 在 repo 頂層 `templates/video/wan-animate/<名稱>/graph.api.json`（下面以名稱稱呼）；每份的 `template.json` 列出可替換欄位與模型 pin，`python tools_src/gameart.py run show video/wan-animate/<名稱>` 可以直接查看。
+
+- 一般角色替換／動作驅動，片長 ≤ 33 幀：`mix`／`move`。
+- 需要 61 幀（約 3.8 秒）：`mix-extend`／`move-extend`。更長的片段沒有固定 template，停止並告知，不要臨場複製延伸節點。
 - 要保留來源音訊、改寬高：仍用上面的 template，依 API reference 的「音訊保留」「解析度」只改允許的欄位。
-- 使用者指定 SCAIL-2，或需要多角色／依顏色綁定身份的替換：讀 [scail2.md](references/scail2.md)，用 `scail2-api.json`／`scail2-extend-api.json`。不要因 Wan Animate 結果不佳就自動改跑 SCAIL-2，反之亦然。
+- 使用者指定 SCAIL-2，或需要多角色／依顏色綁定身份的替換：讀 [scail2.md](references/scail2.md)，用 `scail2`／`scail2-extend`。不要因 Wan Animate 結果不佳就自動改跑 SCAIL-2，反之亦然。
 
 ## 每次工作流程
 

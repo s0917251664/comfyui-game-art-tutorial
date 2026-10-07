@@ -1,0 +1,152 @@
+{
+  "schema_version": 1,
+  "id": "video/sam3/track-mask",
+  "version": "1.0.0",
+  "title": "SAM3 影片物件追蹤（第 0 幀手繪遮罩起手）",
+  "summary": "以第 0 幀遮罩指定一個物件，SAM3 追蹤整支影片，輸出逐幀灰階遮罩（白色＝選取）",
+  "status": "technical_pass",
+  "graph": {
+    "file": "graph.api.json",
+    "format": "comfyui-api",
+    "sha256": "39cf43cd89593679f6db30dc38adc13d175bc152fcfd2fe139a8b38c2ff191cf",
+    "canonical_sha256": "bce7d463f3aa43748d15f9958369d995c8a276d92e82f7baab4d01248d165141"
+  },
+  "provenance": {
+    "derived_from": "SCAIL-2 範本中的 SAM3 節點參數（templates/video/wan-animate/scail2）",
+    "tested_source_sha256": null,
+    "evidence": [
+      {
+        "path": "skills/comfyui-video-layers/references/sam3-track.md",
+        "note": "2026-10-07 實測"
+      },
+      {
+        "path": "docs/knowledge/video/vfx-tools.md",
+        "note": "2026-10-07 直接 HTTP smoke"
+      }
+    ]
+  },
+  "slots": {
+    "source_video": {
+      "type": "video",
+      "upload": true,
+      "required": true,
+      "targets": [
+        {
+          "node": "1",
+          "input": "file",
+          "placeholder": "__SOURCE_VIDEO__"
+        }
+      ],
+      "help": "要追蹤的影片"
+    },
+    "seed_mask": {
+      "type": "mask_image",
+      "upload": true,
+      "required": true,
+      "targets": [
+        {
+          "node": "10",
+          "input": "image",
+          "placeholder": "__SEED_MASK_IMAGE__"
+        }
+      ],
+      "help": "第 0 幀遮罩 PNG：白色＝物件、尺寸和影片相同；graph 只讀紅色通道。mask_session.py 的 mask_editor.png 可以直接用"
+    },
+    "output_prefix": {
+      "type": "output_prefix",
+      "targets": [
+        {
+          "node": "36",
+          "input": "filename_prefix",
+          "placeholder": "__OUTPUT_PREFIX__"
+        }
+      ]
+    }
+  },
+  "constraints": [],
+  "options": {},
+  "fixed_notes": "detection_threshold 0.5、detect_interval 1、max_objects 1、object_indices 空字串（全部物件）",
+  "pre": [
+    {
+      "step": "check_video",
+      "slot": "source_video"
+    },
+    {
+      "step": "check_mask_matches_video",
+      "mask": "seed_mask",
+      "video": "source_video",
+      "channel": "red"
+    },
+    {
+      "step": "upload",
+      "slots": [
+        "source_video",
+        "seed_mask"
+      ]
+    }
+  ],
+  "post": [
+    {
+      "step": "check_png_sequence",
+      "output": "masks",
+      "count": "{pre.source_video.frames}",
+      "width": "{pre.source_video.width}",
+      "height": "{pre.source_video.height}",
+      "grayscale": "rgb_equal"
+    },
+    {
+      "step": "mask_preview",
+      "output": "masks",
+      "video": "source_video",
+      "optional": true
+    }
+  ],
+  "frame_anchoring": {
+    "first": "none",
+    "last": "none",
+    "reference_role": "selection",
+    "time_alignment": "per_source_frame",
+    "continuity": null
+  },
+  "models": [
+    {
+      "role": "sam3",
+      "node": "30",
+      "input": "ckpt_name",
+      "filename": "sam3.1_multiplex_fp16.safetensors",
+      "path": "models/checkpoints/sam3.1_multiplex_fp16.safetensors",
+      "size_bytes": 1745546848,
+      "sha256": "9ba99c92703c2e8b4f47de2d34a539bb8e18923049e238b780d70dbe6368eb03",
+      "source": {
+        "repo": "Comfy-Org/sam3.1",
+        "revision": "7bb8374780a725b4353ed31f3a9395c9742b5621",
+        "file": "checkpoints/sam3.1_multiplex_fp16.safetensors"
+      }
+    }
+  ],
+  "capability_gate": {
+    "nodes": "from_graph",
+    "selectors": "from_models",
+    "files": "from_models",
+    "platforms": {
+      "windows-cuda": {
+        "status": "technical_pass",
+        "evidence": "2026-10-07 RTX 4080，Skye 召槌 1024²×56 幀：手繪遮罩起手，和實驗遮罩平均 IoU 0.998"
+      },
+      "macos-mps": {
+        "status": "untested",
+        "notes": "SAM3 在 MPS 上未驗證"
+      }
+    },
+    "min_memory_mb": null,
+    "capability": "object_track"
+  },
+  "outputs": [
+    {
+      "id": "masks",
+      "node": "36",
+      "kind": "image_sequence",
+      "role": "mask"
+    }
+  ]
+}

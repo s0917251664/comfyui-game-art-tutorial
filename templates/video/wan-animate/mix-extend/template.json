@@ -1,0 +1,427 @@
+{
+  "schema_version": 1,
+  "id": "video/wan-animate/mix-extend",
+  "version": "1.0.0",
+  "title": "Wan Animate Mix（兩段串接 61 幀）",
+  "summary": "把參考角色置入來源影片（保留來源背景），以 SAM2 點位決定替換範圍；兩段 33＋28＝61 幀",
+  "status": "draft",
+  "status_note": "Windows CUDA 已技術通過；dw-ll_ucoco_384.onnx 的 pin 補齊（2.2）前依規則維持 draft",
+  "graph": {
+    "file": "graph.api.json",
+    "format": "comfyui-api",
+    "sha256": "c239bc60f3e6995e798eb3e6cf7d2cecd6b58c7c0867ad21e1a61c1d4bbc1773",
+    "canonical_sha256": "afabb3d7221db8fb93197ff9cffc6d89b1765a6f3398be82dd4747c492fca3c7"
+  },
+  "provenance": {
+    "derived_from": "mix + 官方 Video Extend subgraph",
+    "tested_source_sha256": "748d184588a83996d3bbad8e0aaaee2e449957fcbbc26b5fd9fdbb2a33bc3061",
+    "evidence": [
+      {
+        "path": "skills/comfyui-wan-animate/references/comfyui-api.md",
+        "note": "2026-10-06 Mix61＋音訊（prompt f15941e6…）"
+      },
+      {
+        "path": "docs/knowledge/video/wan-animate-scail2-experiments-2026-10-06.md",
+        "note": "延伸段實驗紀錄"
+      }
+    ]
+  },
+  "slots": {
+    "reference_image": {
+      "type": "image",
+      "upload": true,
+      "required": true,
+      "targets": [
+        {
+          "node": "10",
+          "input": "image",
+          "placeholder": "__REFERENCE_IMAGE__"
+        }
+      ],
+      "help": "參考角色圖（只用來綁定身份，不鎖首幀）"
+    },
+    "source_video": {
+      "type": "video",
+      "upload": true,
+      "required": true,
+      "targets": [
+        {
+          "node": "145",
+          "input": "file",
+          "placeholder": "__SOURCE_VIDEO__"
+        }
+      ],
+      "help": "16 FPS CFR；剛好 61 幀"
+    },
+    "prompt": {
+      "type": "text",
+      "required": true,
+      "validate": {
+        "min_length": 1
+      },
+      "targets": [
+        {
+          "node": "21",
+          "input": "text",
+          "placeholder": "__POSITIVE_PROMPT__"
+        }
+      ],
+      "help": "描述實際觀察到的動作與身份錨點，不加入來源沒有的動作或道具"
+    },
+    "width": {
+      "type": "int",
+      "default": 384,
+      "validate": {
+        "multiple_of": 16,
+        "min": 256,
+        "max": 1280
+      },
+      "tested_values": [
+        384
+      ],
+      "targets": [
+        {
+          "node": "212",
+          "input": "width"
+        },
+        {
+          "node": "62",
+          "input": "width"
+        },
+        {
+          "node": "400",
+          "input": "width"
+        }
+      ],
+      "help": "16 的倍數，寬高要同時改；只實測過 384"
+    },
+    "height": {
+      "type": "int",
+      "default": 384,
+      "validate": {
+        "multiple_of": 16,
+        "min": 256,
+        "max": 1280
+      },
+      "tested_values": [
+        384
+      ],
+      "targets": [
+        {
+          "node": "212",
+          "input": "height"
+        },
+        {
+          "node": "62",
+          "input": "height"
+        },
+        {
+          "node": "400",
+          "input": "height"
+        }
+      ],
+      "help": "16 的倍數；實測過 384。node 212 以中心裁切縮放"
+    },
+    "seed": {
+      "type": "seed",
+      "default": "auto",
+      "targets": [
+        {
+          "node": "63",
+          "input": "seed"
+        }
+      ],
+      "help": "auto＝由 runner 產生並記錄；也可以給明確整數"
+    },
+    "seed_segment2": {
+      "type": "seed",
+      "default_from": "seed",
+      "targets": [
+        {
+          "node": "401",
+          "input": "seed"
+        }
+      ],
+      "help": "第二段 seed；沒有特別理由時和第一段相同（預設）"
+    },
+    "positive_points": {
+      "type": "points",
+      "required": true,
+      "validate": {
+        "min_items": 1
+      },
+      "targets": [
+        {
+          "node": "107",
+          "input": "coordinates_positive",
+          "placeholder": "__POSITIVE_POINTS__"
+        }
+      ],
+      "help": "SAM2 正向點位：輸出寬高的中心裁切座標（不是原圖像素），例如 [{\"x\":192,\"y\":192}]；每支來源都要重新確認"
+    },
+    "negative_points": {
+      "type": "points",
+      "default": [],
+      "validate": {
+        "min_items": 0
+      },
+      "targets": [
+        {
+          "node": "107",
+          "input": "coordinates_negative",
+          "placeholder": "__NEGATIVE_POINTS__"
+        }
+      ],
+      "help": "SAM2 負向點位，可以是空陣列"
+    },
+    "output_prefix": {
+      "type": "output_prefix",
+      "targets": [
+        {
+          "node": "19",
+          "input": "filename_prefix",
+          "placeholder": "__OUTPUT_PREFIX__"
+        }
+      ]
+    }
+  },
+  "constraints": [
+    {
+      "rule": "points_within",
+      "slot": "positive_points",
+      "width": "width",
+      "height": "height"
+    },
+    {
+      "rule": "points_within",
+      "slot": "negative_points",
+      "width": "width",
+      "height": "height"
+    }
+  ],
+  "options": {
+    "keep_audio": {
+      "default": false,
+      "when_true": [
+        {
+          "op": "set_link",
+          "node": "15",
+          "input": "audio",
+          "from": [
+            "23",
+            1
+          ]
+        }
+      ],
+      "help": "保留來源音訊（存檔時截到影片長度）；來源沒有音軌時輸出仍無音軌"
+    }
+  },
+  "fixed_notes": "16 FPS、6 steps、CFG 1、euler/simple、shift 8、text encoder 在 CPU、DWPose 解析度 384、GrowMask 10、BlockifyMask 32；node 300 length 固定 61，兩段各 33 幀",
+  "pre": [
+    {
+      "step": "check_image",
+      "slot": "reference_image"
+    },
+    {
+      "step": "check_video",
+      "slot": "source_video",
+      "fps": 16,
+      "cfr": true,
+      "frames_min": 61,
+      "frames_max": 61
+    },
+    {
+      "step": "upload",
+      "slots": [
+        "reference_image",
+        "source_video"
+      ]
+    }
+  ],
+  "post": [
+    {
+      "step": "check_video_output",
+      "output": "video",
+      "width": "{width}",
+      "height": "{height}",
+      "frames": 61,
+      "fps": 16,
+      "audio": "{keep_audio}"
+    },
+    {
+      "step": "extract_keyframes",
+      "output": "video",
+      "which": [
+        "first",
+        "middle",
+        "last"
+      ]
+    }
+  ],
+  "frame_anchoring": {
+    "first": "none",
+    "last": "none",
+    "reference_role": "identity",
+    "time_alignment": "source_from_frame_0",
+    "continuity": {
+      "segments": 2,
+      "overlap_frames": 5,
+      "seam_frames": [
+        32,
+        33
+      ],
+      "manual_check": "seam"
+    }
+  },
+  "models": [
+    {
+      "role": "diffusion",
+      "node": "20",
+      "input": "unet_name",
+      "filename": "Wan2_2-Animate-14B_fp8_e4m3fn_scaled_KJ.safetensors",
+      "path": "models/diffusion_models/Wan2_2-Animate-14B_fp8_e4m3fn_scaled_KJ.safetensors",
+      "size_bytes": 18401760586,
+      "sha256": "2936b31473a967e7a429a6646bba60e7862d0938e178b58b2a140f391dd5b8e6",
+      "source": {
+        "repo": "Kijai/WanVideo_comfy_fp8_scaled",
+        "revision": "033a4e487f60220b3d6e469599a6aebc46e13cee",
+        "file": "Wan22Animate/Wan2_2-Animate-14B_fp8_e4m3fn_scaled_KJ.safetensors"
+      }
+    },
+    {
+      "role": "lora_distill",
+      "node": "18",
+      "input": "lora_name",
+      "filename": "lightx2v_I2V_14B_480p_cfg_step_distill_rank64_bf16.safetensors",
+      "path": "models/loras/lightx2v_I2V_14B_480p_cfg_step_distill_rank64_bf16.safetensors",
+      "size_bytes": 738005744,
+      "sha256": "85c4a61c30e0497aa44b91d93a893b624708461a56fe5485183b28fa07e2dfb3",
+      "source": {
+        "repo": "Kijai/WanVideo_comfy",
+        "revision": "8260d429d19fd7a72304cad059160b95d843913f",
+        "file": "Lightx2v/lightx2v_I2V_14B_480p_cfg_step_distill_rank64_bf16.safetensors"
+      }
+    },
+    {
+      "role": "lora_relight",
+      "node": "99",
+      "input": "lora_name",
+      "filename": "WanAnimate_relight_lora_fp16.safetensors",
+      "path": "models/loras/WanAnimate_relight_lora_fp16.safetensors",
+      "size_bytes": 1436672440,
+      "sha256": "fc646c74c73f4b251f5fd9bc440ef21b03b27305f499966c68b2b3aa31498561",
+      "source": {
+        "repo": "Kijai/WanVideo_comfy",
+        "revision": "8260d429d19fd7a72304cad059160b95d843913f",
+        "file": "LoRAs/Wan22_relight/WanAnimate_relight_lora_fp16.safetensors"
+      }
+    },
+    {
+      "role": "text_encoder",
+      "node": "2",
+      "input": "clip_name",
+      "filename": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      "path": "models/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      "size_bytes": 6735906897,
+      "sha256": "c3355d30191f1f066b26d93fba017ae9809dce6c627dda5f6a66eaa651204f68",
+      "source": null,
+      "notes": "沿用機器上既有的檔案；舊 manifest 只記錄路徑、大小與 sha256，沒有來源 revision"
+    },
+    {
+      "role": "vae",
+      "node": "3",
+      "input": "vae_name",
+      "filename": "wan_2.1_vae.safetensors",
+      "path": "models/vae/wan_2.1_vae.safetensors",
+      "size_bytes": 253815318,
+      "sha256": "2fc39d31359a4b0a64f55876d8ff7fa8d780956ae2cb13463b0223e15148976b",
+      "source": {
+        "repo": "Comfy-Org/Wan_2.1_ComfyUI_repackaged",
+        "revision": "123acf1cc74bccbb9bfff8ac1ee72edc08c2341d",
+        "file": "split_files/vae/wan_2.1_vae.safetensors"
+      }
+    },
+    {
+      "role": "clip_vision",
+      "node": "4",
+      "input": "clip_name",
+      "filename": "clip_vision_h.safetensors",
+      "path": "models/clip_vision/clip_vision_h.safetensors",
+      "size_bytes": 1264219396,
+      "sha256": "64a7ef761bfccbadbaa3da77366aac4185a6c58fa5de5f589b42a65bcc21f161",
+      "source": {
+        "repo": "Comfy-Org/Wan_2.1_ComfyUI_repackaged",
+        "revision": "123acf1cc74bccbb9bfff8ac1ee72edc08c2341d",
+        "file": "split_files/clip_vision/clip_vision_h.safetensors"
+      }
+    },
+    {
+      "role": "pose_bbox",
+      "node": "100",
+      "input": "bbox_detector",
+      "filename": "yolox_l.onnx",
+      "path": "custom_nodes/comfyui_controlnet_aux/ckpts/yzd-v/DWPose/yolox_l.onnx",
+      "size_bytes": 216746733,
+      "sha256": "7860ae79de6c89a3c1eb72ae9a2756c0ccfbe04b7791bb5880afabd97855a411",
+      "source": {
+        "repo": "yzd-v/DWPose",
+        "revision": "1a7144101628d69ee7a3768d1ee3a094070dc388",
+        "file": "yolox_l.onnx"
+      },
+      "notes": "node 101 用同一個檔案"
+    },
+    {
+      "role": "pose_estimator",
+      "node": "100",
+      "input": "pose_estimator",
+      "filename": "dw-ll_ucoco_384.onnx",
+      "path": null,
+      "size_bytes": null,
+      "sha256": null,
+      "source": null,
+      "notes": "推測和 yolox_l.onnx 在同一個資料夾（custom_nodes/comfyui_controlnet_aux/ckpts/yzd-v/DWPose/）；node 101 用同一個檔案。節點缺檔會自動下載",
+      "pin_status": "TODO(2.2)：舊 manifest 沒有 pin；要在 Windows 確認實際路徑、大小與 sha256 後補上"
+    },
+    {
+      "role": "sam2",
+      "node": "108",
+      "input": "model",
+      "filename": "sam2_hiera_base_plus.safetensors",
+      "path": "models/sam2/sam2_hiera_base_plus.safetensors",
+      "size_bytes": 323407992,
+      "sha256": "fa02d9028dcc4859c191f1d3f1ca1f7eefdb85f3b5e746c9ad738f322f3e89e2",
+      "source": {
+        "repo": "Kijai/sam2-safetensors",
+        "revision": "f885607d88bb3f9145efa49c3e3c50a9e5bf13eb",
+        "file": "sam2_hiera_base_plus.safetensors"
+      },
+      "notes": "DownloadAndLoadSAM2Model 缺檔會自動下載，所以 preflight 一定要確認檔案已在本機"
+    }
+  ],
+  "capability_gate": {
+    "nodes": "from_graph",
+    "selectors": "from_models",
+    "files": "from_models",
+    "platforms": {
+      "windows-cuda": {
+        "status": "technical_pass",
+        "evidence": "2026-10-06 Mix61＋音訊（f15941e6…）"
+      },
+      "macos-mps": {
+        "status": "untested",
+        "notes": "node 108 寫死 device=cuda；Wan 14B fp8 e4m3fn 在 MPS 上未驗證"
+      }
+    },
+    "min_memory_mb": null,
+    "capability": "wan_animate_mix"
+  },
+  "outputs": [
+    {
+      "id": "video",
+      "node": "19",
+      "kind": "video",
+      "expect_count": 1,
+      "role": "candidate"
+    }
+  ]
+}

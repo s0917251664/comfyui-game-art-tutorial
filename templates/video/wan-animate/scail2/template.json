@@ -1,0 +1,389 @@
+{
+  "schema_version": 1,
+  "id": "video/wan-animate/scail2",
+  "version": "1.0.0",
+  "title": "SCAIL-2 角色替換／動畫（單段 33 幀）",
+  "summary": "用參考圖驅動角色跟著來源影片動，或把來源影片裡的人換成參考角色；SAM3 依文字追蹤人物並以彩色遮罩綁定身份",
+  "status": "technical_pass",
+  "graph": {
+    "file": "graph.api.json",
+    "format": "comfyui-api",
+    "sha256": "a083556edc9ffd5f06e7afe2492449363bd7291d75a687d276741734ab339432",
+    "canonical_sha256": "454a91a3582ed81ed38f7d71d4a06828b85a2162b6de7b464fb558f75832cadc"
+  },
+  "provenance": {
+    "derived_from": "workflow_templates video_wan21_scail2_character_replacement.json blob 1fc5602b9c54b3517ed6af320ff281d5615e9306",
+    "tested_source_sha256": "d22dd4fcc487379c8340efeb24ca0ab1fdbc534f1d909d34dcf7a762a3785a72",
+    "evidence": [
+      {
+        "path": "skills/comfyui-wan-animate/references/scail2.md",
+        "note": "2026-10-06 replace33（624c9e12…）、animate33（b7e59189…）"
+      },
+      {
+        "path": "docs/knowledge/video/wan-animate-scail2-experiments-2026-10-06.md",
+        "note": "2026-10-06 實驗紀錄"
+      }
+    ]
+  },
+  "slots": {
+    "reference_image": {
+      "type": "image",
+      "upload": true,
+      "required": true,
+      "targets": [
+        {
+          "node": "1",
+          "input": "image",
+          "placeholder": "__REFERENCE_IMAGE__"
+        }
+      ],
+      "help": "參考角色圖；構圖會主導輸出比例（見 scail2.md）"
+    },
+    "source_video": {
+      "type": "video",
+      "upload": true,
+      "required": true,
+      "targets": [
+        {
+          "node": "2",
+          "input": "file",
+          "placeholder": "__SOURCE_VIDEO__"
+        }
+      ],
+      "help": "16 FPS CFR，剛好 33 幀"
+    },
+    "prompt": {
+      "type": "text",
+      "required": true,
+      "validate": {
+        "min_length": 1
+      },
+      "targets": [
+        {
+          "node": "20",
+          "input": "text",
+          "placeholder": "__POSITIVE_PROMPT__"
+        }
+      ],
+      "help": "描述最終畫面：角色外觀、動作、鏡頭與背景"
+    },
+    "sam3_video_object": {
+      "type": "string",
+      "required": true,
+      "validate": {
+        "pattern": "^[A-Za-z][A-Za-z0-9 ,'-]*$",
+        "max_length": 80
+      },
+      "targets": [
+        {
+          "node": "31",
+          "input": "text",
+          "placeholder": "__SAM3_VIDEO_OBJECT__"
+        }
+      ],
+      "help": "SAM3 在來源影片追蹤的對象，英文名詞片語，例如 person"
+    },
+    "sam3_image_object": {
+      "type": "string",
+      "required": true,
+      "validate": {
+        "pattern": "^[A-Za-z][A-Za-z0-9 ,'-]*$",
+        "max_length": 80
+      },
+      "targets": [
+        {
+          "node": "32",
+          "input": "text",
+          "placeholder": "__SAM3_IMAGE_OBJECT__"
+        }
+      ],
+      "help": "SAM3 在參考圖追蹤的對象，例如 robot、person"
+    },
+    "seed": {
+      "type": "seed",
+      "default": "auto",
+      "targets": [
+        {
+          "node": "43",
+          "input": "noise_seed"
+        }
+      ],
+      "help": "auto＝由 runner 產生並記錄；也可以給明確整數"
+    },
+    "replacement_mode": {
+      "type": "bool",
+      "default": true,
+      "targets": [
+        {
+          "node": "35",
+          "input": "replacement_mode"
+        },
+        {
+          "node": "40",
+          "input": "replacement_mode"
+        }
+      ],
+      "help": "true＝角色替換（保留來源背景，類似 Mix）；false＝角色動畫（背景來自參考圖，類似 Move）"
+    },
+    "object_indices": {
+      "type": "string",
+      "default": "",
+      "validate": {
+        "pattern": "^(\\d+(,\\d+)*)?$"
+      },
+      "targets": [
+        {
+          "node": "35",
+          "input": "object_indices"
+        }
+      ],
+      "help": "多人時只取部分人物，例如 0,2；空字串＝全部"
+    },
+    "width": {
+      "type": "int",
+      "default": 384,
+      "validate": {
+        "multiple_of": 32,
+        "min": 256,
+        "max": 1280
+      },
+      "tested_values": [
+        384
+      ],
+      "targets": [
+        {
+          "node": "5",
+          "input": "width"
+        },
+        {
+          "node": "40",
+          "input": "width"
+        }
+      ],
+      "help": "32 的倍數，寬高一致；只實測過 384（832×448、640×352 只有實驗紀錄）"
+    },
+    "height": {
+      "type": "int",
+      "default": 384,
+      "validate": {
+        "multiple_of": 32,
+        "min": 256,
+        "max": 1280
+      },
+      "tested_values": [
+        384
+      ],
+      "targets": [
+        {
+          "node": "5",
+          "input": "height"
+        },
+        {
+          "node": "40",
+          "input": "height"
+        }
+      ],
+      "help": "32 的倍數；只實測過 384"
+    },
+    "output_prefix": {
+      "type": "output_prefix",
+      "targets": [
+        {
+          "node": "61",
+          "input": "filename_prefix",
+          "placeholder": "__OUTPUT_PREFIX__"
+        }
+      ]
+    }
+  },
+  "constraints": [],
+  "options": {
+    "keep_audio": {
+      "default": false,
+      "when_true": [
+        {
+          "op": "set_link",
+          "node": "60",
+          "input": "audio",
+          "from": [
+            "3",
+            1
+          ]
+        }
+      ],
+      "help": "保留來源音訊（存檔時截到影片長度）；來源沒有音軌時輸出仍無音軌"
+    }
+  },
+  "fixed_notes": "16 FPS、每段 33 幀、DPO LoRA 1.0＋LightX2V 0.8、shift 5、6 steps、CFG 1、euler/simple、text encoder 在 CPU、negative prompt 空字串、SAM3 門檻 0.5、max_objects 4",
+  "pre": [
+    {
+      "step": "check_image",
+      "slot": "reference_image"
+    },
+    {
+      "step": "check_video",
+      "slot": "source_video",
+      "fps": 16,
+      "cfr": true,
+      "frames_min": 33,
+      "frames_max": 33
+    },
+    {
+      "step": "upload",
+      "slots": [
+        "reference_image",
+        "source_video"
+      ]
+    }
+  ],
+  "post": [
+    {
+      "step": "check_video_output",
+      "output": "video",
+      "width": "{width}",
+      "height": "{height}",
+      "frames": 33,
+      "fps": 16,
+      "audio": "{keep_audio}"
+    },
+    {
+      "step": "extract_keyframes",
+      "output": "video",
+      "which": [
+        "first",
+        "middle",
+        "last"
+      ]
+    }
+  ],
+  "frame_anchoring": {
+    "first": "none",
+    "last": "none",
+    "reference_role": "identity",
+    "time_alignment": "source_from_frame_0",
+    "continuity": null
+  },
+  "models": [
+    {
+      "role": "diffusion",
+      "node": "10",
+      "input": "unet_name",
+      "filename": "wan2.1_14B_SCAIL_2_fp8_scaled.safetensors",
+      "path": "models/diffusion_models/wan2.1_14B_SCAIL_2_fp8_scaled.safetensors",
+      "size_bytes": 17694586857,
+      "sha256": "11513b4697ecf566de0cb74660c478f301fb6699a62b10369e91a6ed0fd6b083",
+      "source": {
+        "repo": "Comfy-Org/SCAIL-2",
+        "revision": "fe3c728bc793ba21ca674688f822afb709ad44fb",
+        "file": "diffusion_models/wan2.1_14B_SCAIL_2_fp8_scaled.safetensors"
+      }
+    },
+    {
+      "role": "lora_dpo",
+      "node": "11",
+      "input": "lora_name",
+      "filename": "wan2.1_SCAIL_2_DPO_lora_bf16.safetensors",
+      "path": "models/loras/wan2.1_SCAIL_2_DPO_lora_bf16.safetensors",
+      "size_bytes": 1226936552,
+      "sha256": "b106522036f64e50f5f8ae3b808973515ff442cc2fac27b65d875eafb95b89e2",
+      "source": {
+        "repo": "Comfy-Org/SCAIL-2",
+        "revision": "fe3c728bc793ba21ca674688f822afb709ad44fb",
+        "file": "loras/wan2.1_SCAIL_2_DPO_lora_bf16.safetensors"
+      }
+    },
+    {
+      "role": "lora_distill",
+      "node": "12",
+      "input": "lora_name",
+      "filename": "lightx2v_I2V_14B_480p_cfg_step_distill_rank64_bf16.safetensors",
+      "path": "models/loras/lightx2v_I2V_14B_480p_cfg_step_distill_rank64_bf16.safetensors",
+      "size_bytes": 738005744,
+      "sha256": "85c4a61c30e0497aa44b91d93a893b624708461a56fe5485183b28fa07e2dfb3",
+      "source": {
+        "repo": "Kijai/WanVideo_comfy",
+        "revision": "8260d429d19fd7a72304cad059160b95d843913f",
+        "file": "Lightx2v/lightx2v_I2V_14B_480p_cfg_step_distill_rank64_bf16.safetensors"
+      }
+    },
+    {
+      "role": "text_encoder",
+      "node": "14",
+      "input": "clip_name",
+      "filename": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      "path": "models/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      "size_bytes": 6735906897,
+      "sha256": "c3355d30191f1f066b26d93fba017ae9809dce6c627dda5f6a66eaa651204f68",
+      "source": null,
+      "notes": "沿用機器上既有的檔案；舊 manifest 只記錄路徑、大小與 sha256，沒有來源 revision"
+    },
+    {
+      "role": "vae",
+      "node": "15",
+      "input": "vae_name",
+      "filename": "wan_2.1_vae.safetensors",
+      "path": "models/vae/wan_2.1_vae.safetensors",
+      "size_bytes": 253815318,
+      "sha256": "2fc39d31359a4b0a64f55876d8ff7fa8d780956ae2cb13463b0223e15148976b",
+      "source": {
+        "repo": "Comfy-Org/Wan_2.1_ComfyUI_repackaged",
+        "revision": "123acf1cc74bccbb9bfff8ac1ee72edc08c2341d",
+        "file": "split_files/vae/wan_2.1_vae.safetensors"
+      }
+    },
+    {
+      "role": "clip_vision",
+      "node": "16",
+      "input": "clip_name",
+      "filename": "clip_vision_h.safetensors",
+      "path": "models/clip_vision/clip_vision_h.safetensors",
+      "size_bytes": 1264219396,
+      "sha256": "64a7ef761bfccbadbaa3da77366aac4185a6c58fa5de5f589b42a65bcc21f161",
+      "source": {
+        "repo": "Comfy-Org/Wan_2.1_ComfyUI_repackaged",
+        "revision": "123acf1cc74bccbb9bfff8ac1ee72edc08c2341d",
+        "file": "split_files/clip_vision/clip_vision_h.safetensors"
+      }
+    },
+    {
+      "role": "sam3",
+      "node": "30",
+      "input": "ckpt_name",
+      "filename": "sam3.1_multiplex_fp16.safetensors",
+      "path": "models/checkpoints/sam3.1_multiplex_fp16.safetensors",
+      "size_bytes": 1745546848,
+      "sha256": "9ba99c92703c2e8b4f47de2d34a539bb8e18923049e238b780d70dbe6368eb03",
+      "source": {
+        "repo": "Comfy-Org/sam3.1",
+        "revision": "7bb8374780a725b4353ed31f3a9395c9742b5621",
+        "file": "checkpoints/sam3.1_multiplex_fp16.safetensors"
+      }
+    }
+  ],
+  "capability_gate": {
+    "nodes": "from_graph",
+    "selectors": "from_models",
+    "files": "from_models",
+    "platforms": {
+      "windows-cuda": {
+        "status": "technical_pass",
+        "evidence": "2026-10-06 replace33（624c9e12…）、animate33（b7e59189…）"
+      },
+      "macos-mps": {
+        "status": "untested",
+        "notes": "fp8 scaled 與 SAM3 在 MPS 上未驗證"
+      }
+    },
+    "min_memory_mb": null,
+    "capability": "scail2"
+  },
+  "outputs": [
+    {
+      "id": "video",
+      "node": "61",
+      "kind": "video",
+      "expect_count": 1,
+      "role": "candidate"
+    }
+  ]
+}

@@ -6,10 +6,10 @@
 
 | Template | 起手方式 | 何時用 |
 |---|---|---|
-| [sam3-track-mask-api.json](../assets/sam3-track-mask-api.json) | 第 0 幀手繪遮罩（`SAM3_VideoTrack.initial_mask`），不給文字 | 美術要自己精確指定範圍（只換道具的一部分、避開手等） |
-| [sam3-track-text-api.json](../assets/sam3-track-text-api.json) | 英文文字（`conditioning`） | 物件能用一個名詞清楚描述時，不必手繪 |
+| [track-mask](../../../templates/video/sam3/track-mask/graph.api.json)（`templates/video/sam3/track-mask/`） | 第 0 幀手繪遮罩（`SAM3_VideoTrack.initial_mask`），不給文字 | 美術要自己精確指定範圍（只換道具的一部分、避開手等） |
+| [track-text](../../../templates/video/sam3/track-text/graph.api.json)（`templates/video/sam3/track-text/`） | 英文文字（`conditioning`） | 物件能用一個名詞清楚描述時，不必手繪 |
 
-兩份 graph 都是：`LoadVideo` → `GetVideoComponents` → `SAM3_VideoTrack`（門檻 0.5、每幀偵測）→ `SAM3_TrackToMask`（全部物件）→ `MaskToImage` → `SaveImage`。參數沿用 [SCAIL-2 範本](../../comfyui-wan-animate/assets/scail2-api.json)的 SAM3 節點；遮罩版的 `max_objects` 設為 1，文字版設為 4。
+兩份 graph 都是：`LoadVideo` → `GetVideoComponents` → `SAM3_VideoTrack`（門檻 0.5、每幀偵測）→ `SAM3_TrackToMask`（全部物件）→ `MaskToImage` → `SaveImage`。參數沿用 [SCAIL-2 範本](../../../templates/video/wan-animate/scail2/graph.api.json)的 SAM3 節點；遮罩版的 `max_objects` 設為 1，文字版設為 4。
 
 ## 動態欄位
 

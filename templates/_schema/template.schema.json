@@ -1,0 +1,515 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "templates/_schema/template.schema.json",
+  "title": "gameart 固定 API graph template(template.json)",
+  "description": "文件用途的結構說明。實際驗證以 tools_src/comfyui_pipeline/runner/template.py 為準(只用標準庫,不讀這份 schema);tests/test_templates.py 會確認兩邊的欄位清單一致。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "version",
+    "title",
+    "summary",
+    "status",
+    "graph",
+    "provenance",
+    "slots",
+    "pre",
+    "post",
+    "frame_anchoring",
+    "models",
+    "capability_gate",
+    "outputs"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]*(/[a-z0-9][a-z0-9_-]*)+$",
+      "description": "等於 templates/ 底下的資料夾路徑"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "title": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "draft",
+        "technical_pass",
+        "retired"
+      ],
+      "description": "任何 model 缺 sha256 pin 時不能是 technical_pass"
+    },
+    "status_note": {
+      "type": "string"
+    },
+    "graph": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "file",
+        "format",
+        "sha256",
+        "canonical_sha256"
+      ],
+      "properties": {
+        "file": {
+          "type": "string"
+        },
+        "format": {
+          "const": "comfyui-api"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "檔案位元組"
+        },
+        "canonical_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "sort_keys、緊湊分隔、ensure_ascii=False 的 JSON;和 result manifest 的 graph_sha256 同算法"
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "derived_from",
+        "tested_source_sha256",
+        "evidence"
+      ],
+      "properties": {
+        "derived_from": {
+          "type": "string"
+        },
+        "tested_source_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "path",
+              "note"
+            ],
+            "properties": {
+              "path": {
+                "type": "string",
+                "description": "相對 repo 根目錄,必須存在"
+              },
+              "note": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "slots": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/slot"
+      }
+    },
+    "constraints": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "rule",
+          "slot",
+          "width",
+          "height"
+        ],
+        "properties": {
+          "rule": {
+            "enum": [
+              "points_within"
+            ]
+          },
+          "slot": {
+            "type": "string"
+          },
+          "width": {
+            "type": "string"
+          },
+          "height": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "options": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/option"
+      }
+    },
+    "fixed_notes": {
+      "type": "string"
+    },
+    "pre": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/step"
+      },
+      "description": "送出前步驟;2.1 只驗證格式,實作在 2.3"
+    },
+    "post": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/step"
+      }
+    },
+    "frame_anchoring": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "first",
+        "last",
+        "reference_role",
+        "time_alignment",
+        "continuity"
+      ],
+      "properties": {
+        "first": {
+          "enum": [
+            "image",
+            "conditioning",
+            "same_as_first",
+            "none"
+          ]
+        },
+        "last": {
+          "enum": [
+            "image",
+            "conditioning",
+            "same_as_first",
+            "none"
+          ]
+        },
+        "reference_role": {
+          "enum": [
+            "identity",
+            "selection",
+            "none"
+          ]
+        },
+        "time_alignment": {
+          "enum": [
+            "source_from_frame_0",
+            "per_source_frame"
+          ]
+        },
+        "continuity": {
+          "type": [
+            "object",
+            "null"
+          ]
+        }
+      }
+    },
+    "models": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/model"
+      }
+    },
+    "capability_gate": {
+      "type": "object",
+      "required": [
+        "nodes",
+        "selectors",
+        "files",
+        "platforms",
+        "capability"
+      ],
+      "properties": {
+        "nodes": {
+          "const": "from_graph"
+        },
+        "selectors": {
+          "const": "from_models"
+        },
+        "files": {
+          "const": "from_models"
+        },
+        "platforms": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[a-z0-9]+-[a-z0-9]+$"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "required": [
+              "status"
+            ],
+            "properties": {
+              "status": {
+                "enum": [
+                  "technical_pass",
+                  "untested",
+                  "unsupported"
+                ]
+              },
+              "evidence": {
+                "type": "string"
+              },
+              "notes": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "min_memory_mb": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "capability": {
+          "type": "string"
+        }
+      }
+    },
+    "outputs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "node",
+          "kind",
+          "role"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "node": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "video",
+              "image",
+              "image_sequence"
+            ]
+          },
+          "role": {
+            "enum": [
+              "candidate",
+              "mask",
+              "preview"
+            ]
+          },
+          "expect_count": {
+            "type": "integer"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "node",
+        "input"
+      ],
+      "properties": {
+        "node": {
+          "type": "string"
+        },
+        "input": {
+          "type": "string"
+        },
+        "placeholder": {
+          "type": "string",
+          "pattern": "^__[A-Z0-9_]+__$"
+        }
+      }
+    },
+    "slot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "targets"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "text",
+            "string",
+            "int",
+            "float",
+            "bool",
+            "seed",
+            "points",
+            "image",
+            "video",
+            "mask_image",
+            "output_prefix"
+          ]
+        },
+        "targets": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/target"
+          }
+        },
+        "default": {},
+        "default_from": {
+          "type": "string"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "upload": {
+          "type": "boolean"
+        },
+        "validate": {
+          "type": "object"
+        },
+        "tested_values": {
+          "type": "array"
+        },
+        "help": {
+          "type": "string"
+        }
+      }
+    },
+    "option": {
+      "type": "object",
+      "required": [
+        "default",
+        "when_true"
+      ],
+      "properties": {
+        "default": {
+          "type": "boolean"
+        },
+        "help": {
+          "type": "string"
+        },
+        "when_true": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "op",
+              "node",
+              "input"
+            ],
+            "properties": {
+              "op": {
+                "enum": [
+                  "set_link",
+                  "set_value"
+                ]
+              },
+              "node": {
+                "type": "string"
+              },
+              "input": {
+                "type": "string"
+              },
+              "from": {
+                "type": "array"
+              },
+              "value": {}
+            }
+          }
+        }
+      }
+    },
+    "step": {
+      "type": "object",
+      "required": [
+        "step"
+      ],
+      "properties": {
+        "step": {
+          "type": "string"
+        }
+      }
+    },
+    "model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "node",
+        "input",
+        "filename",
+        "path",
+        "size_bytes",
+        "sha256",
+        "source"
+      ],
+      "properties": {
+        "role": {
+          "type": "string"
+        },
+        "node": {
+          "type": "string"
+        },
+        "input": {
+          "type": "string"
+        },
+        "filename": {
+          "type": "string"
+        },
+        "path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "size_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "notes": {
+          "type": "string"
+        },
+        "pin_status": {
+          "type": "string",
+          "description": "sha256 為 null 時必填"
+        }
+      }
+    }
+  }
+}

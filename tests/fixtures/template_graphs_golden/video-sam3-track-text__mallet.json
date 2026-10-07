@@ -1,0 +1,101 @@
+{
+  "template": "video/sam3/track-text",
+  "case": "mallet",
+  "template_version": "1.0.0",
+  "graph_canonical_sha256": "2c7f2364b4fd82c166c4c4b8b75e2781e42d0de6d3ae8211b253949f7e0898bd",
+  "values": {
+    "track_text": "mallet"
+  },
+  "options": {},
+  "uploads": {
+    "source_video": "run/source.mp4"
+  },
+  "changed": {
+    "1.file": "run/source.mp4",
+    "31.text": "mallet",
+    "36.filename_prefix": "gameart/video-sam3-track-text/golden"
+  },
+  "patched_graph_sha256": "effaf94e332b268141dfd780626e354c90f5d12b07c46bb1255d684e9fbb1fa8",
+  "graph": {
+    "1": {
+      "class_type": "LoadVideo",
+      "inputs": {
+        "file": "run/source.mp4"
+      }
+    },
+    "2": {
+      "class_type": "GetVideoComponents",
+      "inputs": {
+        "video": [
+          "1",
+          0
+        ]
+      }
+    },
+    "30": {
+      "class_type": "CheckpointLoaderSimple",
+      "inputs": {
+        "ckpt_name": "sam3.1_multiplex_fp16.safetensors"
+      }
+    },
+    "31": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "clip": [
+          "30",
+          1
+        ],
+        "text": "mallet"
+      }
+    },
+    "33": {
+      "class_type": "SAM3_VideoTrack",
+      "inputs": {
+        "images": [
+          "2",
+          0
+        ],
+        "model": [
+          "30",
+          0
+        ],
+        "conditioning": [
+          "31",
+          0
+        ],
+        "detection_threshold": 0.5,
+        "max_objects": 4,
+        "detect_interval": 1
+      }
+    },
+    "34": {
+      "class_type": "SAM3_TrackToMask",
+      "inputs": {
+        "track_data": [
+          "33",
+          0
+        ],
+        "object_indices": ""
+      }
+    },
+    "35": {
+      "class_type": "MaskToImage",
+      "inputs": {
+        "mask": [
+          "34",
+          0
+        ]
+      }
+    },
+    "36": {
+      "class_type": "SaveImage",
+      "inputs": {
+        "images": [
+          "35",
+          0
+        ],
+        "filename_prefix": "gameart/video-sam3-track-text/golden"
+      }
+    }
+  }
+}

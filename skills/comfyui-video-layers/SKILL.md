@@ -11,7 +11,7 @@ description: 影片物件遮罩與 2D 層合成。物件追蹤預設用 SAM3 固
 
 先讀 [CLI、部署、plan 與實測限制](references/local-tool.md)。只使用固定 `SteveVideoLayers` 單節點；`preflight` 核對 runtime、client/package/shared helper 檔案 hash、SAM 模型（segment 時）與 ComfyUI live schema，任一不符就停止，不 queue。Server node 另在工作開始時比對已載入 package hash，這項 gate 發生於執行階段。影片解碼、SAM propagation、仿射對齊、合成、編碼及完整輸出驗證都在 server；client 只查檔案/hash、送 queue 與下載。
 
-要讓美術自己指定物件並追蹤整支影片時，預設用 SAM3 固定 graph（[reference](references/sam3-track.md)、[遮罩起手](assets/sam3-track-mask-api.json)、[文字起手](assets/sam3-track-text-api.json)）：在第 0 幀手繪或給英文名詞，直接 HTTP 送出、下載逐幀遮罩，再用 `gameart.py vfx mask-preview` 給美術確認。SAM3 不可用時，才改用本工具：`vfx keyframes` → `mask_session.py` 手繪 → `vfx segment-plan`（第 0 幀必填，大動作片中段要加修正幀）→ 本工具 `run` → `vfx unpack-masks`；要只重畫遮罩內就交給 `generate.py video_inpaint`，見 [vfx-tools](../../docs/knowledge/video/vfx-tools.md#2-影片物件標記與局部重繪)。
+要讓美術自己指定物件並追蹤整支影片時，預設用 SAM3 固定 graph（[reference](references/sam3-track.md)、[遮罩起手](../../templates/video/sam3/track-mask/graph.api.json)、[文字起手](../../templates/video/sam3/track-text/graph.api.json)）：在第 0 幀手繪或給英文名詞，直接 HTTP 送出、下載逐幀遮罩，再用 `gameart.py vfx mask-preview` 給美術確認。SAM3 不可用時，才改用本工具：`vfx keyframes` → `mask_session.py` 手繪 → `vfx segment-plan`（第 0 幀必填，大動作片中段要加修正幀）→ 本工具 `run` → `vfx unpack-masks`；要只重畫遮罩內就交給 `generate.py video_inpaint`，見 [vfx-tools](../../docs/knowledge/video/vfx-tools.md#2-影片物件標記與局部重繪)。
 
 `segment` 適合對 5 秒內片段，以 SAM 2.1 small 依首幀提示傳播 1–4 個物件遮罩；每個物件可在後續影格加提示修正。輸出白色選取、黑色排除的 `L` mask sequence，並附彩色遮罩預覽影片。這與 ComfyUI image edit 的反向 alpha 選區契約不同，不要直接互換。
 
