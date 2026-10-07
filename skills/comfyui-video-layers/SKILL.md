@@ -1,6 +1,6 @@
 ---
 name: comfyui-video-layers
-description: 以 ComfyUI server-side SAM 2.1 propagation 與固定 ordered layer graph，製作短鏡頭遮罩或 2D 層合成候選。
+description: 影片物件遮罩與 2D 層合成。物件追蹤預設用 SAM3 固定 API graph；SAM3 不可用時，以 ComfyUI server-side SAM 2.1 propagation（本工具）備援；另以固定 ordered layer graph 製作 2D 層合成候選。
 ---
 
 # 影片圖層工具

@@ -18,7 +18,7 @@
 | `comfyui-character-animation-workflow` | 角色動作組編排 |
 | `comfyui-film-workflow` | 劇情多鏡、聲音、Animatic |
 | `comfyui-face-swap-workflow` | 影片換臉 |
-| `comfyui-video-layers` | SAM 遮罩／ordered video layers |
+| `comfyui-video-layers` | 影片物件遮罩（SAM3 固定 graph 為預設、SAM2 為備援）／ordered video layers |
 | `comfyui-wan-animate` | Wan Animate（Mix／Move、延伸段、音訊、寬高）與 SCAIL-2 固定 API graph |
 | `comfyui-install` | 安裝與依賴補齊 |
 | `comfyui-new-tool-checklist` | 新增／擴充能力檢查表 |

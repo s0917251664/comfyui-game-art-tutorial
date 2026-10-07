@@ -43,7 +43,7 @@ description: 將短片、循環特效與鏡頭需求路由到已接入的影片 
 | A 畫面變成 B | `transition`，要兩張靜幀 |
 | 同場接續前鏡 | `clip_extend` |
 | 接片／乾淨綠幕合成 | `video_concat`／`video_composite`（本機）|
-| 只改影片中某個物件（美術手繪標記 → SAM 傳播 → 只重畫遮罩內） | `video_inpaint`（wan `masked_edit`），遮罩流程見 [vfx-tools](../../docs/knowledge/video/vfx-tools.md#2-影片物件標記與局部重繪) |
+| 只改影片中某個物件（美術手繪標記 → SAM3 追蹤（SAM2 為備援）→ 只重畫遮罩內） | `video_inpaint`（wan `masked_edit`），遮罩流程見 [vfx-tools](../../docs/knowledge/video/vfx-tools.md#2-影片物件標記與局部重繪) |
 | 影片裡的道具換材質／造型（例如魔法槌 → 木槌） | 先用 `flux2_edit`＋`gameart.py vfx prop-paste` 做母版，再用 H3 `pose_drive --control-type canny` 整幀套原片動作；不要用 `video_inpaint`，見 [vfx-tools §4](../../docs/knowledge/video/vfx-tools.md#4-換道具材質造型先定母版再整幀套原片動作) |
 | 特效要透明成品（PNG 序列／sprite sheet／WebM） | 黑底生成後 `gameart.py vfx luma-alpha`＋`pack`；不透明主體用綠幕＋`chroma-alpha --unmix --despill`，見 [vfx-tools](../../docs/knowledge/video/vfx-tools.md#1-特效去背輸出) |
 | 有劇情的短片 | 先逐鏡建表，再呼叫現有 task、最後 concat；不可一條超長 prompt |
