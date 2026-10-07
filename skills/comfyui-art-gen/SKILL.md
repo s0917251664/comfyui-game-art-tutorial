@@ -61,54 +61,6 @@ description: 執行 ComfyUI 遊戲圖片既有 task，負責本機能力檢查�
 
 只在 task 選擇、模型能力或驗收問題相關時，讀 [生效中決策](../../docs/knowledge/DECISIONS.md) 或依模型/task 查 [經驗索引](../../docs/knowledge/INDEX.md)；不要把歷史觀察當成預設生成規則。SDXL/SD1.5 validation 依本機能力快照；FLUX.2 依獨立 preflight 與適用平台證據。經驗只有累積可重現證據並人工核准後才能提升為正式規則。
 
-## 舊版段落入口
-
-以下標題保留舊技能錨點，正文已移至 vault：
-
-## 核心原則
-
-見 [art-generation.md](../../docs/knowledge/art-generation.md)。
-
-### 產出後自檢
-
-見上方步驟 6 及 [art-generation.md](../../docs/knowledge/art-generation.md)。
-
-## 環境
-
-見 [art-generation.md](../../docs/knowledge/art-generation.md)。
-
-### 這台機器能跑什麼（SDXL/SD1.5 模型設定檔）
-
-見 [art-generation.md](../../docs/knowledge/art-generation.md)。
-
-## 決策順序(這個需求該不該走這條管線)
-
-見 [art-generation.md](../../docs/knowledge/art-generation.md)。
-
-## 任務判斷(先分類,再決定要問什麼)
-
-見 [art-generation.md](../../docs/knowledge/art-generation.md)。
-
-## 各 task 必要輸入
-
-見 [art-generation.md](../../docs/knowledge/art-generation.md)。
-
-## 參數界線與送出前檢查
-
-見 [art-parameters.md](../../docs/knowledge/art-parameters.md)。
-
-## 執行
-
-見 [art-generation.md](../../docs/knowledge/art-generation.md)。
-
-## 離線檢查與實機 smoke test
-
-見 [art-generation.md](../../docs/knowledge/art-generation.md)。
-
-## 深入參考(邊界情況/踩過的坑,查這裡,不用每次都讀)
-
-按需知識連結見下方參考清單。
-
 ## 按需參考
 
 - [task 選擇、必要輸入與 CLI 範例](../../docs/knowledge/art-generation.md)：快速路由無法判斷，或需要特定 task 的遮罩／複合圖層分支時，只讀該小節。
