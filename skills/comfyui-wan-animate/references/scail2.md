@@ -6,8 +6,8 @@ SCAIL-2（Wan2.1 14B 架構）是另一個角色動畫模型：用參考圖驅�
 
 | Template | 用途 | 輸出 |
 |---|---|---|
-| [scail2-api.json](../assets/scail2-api.json) | 單段 | 33 幀 |
-| [scail2-extend-api.json](../assets/scail2-extend-api.json) | 兩段串接 | 33 + 28 = 61 幀 |
+| [scail2](../../../templates/video/wan-animate/scail2/graph.api.json)（`templates/video/wan-animate/scail2/`） | 單段 | 33 幀 |
+| [scail2-extend](../../../templates/video/wan-animate/scail2-extend/graph.api.json)（`templates/video/wan-animate/scail2-extend/`） | 兩段串接 | 33 + 28 = 61 幀 |
 
 兩份都是依官方 [`video_wan21_scail2_character_replacement.json`](https://github.com/Comfy-Org/workflow_templates/blob/main/templates/video_wan21_scail2_character_replacement.json)（Git blob `1fc5602b9c54b3517ed6af320ff281d5615e9306`）逐節點對應的 API graph，並做了三項明確調整：
 

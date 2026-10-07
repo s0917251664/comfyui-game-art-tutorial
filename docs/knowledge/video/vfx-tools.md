@@ -30,7 +30,7 @@ last_updated: 2026-10-07
 gameart.py vfx keyframes --video <src.mp4> --frames 0 --output-dir <dir>/keyframes      # 抽第 0 幀
 mask_session.py create --image <dir>/keyframes/frame_00000.png --output-dir <dir>      # 把 EDITOR_URL 給美術，只塗要改的物件
 mask_session.py fetch --session-id <id> --output-dir <dir>                             # 取得 mask_editor.png
-直接 HTTP 送 skills/comfyui-video-layers/assets/sam3-track-mask-api.json                # 或 sam3-track-text-api.json（只打英文名詞）
+直接 HTTP 送 templates/video/sam3/track-mask/graph.api.json             # 或 track-text/graph.api.json（只打英文名詞）
     → 下載 SaveImage 逐幀遮罩到 <dir>/masks
 gameart.py vfx mask-preview --video <src.mp4> --masks <dir>/masks --output <dir>/mask_preview.png   # 給美術確認
 ```
@@ -147,4 +147,4 @@ gameart.py vfx unpack-masks --segment-dir <dir>/segment --video <src.mp4> --outp
 | SAM3 用第 0 幀手繪遮罩（`SAM3_VideoTrack.initial_mask`，不給文字） | 塗多少就追多少，從頭到尾不會自己修正；使用者實際手繪的遮罩只追到槌頭和槌柄，握把、手、尾巴都沒被選進去，7.4 秒 |
 | SAM3 用隨手框的方塊當第 0 幀遮罩 | 前段把背景和整個角色都選進去，不可用 |
 
-SAM3 追蹤已做成固定 API graph（`skills/comfyui-video-layers/assets/sam3-track-*.json`）。2026-10-07 的直接 HTTP smoke：遮罩版 56 幀，和實驗遮罩平均 IoU 0.998；文字版 `mallet` 56 幀，IoU 1.0（`output/experiments/vfx-sam3-graph-smoke-20261007/smoke.json`）。研究用腳本放在 [`experiences/2026-10-07-vfx-research/scripts/`](../experiences/2026-10-07-vfx-research/scripts/README.md)，不是產線入口。
+SAM3 追蹤已做成固定 API graph（`templates/video/sam3/track-{mask,text}/graph.api.json`，2026-10-07 前放在 `skills/comfyui-video-layers/assets/`）。2026-10-07 的直接 HTTP smoke：遮罩版 56 幀，和實驗遮罩平均 IoU 0.998；文字版 `mallet` 56 幀，IoU 1.0（`output/experiments/vfx-sam3-graph-smoke-20261007/smoke.json`）。研究用腳本放在 [`experiences/2026-10-07-vfx-research/scripts/`](../experiences/2026-10-07-vfx-research/scripts/README.md)，不是產線入口。

@@ -4,13 +4,13 @@
 
 ## 固定 templates 與 preflight
 
-使用技能目錄中的固定 templates 及[template manifest](../assets/template-manifest.json)：
+使用 repo 頂層 `templates/video/wan-animate/` 的固定 graph（2026-10-07 起從技能目錄搬過來，位元組不變）。每份旁邊的 `template.json` 記錄 sha256、可替換欄位與模型 pin；舊的 [template manifest](../assets/template-manifest.json) 保留到 runner 接手文件為止：
 
 | Template | 用途 | 輸出幀數 |
 |---|---|---|
-| [mix-api.json](../assets/mix-api.json)／[move-api.json](../assets/move-api.json) | 單段 Mix／Move | 17 或 33 |
-| [mix-extend-api.json](../assets/mix-extend-api.json)／[move-extend-api.json](../assets/move-extend-api.json) | 兩段串接的較長 Mix／Move（見下方「延伸段」） | 固定 61 |
-| [scail2-api.json](../assets/scail2-api.json)／[scail2-extend-api.json](../assets/scail2-extend-api.json) | SCAIL-2，契約另見 [scail2.md](scail2.md) | 33／61 |
+| [mix](../../../templates/video/wan-animate/mix/graph.api.json)／[move](../../../templates/video/wan-animate/move/graph.api.json) | 單段 Mix／Move | 17 或 33 |
+| [mix-extend](../../../templates/video/wan-animate/mix-extend/graph.api.json)／[move-extend](../../../templates/video/wan-animate/move-extend/graph.api.json) | 兩段串接的較長 Mix／Move（見下方「延伸段」） | 固定 61 |
+| [scail2](../../../templates/video/wan-animate/scail2/graph.api.json)／[scail2-extend](../../../templates/video/wan-animate/scail2-extend/graph.api.json) | SCAIL-2，契約另見 [scail2.md](scail2.md) | 33／61 |
 
 以 `GET {comfyui_url}/object_info` 取得 live schema，核對兩份 graph 的 node class 存在，並確認 loader 對應的 live model selectors 可選到 graph 固定使用的模型。再比對 manifest 中模型路徑與檔案大小。Preflight 必須在任何上傳前完成；node、model selector、資產或 graph input 不匹配就停止，不要用相似名稱推定相容。
 

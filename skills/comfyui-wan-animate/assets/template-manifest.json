@@ -1,42 +1,42 @@
 {
-  "scope": "Fixed API JSON (not UI format) for the official native Wan Animate first segment, its 2-segment extend, and SCAIL-2. No generator CLI. Placeholders must be resolved before submission.",
+  "scope": "Fixed API JSON (not UI format) for the official native Wan Animate first segment, its 2-segment extend, and SCAIL-2. No generator CLI. Placeholders must be resolved before submission. Since PR 2.1 the graphs live in templates/video/wan-animate/<mode>/graph.api.json (byte-identical, same sha256); this manifest is kept until PR 2.4 and template.json is the new source of truth.",
   "templates": [
     {
       "mode": "mix",
-      "template": "mix-api.json",
+      "template": "../../../templates/video/wan-animate/mix/graph.api.json",
       "sha256": "5ba22f287ef8f9cb9cb926c249724ae050a0b3bd3076863cdd25f4b6b64c6d6c",
       "tested_source_sha256": "305251fbde9f9703c94eef9158119e84f3fa3415dfded27057ab800a440da1e5"
     },
     {
       "mode": "move",
-      "template": "move-api.json",
+      "template": "../../../templates/video/wan-animate/move/graph.api.json",
       "sha256": "e1f9f6c2097987170e591612d4f7d0b98547a3eddf1f5945153c6223e7cb3240",
       "tested_source_sha256": "15c0706722352c91b57dd44d4166d72d0b3b9f033d7fc4106f7367fdbdbc84ae"
     },
     {
       "mode": "mix-extend",
-      "template": "mix-extend-api.json",
+      "template": "../../../templates/video/wan-animate/mix-extend/graph.api.json",
       "sha256": "c239bc60f3e6995e798eb3e6cf7d2cecd6b58c7c0867ad21e1a61c1d4bbc1773",
       "tested_source_sha256": "748d184588a83996d3bbad8e0aaaee2e449957fcbbc26b5fd9fdbb2a33bc3061",
       "derived_from": "mix-api.json + official Video Extend subgraph"
     },
     {
       "mode": "move-extend",
-      "template": "move-extend-api.json",
+      "template": "../../../templates/video/wan-animate/move-extend/graph.api.json",
       "sha256": "07e7b2a589c6518e0a0627a1879594fe27a4ec9dde435520f9c8f94f93611150",
       "tested_source_sha256": "781809176fc7ec4b313bdf3808731043c46ab30e7462b8534fdececfd33856f0",
       "derived_from": "move-api.json + official Video Extend subgraph"
     },
     {
       "mode": "scail2",
-      "template": "scail2-api.json",
+      "template": "../../../templates/video/wan-animate/scail2/graph.api.json",
       "sha256": "a083556edc9ffd5f06e7afe2492449363bd7291d75a687d276741734ab339432",
       "tested_source_sha256": "d22dd4fcc487379c8340efeb24ca0ab1fdbc534f1d909d34dcf7a762a3785a72",
       "derived_from": "workflow_templates video_wan21_scail2_character_replacement.json blob 1fc5602b9c54b3517ed6af320ff281d5615e9306"
     },
     {
       "mode": "scail2-extend",
-      "template": "scail2-extend-api.json",
+      "template": "../../../templates/video/wan-animate/scail2-extend/graph.api.json",
       "sha256": "35a3f3e50206d705e3faebc64e9da33a7345ebc8db6d5623422205a5dcf89780",
       "tested_source_sha256": "6d2c47aefddfe6248ca14be333507cbac5e9e78c72b30e4ca4f2cdb4815b9795",
       "derived_from": "same as scail2"

@@ -7,9 +7,10 @@ third_party/claude-obsidian/** -text
 third_party/claude-obsidian-skills/** -text
 skills/project-knowledge/** -text
 
-# 固定 ComfyUI API graph：Wan Animate 的 sha256 記在 template-manifest.json；SAM3 的兩份同樣視為固定位元組。
+# 固定 ComfyUI API graph（D1）：每份 template.json 記錄 graph.api.json 的位元組 sha256 與 canonical sha256。
+templates/** -text
+# 舊的 Wan template-manifest.json 在 PR 2.4 刪除前保持原樣（D12）。
 skills/comfyui-wan-animate/assets/** -text
-skills/comfyui-video-layers/assets/** -text
 
 # smoke 報告記錄套件檔的 sha256；validation 證據記錄報告檔的 sha256。
 tools_src/comfyui_pipeline/smoke_suites/** -text
