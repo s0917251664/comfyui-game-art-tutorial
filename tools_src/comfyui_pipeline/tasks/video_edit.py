@@ -154,7 +154,7 @@ def finalize_paste_back(args, raw_path, frames, grown, crop, size, length):
             "per_frame": per_frame, "fps": VIDEO_FPS, "audio": "dropped",
             "outputs": {"frames_dir": "frames/ (PNG, lossless master)",
                         "mp4": "composited.mp4 (H.264 crf 18, re-encoded, not lossless)"},
-            "acceptance": "pending Steve review; outside-mask preservation does not judge the edit",
+            "acceptance": "pending human review; outside-mask preservation does not judge the edit",
         }
         with open(os.path.join(staging, "result.json"), "w", encoding="utf-8") as fh:
             json.dump(report, fh, ensure_ascii=False, indent=2)

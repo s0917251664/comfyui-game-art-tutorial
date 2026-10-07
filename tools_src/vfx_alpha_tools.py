@@ -669,7 +669,7 @@ def _cmd_alpha(args):
               "processing_seconds_per_frame": round(seconds / len(rgba), 4),
               "metrics": alpha_metrics(rgba, key=key,
                                        reference_alpha=[r[..., 3] for r in reference] if reference else None),
-              "alpha": "straight", "acceptance": "pending Steve review"}
+              "alpha": "straight", "acceptance": "pending human review"}
     comparison_board(frames[len(frames) // 2], [(args.command.upper(), rgba[len(rgba) // 2])], out / "board_mid.png")
     save_json(out / "result.json", report)
     return report
@@ -742,7 +742,7 @@ def _cmd_mask_recolor(args):
     report = {"schema_version": 1, "kind": "vfx_mask_recolor", "status": "candidate", "model_generation": False,
               "fps": fps, "frames": len(composed), "matched_pixels_per_frame": hits,
               "outside_changed_pixels_total": sum(r["outside_changed_pixels"] for r in per_frame),
-              "per_frame": per_frame, "acceptance": "pending Steve review"}
+              "per_frame": per_frame, "acceptance": "pending human review"}
     save_json(out / "result.json", report)
     return report
 
@@ -763,7 +763,7 @@ def _cmd_mask_composite(args):
               "frames": len(composed), "feather": args.feather,
               "edited_outside_mask_drift_before_composite": drift,
               "outside_changed_pixels_total": sum(r["outside_changed_pixels"] for r in per_frame),
-              "per_frame": per_frame, "acceptance": "pending Steve review"}
+              "per_frame": per_frame, "acceptance": "pending human review"}
     save_json(out / "result.json", report)
     return report
 
@@ -887,7 +887,7 @@ def _cmd_prop_paste(args):
               "inputs": {"source": file_record(args.source), "edited": file_record(args.edited), "mask": file_record(args.mask)},
               "parameters": {"grow": args.grow, "near": args.near, "tolerance": args.tolerance, "softness": args.softness},
               **stats, "outputs": [file_record(directory / "composited.png"), file_record(directory / "selection.png")],
-              "acceptance": "pending Steve review; this only replaces the prop region, it does not judge the design"}
+              "acceptance": "pending human review; this only replaces the prop region, it does not judge the design"}
     save_json(directory / "result.json", report)
     return report
 
