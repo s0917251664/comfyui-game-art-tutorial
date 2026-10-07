@@ -1,10 +1,8 @@
 # video/wan-animate/mix
 
-**Wan Animate Mix（單段 17／33 幀）**（v1.0.0，draft）
+**Wan Animate Mix（單段 17／33 幀）**（v1.1.0，technical_pass）
 
 把參考角色置入來源影片（保留來源背景），以 SAM2 點位決定替換範圍。
-
-狀態說明：Windows CUDA 已技術通過；dw-ll_ucoco_384.onnx 的 pin 補齊（2.2）前依規則維持 draft。
 
 - 必填：`reference_image`、`source_video`、`prompt`、`positive_points`
 - 選填：`frames`、`width`、`height`、`seed`、`negative_points`

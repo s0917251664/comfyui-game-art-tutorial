@@ -1,11 +1,10 @@
 {
   "schema_version": 1,
   "id": "video/wan-animate/move",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "title": "Wan Animate Move（單段 17／33 幀）",
   "summary": "參考角色跟著來源影片的動作動起來（背景由參考圖與 prompt 決定）",
-  "status": "draft",
-  "status_note": "Windows CUDA 已技術通過；dw-ll_ucoco_384.onnx 的 pin 補齊（2.2）前依規則維持 draft",
+  "status": "technical_pass",
   "graph": {
     "file": "graph.api.json",
     "format": "comfyui-api",
@@ -310,19 +309,24 @@
         "revision": "1a7144101628d69ee7a3768d1ee3a094070dc388",
         "file": "yolox_l.onnx"
       },
-      "notes": "node 101 用同一個檔案"
+      "notes": "node 101 用同一個檔案；DWPreprocessor 缺檔時會自動下載，所以 preflight 一定要確認檔案已在本機",
+      "auto_download": true
     },
     {
       "role": "pose_estimator",
       "node": "100",
       "input": "pose_estimator",
       "filename": "dw-ll_ucoco_384.onnx",
-      "path": null,
-      "size_bytes": null,
-      "sha256": null,
-      "source": null,
-      "notes": "推測和 yolox_l.onnx 在同一個資料夾（custom_nodes/comfyui_controlnet_aux/ckpts/yzd-v/DWPose/）；node 101 用同一個檔案。節點缺檔會自動下載",
-      "pin_status": "TODO(2.2)：舊 manifest 沒有 pin；要在 Windows 確認實際路徑、大小與 sha256 後補上"
+      "path": "custom_nodes/comfyui_controlnet_aux/ckpts/yzd-v/DWPose/dw-ll_ucoco_384.onnx",
+      "size_bytes": 134399116,
+      "sha256": "724f4ff2439ed61afb86fb8a1951ec39c6220682803b4a8bd4f598cd913b1843",
+      "source": {
+        "repo": "yzd-v/DWPose",
+        "revision": "1a7144101628d69ee7a3768d1ee3a094070dc388",
+        "file": "dw-ll_ucoco_384.onnx"
+      },
+      "notes": "node 101 用同一個檔案。2026-10-08 Windows 實機確認路徑、大小與 sha256，和 Hugging Face yzd-v/DWPose 該 revision 的 LFS sha256 一致",
+      "auto_download": true
     }
   ],
   "capability_gate": {
