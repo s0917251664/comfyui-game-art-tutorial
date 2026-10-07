@@ -1,9 +1,4 @@
 # Preserve imported skill and binding byte hashes across platforms.
-skills/wiki*/** -text
-skills/obsidian-*/** -text
-skills/autoresearch/** -text
-skills/canvas/** -text
-skills/defuddle/** -text
-skills/save/** -text
-skills/think/** -text
+# The 15 claude-obsidian upstream skills live outside skills/ since 2026-10-07.
+third_party/claude-obsidian-skills/** -text
 skills/comfyui-wan-animate/assets/** -text

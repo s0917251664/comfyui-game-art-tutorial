@@ -48,7 +48,7 @@
 ## 入口與參考
 
 - [`docs/knowledge/rules/`](docs/knowledge/rules/README.md)：跨路線規則只在這裡完整寫一次（R1 候選與美術驗收、R2 固定流程、R3 Idle 錨定），其他文件只引用編號。
-- 技能分組（產線 vs. Obsidian 上游）見 [`skills/README.md`](skills/README.md)；產線工作不讀 wiki／obsidian 類技能。
+- 技能索引見 [`skills/README.md`](skills/README.md)。`skills/` 只放本專案技能；Obsidian 上游技能已移到 [`third_party/claude-obsidian-skills/`](third_party/claude-obsidian-skills/README.md)，產線工作和知識庫讀寫都不需要它們。
 - 文件分工：README 說明開始方式，AGENTS 保留路由與必要原則，TOOLS 提供能力索引；精確操作契約留在技能 references，日期化實測與狀態留在對應知識頁。入口引用主要紀錄，避免複製整段測試狀態。
 - [`教學.md`](教學.md)：環境建置、功能地圖與設備／預算選型。
 - [`docs/knowledge/TOOLS.md`](docs/knowledge/TOOLS.md)：能力、執行方式、狀態及文件路由；[`docs/knowledge/INDEX.md`](docs/knowledge/INDEX.md)：知識庫導覽。

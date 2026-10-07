@@ -1,6 +1,6 @@
 # skills/ 索引
 
-技能必須維持扁平的 `skills/<name>/SKILL.md`：Agent 以此路徑探索技能，`.gitattributes`、`docs/knowledge/maintenance/obsidian-integration.md` 與各 SKILL 內的相對連結也依賴它，因此**不做子資料夾分組**，只在此以清單區分。
+技能必須維持扁平的 `skills/<name>/SKILL.md`：Agent 以此路徑探索技能，各 SKILL 內的相對連結也依賴它，因此**不做子資料夾分組**，只在此以清單區分。本資料夾只放本專案自己的技能；Obsidian 上游技能已移出（見 B 段）。
 
 ## A. 遊戲美術產線技能（本專案核心，路由見 [`AGENTS.md`](../AGENTS.md)）
 
@@ -25,11 +25,10 @@
 | `comfyui-pipeline-review` | 技能庫、架構審視 |
 | `project-knowledge` | 專案知識庫（`docs/knowledge/`）按需讀寫 |
 
-## B. 知識庫／Obsidian 上游技能（與出圖產線無關）
+## B. Obsidian 上游技能（不在本資料夾）
 
-來源為 `third_party/claude-obsidian`，僅在使用者明確要處理 Obsidian vault／wiki 時才觸發；範圍與限制見 [`docs/knowledge/maintenance/obsidian-integration.md`](../docs/knowledge/maintenance/obsidian-integration.md)。
-`wiki` 比上游多 `references/runtime-binding.md`（本專案路徑綁定）。
+15 個 `claude-obsidian` 上游技能的專案副本放在 [`third_party/claude-obsidian-skills/`](../third_party/claude-obsidian-skills/README.md)（2026-10-07 從 `skills/` 移出）。只有使用者明確要處理另外初始化的 Obsidian vault 時才用，範圍與限制見 [`docs/knowledge/maintenance/obsidian-integration.md`](../docs/knowledge/maintenance/obsidian-integration.md)。
 
 `autoresearch`、`canvas`、`defuddle`、`obsidian-bases`、`obsidian-markdown`、`save`、`think`、`wiki`、`wiki-cli`、`wiki-fold`、`wiki-ingest`、`wiki-lint`、`wiki-mode`、`wiki-query`、`wiki-retrieve`
 
-產線工作不需要讀這一組。
+產線工作和專案知識庫（`docs/knowledge/`）的讀寫都不需要這一組；知識庫依 A 段的 `project-knowledge` 用一般 Markdown 檔案工具讀寫。

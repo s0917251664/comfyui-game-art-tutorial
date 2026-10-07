@@ -7,7 +7,7 @@ description: Read and maintain this project's Markdown knowledge vault, includin
 
 Use this skill only for work in this repository. For path binding, read [runtime-binding.md](references/runtime-binding.md) and confirm that the active task belongs to the project before opening its knowledge vault.
 
-Start with `docs/knowledge/TOOLS.md` to find the relevant topic and skill. Use `rg` to locate relevant notes, then read only the sections needed for the current request. Do not load the whole vault into the prompt. Standard Markdown files and ordinary repository file tools are the knowledge store; no dedicated vault CLI or Obsidian runtime is required.
+Start with `docs/knowledge/TOOLS.md` to find the relevant topic and skill. Use `rg` to locate relevant notes, then read only the sections needed for the current request. Do not load the whole vault into the prompt. Standard Markdown files and ordinary repository file tools are the knowledge store; no dedicated vault CLI or Obsidian runtime is required. The upstream claude-obsidian skills stored under `third_party/claude-obsidian-skills/` (`wiki`, `wiki-query`, `wiki-ingest`, `save`, and the rest) are not part of this read/write path: they target a separately initialized claude-obsidian vault, and `docs/knowledge/` is not one. Do not load them to read or save project notes.
 
 Use ordinary repository file editing to save Markdown notes; no dedicated CLI is needed. For every document added or changed in this project, have a smaller model draft it, then have the main agent inspect the actual diff and complete delivery. Review sources, links, and whether the text exceeds the evidence or changes a project rule. Routine saves within already authorized scope do not require asking the user again.
 
