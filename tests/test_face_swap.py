@@ -102,7 +102,7 @@ class FaceSwapTests(unittest.TestCase):
         self.assertFalse((self.root/'result').exists())
 
     def test_fixed_graph_routes_entire_video_processing_to_comfy(self):
-        graph=client.build_graph('input.mkv','steve.png',0,-1,[(0,1)],1,8,'preserve','preserve','test')
+        graph=client.build_graph('input.mkv','reference.png',0,-1,[(0,1)],1,8,'preserve','preserve','test')
         self.assertEqual(graph['1']['class_type'],'SteveLoadFaceSwapVideo')
         self.assertEqual(graph['2']['class_type'],'SteveReActorVideo')
         self.assertEqual(graph['2']['inputs']['source'],['1',0])

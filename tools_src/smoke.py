@@ -5,6 +5,12 @@
 ``generate.py``(各 task 都帶明確 ``--result-json``),收集結果後寫 ``<output-dir>/smoke-report.json``
 與總覽圖 ``smoke-contact-sheet.jpg``。可從 repo 的 tools_src/ 或部署後的 <ComfyUI>/tools/ 執行。
 
+設定檔與快照的位置(規則在 comfyui_pipeline/runtime_config.py):
+- 從 repo 執行:沒給 ``--config`` 時自動用 ``<repo>/local_config.json``;相對 ``--config`` 以 repo 根目錄解析;
+  快照讀設定檔的 ``<comfyui_path>/tools``(``--snapshot-dir`` 可覆寫)。
+- 從部署端 ``<ComfyUI>/tools/`` 執行:不自動找設定檔;相對 ``--config`` 以目前工作目錄解析;快照讀 ``tools/`` 本身。
+- 設定檔一律轉成絕對路徑再交給子程序;子程序經 ``GAMEART_SNAPSHOT_DIR`` 讀同一份快照。
+
 狀態語意(設計原則:模型/節點由使用者選裝,沒裝不是錯誤):
 - pass:     task 實際執行成功。
 - fail:     capability 判定可用、卻在執行時出錯(或逾時)。唯一會讓整個套件失敗的狀態。
@@ -27,8 +33,10 @@ HERE = Path(__file__).resolve().parent
 if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
+from comfyui_pipeline import client as _client  # noqa: E402
 from comfyui_pipeline import fingerprint as fp  # noqa: E402
 from comfyui_pipeline import profiles as _profiles  # noqa: E402
+from comfyui_pipeline import runtime_config as rc  # noqa: E402
 
 REPORT_SCHEMA_VERSION = 1
 REPORT_KIND = "smoke_report"
@@ -129,6 +137,41 @@ def read_json(path):
         return None
 
 
+def resolve_run_settings(config=None, snapshot_dir=None, comfy_url=None, script_dir=HERE, cwd=None,
+                         isfile=os.path.isfile):
+    """決定這次 smoke 用的設定檔、快照資料夾與 ComfyUI 路徑;設定錯誤丟 SmokeError。
+
+    回傳 dict:mode / config_path / config_source / snapshot_dir / snapshot_source / comfyui_path。
+    """
+    repo_root = rc.find_repo_root(script_dir, isfile=isfile)
+    config_path, config_source = rc.choose_config_path(config, repo_root, cwd, isfile=isfile)
+    if config_path and not isfile(config_path):
+        raise SmokeError(f"設定檔不存在: {config_path}" + (
+            f"(相對路徑以 repo 根目錄 {repo_root} 解析)" if repo_root and not os.path.isabs(config) else ""))
+    data = rc.read_config(config_path)
+    comfyui_path = rc.comfyui_path_from_config(data, config_path) if repo_root else None
+    try:
+        found, source = rc.find_snapshot_dir(script_dir, snapshot_dir, repo_root, comfyui_path, cwd, isfile=isfile)
+    except rc.SnapshotNotFound as exc:
+        raise SmokeError(str(exc)) from exc
+    try:
+        _client.resolve_comfy_url(comfy_url, config_path)
+    except RuntimeError as exc:
+        hint = "" if repo_root else "(從部署端執行時不會自動找 local_config.json)"
+        raise SmokeError(f"{exc}{hint}") from exc
+    return {"mode": rc.run_mode(repo_root), "repo_root": repo_root, "config_path": config_path,
+            "config_source": config_source, "snapshot_dir": found, "snapshot_source": source,
+            "comfyui_path": comfyui_path}
+
+
+def child_environment(snapshot_dir, base=None):
+    """generate 子程序的環境變數:指定快照資料夾,讓它和 smoke 讀同一份 device_config。"""
+    env = dict(os.environ if base is None else base)
+    if snapshot_dir:
+        env[rc.SNAPSHOT_DIR_ENV] = str(snapshot_dir)
+    return env
+
+
 def resolve_environment(snapshot_dir=HERE, comfyui_path=None, profile_id=None):
     """讀機器快照,回傳 env dict(device / capabilities / profile_id / comfyui_path / model_roots)。"""
     snapshot_dir = Path(snapshot_dir)
@@ -225,10 +268,10 @@ def build_command(entry, out_dir, outputs_by_id, mask_path, *, generate=None, pr
     return cmd
 
 
-def default_runner(cmd, timeout, cwd):
+def default_runner(cmd, timeout, cwd, env=None):
     """實際呼叫子程序;回傳 (exit_code, stdout, stderr, timed_out)。"""
     try:
-        done = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, cwd=cwd,
+        done = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, cwd=cwd, env=env,
                               encoding="utf-8", errors="replace")
         return done.returncode, done.stdout, done.stderr, False
     except subprocess.TimeoutExpired as exc:
@@ -255,7 +298,8 @@ def _outputs_from_manifest(manifest, base):
 
 
 def run_task(entry, env, out_dir, outputs_by_id, mask_path, results, *, runner=default_runner,
-             task_timeout=DEFAULT_TASK_TIMEOUT, comfy_url=None, config_path=None, generate=None):
+             task_timeout=DEFAULT_TASK_TIMEOUT, comfy_url=None, config_path=None, generate=None,
+             snapshot_dir=None):
     """執行單一 task,回傳報告用的 task 紀錄 dict。"""
     out_dir = Path(out_dir)
     record = {
@@ -278,7 +322,8 @@ def run_task(entry, env, out_dir, outputs_by_id, mask_path, results, *, runner=d
     record["command"] = cmd
     (out_dir / entry["id"]).mkdir(parents=True, exist_ok=True)
     started = time.monotonic()
-    code, stdout, stderr, timed_out = runner(cmd, task_timeout, str(HERE))
+    child_env = child_environment(snapshot_dir) if snapshot_dir else None
+    code, stdout, stderr, timed_out = runner(cmd, task_timeout, str(HERE), env=child_env)
     record["duration_s"] = round(time.monotonic() - started, 2)
     record["exit_code"] = code
     log_dir = out_dir / "logs"
@@ -495,7 +540,7 @@ def record_report(repo_root, report_path, sheet_path, report, with_images=False)
 # ---------- 主流程 ----------
 
 def run_suite(suite, env, out_dir, wanted=None, *, runner=default_runner, task_timeout=DEFAULT_TASK_TIMEOUT,
-              comfy_url=None, config_path=None, generate=None, log=print):
+              comfy_url=None, config_path=None, generate=None, snapshot_dir=None, log=print):
     out_dir = Path(out_dir)
     entries, auto = select_tasks(suite, wanted)
     started = utc_now()
@@ -516,7 +561,7 @@ def run_suite(suite, env, out_dir, wanted=None, *, runner=default_runner, task_t
         else:
             rec = run_task(entry, env, out_dir, outputs_by_id, mask_path, results, runner=runner,
                            task_timeout=task_timeout, comfy_url=comfy_url, config_path=config_path,
-                           generate=generate)
+                           generate=generate, snapshot_dir=snapshot_dir)
         rec["dependency_only"] = entry["id"] in auto
         results[entry["id"]] = rec
         records.append(rec)
@@ -531,9 +576,13 @@ def build_parser():
     ap.add_argument("--suite", default=DEFAULT_SUITE, help=f"套件 id(預設 {DEFAULT_SUITE})")
     ap.add_argument("--tasks", help="只跑這些 task id(逗號分隔;其依賴的上游 task 會自動補入)")
     ap.add_argument("--profile", dest="profile_id", help="明確指定圖片模型設定檔;預設用快照 default_profile")
-    ap.add_argument("--comfyui-path", help="ComfyUI 路徑(算環境指紋用);預設從快照推得")
+    ap.add_argument("--comfyui-path", help="ComfyUI 路徑(算環境指紋用);預設從快照或設定檔推得")
     ap.add_argument("--comfy-url", help="轉給 generate.py 的 ComfyUI URL")
-    ap.add_argument("--config", help="轉給 generate.py 的 runtime config")
+    ap.add_argument("--config", help="local_config.json;從 repo 執行時預設 <repo>/local_config.json,"
+                                     "相對路徑以 repo 根目錄解析;從部署端執行時必須指定(或給 --comfy-url),"
+                                     "相對路徑以目前目錄解析")
+    ap.add_argument("--snapshot-dir", help="機器快照資料夾(device_config.json 等);"
+                                           "預設 repo 執行時為 <comfyui_path>/tools,部署端為 tools/ 本身")
     ap.add_argument("--task-timeout", type=float, default=DEFAULT_TASK_TIMEOUT, help="單一 task 子程序秒數上限")
     ap.add_argument("--record", metavar="REPO_ROOT",
                     help="把報告複製到 <REPO_ROOT>/docs/knowledge/validation/<platform_key>/<日期>-<suite>-<profile>.json")
@@ -588,14 +637,22 @@ def main(argv=None):
         select_tasks(suite, wanted)  # 先驗證 id
         if (out_dir / REPORT_NAME).exists():
             raise SmokeError(f"{out_dir / REPORT_NAME} 已存在;請換一個 --output-dir,不覆寫舊報告")
-        env = resolve_environment(HERE, args.comfyui_path, args.profile_id)
+        settings = resolve_run_settings(args.config, args.snapshot_dir, args.comfy_url)
+        env = resolve_environment(settings["snapshot_dir"], args.comfyui_path or settings["comfyui_path"],
+                                  args.profile_id)
     except SmokeError as exc:
         print(f"smoke: {exc}", file=sys.stderr)
         return 2
+    mode = "repo" if settings["mode"] == rc.REPO_MODE else "部署端"
+    source = {"cli": "--config", "repo-default": "repo 預設"}.get(settings["config_source"], "")
+    print(f"[smoke] 執行位置: {mode}({HERE})", flush=True)
+    print(f"[smoke] 使用設定: {settings['config_path'] or '(無,使用 --comfy-url 或環境變數)'}"
+          + (f"({source})" if source else ""), flush=True)
+    print(f"[smoke] 快照資料夾: {settings['snapshot_dir']}", flush=True)
     out_dir.mkdir(parents=True, exist_ok=True)
     report = run_suite(suite, env, out_dir, wanted, task_timeout=args.task_timeout,
-                       comfy_url=args.comfy_url, config_path=args.config,
-                       log=lambda msg: print(msg, flush=True))
+                       comfy_url=args.comfy_url, config_path=settings["config_path"],
+                       snapshot_dir=settings["snapshot_dir"], log=lambda msg: print(msg, flush=True))
     sheet = make_contact_sheet(report, out_dir)
     report["contact_sheet"] = SHEET_NAME if sheet else None
     report_path = write_report(out_dir, report)

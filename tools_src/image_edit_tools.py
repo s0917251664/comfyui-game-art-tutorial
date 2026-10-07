@@ -112,7 +112,7 @@ def composite(source, edited, mask, output_dir, keep_source_alpha=False):
               "dimensions": list(a.size), "preserved_pixels": int(preserved.sum()),
               "outside_changed_pixels": 0, "output": file_record(target),
               "keep_source_alpha": keep_source_alpha,
-              "acceptance": "pending Steve review; pixel preservation does not judge edit quality"}
+              "acceptance": "pending human review; pixel preservation does not judge edit quality"}
     save_json(out / "result.json", report)
     return report
 
@@ -161,7 +161,7 @@ def recolor(source, mask, output_dir, from_hue, to_hue, hue_range=45, min_satura
               "limitations": ["HSV hue rotation only; no material change or exact target RGB guarantee",
                               "Saturation and HSV value retained before quantization; not physical relighting",
                               "Neutral/low-saturation pixels and hues outside range remain unchanged"],
-              "acceptance": "pending Steve review"}
+              "acceptance": "pending human review"}
     save_json(out / "result.json", report)
     return report
 
@@ -361,7 +361,7 @@ def sweep(plan_path, config_path, output_dir, *, profile=None, timeout=240,
     report = {"schema_version": 1, "kind": "image_parameter_sweep", "status": "planned" if dry_run else "running",
               "task": task, "plan": file_record(plan_path), "config": file_record(config_path),
               "inputs": inputs, "runtime": runtime, "preserve_outside": preserve,
-              "art_acceptance": "all outputs are candidates; pending Steve review", "runs": []}
+              "art_acceptance": "all outputs are candidates; pending human review", "runs": []}
     save_json(out / "sweep.json", report)
     images, labels = [], []
     try:

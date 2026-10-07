@@ -37,7 +37,7 @@ class AssetReviewTests(unittest.TestCase):
             out, manifest = _make(d)
             self.assertIn("pending", run("list", d)[1])
             before = Path(manifest).read_bytes()
-            run("accept", manifest, "--by", "Steve", "--note", "ok")
+            run("accept", manifest, "--by", "reviewer", "--note", "ok")
             self.assertEqual(Path(manifest).read_bytes(), before)
             self.assertIn("accepted", run("list", d)[1])
             Path(out).write_bytes(b"regenerated")
@@ -45,7 +45,7 @@ class AssetReviewTests(unittest.TestCase):
             self.assertIn("mismatch", listing)
             self.assertIn("modified", listing)
             with self.assertRaises(SystemExit):
-                run("reject", out, "--by", "Steve")
+                run("reject", out, "--by", "reviewer")
 
     def test_by_required_and_reject_by_output_path(self):
         with tempfile.TemporaryDirectory() as d:
@@ -54,18 +54,18 @@ class AssetReviewTests(unittest.TestCase):
                 run("accept", manifest)
             with self.assertRaises(SystemExit):
                 run("accept", manifest, "--by", "  ")
-            run("reject", out, "--by", "Steve")
+            run("reject", out, "--by", "reviewer")
             self.assertIn("rejected", run("list", manifest)[1])
             self.assertFalse(Path(d, "a.decisions.json").read_text().count("accepted"))
 
     def test_show_by_hash_prefix(self):
         with tempfile.TemporaryDirectory() as d:
             _, manifest = _make(d)
-            run("accept", manifest, "--by", "Steve")
+            run("accept", manifest, "--by", "reviewer")
             sha = hashlib.sha256(b"png-bytes").hexdigest()[:8]
             code, text = run("show", sha, "--in", d)
             self.assertEqual(code, 0)
-            self.assertEqual(json.loads(text)["decision_history"][0]["by"], "Steve")
+            self.assertEqual(json.loads(text)["decision_history"][0]["by"], "reviewer")
 
 
 if __name__ == "__main__":
@@ -90,7 +90,7 @@ class ExplicitManifestTests(unittest.TestCase):
             code, listing = run("list", custom)
             self.assertEqual(0, code)
             self.assertIn("pending", listing)
-            run("accept", custom, "--by", "Steve")
+            run("accept", custom, "--by", "reviewer")
             self.assertTrue(os.path.isfile(os.path.join(d, "explicit.decisions.json")))
             self.assertIn("accepted", run("list", custom)[1])
 

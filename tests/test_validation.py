@@ -109,7 +109,7 @@ class ProposeTests(RepoCase):
         self.assertEqual(1, code)
         self.assertIn("舊格式報告(無 profile_hash_scheme),請用目前版本重跑 smoke 產生新報告", out)
         before = self.profile_text()
-        code, _, err = self.run_cli("approve", str(path), "--by", "steve")
+        code, _, err = self.run_cli("approve", str(path), "--by", "reviewer")
         self.assertEqual(2, code)
         self.assertIn("舊格式報告", err)
         self.assertEqual(before, self.profile_text())
@@ -124,14 +124,14 @@ class ApproveTests(RepoCase):
     def test_approve_appends_evidence_and_keeps_rest_of_profile(self):
         path = self.write_report(make_report(self.profile))
         before_no_validation = {k: v for k, v in self.profile.items() if k != "validation"}
-        code, out, err = self.run_cli("approve", str(path), "--by", "steve")
+        code, out, err = self.run_cli("approve", str(path), "--by", "reviewer")
         self.assertEqual(0, code, err)
         updated = json.loads(self.profile_text())
         self.assertEqual(before_no_validation, {k: v for k, v in updated.items() if k != "validation"})
         entries = updated["validation"]["macos-mps"]
         self.assertEqual(1, len(entries))
         entry = entries[0]
-        self.assertEqual("steve", entry["approved_by"])
+        self.assertEqual("reviewer", entry["approved_by"])
         self.assertEqual(validation.sha256_file(path), entry["report_sha256"])
         self.assertEqual(profiles.profile_content_sha256(self.profile), entry["profile_sha256"])
         self.assertEqual({"comfyui_version": "0.34.0", "comfyui_commit": "c" * 40,
@@ -162,21 +162,21 @@ class ApproveTests(RepoCase):
         }
         for label, path in cases.items():
             with self.subTest(label):
-                code, _, err = self.run_cli("approve", str(path), "--by", "steve")
+                code, _, err = self.run_cli("approve", str(path), "--by", "reviewer")
                 self.assertEqual(2, code)
                 self.assertTrue(err)
                 self.assertEqual(before, self.profile_text())
 
     def test_same_report_cannot_be_approved_twice(self):
         path = self.write_report(make_report(self.profile))
-        self.assertEqual(0, self.run_cli("approve", str(path), "--by", "steve")[0])
-        code, _, err = self.run_cli("approve", str(path), "--by", "steve")
+        self.assertEqual(0, self.run_cli("approve", str(path), "--by", "reviewer")[0])
+        code, _, err = self.run_cli("approve", str(path), "--by", "reviewer")
         self.assertEqual(2, code)
         self.assertIn("已核准", err)
 
     def test_status_shows_legacy_and_evidence(self):
         path = self.write_report(make_report(self.profile))
-        self.run_cli("approve", str(path), "--by", "steve")
+        self.run_cli("approve", str(path), "--by", "reviewer")
         code, out, _ = self.run_cli("status", "--profile", "sdxl_standard")
         self.assertEqual(0, code)
         self.assertIn("legacy", out)
@@ -273,8 +273,13 @@ class SmokeRecordCommandTests(unittest.TestCase):
 
     def test_explicit_run_form_parses_like_bare_form(self):
         parser = smoke.build_parser()
+        tmp_snap = "/snap"
         with mock.patch.object(smoke, "run_suite", side_effect=RuntimeError("stop")), \
                 mock.patch.object(smoke, "resolve_environment", return_value={}), \
+                mock.patch.object(smoke, "resolve_run_settings", return_value={
+                    "mode": "repo", "config_path": None, "config_source": None, "snapshot_dir": tmp_snap,
+                    "comfyui_path": None}), \
+                contextlib.redirect_stdout(io.StringIO()), \
                 tempfile.TemporaryDirectory() as tmp:
             for argv in (["run", "--output-dir", tmp], ["--output-dir", tmp]):
                 with self.assertRaises(RuntimeError):
