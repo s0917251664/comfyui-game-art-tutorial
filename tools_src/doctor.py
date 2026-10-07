@@ -17,6 +17,7 @@ if HERE not in sys.path:
     sys.path.insert(0, HERE)
 
 from comfyui_pipeline import fingerprint as fp  # noqa: E402
+from comfyui_pipeline import runtime_config as rc  # noqa: E402
 
 
 def _read_json(path):
@@ -29,8 +30,12 @@ def _read_json(path):
 
 
 def resolve_context(args):
-    """決定 (config, comfyui_path, snapshot_dir)。找不到設定檔時退回 doctor.py 所在目錄。"""
-    config_path = args.config
+    """決定 (config, comfyui_path, snapshot_dir)。找不到設定檔時退回 doctor.py 所在目錄。
+
+    相對 ``--config`` 的解析和 smoke 相同(runtime_config):從 repo 執行時以 repo 根目錄解析,
+    部署端以目前工作目錄解析。
+    """
+    config_path = rc.resolve_config_path(args.config, rc.find_repo_root(HERE)) if args.config else None
     if not config_path:
         for candidate in (os.path.join(os.path.dirname(HERE), "local_config.json"),
                           os.path.join(HERE, "local_config.json")):
@@ -38,7 +43,7 @@ def resolve_context(args):
                 config_path = candidate
                 break
     config = _read_json(config_path) if config_path else None
-    comfyui_path = args.comfyui_path or (config or {}).get("comfyui_path")
+    comfyui_path = args.comfyui_path or rc.comfyui_path_from_config(config, config_path)
     if comfyui_path:
         comfyui_path = os.path.abspath(os.path.expanduser(comfyui_path))
     if args.snapshot_dir:

@@ -21,7 +21,10 @@ DEFAULT_NEGATIVE = "blurry, low quality, extra fingers, deformed, watermark"
 DEFAULT_PROFILE_ID = "sdxl_standard"
 _SDXL_PROFILE = _profiles.load_profile(DEFAULT_PROFILE_ID)
 SDXL_TIERS = frozenset(_SDXL_PROFILE["tiers"])
-DEVICE_CONFIG_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "device_config.json")
+# 機器快照預設在腳本所在資料夾(部署端 <ComfyUI>/tools)。smoke 從 repo 執行時會設 GAMEART_SNAPSHOT_DIR
+# 指向 <ComfyUI>/tools,讓 generate 子程序讀同一份快照(見 runtime_config.SNAPSHOT_DIR_ENV)。
+_SNAPSHOT_DIR = os.environ.get("GAMEART_SNAPSHOT_DIR") or os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DEVICE_CONFIG_PATH = os.path.join(os.path.abspath(_SNAPSHOT_DIR), "device_config.json")
 
 def _require_pillow():
     if PILImage is None or ImageDraw is None or ImageFilter is None:

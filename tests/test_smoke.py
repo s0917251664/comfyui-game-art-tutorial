@@ -36,7 +36,7 @@ def env(**kw):
 
 
 def fake_runner_factory(fail=(), calls=None, stderr_for=None):
-    def runner(cmd, timeout, cwd):
+    def runner(cmd, timeout, cwd, env=None):
         result = Path(cmd[cmd.index("--result-json") + 1])
         task_id = result.name[:-len(".result.json")]
         if calls is not None:
