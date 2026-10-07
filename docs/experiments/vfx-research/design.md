@@ -2,7 +2,7 @@
 
 日期：2026-10-07｜平台：windows-cuda（RTX 4080 16 GB）｜分支：`research/vfx-alpha-mask-idle`｜數據：[results.md](results.md)
 
-主軸是用明確的控制取代文字描述，例如 alpha、遮罩、首尾幀和量測。本次沒有下載任何模型、套件或權重，也沒有修改既有 task、graph 或技能，只新增研究用的本機工具 `tools_src/vfx_alpha_tools.py`（附單元測試）。所有產物都是 candidate，是否接受由 Steve 決定。
+主軸是用明確的控制取代文字描述，例如 alpha、遮罩、首尾幀和量測。第一輪沒有下載任何模型、套件或權重；追加實測時經 Steve 同意，只下載了 Wan2.1 VACE 1.3B（4.31 GB，見需求 2）。本研究沒有修改既有 task、graph 或技能，只新增研究用的本機工具 `tools_src/vfx_alpha_tools.py`（附單元測試）。所有產物都是 candidate，是否接受由 Steve 決定。
 
 ---
 
@@ -84,39 +84,50 @@ video_layers segment（SAM 2.1，白色=選取）
   → 交付 PNG 序列（MP4 重新編碼會讓遮罩外產生約 1.1 的差，和原片重新編碼相同）
 ```
 
-### 實測結果（results §2）
+### 實測結果（results §2A、§2B）
 
 - 本機遮罩換色（像素路線）：遮罩外 0 像素變動；遮罩內有飽和度的青色 100% 轉成洋紅。限制是發光最強時接近白色的部分換不到、遮罩外的光點沒有改、尾巴被漏選染色。
-- AI 路線（沒有 VACE，只能用 Fun Control 5B canny 整片重畫再貼回）：重畫的原始輸出在遮罩外平均差 63.8，貼回後遮罩外為 0；但遮罩內的槌子設計被破壞（金框變色、Z 字消失），顏色也沒有穩住，青色仍佔 24.6%。**這個路線判定不可用**。
-- 遮罩品質：SAM 在快速揮動的幀（3–6）相鄰幀 IoU 降到 0.42–0.49，前 5 幀有漏選到尾巴；外圍光點需要另外框成第二個物件，或用擴張遮罩。
+- 沒有遮罩條件的 AI 路線（Fun Control 5B canny 整片重畫再貼回）：重畫的原始輸出在遮罩外平均差 63.8；貼回後遮罩外為 0，但槌子設計被破壞，青色仍佔 24.6%。**判定不可用**。
+- **VACE 1.3B（2026-10-07 追加，已下載實測）**：576² 裁切工作區、57 幀，每組約 88 秒。裁切區內遮罩外的差異只有約 4.4（Fun Control 是 63.8），角色本體幾乎不動；貼回後遮罩外 0 變動；遮罩內相鄰幀 MAE 14.9–16.9，和原片的 15.1 相近，沒有額外閃爍。
+  - template 模式（遮罩內塗黑，官方做法）：洋紅佔比 46–58%，但每個 seed 都重新設計一把不同的槌子，原設計沒有留下。適合「換成新物件」。
+  - keep 模式（遮罩內保留原片當引導）：保住槌子結構（金色端框、晶窗、握柄），光效轉成洋紅（36–52%）；但槌身深藍被帶向紫色、金色更飽和、Z 字變淡。適合「同一物件改光效、材質」，但仍需人工選 seed。
+- 遮罩品質：SAM 在快速揮動的幀（3–6）相鄰幀 IoU 降到 0.42–0.49，前 5 幀有漏選到尾巴；外圍光點沒有選到，所以所有路線都沒改到光點。
 
-### 推薦
+### 推薦（依 VACE 實測更新）
 
-- **現在就能用的**：「SAM 遮罩＋本機像素操作＋貼回＋遮罩外檢查」適合只換顏色的需求（例如武器光效改色）。建議日後把 `mask-recolor` 加上低飽和高亮像素的處理選項（例如依亮度把白色高光往目標色染），並把光點粒子當成第二個 SAM 物件或用擴張遮罩。
-- **要改形狀、材質或加減特效**：必須有支援遮罩條件的模型（VACE）。建議 Steve 先決定是否下載 Wan2.1 VACE 1.3B（4.31 GB，最小、最快能驗證流程），品質不夠再考慮 14B。
-
-### VACE 實測計畫（下載後執行）
-
-1. 模型：先用 `wan2.1_vace_1.3B_fp16.safetensors`；text encoder `umt5_xxl_fp8_e4m3fn_scaled` 和 VAE `wan_2.1_vae` 本機都已有。
-2. 固定 graph：`UNETLoader → WanVaceToVideo(control_video=原片 RGB, control_masks=SAM 遮罩擴張 8 px, strength=1.0) → KSampler → TrimVideoLatent → VAEDecode`，832×480 或 640×640，長度 4k+1（原片 56 幀取 53 或補到 57）。
-3. 同一支召槌片、同一組遮罩，prompt 只描述遮罩內的變化；固定 3 個 seed。
-4. 量測沿用 `run_req2.py`：遮罩外 drift（貼回前）、貼回後遮罩外為 0、遮罩內相鄰幀 MAE、色相佔比，並和 A 路線並排比較。
-5. 在 `video_capabilities.json` 加入 `vace` capability gate 之前，不接成 task。
-
-### 缺少的模型
-
-| 名稱 | 來源 | 大小 |
+| 需求類型 | 推薦路線 | 理由 |
 |---|---|---|
-| `wan2.1_vace_1.3B_fp16.safetensors` | [Comfy-Org/Wan_2.1_ComfyUI_repackaged](https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged) `split_files/diffusion_models` | 4.31 GB |
-| `wan2.1_vace_14B_fp16.safetensors` | 同上 | 34.68 GB（16 GB VRAM 需要 offload） |
-| `wan2.2_fun_vace_{high,low}_noise_14B_fp8_scaled.safetensors` | [Comfy-Org/Wan_2.2_ComfyUI_Repackaged](https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged) | 各 17.35 GB（需要兩個） |
+| 只換顏色，造型要完全不變 | SAM 遮罩＋`mask-recolor`＋貼回 | 決定性、遮罩外和非目標色逐 byte 不變；接近白色的高光需要另外處理 |
+| 同一物件改光效或材質，可以接受細節微調 | VACE keep 模式＋貼回，跑 3 個 seed 由人選 | 結構保住、光效顏色整體一致；會帶動槌身色調，Z 字這類細節不保證 |
+| 換成新物件或新特效 | VACE template 模式＋貼回 | 遮罩內整個重新生成，外部不受影響 |
+| 要連外圍光點一起改 | 光點框成 SAM 第二個物件，或擴大遮罩 | 這次光點不在遮罩內，三種路線都沒改到 |
+
+- 1.3B 只支援 480P 級畫布，所以小物件建議用「裁切工作區＋貼回」（這次 576²），不要直接處理整張 1024。
+- 品質不夠時再考慮 14B（約 35 GB），需要你另外同意下載。
+
+### 實測計畫的執行紀錄
+
+原計畫（照官方模板固定 graph、同一組遮罩、3 個 seed、量遮罩外 drift 和遮罩內統計、和本機換色並排比較）已全部執行。和原計畫不同的地方：
+- 畫布改成 576² 裁切工作區，不用 832×480 或 640×640。
+- 多加了 keep 模式。
+- shift 和取樣參數改照本機官方模板（shift 5、20 步、cfg 6）。
+
+目前仍是研究 graph；在 `video_capabilities.json` 加入 `vace` capability gate 之前，不接成 task。
+
+### 模型
+
+| 名稱 | 來源 | 大小 | 狀態 |
+|---|---|---|---|
+| `wan2.1_vace_1.3B_fp16.safetensors` | [Comfy-Org/Wan_2.1_ComfyUI_repackaged](https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged) `split_files/diffusion_models` | 4.31 GB | **已下載**（2026-10-07，SHA-256 驗證一致） |
+| `wan2.1_vace_14B_fp16.safetensors` | 同上 | 34.68 GB（16 GB VRAM 需要 offload） | 未下載 |
+| `wan2.2_fun_vace_{high,low}_noise_14B_fp8_scaled.safetensors` | [Comfy-Org/Wan_2.2_ComfyUI_Repackaged](https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged) | 各 17.35 GB（需要兩個） | 未下載 |
 
 [Kijai/WanVideo_comfy_fp8_scaled](https://huggingface.co/Kijai/WanVideo_comfy_fp8_scaled/tree/main/VACE) 另有約 3.05 GB 的 VACE module 檔；它和核心 `WanVaceToVideo` 的載入方式是否相容沒有查證，不列為首選。
 
 ### 後續工作量
 
-- VACE 1.3B 下載後的實測：約 1 天。
-- 接成固定 task（graph、gate、sidecar、測試、技能）：約 2–3 天。
+- 接成固定 task（裁切／貼回、keep／template 模式、capability gate、sidecar、測試、技能）：約 2–3 天。
+- `mask-recolor` 加高光處理選項：約 0.5 天。
 - `video_layers` client rename 加重試：約 0.5 天（見下方附帶問題）。
 
 ---
@@ -209,9 +220,9 @@ H3 鎖首尾的機制（`nodes_minimax_h3.py`、`comfy/ldm/minimax/model.py`）�
 
 ## 需要 Steve 決定的事項
 
-1. 是否下載 Wan2.1 VACE 1.3B（4.31 GB），讓需求 2 可以做 AI 局部重繪實測；14B 版（約 35 GB）是否需要之後再決定。
+1. ~~是否下載 Wan2.1 VACE 1.3B~~：已同意並完成實測（results §2B）。下一步是否把 VACE 接成固定 task，以及是否需要 14B 版（約 35 GB）。
 2. 特效交付格式：是否採用「黑底 RGB（additive）＋ straight alpha PNG」為預設，WebM、APNG、sprite sheet 是否需要，以及 sprite sheet 的單張尺寸上限（目前 5632×2912）。
 3. 是否把 `vfx_alpha_tools` 正式接入產線（`gameart.py`、部署、技能文件）。
 4. 需求 3 的樣板規則和技能修改建議是否照表實施。
 5. 原生 RGBA（Wan-Alpha）是否等 I2V 權重出來再評估；MatAnyone 的授權是否可以接受。
-6. 本次所有生成片（results §0）都是 candidate，尚未驗收。
+6. 本次所有生成片（results §0、§2B）都是 candidate，尚未驗收。

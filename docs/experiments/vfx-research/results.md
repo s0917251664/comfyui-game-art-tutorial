@@ -98,6 +98,37 @@
 - B 的槌子金框變成米白、Z 字消失，第 40 幀的光又回到青色。
 - B' 的洋紅光暈在遮罩邊緣被硬切，外圍光點仍是原本的青色。
 
+### 2B. VACE 1.3B 遮罩局部重繪（2026-10-07 追加，Steve 同意下載）
+
+**模型**：`wan2.1_vace_1.3B_fp16.safetensors`，來源 Comfy-Org/Wan_2.1_ComfyUI_repackaged，4,309,519,800 bytes，SHA-256 `640ccc0577e6a5d4bb15cd91b11b699ef914fc55f126c5a1c544e152130784f2`（和 Hugging Face 公布值一致）。存放在 `ComfyUI/models/diffusion_models/`。text encoder 和 VAE 沿用本機既有的 `umt5_xxl_fp8_e4m3fn_scaled`、`wan_2.1_vae`。下載後執行 `doctor --refresh`（模型數 109→110，H3／Wan 能力不變），舊快照備份在 `capability_snapshot_before_vace_refresh/`。
+
+**Graph**：研究用固定 graph，照官方模板 `video_wan_vace_inpainting.json` 的非 turbo 分支：ModelSamplingSD3 shift 5、KSampler 20 步／cfg 6／uni_pc／simple、`WanVaceToVideo` strength 1、`TrimVideoLatent`，負向詞照抄模板。遮罩用 SAM 遮罩擴張 8 px（模板預設 GrowMask 20，用在 720 畫布）。輸入用 KJNodes `LoadImagesFromFolderKJ` 讀無損 PNG，輸出用 SaveImage 存 PNG。腳本：`req2_vace/run_vace.py`；每組的 graph 在 `raw/<run>/workflow_api.json`，紀錄在 `raw/run_log.json`。這個 graph 沒有接成 task。
+
+**設定**：從 1024 原片的 (160,176) 裁出 576×576 工作區，56 幀送進 length 57（第 57 幀由節點自動補灰並丟棄）。兩種模式：
+- **template**：遮罩內 control 填黑，和官方模板相同，等於整個重畫。
+- **keep**：遮罩內保留原片，當作引導。
+
+各跑 seed 101／202／303，結果貼回 1024 原片時使用擴張後的遮罩，羽化 4。
+
+`req2_vace/analysis/vace_results.json`（遮罩內統計使用原 SAM 遮罩；「遮罩內 vs 原片」是改變量，不是品質分數）：
+
+| 組別 | 每組秒數 | 裁切區內遮罩外差異（貼回前，平均；>8 的比例） | 貼回後遮罩外變動 | 遮罩內 vs 原片 MAE | 遮罩內相鄰幀 MAE | 青色／洋紅佔比 |
+|---|---|---|---|---|---|---|
+| template s101 | 98.2* | 4.38；12.4% | 0 | 92.6 | 14.93 | 3.3%／53.3% |
+| template s202 | 88.1 | 4.59；12.3% | 0 | 86.8 | 15.29 | 2.0%／58.2% |
+| template s303 | 88.0 | 4.37；12.5% | 0 | 89.7 | 16.03 | 2.7%／46.2% |
+| keep s101 | 95.1 | 4.51；12.3% | 0 | 65.8 | 16.90 | 3.0%／52.1% |
+| keep s202 | 88.0 | 4.50；11.9% | 0 | 61.9 | 16.13 | 7.4%／36.2% |
+| keep s303 | 88.0 | 4.27；12.0% | 0 | 71.6 | 16.87 | 2.3%／50.8% |
+
+\* 含模型首次載入。原片遮罩內相鄰幀 MAE 為 15.13，三種路線的比較見 2A（本機換色 16.08、Wan canny 貼回 16.02）。
+
+對照圖 `req2_vace/analysis/board_vace.png`（第 0／12／18／40 幀），貼回後的 PNG 序列在 `analysis/<run>_pasted/`：
+
+- template：每個 seed 都畫出一把不同設計的新槌子（黑框方塊、金框紫面等），同一支片內前後一致，但原設計（金色端框、晶窗、Z 字）沒有留下。
+- keep：保住了槌子結構（金色端框、晶窗位置、握柄），晶窗和光暈轉成洋紅；但槌身深藍被帶向紫色，金色更飽和，Z 字變淡或變形。s202 最接近原設計，但晶窗內仍殘留一點青色（7.4%）。
+- 兩種模式都沒有改到遮罩外的青色光點；角色本體在裁切區內的差異平均約 4.4，主要來自重新編碼和色調的微小偏移，貼回後歸零。
+
 ## 3. Idle 首幀與首尾呼應
 
 **Idle 圖**：`inputs/skye_idle_square_1024.png`，從 Skye 正式區 `09_1024方形綠幕動作/00_生成參考/character_safearea_square_1024.png` 複製；它是已驗收「一般待機」FINAL 影片所用的生成參考。
