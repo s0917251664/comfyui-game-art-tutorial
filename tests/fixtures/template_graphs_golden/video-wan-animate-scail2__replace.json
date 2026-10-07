@@ -1,0 +1,383 @@
+{
+  "template": "video/wan-animate/scail2",
+  "case": "replace",
+  "template_version": "1.0.0",
+  "graph_canonical_sha256": "454a91a3582ed81ed38f7d71d4a06828b85a2162b6de7b464fb558f75832cadc",
+  "values": {
+    "prompt": "the robot from the reference image dances, same pose as the source video",
+    "seed": 20261006,
+    "sam3_video_object": "person",
+    "sam3_image_object": "robot"
+  },
+  "options": {
+    "keep_audio": false
+  },
+  "uploads": {
+    "reference_image": "run/reference.png",
+    "source_video": "run/source.mp4"
+  },
+  "changed": {
+    "1.image": "run/reference.png",
+    "2.file": "run/source.mp4",
+    "20.text": "the robot from the reference image dances, same pose as the source video",
+    "31.text": "person",
+    "32.text": "robot",
+    "43.noise_seed": 20261006,
+    "61.filename_prefix": "gameart/video-wan-animate-scail2/golden"
+  },
+  "patched_graph_sha256": "7027bcf45a84c5c91ddfdb1a2927f83a1bb9f5e444ba914894d6d29ae95d919e",
+  "graph": {
+    "1": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "run/reference.png"
+      }
+    },
+    "2": {
+      "class_type": "LoadVideo",
+      "inputs": {
+        "file": "run/source.mp4"
+      }
+    },
+    "3": {
+      "class_type": "GetVideoComponents",
+      "inputs": {
+        "video": [
+          "2",
+          0
+        ]
+      }
+    },
+    "4": {
+      "class_type": "ImageFromBatch",
+      "inputs": {
+        "image": [
+          "3",
+          0
+        ],
+        "batch_index": 0,
+        "length": 33
+      }
+    },
+    "5": {
+      "class_type": "ImageScale",
+      "inputs": {
+        "image": [
+          "4",
+          0
+        ],
+        "upscale_method": "area",
+        "width": 384,
+        "height": 384,
+        "crop": "center"
+      }
+    },
+    "10": {
+      "class_type": "UNETLoader",
+      "inputs": {
+        "unet_name": "wan2.1_14B_SCAIL_2_fp8_scaled.safetensors",
+        "weight_dtype": "default"
+      }
+    },
+    "11": {
+      "class_type": "LoraLoaderModelOnly",
+      "inputs": {
+        "model": [
+          "10",
+          0
+        ],
+        "lora_name": "wan2.1_SCAIL_2_DPO_lora_bf16.safetensors",
+        "strength_model": 1.0
+      }
+    },
+    "12": {
+      "class_type": "LoraLoaderModelOnly",
+      "inputs": {
+        "model": [
+          "11",
+          0
+        ],
+        "lora_name": "lightx2v_I2V_14B_480p_cfg_step_distill_rank64_bf16.safetensors",
+        "strength_model": 0.8
+      }
+    },
+    "13": {
+      "class_type": "ModelSamplingSD3",
+      "inputs": {
+        "model": [
+          "12",
+          0
+        ],
+        "shift": 5.0
+      }
+    },
+    "14": {
+      "class_type": "CLIPLoader",
+      "inputs": {
+        "clip_name": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+        "type": "wan",
+        "device": "cpu"
+      }
+    },
+    "15": {
+      "class_type": "VAELoader",
+      "inputs": {
+        "vae_name": "wan_2.1_vae.safetensors"
+      }
+    },
+    "16": {
+      "class_type": "CLIPVisionLoader",
+      "inputs": {
+        "clip_name": "clip_vision_h.safetensors"
+      }
+    },
+    "17": {
+      "class_type": "CLIPVisionEncode",
+      "inputs": {
+        "clip_vision": [
+          "16",
+          0
+        ],
+        "image": [
+          "1",
+          0
+        ],
+        "crop": "none"
+      }
+    },
+    "20": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "clip": [
+          "14",
+          0
+        ],
+        "text": "the robot from the reference image dances, same pose as the source video"
+      }
+    },
+    "21": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "clip": [
+          "14",
+          0
+        ],
+        "text": ""
+      }
+    },
+    "30": {
+      "class_type": "CheckpointLoaderSimple",
+      "inputs": {
+        "ckpt_name": "sam3.1_multiplex_fp16.safetensors"
+      }
+    },
+    "31": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "clip": [
+          "30",
+          1
+        ],
+        "text": "person"
+      }
+    },
+    "32": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "clip": [
+          "30",
+          1
+        ],
+        "text": "robot"
+      }
+    },
+    "33": {
+      "class_type": "SAM3_VideoTrack",
+      "inputs": {
+        "images": [
+          "5",
+          0
+        ],
+        "model": [
+          "30",
+          0
+        ],
+        "conditioning": [
+          "31",
+          0
+        ],
+        "detection_threshold": 0.5,
+        "max_objects": 4,
+        "detect_interval": 1
+      }
+    },
+    "34": {
+      "class_type": "SAM3_VideoTrack",
+      "inputs": {
+        "images": [
+          "1",
+          0
+        ],
+        "model": [
+          "30",
+          0
+        ],
+        "conditioning": [
+          "32",
+          0
+        ],
+        "detection_threshold": 0.5,
+        "max_objects": 4,
+        "detect_interval": 1
+      }
+    },
+    "35": {
+      "class_type": "SCAIL2ColoredMask",
+      "inputs": {
+        "driving_track_data": [
+          "33",
+          0
+        ],
+        "ref_track_data": [
+          "34",
+          0
+        ],
+        "object_indices": "",
+        "sort_by": "left_to_right",
+        "replacement_mode": true
+      }
+    },
+    "40": {
+      "class_type": "WanSCAILToVideo",
+      "inputs": {
+        "positive": [
+          "20",
+          0
+        ],
+        "negative": [
+          "21",
+          0
+        ],
+        "vae": [
+          "15",
+          0
+        ],
+        "width": 384,
+        "height": 384,
+        "length": 33,
+        "batch_size": 1,
+        "pose_video": [
+          "5",
+          0
+        ],
+        "pose_video_mask": [
+          "35",
+          0
+        ],
+        "replacement_mode": true,
+        "pose_strength": 1.0,
+        "pose_start": 0.0,
+        "pose_end": 1.0,
+        "reference_image": [
+          "1",
+          0
+        ],
+        "reference_image_mask": [
+          "35",
+          1
+        ],
+        "clip_vision_output": [
+          "17",
+          0
+        ],
+        "video_frame_offset": 0,
+        "previous_frame_count": 5
+      }
+    },
+    "41": {
+      "class_type": "KSamplerSelect",
+      "inputs": {
+        "sampler_name": "euler"
+      }
+    },
+    "42": {
+      "class_type": "BasicScheduler",
+      "inputs": {
+        "model": [
+          "12",
+          0
+        ],
+        "scheduler": "simple",
+        "steps": 6,
+        "denoise": 1.0
+      }
+    },
+    "43": {
+      "class_type": "SamplerCustom",
+      "inputs": {
+        "model": [
+          "13",
+          0
+        ],
+        "add_noise": true,
+        "noise_seed": 20261006,
+        "cfg": 1.0,
+        "positive": [
+          "40",
+          0
+        ],
+        "negative": [
+          "40",
+          1
+        ],
+        "sampler": [
+          "41",
+          0
+        ],
+        "sigmas": [
+          "42",
+          0
+        ],
+        "latent_image": [
+          "40",
+          2
+        ]
+      }
+    },
+    "44": {
+      "class_type": "VAEDecode",
+      "inputs": {
+        "samples": [
+          "43",
+          1
+        ],
+        "vae": [
+          "15",
+          0
+        ]
+      }
+    },
+    "60": {
+      "class_type": "CreateVideo",
+      "inputs": {
+        "images": [
+          "44",
+          0
+        ],
+        "fps": 16.0
+      }
+    },
+    "61": {
+      "class_type": "SaveVideo",
+      "inputs": {
+        "video": [
+          "60",
+          0
+        ],
+        "filename_prefix": "gameart/video-wan-animate-scail2/golden",
+        "format": "mp4",
+        "codec": "h264"
+      }
+    }
+  }
+}

@@ -1,0 +1,547 @@
+{
+  "template": "video/wan-animate/mix-extend",
+  "case": "audio",
+  "template_version": "1.0.0",
+  "graph_canonical_sha256": "afabb3d7221db8fb93197ff9cffc6d89b1765a6f3398be82dd4747c492fca3c7",
+  "values": {
+    "prompt": "the robot from the reference image dances, same pose as the source video",
+    "seed": 20261006,
+    "positive_points": [
+      {
+        "x": 192,
+        "y": 192
+      }
+    ]
+  },
+  "options": {
+    "keep_audio": true
+  },
+  "uploads": {
+    "reference_image": "run/reference.png",
+    "source_video": "run/source.mp4"
+  },
+  "changed": {
+    "10.image": "run/reference.png",
+    "107.coordinates_negative": "[]",
+    "107.coordinates_positive": "[{\"x\":192,\"y\":192}]",
+    "145.file": "run/source.mp4",
+    "15.audio": [
+      "23",
+      1
+    ],
+    "19.filename_prefix": "gameart/video-wan-animate-mix-extend/golden",
+    "21.text": "the robot from the reference image dances, same pose as the source video",
+    "401.seed": 20261006,
+    "63.seed": 20261006
+  },
+  "patched_graph_sha256": "ec36e46a928f0a18df407acb5f9fe3dd4c7c0ea828e936f53aa295510fe39dd6",
+  "graph": {
+    "20": {
+      "class_type": "UNETLoader",
+      "inputs": {
+        "unet_name": "Wan2_2-Animate-14B_fp8_e4m3fn_scaled_KJ.safetensors",
+        "weight_dtype": "default"
+      }
+    },
+    "18": {
+      "class_type": "LoraLoaderModelOnly",
+      "inputs": {
+        "model": [
+          "20",
+          0
+        ],
+        "lora_name": "lightx2v_I2V_14B_480p_cfg_step_distill_rank64_bf16.safetensors",
+        "strength_model": 1.0
+      }
+    },
+    "99": {
+      "class_type": "LoraLoaderModelOnly",
+      "inputs": {
+        "model": [
+          "18",
+          0
+        ],
+        "lora_name": "WanAnimate_relight_lora_fp16.safetensors",
+        "strength_model": 1.0
+      }
+    },
+    "60": {
+      "class_type": "ModelSamplingSD3",
+      "inputs": {
+        "model": [
+          "99",
+          0
+        ],
+        "shift": 8.0
+      }
+    },
+    "2": {
+      "class_type": "CLIPLoader",
+      "inputs": {
+        "clip_name": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+        "type": "wan",
+        "device": "cpu"
+      }
+    },
+    "3": {
+      "class_type": "VAELoader",
+      "inputs": {
+        "vae_name": "wan_2.1_vae.safetensors"
+      }
+    },
+    "4": {
+      "class_type": "CLIPVisionLoader",
+      "inputs": {
+        "clip_name": "clip_vision_h.safetensors"
+      }
+    },
+    "10": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "run/reference.png"
+      }
+    },
+    "9": {
+      "class_type": "CLIPVisionEncode",
+      "inputs": {
+        "clip_vision": [
+          "4",
+          0
+        ],
+        "image": [
+          "10",
+          0
+        ],
+        "crop": "none"
+      }
+    },
+    "21": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "clip": [
+          "2",
+          0
+        ],
+        "text": "the robot from the reference image dances, same pose as the source video"
+      }
+    },
+    "1": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "clip": [
+          "2",
+          0
+        ],
+        "text": "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走"
+      }
+    },
+    "145": {
+      "class_type": "LoadVideo",
+      "inputs": {
+        "file": "run/source.mp4"
+      }
+    },
+    "23": {
+      "class_type": "GetVideoComponents",
+      "inputs": {
+        "video": [
+          "145",
+          0
+        ]
+      }
+    },
+    "300": {
+      "class_type": "ImageFromBatch",
+      "inputs": {
+        "image": [
+          "23",
+          0
+        ],
+        "batch_index": 0,
+        "length": 61
+      }
+    },
+    "212": {
+      "class_type": "ImageScale",
+      "inputs": {
+        "image": [
+          "300",
+          0
+        ],
+        "upscale_method": "lanczos",
+        "width": 384,
+        "height": 384,
+        "crop": "center"
+      }
+    },
+    "100": {
+      "class_type": "DWPreprocessor",
+      "inputs": {
+        "image": [
+          "212",
+          0
+        ],
+        "detect_hand": "disable",
+        "detect_body": "disable",
+        "detect_face": "enable",
+        "resolution": 384,
+        "bbox_detector": "yolox_l.onnx",
+        "pose_estimator": "dw-ll_ucoco_384.onnx",
+        "scale_stick_for_xinsr_cn": "disable"
+      }
+    },
+    "101": {
+      "class_type": "DWPreprocessor",
+      "inputs": {
+        "image": [
+          "212",
+          0
+        ],
+        "detect_hand": "enable",
+        "detect_body": "enable",
+        "detect_face": "disable",
+        "resolution": 384,
+        "bbox_detector": "yolox_l.onnx",
+        "pose_estimator": "dw-ll_ucoco_384.onnx",
+        "scale_stick_for_xinsr_cn": "disable"
+      }
+    },
+    "108": {
+      "class_type": "DownloadAndLoadSAM2Model",
+      "inputs": {
+        "model": "sam2_hiera_base_plus.safetensors",
+        "segmentor": "video",
+        "device": "cuda",
+        "precision": "fp16"
+      }
+    },
+    "107": {
+      "class_type": "Sam2Segmentation",
+      "inputs": {
+        "sam2_model": [
+          "108",
+          0
+        ],
+        "image": [
+          "212",
+          0
+        ],
+        "coordinates_positive": "[{\"x\":192,\"y\":192}]",
+        "coordinates_negative": "[]",
+        "keep_model_loaded": false,
+        "individual_objects": false
+      }
+    },
+    "274": {
+      "class_type": "GrowMask",
+      "inputs": {
+        "mask": [
+          "107",
+          0
+        ],
+        "expand": 10,
+        "tapered_corners": true
+      }
+    },
+    "276": {
+      "class_type": "BlockifyMask",
+      "inputs": {
+        "masks": [
+          "274",
+          0
+        ],
+        "block_size": 32,
+        "device": "cpu"
+      }
+    },
+    "275": {
+      "class_type": "DrawMaskOnImage",
+      "inputs": {
+        "image": [
+          "212",
+          0
+        ],
+        "mask": [
+          "276",
+          0
+        ],
+        "color": "0, 0, 0",
+        "device": "cpu"
+      }
+    },
+    "62": {
+      "class_type": "WanAnimateToVideo",
+      "inputs": {
+        "positive": [
+          "21",
+          0
+        ],
+        "negative": [
+          "1",
+          0
+        ],
+        "vae": [
+          "3",
+          0
+        ],
+        "width": 384,
+        "height": 384,
+        "length": 33,
+        "batch_size": 1,
+        "clip_vision_output": [
+          "9",
+          0
+        ],
+        "reference_image": [
+          "10",
+          0
+        ],
+        "face_video": [
+          "100",
+          0
+        ],
+        "pose_video": [
+          "101",
+          0
+        ],
+        "background_video": [
+          "275",
+          0
+        ],
+        "character_mask": [
+          "276",
+          0
+        ],
+        "continue_motion_max_frames": 5,
+        "video_frame_offset": 0
+      }
+    },
+    "63": {
+      "class_type": "KSampler",
+      "inputs": {
+        "model": [
+          "60",
+          0
+        ],
+        "positive": [
+          "62",
+          0
+        ],
+        "negative": [
+          "62",
+          1
+        ],
+        "latent_image": [
+          "62",
+          2
+        ],
+        "seed": 20261006,
+        "steps": 6,
+        "cfg": 1.0,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "denoise": 1.0
+      }
+    },
+    "57": {
+      "class_type": "TrimVideoLatent",
+      "inputs": {
+        "samples": [
+          "63",
+          0
+        ],
+        "trim_amount": [
+          "62",
+          3
+        ]
+      }
+    },
+    "58": {
+      "class_type": "VAEDecode",
+      "inputs": {
+        "samples": [
+          "57",
+          0
+        ],
+        "vae": [
+          "3",
+          0
+        ]
+      }
+    },
+    "230": {
+      "class_type": "ImageFromBatch",
+      "inputs": {
+        "image": [
+          "58",
+          0
+        ],
+        "batch_index": [
+          "62",
+          4
+        ],
+        "length": 4096
+      }
+    },
+    "15": {
+      "class_type": "CreateVideo",
+      "inputs": {
+        "images": [
+          "405",
+          0
+        ],
+        "fps": 16.0,
+        "audio": [
+          "23",
+          1
+        ]
+      }
+    },
+    "19": {
+      "class_type": "SaveVideo",
+      "inputs": {
+        "video": [
+          "15",
+          0
+        ],
+        "filename_prefix": "gameart/video-wan-animate-mix-extend/golden",
+        "format": "mp4",
+        "codec": "h264"
+      }
+    },
+    "400": {
+      "class_type": "WanAnimateToVideo",
+      "inputs": {
+        "positive": [
+          "21",
+          0
+        ],
+        "negative": [
+          "1",
+          0
+        ],
+        "vae": [
+          "3",
+          0
+        ],
+        "width": 384,
+        "height": 384,
+        "length": 33,
+        "batch_size": 1,
+        "clip_vision_output": [
+          "9",
+          0
+        ],
+        "reference_image": [
+          "10",
+          0
+        ],
+        "face_video": [
+          "100",
+          0
+        ],
+        "pose_video": [
+          "101",
+          0
+        ],
+        "background_video": [
+          "275",
+          0
+        ],
+        "character_mask": [
+          "276",
+          0
+        ],
+        "continue_motion_max_frames": 5,
+        "video_frame_offset": [
+          "62",
+          5
+        ],
+        "continue_motion": [
+          "230",
+          0
+        ]
+      }
+    },
+    "401": {
+      "class_type": "KSampler",
+      "inputs": {
+        "model": [
+          "60",
+          0
+        ],
+        "positive": [
+          "400",
+          0
+        ],
+        "negative": [
+          "400",
+          1
+        ],
+        "latent_image": [
+          "400",
+          2
+        ],
+        "seed": 20261006,
+        "steps": 6,
+        "cfg": 1.0,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "denoise": 1.0
+      }
+    },
+    "402": {
+      "class_type": "TrimVideoLatent",
+      "inputs": {
+        "samples": [
+          "401",
+          0
+        ],
+        "trim_amount": [
+          "400",
+          3
+        ]
+      }
+    },
+    "403": {
+      "class_type": "VAEDecode",
+      "inputs": {
+        "samples": [
+          "402",
+          0
+        ],
+        "vae": [
+          "3",
+          0
+        ]
+      }
+    },
+    "404": {
+      "class_type": "ImageFromBatch",
+      "inputs": {
+        "image": [
+          "403",
+          0
+        ],
+        "batch_index": [
+          "400",
+          4
+        ],
+        "length": 4096
+      }
+    },
+    "405": {
+      "class_type": "ImageBatch",
+      "inputs": {
+        "image1": [
+          "230",
+          0
+        ],
+        "image2": [
+          "404",
+          0
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,106 @@
+{
+  "template": "video/sam3/track-mask",
+  "case": "default",
+  "template_version": "1.0.0",
+  "graph_canonical_sha256": "bce7d463f3aa43748d15f9958369d995c8a276d92e82f7baab4d01248d165141",
+  "values": {},
+  "options": {},
+  "uploads": {
+    "source_video": "run/source.mp4",
+    "seed_mask": "run/seed_mask.png"
+  },
+  "changed": {
+    "1.file": "run/source.mp4",
+    "10.image": "run/seed_mask.png",
+    "36.filename_prefix": "gameart/video-sam3-track-mask/golden"
+  },
+  "patched_graph_sha256": "6dbd8a8985edbe178e2b000c354ec17caf872d753fbcc10bbaa3ab6b4e211669",
+  "graph": {
+    "1": {
+      "class_type": "LoadVideo",
+      "inputs": {
+        "file": "run/source.mp4"
+      }
+    },
+    "2": {
+      "class_type": "GetVideoComponents",
+      "inputs": {
+        "video": [
+          "1",
+          0
+        ]
+      }
+    },
+    "10": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "run/seed_mask.png"
+      }
+    },
+    "11": {
+      "class_type": "ImageToMask",
+      "inputs": {
+        "image": [
+          "10",
+          0
+        ],
+        "channel": "red"
+      }
+    },
+    "30": {
+      "class_type": "CheckpointLoaderSimple",
+      "inputs": {
+        "ckpt_name": "sam3.1_multiplex_fp16.safetensors"
+      }
+    },
+    "33": {
+      "class_type": "SAM3_VideoTrack",
+      "inputs": {
+        "images": [
+          "2",
+          0
+        ],
+        "model": [
+          "30",
+          0
+        ],
+        "initial_mask": [
+          "11",
+          0
+        ],
+        "detection_threshold": 0.5,
+        "max_objects": 1,
+        "detect_interval": 1
+      }
+    },
+    "34": {
+      "class_type": "SAM3_TrackToMask",
+      "inputs": {
+        "track_data": [
+          "33",
+          0
+        ],
+        "object_indices": ""
+      }
+    },
+    "35": {
+      "class_type": "MaskToImage",
+      "inputs": {
+        "mask": [
+          "34",
+          0
+        ]
+      }
+    },
+    "36": {
+      "class_type": "SaveImage",
+      "inputs": {
+        "images": [
+          "35",
+          0
+        ],
+        "filename_prefix": "gameart/video-sam3-track-mask/golden"
+      }
+    }
+  }
+}
