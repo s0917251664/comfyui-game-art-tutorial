@@ -10,6 +10,14 @@ repo 內的 Markdown 要在 clean clone 上就能點得通。`tests/test_doc_lin
 - 連到 `.md` 的 `#錨點` 要對得到 GitHub 風格的標題錨點（重複標題依序加 `-1`、`-2`）；
 - 不可以連到 `output/`。
 
+單獨執行這個測試（在 repo 根目錄）：
+
+```
+PYTHONPATH=tools_src:tests python -m unittest test_doc_links
+```
+
+Windows 的 `PYTHONPATH` 用 `;` 分隔；也可以直接 `python tests/test_doc_links.py`。在 ComfyUI venv 裡不要寫成 `tests.test_doc_links`，因為 venv 裡有套件（color_matcher）裝了頂層 `tests` 套件，會蓋掉 repo 的 `tests/`。
+
 ## 本機證據（`output/`）怎麼寫
 
 `output/` 不進版控（`.gitignore`），裡面的實測證據只存在跑測試的那台機器上。文件引用這些證據時寫成純文字：
@@ -24,7 +32,7 @@ validation（本機證據：`output/scail2-test/replace33/validation.json`）
 
 ## 允許的例外
 
-例外寫在 `tests/test_doc_links.py` 的 `ALLOWED_MISSING`，並附上原因。例外失效時（連結被修好或刪除）測試也會失敗，提醒移除。目前只有兩個：
+例外寫在 `tests/test_doc_links.py` 的 `ALLOWED_MISSING`，並附上原因。例外失效時（連結被修好或刪除）測試也會失敗，提醒移除。目標是 gitignore 的本機檔時（列在 `MACHINE_LOCAL_FILES`，目前只有 `local_config.json`），clean checkout 沒有、已設定的機器有，兩種情況都算通過。目前只有兩個：
 
 | 來源 | 連結 | 原因 |
 |---|---|---|

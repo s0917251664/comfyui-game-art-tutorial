@@ -7,7 +7,12 @@
   docs/knowledge/maintenance/doc-links.md)。
 
 ``third_party/claude-obsidian/``(上游 vendor 原檔)不檢查。刻意保留的例外列在 ALLOWED_MISSING,
-例外已不存在時測試也會失敗,避免清單過期。
+例外已不存在時測試也會失敗,避免清單過期。MACHINE_LOCAL_FILES 裡的目標是 gitignore 的本機檔
+(例如 local_config.json),clean checkout 沒有、已設定的機器有,兩種情況都算通過。
+
+單獨執行:``PYTHONPATH=tools_src:tests python -m unittest test_doc_links``(Windows 用 ``;`` 分隔),
+或 ``python tests/test_doc_links.py``。ComfyUI venv 裡不要寫成 ``tests.test_doc_links``:
+有套件(color_matcher)在 site-packages 裝了頂層 ``tests`` 套件,會蓋掉 repo 的 tests/。
 """
 import os
 import re
@@ -24,6 +29,9 @@ ALLOWED_MISSING = {
     ("third_party/claude-obsidian-skills/wiki/references/frontmatter.md", "../../../WIKI.md"):
         "上游原文,原本指向上游 repo 根目錄;改了會破壞 hash",
 }
+
+# 目標是 gitignore 的本機檔(repo 根目錄相對路徑):存在或不存在都可以,不算過期例外。
+MACHINE_LOCAL_FILES = {"local_config.json"}
 
 FENCE_RE = re.compile(r"^(```|~~~).*?^\1[^\n]*$", re.S | re.M)
 INLINE_CODE_RE = re.compile(r"(`+)(?!`).+?(?<!`)\1(?!`)", re.S)
@@ -82,7 +90,9 @@ def anchors(path):
     return _ANCHORS[path]
 
 
-def check_repo():
+def check_repo(allowed=None, machine_local=None):
+    allowed = ALLOWED_MISSING if allowed is None else allowed
+    machine_local = MACHINE_LOCAL_FILES if machine_local is None else machine_local
     problems, allowed_seen = [], set()
     for rel in tracked_markdown():
         source = os.path.join(ROOT, rel)
@@ -100,8 +110,11 @@ def check_repo():
             if target_rel == "output" or target_rel.startswith("output/"):
                 problems.append(f"{rel}: 連到不進版控的 output/: {raw}(改寫成「標籤（本機證據：`output/...`）」)")
                 continue
+            if (rel, raw) in allowed and target_rel in machine_local:
+                allowed_seen.add((rel, raw))  # 本機檔:有沒有都可以
+                continue
             if not os.path.exists(target):
-                if (rel, raw) in ALLOWED_MISSING:
+                if (rel, raw) in allowed:
                     allowed_seen.add((rel, raw))
                     continue
                 problems.append(f"{rel}: 目標不存在: {raw}")
@@ -109,7 +122,7 @@ def check_repo():
             if fragment and target.endswith(".md"):
                 if urllib.parse.unquote(fragment).lower() not in anchors(target):
                     problems.append(f"{rel}: 錨點不存在: {raw}")
-    stale = sorted(set(ALLOWED_MISSING) - allowed_seen)
+    stale = sorted(set(allowed) - allowed_seen)
     return problems, stale
 
 
@@ -118,6 +131,27 @@ class DocLinkTests(unittest.TestCase):
         problems, stale = check_repo()
         self.assertEqual(problems, [], "\n" + "\n".join(problems))
         self.assertEqual(stale, [], "ALLOWED_MISSING 裡有已經不存在的例外,請移除: %r" % stale)
+
+    def test_stale_exception_is_reported(self):
+        # 連結本來就存在(README.md -> AGENTS.md)時,把它列為例外要被報成過期。
+        fake = dict(ALLOWED_MISSING)
+        fake[("README.md", "AGENTS.md")] = "測試用"
+        _, stale = check_repo(allowed=fake, machine_local=set())
+        self.assertIn(("README.md", "AGENTS.md"), stale)
+        # 同一個連結若標為本機檔,不論存在與否都不算過期。
+        _, stale = check_repo(allowed=fake, machine_local=MACHINE_LOCAL_FILES | {"AGENTS.md"})
+        self.assertNotIn(("README.md", "AGENTS.md"), stale)
+
+    def test_machine_local_files_are_gitignored(self):
+        for name in sorted(MACHINE_LOCAL_FILES):
+            try:
+                result = subprocess.run(["git", "check-ignore", "-q", "--no-index", name],
+                                        cwd=ROOT, capture_output=True)
+            except OSError:
+                self.skipTest("找不到 git")
+            if result.returncode == 128:
+                self.skipTest("不是 git checkout")
+            self.assertEqual(result.returncode, 0, f"{name}:MACHINE_LOCAL_FILES 只能放 .gitignore 涵蓋的本機檔")
 
     def test_slugify_matches_github_style(self):
         self.assertEqual(slugify("2. 影片物件標記與局部重繪"), "2-影片物件標記與局部重繪")

@@ -9,7 +9,7 @@ status: current
 ## 步驟
 
 1. 部署最新工具：`python tools_src/gameart.py deploy`（dry run 確認）→ `deploy --yes`。`smoke.py` 與 `comfyui_pipeline/smoke_suites/` 會一併部署。
-2. 確認快照新鮮：`python <ComfyUI>/tools/gameart.py doctor`（過期就 `doctor --refresh`）。ComfyUI server 要在跑。
+2. 確認快照新鮮：`<python_exe> <ComfyUI>/tools/gameart.py doctor`（過期就 `doctor --refresh`）。ComfyUI server 要在跑。`<python_exe>` 與 `<ComfyUI>` 的意思見第 3 步。
 3. 跑套件。目前（2026-10-07）只有下面這個寫法可行：用部署目錄的 `gameart.py`、ComfyUI venv 的 Python，並以**絕對路徑**指定 `--config`：
 
    ```
