@@ -11,7 +11,7 @@ description: 在選定 ComfyUI 執行路線時，編排角色動作組的既有�
 
 ## 何時使用
 
-已選定 ComfyUI 執行同一角色的動作組（如 Idle、Win、Expect、Fail、Attack），或從角色圖做到逐支驗收與交付時使用。只整理動作需求／驗收表時走共用工作流程，不讀本機生成 gate。單支「讓這張靜幀動起來」走 [`comfyui-video-gen`](../comfyui-video-gen/SKILL.md)；有劇情的多鏡過場走 [劇情影片流程](../comfyui-film-workflow/SKILL.md)。
+已選定 ComfyUI 執行同一角色的動作組（如 Idle、Win、Expect、Fail、Attack），或從角色圖做到逐支驗收與交付時使用。只整理動作需求／驗收表時走共用工作流程，不讀本機生成 gate。單支「讓這張靜幀動起來」走 [`comfyui-video-gen`](../comfyui-video-gen/SKILL.md)；有劇情的多鏡過場走 [劇情影片流程](../comfyui-film-workflow/SKILL.md)。當動作來源是既有影片且使用者選擇 Wan Animate 或 SCAIL-2（影片驅動參考角色／影片中人物替換）時，改走獨立的 [`comfyui-wan-animate`](../comfyui-wan-animate/SKILL.md)；其 gate 是該技能的 live preflight，不在 video_capabilities.json；已接受輸出仍經本技能的逐動作驗收與 frames 交付。
 
 ## 執行邊界
 

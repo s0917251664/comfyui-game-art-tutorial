@@ -1,12 +1,13 @@
 ---
 type: installation-record
 status: installed-technical-pass-content-candidate
+scail2: installed-technical-pass-content-candidate
 last_updated: 2026-10-06
 ---
 
 # Wan2.2 Animate 本機安裝與驗證
 
-目前狀態：正式 8188 已完成安裝；固定 API templates 的 Mix17／Move17 已直接 HTTP 實測，live node／model preflight、queue、下載與完整解碼均技術通過。輸出有肩膀、手臂與手部變形，仍為 candidate，未獲使用者美術驗收；17 幀結果不證明 33 幀穩定。日常操作、每次執行前的 live gate 及當次證據見[專用技能](../../../skills/comfyui-wan-animate/SKILL.md)與[API reference](../../../skills/comfyui-wan-animate/references/comfyui-api.md)，採直接 HTTP，不要求瀏覽器或新增 client／CLI。本頁以下保留安裝 pins 與安裝期歷史測試。輸出證據位於本機 ignored `output/`，clean clone 不含，連結不代表目前 live gate。
+目前狀態：正式 8188 已完成安裝；固定 API templates 的 Mix17／Move17、兩段延伸 Mix61（含音訊）／Move61 與直式 384×640 Move17 已直接 HTTP 實測，live node／model preflight、queue、下載與完整解碼均技術通過。輸出有肩膀、手臂與手部變形，仍為 candidate，未獲使用者美術驗收。SCAIL-2 已於同日下載 FP8 權重並完成技術實測，見下方 SCAIL-2 段。日常操作、每次執行前的 live gate 及當次證據見[專用技能](../../../skills/comfyui-wan-animate/SKILL.md)與[API reference](../../../skills/comfyui-wan-animate/references/comfyui-api.md)，採直接 HTTP，不要求瀏覽器或新增 client／CLI。本頁以下保留安裝 pins 與安裝期歷史測試。輸出證據位於本機 ignored `output/`，clean clone 不含，連結不代表目前 live gate。
 
 
 ## 本機設定與使用入口
@@ -55,13 +56,11 @@ RTX 4080（16,376 MiB VRAM）、31.1 GiB RAM；ComfyUI 位於 `C:/Users/XU/Comfy
 
 已重跑影片 detector，既有 h3／wan 仍 available，原預設 h3 保留；該 detector 不涵蓋 Animate。安裝後 portable verification：43 passed、0 failed；pip check 無依賴衝突。此回歸檢查不替代上方 Animate smoke。[正式節點 preflight](../../../output/wan-animate-install/production-node-preflight.json)、[portable report](../../../output/wan-animate-install/portable-final.txt)。
 
-## SCAIL-2 追加參考（未安裝）
+## SCAIL-2 安裝與實測（2026-10-06）
 
-Steve 追加提出 SCAIL-2「加入參考」方向，未要求安裝。官方 [zai-org/SCAIL-2](https://github.com/zai-org/SCAIL-2) 說明其端到端角色動畫、角色替換與多角色參考能力；遮罩以黑、白及彩色區域表達不同語義，不能直接當成本專案一般二值遮罩理解。官方獨立環境要求 Python 3.10–3.12。
+Steve 於 2026-10-06 同意下載並實測。以固定 revision 下載三個檔案並逐一核對 SHA-256，合計 20,667,070,257 bytes（19.25 GiB）：SCAIL-2 14B FP8 scaled 主模型與 DPO LoRA（`Comfy-Org/SCAIL-2` @ `fe3c728bc793ba21ca674688f822afb709ad44fb`）、SAM3.1 multiplex（`Comfy-Org/sam3.1` @ `7bb8374780a725b4353ed31f3a9395c9742b5621`）。UMT5、CLIP Vision H、LightX2V LoRA 與 VAE 重用 Wan Animate 既有檔案；官方範本寫的 `Wan2_1_VAE_bf16` 改用本機 `wan_2.1_vae.safetensors`，實測可解碼。ComfyUI 版本不變（`WanSCAILToVideo` 等節點為 core 內建），未新增 custom node 或 Python 套件。下載腳本與記錄在 ignored `output/scail2-install/`。
 
-安裝期曾記錄本機可見 `WanSCAILToVideo`／`SCAIL2ColoredMask` 節點名稱，但當時節點與工作流未驗證。後續 2026-10-06 範本 preflight 確認所需 node class 存在，卻發現四個精確模型檔名未匹配；權重／相容模型仍未驗證，graph 未 queue、未推論。詳見[動畫評估筆記](animation-evaluation.md)。RTX 4080 16 GB 是否足以執行未知；節點 preflight 不代表可執行。此項不在 Wan Animate smoke 範圍。
-
-另見[官方權重](https://huggingface.co/zai-org/SCAIL-2)與[ComfyUI 原生整合 PR](https://github.com/Comfy-Org/ComfyUI/pull/14373)。參考項目不構成安裝或 16 GB 可行性驗證。
+替換 33 幀、替換 61 幀（兩段延伸）、動畫 33 幀三次 queue 全部技術通過，RTX 4080 16 GB 可執行 384×384。身份一致性比 Wan Animate 好，但兩種模式都變成全身構圖、未貼合來源近景鏡頭，內容仍為 candidate。檔案清單、模式、動態欄位與實測細節見 [SCAIL-2 reference](../../../skills/comfyui-wan-animate/references/scail2.md)；官方研究來源仍見[動畫評估筆記](animation-evaluation.md)。
 
 ## 新增能力 checklist 適用性
 
@@ -69,4 +68,5 @@ Steve 追加提出 SCAIL-2「加入參考」方向，未要求安裝。官方 [z
 - 程式與部署：未修改 production facade/package、catalog、profile 或新增 task，相關同步／golden fixture 項目不適用；安裝專用 helper 已語法檢查及實際執行。原生 UI workflow 已部署並檢查 node id、pos、link 端點與 last_link_id。
 - 實測：Mix17／Mix33／Move33 實際 queue，輸出與解碼契約通過；無音訊，未測音訊保留。抽幀已檢查且記錄品質缺陷，未標記人工接受。
 - 文件：安裝、模型來源、video-gen、face-swap integration、AGENTS、知識路由與 tested-versions 已更新；後續已補專用技能與 API templates，不將此路徑宣稱為 `generate.py` 正式 task。
-- 收尾：正式 8188 已重啟、31-node preflight pass、detector 保留 h3，portable 43/0，pip check pass；已移除本次完成下載留下的單一 .part 檔。SCAIL-2 只記參考，未安裝。
+- 收尾：正式 8188 已重啟、31-node preflight pass、detector 保留 h3，portable 43/0，pip check pass；已移除本次完成下載留下的單一 .part 檔。
+- 2026-10-06 追加：延伸段／SCAIL-2 templates 加入專用技能，live schema preflight、實際 queue 與完整解碼通過；未改 production package、profile 或 capability catalog。

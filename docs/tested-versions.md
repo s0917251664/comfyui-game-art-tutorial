@@ -531,6 +531,8 @@ Windows ACL issue：Python 3.13 `tempfile.mkdtemp()` 私有 mode-0700 DACL 在 r
 
 ## Wan2.2 Animate 原生 workflow 狀態（2026-10-06）
 
+同日追加：兩段延伸 Mix61（含來源音訊）／Move61、直式 384×640 Move17，以及 SCAIL-2 FP8 替換 33／61 幀、動畫 33 幀，皆以固定 API templates 直接 HTTP 實測，完整解碼與 PTS grid 通過；內容仍 candidate。ComfyUI 仍為 `12d5279438bfefc058a269eae805ceab6047777f`（v0.34.0）。細節見[API reference](../skills/comfyui-wan-animate/references/comfyui-api.md)與[SCAIL-2 reference](../skills/comfyui-wan-animate/references/scail2.md)。
+
 後續已完成專用技能內 Mix17／Move17 固定 templates 的直接 HTTP API 實测：384×384、17 幀、16 FPS、1.0625 秒、H.264 無音訊，完整解碼與 PTS grid 通過；內容仍有肩膀／手臂／手部變形，未美術接受。本次沒有新增 Python client、CLI 或 `generate.py` task。實際 prompt ID、template hash、graph、上傳回應、history、耗時與限制見[API 操作與實測紀錄](../skills/comfyui-wan-animate/references/comfyui-api.md)。
 
-截至 2026-10-06 已完成安裝，正式 8188 的 31 個官方 UI 節點齊備；Mix／Move 的 33 幀 API smoke 技術通過。抽幀發現角色身份漂移，Move 多出吉他，內容仍為 candidate，未獲使用者驗收。 此能力為獨立原生 UI workflow，未接入 `generate.py` task/backend；H3/Wan 5B detector 不涵蓋 Animate。既有預設 h3 保持不變。詳細 pins、操作與實測見[安裝紀錄](knowledge/video/wan-animate-install.md)。SCAIL-2 僅列為參考，權重未安裝／未實測。
+截至 2026-10-06 已完成安裝，正式 8188 的 31 個官方 UI 節點齊備；Mix／Move 的 33 幀 API smoke 技術通過。抽幀發現角色身份漂移，Move 多出吉他，內容仍為 candidate，未獲使用者驗收。 此能力為獨立原生 UI workflow，未接入 `generate.py` task/backend；H3/Wan 5B detector 不涵蓋 Animate。既有預設 h3 保持不變。詳細 pins、操作與實測見[安裝紀錄](knowledge/video/wan-animate-install.md)。（SCAIL-2 已於同日另行安裝實測，見上方追加段。）

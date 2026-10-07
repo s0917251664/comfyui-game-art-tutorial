@@ -59,8 +59,11 @@ repo 附最小 `.obsidian/app.json` 和 `core-plugins.json`，使用檔案瀏覽
 
 ## Wan Animate／SCAIL-2 路由
 
-- [Wan Animate／SCAIL-2 評估與受控學習方式](video/animation-evaluation.md)：包含官方 UI 範本、live preflight、prompt-only 候選、mask 語義與逐階段停止條件；SCAIL-2 權重及推論仍未驗證。
-- [Wan Animate 技能入口](../../skills/comfyui-wan-animate/SKILL.md)：Mix／Move 固定原生 API graph 的本機能力查詢、brief 與候選驗收流程；[API 操作 reference](../../skills/comfyui-wan-animate/references/comfyui-api.md)記錄 live preflight 與 request 契約。
+- [Wan Animate／SCAIL-2 評估與受控學習方式](video/animation-evaluation.md)：包含官方 UI 範本、prompt-only 候選、mask 語義與逐階段停止條件。
+- [SCAIL-2 API 操作契約與實測](../../skills/comfyui-wan-animate/references/scail2.md)：FP8 權重已安裝，替換／動畫與兩段延伸技術通過，內容 candidate。
+- [SCAIL-2 角色替換實驗（2026-10-07）](video/scail2-character-replacement-experiment-2026-10-07.md)：用本人照片替換影片主角，比較整畫面重畫、只換頭＋換臉等四種做法。
+- [Wan Animate／SCAIL-2 實驗紀錄（2026-10-06）](video/wan-animate-scail2-experiments-2026-10-06.md)：延伸段、音訊、直式寬高與 SCAIL-2 六支候選的條件、prompt、抽幀觀察與限制。
+- [Wan Animate 技能入口](../../skills/comfyui-wan-animate/SKILL.md)：Mix／Move（單段、兩段延伸、音訊、寬高）與 SCAIL-2 固定 API graph 的本機能力查詢、brief 與候選驗收流程；[API 操作 reference](../../skills/comfyui-wan-animate/references/comfyui-api.md)記錄 live preflight 與 request 契約。
 - [Wan Animate 安裝紀錄](video/wan-animate-install.md)：安裝 pins 與歷史 33 幀測試；目前 17 幀 API 證據及內容限制以技能/API reference 為準。輸出證據位於本機 ignored output，clean clone 不含。
 - [角色動畫 brief 模板](video/templates/animation-brief.md)與[候選測試紀錄模板](video/templates/animation-test-record.md)：先固定輸入、身份錨點與驗收條件，再記錄實際候選與使用者決定。
 

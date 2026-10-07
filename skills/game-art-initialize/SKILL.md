@@ -12,7 +12,7 @@ description: 協助第一次使用本專案的使用者開始遊戲美術工作�
 - 使用者尚未選執行路線：先整理需求、盤點本專案技能；優先提出可直接開始的需求整理方式。清楚告知：「可以先只使用需求整理與平台圖片技能，不必安裝 ComfyUI 或 Python；需要本機功能時再補環境。」不可默認舊的 ComfyUI 路線並觸發安裝。
 - 只整理需求／製作規劃：讀 `skills/game-art-workflow/SKILL.md`。平台原生圖片技能可在會話提供相符工具時直接使用，不需要 repo、本機 runtime 或 `local_config.json`。
 - 使用者明確選平台圖片工具：讀 `skills/platform-image-gen/SKILL.md`，逐項核對當下工具 schema。工具目前可用、schema 有效且符合本案時才執行；否則交付 brief 與缺口。不得推定免費、付費權限、外部 API 可用或影片支援。
-- 使用者明確選 ComfyUI：先按 task 路由到現有 executor，不能一概套用圖片 CLI 或強制要求本機 Python／設定：圖片既有 CLI 讀 `skills/comfyui-art-gen/SKILL.md`；現有影片 CLI 讀 `skills/comfyui-video-gen/SKILL.md`；Wan Animate 固定 API 讀 `skills/comfyui-wan-animate/SKILL.md`；影片換臉和 Video Layers 分別讀 `skills/comfyui-face-swap-workflow/SKILL.md`、`skills/comfyui-video-layers/SKILL.md`。遵照 executor 自己的 CLI／API、profile、loopback、路徑、模型與 task gate。只有 executor 明確支援的 API 方式，才可在明確 server URL 及本次授權下以 HTTP 呼叫；不臨場改用 API，也不因泛稱「ComfyUI」就新造 graph。既有專案已選路線時沿用已配置方式。
+- 使用者明確選 ComfyUI：先按 task 路由到現有 executor，不能一概套用圖片 CLI 或強制要求本機 Python／設定：圖片既有 CLI 讀 `skills/comfyui-art-gen/SKILL.md`；現有影片 CLI 讀 `skills/comfyui-video-gen/SKILL.md`；Wan Animate／SCAIL-2 固定 API 讀 `skills/comfyui-wan-animate/SKILL.md`；影片換臉和 Video Layers 分別讀 `skills/comfyui-face-swap-workflow/SKILL.md`、`skills/comfyui-video-layers/SKILL.md`。遵照 executor 自己的 CLI／API、profile、loopback、路徑、模型與 task gate。只有 executor 明確支援的 API 方式，才可在明確 server URL 及本次授權下以 HTTP 呼叫；不臨場改用 API，也不因泛稱「ComfyUI」就新造 graph。既有專案已選路線時沿用已配置方式。
 - 本機檔案處理與遮罩等 helper 是獨立路線，按任務讀 `skills/local-image-edit-tools/SKILL.md`、`skills/comfyui-object-design/SKILL.md` 或相符工具技能；逐項檢查其自身依賴，不由「使用 ComfyUI」推定需要 server、GPU 或 repo Python。
 - 只有使用者明確要求安裝／初始化本機 ComfyUI，或明確選擇需本機安裝的既有 CLI／helper 且其自身依賴缺失時，才讀 `skills/comfyui-install/SKILL.md` 和安裝知識。安裝前遵照安裝流程說明容量與範圍。各工具依自己的契約判斷依賴；不得假設所有 ComfyUI 路線都需要相同 Python 或本機設定。
 

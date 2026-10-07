@@ -1,0 +1,605 @@
+{
+  "schema_version": 1,
+  "kind": "smoke_report",
+  "technical_only": true,
+  "note": "僅技術檢查(能否執行、輸出可讀、尺寸/hash 記錄),不代表美術接受;content_review 未進行。",
+  "content_review": "not_performed",
+  "suite": {
+    "id": "image-core",
+    "sha256": "e0f5fe3bc743a88e39763c6efc366220c708dde3ec76ebed14fd987906c9497d",
+    "selected_tasks": null
+  },
+  "started": "2026-10-06T08:28:04+00:00",
+  "finished": "2026-10-06T08:29:07+00:00",
+  "platform_key": "windows-cuda",
+  "device": {
+    "platform_key": "windows-cuda",
+    "os": "Windows",
+    "machine": "amd64",
+    "backend": "cuda",
+    "gpu_name": "NVIDIA GeForce RTX 4080",
+    "vram_mb": 16376,
+    "unified_memory_mb": null,
+    "usable_memory_mb": 16376,
+    "tier": "sdxl"
+  },
+  "fingerprint": {
+    "platform": {
+      "os": "Windows",
+      "machine": "amd64"
+    },
+    "comfyui": {
+      "commit": "12d5279438bfefc058a269eae805ceab6047777f",
+      "version": "0.34.0"
+    },
+    "custom_nodes": {
+      "count": 11,
+      "hash": "0e65d97206965428"
+    },
+    "models": {
+      "count": 106,
+      "hash": "0a42d7ff302980fe"
+    }
+  },
+  "profile_id": "sdxl_standard",
+  "profile_sha256": "6dbd988bd88cfe17aed83b488137f7569967c54fe403564d41d367eedb38a167",
+  "profile_hash_scheme": "content-v1",
+  "summary": {
+    "overall": "pass",
+    "counts": {
+      "pass": 10,
+      "fail": 0,
+      "skipped": 0,
+      "not_installed": 0
+    },
+    "runnable": 10,
+    "note": "整體判定只看實際執行的 task;not_installed/skipped 不計入失敗。"
+  },
+  "tasks": [
+    {
+      "id": "concept",
+      "task": "concept",
+      "status": "pass",
+      "reason": null,
+      "duration_s": 4.67,
+      "seed_requested": 1001,
+      "seeds_resolved": {
+        "5": {
+          "seed": 1001
+        }
+      },
+      "seed_note": null,
+      "command": [
+        "C:\\Users\\XU\\ComfyUI\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\XU\\ComfyUI\\tools\\generate.py",
+        "--profile",
+        "sdxl_standard",
+        "--config",
+        "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\local_config.json",
+        "--result-json",
+        "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\output\\experiments\\deploy-validation-win-20261006\\smoke-1\\concept.result.json",
+        "concept",
+        "--prompt",
+        "a lone wooden treasure chest on a stone floor, game concept art, simple background",
+        "--width",
+        "768",
+        "--height",
+        "768",
+        "--output-dir",
+        "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\output\\experiments\\deploy-validation-win-20261006\\smoke-1\\concept",
+        "--seed",
+        "1001"
+      ],
+      "exit_code": 0,
+      "log": "logs\\concept.log",
+      "outputs": [
+        {
+          "path": "concept\\concept_00081_.png",
+          "sha256": "d6c91903122ac8bdda98e41c53e78a2b8afece858c753274221f54edd019e827",
+          "size": 791194,
+          "mode": "RGB",
+          "width": 768,
+          "height": 768
+        }
+      ],
+      "result_json": "concept.result.json",
+      "missing": [],
+      "dependency_only": false,
+      "technical_validation": "pass",
+      "profile_id_in_result": "sdxl_standard",
+      "profile_sha256_in_result": "6dbd988bd88cfe17aed83b488137f7569967c54fe403564d41d367eedb38a167"
+    },
+    {
+      "id": "icon_asset",
+      "task": "icon_asset",
+      "status": "pass",
+      "reason": null,
+      "duration_s": 4.69,
+      "seed_requested": 1002,
+      "seeds_resolved": {
+        "5": {
+          "seed": 1002
+        }
+      },
+      "seed_note": null,
+      "command": [
+        "C:\\Users\\XU\\ComfyUI\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\XU\\ComfyUI\\tools\\generate.py",
+        "--profile",
+        "sdxl_standard",
+        "--config",
+        "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\local_config.json",
+        "--result-json",
+        "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\output\\experiments\\deploy-validation-win-20261006\\smoke-1\\icon_asset.result.json",
+        "icon_asset",
+        "--prompt",
+        "a red health potion bottle, game inventory icon, centered",
+        "--width",
+        "512",
+        "--height",
+        "512",
+        "--output-dir",
+        "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\output\\experiments\\deploy-validation-win-20261006\\smoke-1\\icon_asset",
+        "--seed",
+        "1002"
+      ],
+      "exit_code": 0,
+      "log": "logs\\icon_asset.log",
+      "outputs": [
+        {
+          "path": "icon_asset\\transparent_00165_.png",
+          "sha256": "c6be6ce8b139770b8ed1aecd07b491be1124e46bc77fba6fcad40082da4327a7",
+          "size": 443455,
+          "mode": "RGBA",
+          "width": 512,
+          "height": 512
+        }
+      ],
+      "result_json": "icon_asset.result.json",
+      "missing": [],
+      "dependency_only": false,
+      "technical_validation": "pass",
+      "profile_id_in_result": "sdxl_standard",
+      "profile_sha256_in_result": "6dbd988bd88cfe17aed83b488137f7569967c54fe403564d41d367eedb38a167"
+    },
+    {
+      "id": "refine",
+      "task": "refine",
+      "status": "pass",
+      "reason": null,
+      "duration_s": 4.78,
+      "seed_requested": 1003,
+      "seeds_resolved": {
+        "6": {
+          "seed": 1003
+        }
+      },
+      "seed_note": null,
+      "command": [
+        "C:\\Users\\XU\\ComfyUI\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\XU\\ComfyUI\\tools\\generate.py",
+        "--profile",
+        "sdxl_standard",
+        "--config",
+        "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\local_config.json",
+        "--result-json",
+        "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\output\\experiments\\deploy-validation-win-20261006\\smoke-1\\refine.result.json",
+        "refine",
+        "--prompt",
+        "a lone wooden treasure chest on a stone floor, detailed, game concept art",
+        "--image",
+        "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\output\\experiments\\deploy-validation-win-20261006\\smoke-1\\concept\\concept_00081_.png",
+        "--denoise",
+        "0.45",
+        "--output-dir",
+        "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\output\\experiments\\deploy-validation-win-20261006\\smoke-1\\refine",
+        "--seed",
+        "1003"
+      ],
+      "exit_code": 0,
+      "log": "logs\\refine.log",
+      "outputs": [
+        {
+          "path": "refine\\refine_00058_.png",
+          "sha256": "522963331d0d77a1bdbd0aaf59ef417c72c748edb115848b66623eec05f3159e",
+          "size": 763507,
+          "mode": "RGB",
+          "width": 768,
+          "height": 768
+        }
+      ],
+      "result_json": "refine.result.json",
+      "missing": [],
+      "dependency_only": false,
+      "technical_validation": "pass",
+      "profile_id_in_result": "sdxl_standard",
+      "profile_sha256_in_result": "6dbd988bd88cfe17aed83b488137f7569967c54fe403564d41d367eedb38a167"
+    },
+    {
+      "id": "upscale",
+      "task": "upscale",
+      "status": "pass",
+      "reason": null,
+      "duration_s": 7.91,
+      "seed_requested": 1004,
+      "seeds_resolved": {
+        "9": {
+          "seed": 1004
+        }
+      },
+      "seed_note": null,
+      "command": [
+        "C:\\Users\\XU\\ComfyUI\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\XU\\ComfyUI\\tools\\generate.py",
+        "--profile",
+        "sdxl_standard",
+        "--config",
+        "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\local_config.json",
+        "--result-json",
+        "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\output\\experiments\\deploy-validation-win-20261006\\smoke-1\\upscale.result.json",
+        "upscale",
+        "--prompt",
+        "a red health potion bottle, game inventory icon, centered",
+        "--image",
+        "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\output\\experiments\\deploy-validation-win-20261006\\smoke-1\\icon_asset\\transparent_00165_.png",
+        "--scale",
+        "2",
+        "--denoise",
+        "0.3",
+        "--output-dir",
+        "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\output\\experiments\\deploy-validation-win-20261006\\smoke-1\\upscale",
+        "--seed",
+        "1004"
+      ],
+      "exit_code": 0,
+      "log": "logs\\upscale.log",
+      "outputs": [
+        {
+          "path": "upscale\\upscale_00005_.png",
+          "sha256": "38e42b7d6ae24fee310ac61593e57cb4c442a348926997f65d3eeb5c8765f7de",
+          "size": 1301395,
+          "mode": "RGB",
+          "width": 1024,
+          "height": 1024
+        }
+      ],
+      "result_json": "upscale.result.json",
+      "missing": [],
+      "dependency_only": false,
+      "technical_validation": "pass",
+      "profile_id_in_result": "sdxl_standard",
+      "profile_sha256_in_result": "6dbd988bd88cfe17aed83b488137f7569967c54fe403564d41d367eedb38a167"
+    },
+    {
+      "id": "pose_only_canny",
+      "task": "pose_only",
+      "status": "pass",
+      "reason": null,
+      "duration_s": 8.89,
+      "seed_requested": 1005,
+      "seeds_resolved": {
+        "9": {
+          "seed": 1005
+        }
+      },
+      "seed_note": null,
+      "command": [
+        "C:\\Users\\XU\\ComfyUI\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\XU\\ComfyUI\\tools\\generate.py",
+        "--profile",
+        "sdxl_standard",
+        "--config",
+        "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\local_config.json",
+        "--result-json",
+        "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\output\\experiments\\deploy-validation-win-20261006\\smoke-1\\pose_only_canny.result.json",
+        "pose_only",
+        "--prompt",
+        "a lone wooden treasure chest on a stone floor, game concept art",
+        "--pose-ref",
+        "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\output\\experiments\\deploy-validation-win-20261006\\smoke-1\\concept\\concept_00081_.png",
+        "--control-type",
+        "canny",
+        "--width",
+        "768",
+        "--height",
+        "768",
+        "--output-dir",
+        "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\output\\experiments\\deploy-validation-win-20261006\\smoke-1\\pose_only_canny",
+        "--seed",
+        "1005"
+      ],
+      "exit_code": 0,
+      "log": "logs\\pose_only_canny.log",
+      "outputs": [
+        {
+          "path": "pose_only_canny\\pose_only_00082_.png",
+          "sha256": "5305fc8b41e8676982b1397578e54d2912e8ea36082b01bf9ca71bb3c7b2d4ca",
+          "size": 753474,
+          "mode": "RGB",
+          "width": 768,
+          "height": 768
+        }
+      ],
+      "result_json": "pose_only_canny.result.json",
+      "missing": [],
+      "dependency_only": false,
+      "technical_validation": "pass",
+      "profile_id_in_result": "sdxl_standard",
+      "profile_sha256_in_result": "6dbd988bd88cfe17aed83b488137f7569967c54fe403564d41d367eedb38a167"
+    },
+    {
+      "id": "style_lock",
+      "task": "style_lock",
+      "status": "pass",
+      "reason": null,
+      "duration_s": 8.84,
+      "seed_requested": 1006,
+      "seeds_resolved": {
+        "9": {
+          "seed": 1006
+        }
+      },
+      "seed_note": null,
+      "command": [
+        "C:\\Users\\XU\\ComfyUI\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\XU\\ComfyUI\\tools\\generate.py",
+        "--profile",
+        "sdxl_standard",
+        "--config",
+        "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\local_config.json",
+        "--result-json",
+        "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\output\\experiments\\deploy-validation-win-20261006\\smoke-1\\style_lock.result.json",
+        "style_lock",
+        "--prompt",
+        "a lone wooden treasure chest on a stone floor, game concept art",
+        "--character-ref",
+        "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\output\\experiments\\deploy-validation-win-20261006\\smoke-1\\concept\\concept_00081_.png",
+        "--width",
+        "768",
+        "--height",
+        "768",
+        "--output-dir",
+        "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\output\\experiments\\deploy-validation-win-20261006\\smoke-1\\style_lock",
+        "--seed",
+        "1006"
+      ],
+      "exit_code": 0,
+      "log": "logs\\style_lock.log",
+      "outputs": [
+        {
+          "path": "style_lock\\style_lock_00045_.png",
+          "sha256": "0617614f2640815086c45e426e9f9cb265e96a2a616c20adb0e0a09a9ff30719",
+          "size": 780208,
+          "mode": "RGB",
+          "width": 768,
+          "height": 768
+        }
+      ],
+      "result_json": "style_lock.result.json",
+      "missing": [],
+      "dependency_only": false,
+      "technical_validation": "pass",
+      "profile_id_in_result": "sdxl_standard",
+      "profile_sha256_in_result": "6dbd988bd88cfe17aed83b488137f7569967c54fe403564d41d367eedb38a167"
+    },
+    {
+      "id": "character_action_canny",
+      "task": "character_action",
+      "status": "pass",
+      "reason": null,
+      "duration_s": 9.07,
+      "seed_requested": 1007,
+      "seeds_resolved": {
+        "12": {
+          "seed": 1007
+        }
+      },
+      "seed_note": null,
+      "command": [
+        "C:\\Users\\XU\\ComfyUI\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\XU\\ComfyUI\\tools\\generate.py",
+        "--profile",
+        "sdxl_standard",
+        "--config",
+        "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\local_config.json",
+        "--result-json",
+        "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\output\\experiments\\deploy-validation-win-20261006\\smoke-1\\character_action_canny.result.json",
+        "character_action",
+        "--prompt",
+        "a lone wooden treasure chest on a stone floor, game concept art",
+        "--character-ref",
+        "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\output\\experiments\\deploy-validation-win-20261006\\smoke-1\\concept\\concept_00081_.png",
+        "--pose-ref",
+        "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\output\\experiments\\deploy-validation-win-20261006\\smoke-1\\concept\\concept_00081_.png",
+        "--control-type",
+        "canny",
+        "--width",
+        "768",
+        "--height",
+        "768",
+        "--output-dir",
+        "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\output\\experiments\\deploy-validation-win-20261006\\smoke-1\\character_action_canny",
+        "--seed",
+        "1007"
+      ],
+      "exit_code": 0,
+      "log": "logs\\character_action_canny.log",
+      "outputs": [
+        {
+          "path": "character_action_canny\\character_action_00055_.png",
+          "sha256": "027c80e5772e1dc7deaf30f2ff7c47bb8cd8a3055bc6143ddec8ff5fd5fa4361",
+          "size": 784897,
+          "mode": "RGB",
+          "width": 768,
+          "height": 768
+        }
+      ],
+      "result_json": "character_action_canny.result.json",
+      "missing": [],
+      "dependency_only": false,
+      "technical_validation": "pass",
+      "profile_id_in_result": "sdxl_standard",
+      "profile_sha256_in_result": "6dbd988bd88cfe17aed83b488137f7569967c54fe403564d41d367eedb38a167"
+    },
+    {
+      "id": "inpaint",
+      "task": "inpaint",
+      "status": "pass",
+      "reason": null,
+      "duration_s": 5.24,
+      "seed_requested": 1008,
+      "seeds_resolved": {
+        "7": {
+          "seed": 1008
+        }
+      },
+      "seed_note": null,
+      "command": [
+        "C:\\Users\\XU\\ComfyUI\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\XU\\ComfyUI\\tools\\generate.py",
+        "--profile",
+        "sdxl_standard",
+        "--config",
+        "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\local_config.json",
+        "--result-json",
+        "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\output\\experiments\\deploy-validation-win-20261006\\smoke-1\\inpaint.result.json",
+        "inpaint",
+        "--prompt",
+        "a golden coin pile",
+        "--image",
+        "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\output\\experiments\\deploy-validation-win-20261006\\smoke-1\\concept\\concept_00081_.png",
+        "--mask",
+        "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\output\\experiments\\deploy-validation-win-20261006\\smoke-1\\smoke-mask.png",
+        "--denoise",
+        "1.0",
+        "--output-dir",
+        "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\output\\experiments\\deploy-validation-win-20261006\\smoke-1\\inpaint",
+        "--seed",
+        "1008"
+      ],
+      "exit_code": 0,
+      "log": "logs\\inpaint.log",
+      "outputs": [
+        {
+          "path": "inpaint\\inpaint_00047_.png",
+          "sha256": "877a8b0b4cb18d1e0ad6b95fddcd67b787bcbcb48d6ab962d19115e665d637de",
+          "size": 780876,
+          "mode": "RGB",
+          "width": 768,
+          "height": 768
+        }
+      ],
+      "result_json": "inpaint.result.json",
+      "missing": [],
+      "dependency_only": false,
+      "technical_validation": "pass",
+      "profile_id_in_result": "sdxl_standard",
+      "profile_sha256_in_result": "6dbd988bd88cfe17aed83b488137f7569967c54fe403564d41d367eedb38a167"
+    },
+    {
+      "id": "guided_inpaint",
+      "task": "guided_inpaint",
+      "status": "pass",
+      "reason": null,
+      "duration_s": 6.93,
+      "seed_requested": 1009,
+      "seeds_resolved": {
+        "12": {
+          "seed": 1009
+        }
+      },
+      "seed_note": null,
+      "command": [
+        "C:\\Users\\XU\\ComfyUI\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\XU\\ComfyUI\\tools\\generate.py",
+        "--profile",
+        "sdxl_standard",
+        "--config",
+        "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\local_config.json",
+        "--result-json",
+        "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\output\\experiments\\deploy-validation-win-20261006\\smoke-1\\guided_inpaint.result.json",
+        "guided_inpaint",
+        "--prompt",
+        "a golden coin pile",
+        "--image",
+        "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\output\\experiments\\deploy-validation-win-20261006\\smoke-1\\concept\\concept_00081_.png",
+        "--mask",
+        "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\output\\experiments\\deploy-validation-win-20261006\\smoke-1\\smoke-mask.png",
+        "--control-type",
+        "canny",
+        "--denoise",
+        "1.0",
+        "--output-dir",
+        "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\output\\experiments\\deploy-validation-win-20261006\\smoke-1\\guided_inpaint",
+        "--seed",
+        "1009"
+      ],
+      "exit_code": 0,
+      "log": "logs\\guided_inpaint.log",
+      "outputs": [
+        {
+          "path": "guided_inpaint\\guided_inpaint_00021_.png",
+          "sha256": "9edc4e5480bf08333b4379438eb9c9d9670c0c600df62091f7864b1735cfbc91",
+          "size": 777267,
+          "mode": "RGB",
+          "width": 768,
+          "height": 768
+        }
+      ],
+      "result_json": "guided_inpaint.result.json",
+      "missing": [],
+      "dependency_only": false,
+      "technical_validation": "pass",
+      "profile_id_in_result": "sdxl_standard",
+      "profile_sha256_in_result": "6dbd988bd88cfe17aed83b488137f7569967c54fe403564d41d367eedb38a167"
+    },
+    {
+      "id": "layer_split",
+      "task": "layer_split",
+      "status": "pass",
+      "reason": null,
+      "duration_s": 1.77,
+      "seed_requested": null,
+      "seeds_resolved": {},
+      "seed_note": "layer_split 沒有 --seed(不做取樣),manifest 的 resolved_seeds 為空",
+      "command": [
+        "C:\\Users\\XU\\ComfyUI\\.venv\\Scripts\\python.exe",
+        "C:\\Users\\XU\\ComfyUI\\tools\\generate.py",
+        "--profile",
+        "sdxl_standard",
+        "--config",
+        "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\local_config.json",
+        "--result-json",
+        "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\output\\experiments\\deploy-validation-win-20261006\\smoke-1\\layer_split.result.json",
+        "layer_split",
+        "--image",
+        "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\output\\experiments\\deploy-validation-win-20261006\\smoke-1\\concept\\concept_00081_.png",
+        "--mask",
+        "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\output\\experiments\\deploy-validation-win-20261006\\smoke-1\\smoke-mask.png",
+        "--layer-name",
+        "smoke_layer",
+        "--output-dir",
+        "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\output\\experiments\\deploy-validation-win-20261006\\smoke-1\\layer_split"
+      ],
+      "exit_code": 0,
+      "log": "logs\\layer_split.log",
+      "outputs": [
+        {
+          "path": "layer_split\\layer_smoke_layer_00001_.png",
+          "sha256": "e3fa1c0ddf61d317a8c74a90a51172da12f3e66da09d6d0dcbccc2b00f04de03",
+          "size": 918470,
+          "mode": "RGBA",
+          "width": 768,
+          "height": 768
+        }
+      ],
+      "result_json": "layer_split.result.json",
+      "missing": [],
+      "dependency_only": false,
+      "technical_validation": "pass",
+      "profile_id_in_result": "sdxl_standard",
+      "profile_sha256_in_result": "6dbd988bd88cfe17aed83b488137f7569967c54fe403564d41d367eedb38a167"
+    }
+  ],
+  "contact_sheet": "smoke-contact-sheet.jpg"
+}

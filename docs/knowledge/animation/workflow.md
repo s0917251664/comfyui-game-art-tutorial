@@ -23,7 +23,7 @@ status: active
 |---|---|---|---:|---|---|---|---|
 | Idle | 等待狀態 | 是 | 使用者指定 | 已定稿角色圖 | `img2video` 或需求吻合時 `fx_loop` | capability config | MP4；需要時 PNG frames |
 
-`img2video` 適用原構圖 idle/展示，`fx_loop` 用於明確需要無縫循環的元素，`character_video` 適用換場景/新表演且首幀可變，`pose_drive` 使用動作參考片，`camera_move` 主體不動只運鏡。不要為整組一致而把所有動作塞進同一 task。
+`img2video` 適用原構圖 idle/展示，`fx_loop` 用於明確需要無縫循環的元素，`character_video` 適用換場景/新表演且首幀可變，`pose_drive` 使用動作參考片，`camera_move` 主體不動只運鏡。不要為整組一致而把所有動作塞進同一 task。需要更貼近動作影片的表情與手勢、或把影片中人物換成角色時，可改走獨立的 [Wan Animate／SCAIL-2 技能](../../../skills/comfyui-wan-animate/SKILL.md)（固定 API graph，另有自己的 gate，不在 video_capabilities.json）。
 
 ## 製作與驗收
 
