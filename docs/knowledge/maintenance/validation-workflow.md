@@ -9,15 +9,22 @@ status: current
 ## 步驟
 
 1. 部署最新工具：`python tools_src/gameart.py deploy`（dry run 確認）→ `deploy --yes`。`smoke.py` 與 `comfyui_pipeline/smoke_suites/` 會一併部署。
-2. 確認快照新鮮：`python <ComfyUI>/tools/gameart.py doctor`（過期就 `doctor --refresh`）。ComfyUI server 要在跑。
-3. 跑套件（從部署目錄執行，才會用到這台機器的快照）：
+2. 確認快照新鮮：`<python_exe> <ComfyUI>/tools/gameart.py doctor`（過期就 `doctor --refresh`）。ComfyUI server 要在跑。`<python_exe>` 與 `<ComfyUI>` 的意思見第 3 步。
+3. 跑套件。目前（2026-10-07）只有下面這個寫法可行：用部署目錄的 `gameart.py`、ComfyUI venv 的 Python，並以**絕對路徑**指定 `--config`：
 
    ```
-   python <ComfyUI>/tools/gameart.py smoke --output-dir <某個新資料夾> [--tasks concept,inpaint] [--profile sdxl_standard]
+   <python_exe> <ComfyUI>/tools/gameart.py smoke run --output-dir <某個新資料夾> --config <repo 絕對路徑>/local_config.json [--tasks concept,inpaint] [--profile sdxl_standard]
    ```
+
+   - `<python_exe>` 用 `local_config.json` 裡的 `python_exe`（ComfyUI 的 venv，例如 Windows 的 `<ComfyUI>\.venv\Scripts\python.exe`）。`<ComfyUI>` 是 `comfyui_path`。
+   - **一定要給 `--config`**：smoke 會把它轉給每個 `generate.py` 子程序，沒給就會失敗，錯誤是「未設定 ComfyUI URL」。也可以改給 `--comfy-url <URL>`。
+   - **`--config` 要寫絕對路徑**：子程序的工作目錄是部署的 `tools/` 資料夾，相對路徑會從那裡解析而找不到檔案。
+   - **不要用 repo 的 `tools_src/gameart.py smoke run`**：它只在 `tools_src/` 找 `device_config.json`，但快照在 `<ComfyUI>/tools/`，結果會變成大多數 task 被略過或失敗（2026-10-07 Windows 實測 0 pass／2 fail／8 skip）。
+   - `--output-dir` 和 `--record` 的相對路徑以目前工作目錄解析，可以照常使用；為了清楚，建議也寫絕對路徑。
+   - 以上三個限制會在後續的程式修正（1.5-B）處理：讓相對 `--config` 以 repo 根目錄解析，從 repo 執行時改讀 `<comfyui_path>/tools` 的快照。修正合併後，這一步的說明會同步更新。
 
    預設套件 `image-core`；`--tasks` 只跑子集（上游依賴自動補入）。輸出：`smoke-report.json`、`smoke-contact-sheet.jpg`、各 task 輸出、`logs/<task>.log`、`<task>.result.json`。
-4. 記錄進 repo：跑的時候加 `--record <repo_root>`（可再加 `--record-images` 一併複製總覽圖 JPG），或事後對既有報告執行 `python tools_src/gameart.py smoke record <report.json> [--repo-root .] [--with-images]`。報告會複製到 `docs/knowledge/validation/<platform_key>/<日期>-<suite>-<profile>.json`，同名不覆寫，內容相同的報告不重複記錄。這一步不改任何 profile 的 `validation`。（`smoke run --output-dir ...` 是明確形式，與裸 `smoke --output-dir ...` 相同。）
+4. 記錄進 repo：跑的時候加 `--record <repo_root>`（可再加 `--record-images` 一併複製總覽圖 JPG），或事後對既有報告執行 `python tools_src/gameart.py smoke record <report.json> [--repo-root .] [--with-images]`。報告會複製到 `docs/knowledge/validation/<platform_key>/<日期>-<suite>-<profile>.json`，同名不覆寫，內容相同的報告不重複記錄。這一步不改任何 profile 的 `validation`。（`smoke run --output-dir ...` 是明確形式，與裸 `smoke --output-dir ...` 相同；`--config` 的要求見第 3 步。）
 5. 提案（唯讀）：`python tools_src/gameart.py validation propose <repo 內的報告>`。檢查報告在 `docs/knowledge/validation/` 內、報告綁的設定檔雜湊與目前設定檔一致，列出哪些 task 會升為 `verified`（只有 `pass`；`not_installed`／`skipped` 只是沒有證據，中性略過）與將寫入的證據項目。不寫任何檔案。
 6. **使用者決定**：把 propose 輸出與總覽圖給使用者；美術與是否採信由使用者判斷。
 7. 核准：`python tools_src/gameart.py validation approve <報告> --by <使用者>`，把證據項目附加到 profile 的 `validation`。報告不在 repo 內、設定檔雜湊不符、沒有任何 pass task、同一報告已核准過都會拒絕。之後檢視 `git diff` 並由使用者決定是否 commit。

@@ -9,8 +9,8 @@ asset_id: smoke-potion
 
 ## Version 1 — candidate
 
-- 圖片：![Smoke 測試候選圖](../../../output/agent_refactor_smoke_20261001/recorded/concept_00069_.png)
-- Manifest：[concept.json](../../../output/agent_refactor_smoke_20261001/concept.json)
+- 圖片：!Smoke 測試候選圖（本機證據：`output/agent_refactor_smoke_20261001/recorded/concept_00069_.png`）
+- Manifest：concept.json（本機證據：`output/agent_refactor_smoke_20261001/concept.json`）
 - 狀態：candidate（待驗收）
 - 來源事件時間：2026-09-30T17:29:57+00:00（台灣時間 2026-10-01 01:29:57）
 - Task／profile：`concept`／`sdxl_standard`

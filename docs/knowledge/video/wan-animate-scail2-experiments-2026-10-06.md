@@ -115,8 +115,8 @@ last_updated: 2026-10-06
 ## 來源與追溯
 
 **證據位置**（ignored `output/`，clean clone 不含；每個資料夾內有 `validation.json`、`workflow_api.json`、`history.json`、`candidate.mp4` 與抽幀）
-- Wan Animate：[mix61-audio](../../../output/wan-animate-extend/mix61-audio/validation.json)、[move61](../../../output/wan-animate-extend/move61/validation.json)、[move17-384x640](../../../output/wan-animate-extend/move17-384x640/validation.json)
-- SCAIL-2：[replace33](../../../output/scail2-test/replace33/validation.json)、[replace61](../../../output/scail2-test/replace61/validation.json)、[animate33](../../../output/scail2-test/animate33/validation.json)
+- Wan Animate：mix61-audio（本機證據：`output/wan-animate-extend/mix61-audio/validation.json`）、move61（本機證據：`output/wan-animate-extend/move61/validation.json`）、move17-384x640（本機證據：`output/wan-animate-extend/move17-384x640/validation.json`）
+- SCAIL-2：replace33（本機證據：`output/scail2-test/replace33/validation.json`）、replace61（本機證據：`output/scail2-test/replace61/validation.json`）、animate33（本機證據：`output/scail2-test/animate33/validation.json`）
 - 測試素材準備與範本產生腳本：`output/wan-animate-extend/prepare_fixture.py`、`build_extend_templates.py`，`output/scail2-install/build_scail2_templates.py`、`download.sh`
 
 **參考文件**

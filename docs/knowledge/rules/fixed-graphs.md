@@ -13,6 +13,8 @@ status: current
 4. 研究用的一次性腳本（例如 `experiences/*/scripts/`）不是產線入口，不可當工具呼叫，也不要從裡面衍生新功能。
 5. 發現文件和實作衝突時，先核對實作並修正說明，不要為了符合舊文件而改 graph。
 
+> **預定變更（2026-10-07 已決定，D8）**：template runner（`gameart.py run`）完成後，第 1 點會改為「固定 API JSON 一律透過 template＋runner 執行」，手動 HTTP 只留作除錯。runner 合併前，仍依目前第 1 點執行。見 [ADR](../decisions/2026-10-07-phase2-template-runner.md)。
+
 ## 適用範圍
 
 所有 ComfyUI 路線（圖片、影片、Wan Animate／SCAIL-2、SAM3 追蹤、換臉、Video Layers）。平台原生圖片工具與本機像素工具不組 ComfyUI graph，不受第 1、2 點限制，但同樣適用第 3 點。

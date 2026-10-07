@@ -9,6 +9,7 @@
 - [新增能力檢查流程](new-capability-checklist.md)：新增圖片、影片或本機工具能力時，逐類檢查安裝、程式、實測及文件。
 - [技能庫路線與盤點](skill-library.md)：brief、平台原生、直接 ComfyUI API、既有 CLI 與 helper/custom node 的界線，17 個 repo 美術技能現況及維護原則。
 - [Video Layers 新增能力檢查紀錄](video-layers-checklist.md)：本次影片／本機工具實作已完成項目、略過原因與仍待驗收 gate。
+- [文件連結規則](doc-links.md)：相對連結與錨點由 `tests/test_doc_links.py` 檢查；`output/` 本機證據的寫法與允許的例外。
 - [Obsidian 技能與專案知識庫](obsidian-integration.md)：上游來源固定版本、技能路由、原生 Windows 限制及既有 Markdown vault 的支援範圍。
 
 本目錄只定義維護決策與能力變更的要求；一般產圖、安裝目標和模型來源請讀 `art/` 或 [installation](../installation/README.md)。

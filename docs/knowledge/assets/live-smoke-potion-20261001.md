@@ -8,8 +8,8 @@ date: 2026-10-01
 
 ## Version 1 — candidate
 
-- 圖片：![SDXL concept 實機候選](../../../output/live_smoke_20261001_01/concept_00070_.png)
-- Manifest：[concept.result.json](../../../output/live_smoke_20261001_01/concept.result.json)
+- 圖片：!SDXL concept 實機候選（本機證據：`output/live_smoke_20261001_01/concept_00070_.png`）
+- Manifest：concept.result.json（本機證據：`output/live_smoke_20261001_01/concept.result.json`）
 - 狀態：candidate（待美術審核者驗收；未收到 accepted／rejected 決定）
 - 日期：2026-10-01（使用者端日期）
 - Task／profile：`concept`／`sdxl_standard`

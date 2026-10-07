@@ -8,10 +8,10 @@ date: 2026-10-01
 
 ## Version 1 — candidate
 
-- 影片：[potion_knockover_00001_.mp4](../../../output/potion_knockover_20261001_01/potion_knockover_00001_.mp4)
-- Sidecar：[potion_knockover_00001_.mp4.json](../../../output/potion_knockover_20261001_01/potion_knockover_00001_.mp4.json)
-- QA contact sheet（12 個取樣時點，僅供檢視、不是正式影格序列）：![12 個取樣時點](../../../output/potion_knockover_20261001_01/review_contact_sheet.png)
-- 輸入靜幀：[concept_00070_.png](../../../output/live_smoke_20261001_01/concept_00070_.png)，SHA-256：`34f4dba2a66e9f2b27ed33d4ac29f0ad827d6b7394e96c60f44855f9a60fa329`
+- 影片：potion_knockover_00001_.mp4（本機證據：`output/potion_knockover_20261001_01/potion_knockover_00001_.mp4`）
+- Sidecar：potion_knockover_00001_.mp4.json（本機證據：`output/potion_knockover_20261001_01/potion_knockover_00001_.mp4.json`）
+- QA contact sheet（12 個取樣時點，僅供檢視、不是正式影格序列）：!12 個取樣時點（本機證據：`output/potion_knockover_20261001_01/review_contact_sheet.png`）
+- 輸入靜幀：concept_00070_.png（本機證據：`output/live_smoke_20261001_01/concept_00070_.png`），SHA-256：`34f4dba2a66e9f2b27ed33d4ac29f0ad827d6b7394e96c60f44855f9a60fa329`
 - 狀態：candidate（待美術審核者驗收；未收到 accepted／rejected 決定）
 - 日期：2026-10-01（使用者端日期）
 - Task／backend／seed：`img2video`／`h3`／`2026100102`
