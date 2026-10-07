@@ -1,4 +1,4 @@
-"""Local alpha extraction, masked video recomposition and loop measurements for VFX research.
+"""Local VFX alpha extraction, packing, video object marking/paste-back and Idle loop measurements.
 
 Pure Pillow/NumPy pixel operations; PyAV is only needed to read MP4 input or to
 write WebM. No ComfyUI server, no model download, no generation graph. BiRefNet
@@ -176,7 +176,10 @@ def chroma_alpha(rgb, key="00FF00", tolerance=60.0, softness=40.0, despill=False
 def birefnet_alpha(frames, model_root, variant="general"):
     """Per-frame BiRefNet matte (no temporal model). Returns (rgba_frames, seconds_per_frame)."""
     import torch
-    import benchmark_birefnet as bb
+    try:
+        import benchmark_birefnet as bb
+    except ImportError as exc:
+        raise RuntimeError("birefnet-alpha 只能在 repo 的 tools_src/ 執行（需要 benchmark_birefnet.py，未部署）") from exc
     if variant not in bb.VARIANTS:
         raise ValueError(f"Unknown variant {variant!r}; choose from {sorted(bb.VARIANTS)}")
     if not torch.cuda.is_available():
@@ -507,6 +510,64 @@ def loop_metrics(frames, reference=None, key=None):
     return report, ref
 
 
+# ---------------------------------------------------------------- manual region marking (video_layers bridge)
+
+SEGMENT_MIN_WIDTH, SEGMENT_MAX_WIDTH = 256, 1280
+
+
+def working_size(width, height, requested=None):
+    """video_layers segment working canvas: even width 256..1280, aspect kept, even height."""
+    target = requested or min(width, SEGMENT_MAX_WIDTH)
+    target -= target % 2
+    if not SEGMENT_MIN_WIDTH <= target <= SEGMENT_MAX_WIDTH:
+        raise ValueError(f"working width must be even and within {SEGMENT_MIN_WIDTH}..{SEGMENT_MAX_WIDTH}")
+    h = round(height * target / width)
+    return target, h - h % 2
+
+
+def editor_mask_to_l(image, size):
+    """Simple Mask editor export (white paint on opaque black, RGBA) or any mask -> binary L at ``size``.
+
+    Alpha is ignored on purpose (same rule as simple_mask_tool.core) so browsers cannot invert semantics.
+    """
+    gray = image.convert("RGB").convert("L")
+    if gray.size != tuple(size):
+        gray = gray.resize(tuple(size), Image.Resampling.NEAREST)
+    return gray.point(lambda v: 255 if v > 127 else 0)
+
+
+def _posix(path):
+    return Path(path).resolve().as_posix()
+
+
+def segment_plan(video, masks_by_frame, frame_count, fps, work, object_id=1):
+    """Build a video_layers segment plan whose prompts are hand-painted masks."""
+    if 0 not in masks_by_frame:
+        raise ValueError("A frame-0 mask is required (video_layers needs a frame-0 prompt)")
+    for frame in masks_by_frame:
+        if not 0 <= frame < frame_count:
+            raise ValueError(f"mask frame {frame} is outside 0..{frame_count - 1}")
+    end = math.floor(frame_count / fps * 1000) / 1000.0
+    return {"schema_version": 1, "operation": "segment", "video": _posix(video),
+            "start": 0, "end": end, "width": work[0],
+            "objects": [{"id": object_id, "prompts": [
+                {"frame": f, "mask": _posix(masks_by_frame[f])} for f in sorted(masks_by_frame)]}]}
+
+
+def mask_overlay_strip(frames, masks, picks, target, thumb=256):
+    tiles = []
+    for i in picks:
+        x = frames[i][..., :3].astype(np.float32)
+        sel = masks[i] > 127
+        x[sel] = x[sel] * 0.45 + np.array([255, 0, 255], np.float32) * 0.55
+        tiles.append(_label_tile(np.round(x).astype(np.uint8), f"frame {i}", thumb))
+    canvas = Image.new("RGB", (thumb * len(tiles), max(t.height for t in tiles)), "#e5e5e5")
+    for k, t in enumerate(tiles):
+        canvas.paste(t, (k * thumb, 0))
+    canvas.save(target, format="PNG")
+    return target
+
+
 # ---------------------------------------------------------------- CLI
 
 def _cmd_alpha(args):
@@ -651,6 +712,93 @@ def _cmd_loop(args):
     return report
 
 
+def _frame_list(text, count):
+    picks = sorted({int(x) for x in text.split(",") if x.strip()})
+    for i in picks:
+        if not 0 <= i < count:
+            raise ValueError(f"frame {i} is outside 0..{count - 1}")
+    return picks
+
+
+def _cmd_keyframes(args):
+    frames, fps = read_frames(args.video)
+    h, w = frames[0].shape[:2]
+    work = working_size(w, h, args.width)
+    picks = _frame_list(args.frames, len(frames))
+    out = new_directory(args.output_dir)
+    written = []
+    for i in picks:
+        im = Image.fromarray(frames[i])
+        if im.size != work:
+            im = im.resize(work, Image.Resampling.LANCZOS)
+        im.save(out / f"frame_{i:05d}.png")
+        written.append(str(out / f"frame_{i:05d}.png"))
+    report = {"status": "complete", "video": str(Path(args.video).resolve()), "frames": len(frames), "fps": fps,
+              "working_size": list(work), "keyframes": written,
+              "next": "open each keyframe with mask_session.py create; paint the object white"}
+    save_json(out / "keyframes.json", report)
+    return report
+
+
+def _cmd_segment_plan(args):
+    frames, fps = read_frames(args.video)
+    h, w = frames[0].shape[:2]
+    work = working_size(w, h, args.width)
+    out = new_directory(args.output_dir)
+    masks = {}
+    for item in args.mask:
+        frame, _, path = item.partition("=")
+        if not path:
+            raise ValueError("--mask must be FRAME=PATH")
+        frame = int(frame)
+        with Image.open(path) as im:
+            converted = editor_mask_to_l(im, work)
+        if not np.asarray(converted).any():
+            raise ValueError(f"mask for frame {frame} is empty")
+        target = out / f"seed_mask_{frame:05d}.png"
+        converted.save(target)
+        masks[frame] = target
+    plan = segment_plan(args.video, masks, len(frames), fps or 24.0, work, args.object_id)
+    (out / "segment_plan.json").write_text(json.dumps(plan, ensure_ascii=False, indent=2), encoding="utf-8")
+    return {"status": "complete", "plan": str(out / "segment_plan.json"), "working_size": list(work)}
+
+
+def _cmd_unpack_masks(args):
+    import io
+    import zipfile
+    source = Path(args.segment_dir)
+    zpath = source / "layers.zip" if source.is_dir() else source
+    prefix = f"masks/object-{args.object_id:03d}/"
+    size = None
+    if args.video:
+        frames, _ = read_frames(args.video)
+        size = (frames[0].shape[1], frames[0].shape[0])
+    out = new_directory(args.output_dir)
+    with zipfile.ZipFile(zpath) as archive:
+        names = sorted(n for n in archive.namelist() if n.startswith(prefix) and n.lower().endswith(".png"))
+        if not names:
+            raise ValueError(f"no masks for object {args.object_id} in {zpath}")
+        for k, n in enumerate(names):
+            with Image.open(io.BytesIO(archive.read(n))) as im:
+                m = im.convert("L")
+            if size and m.size != size:
+                m = m.resize(size, Image.Resampling.NEAREST)
+            m.save(out / f"{k:05d}.png")
+    return {"status": "complete", "output": str(out), "masks": len(names)}
+
+
+def _cmd_mask_preview(args):
+    frames, _ = read_frames(args.video)
+    masks = read_masks(args.masks, len(frames), (frames[0].shape[1], frames[0].shape[0]))
+    n = len(frames)
+    picks = _frame_list(args.frames, n) if args.frames else sorted({0, n // 4, n // 2, 3 * n // 4, n - 1})
+    if Path(args.output).exists():
+        raise FileExistsError(f"Refusing to overwrite {args.output}")
+    Path(args.output).parent.mkdir(parents=True, exist_ok=True)
+    mask_overlay_strip(frames, masks, picks, args.output)
+    return {"status": "complete", "output": str(Path(args.output).resolve()), "frames": picks}
+
+
 def build_parser():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -719,13 +867,36 @@ def build_parser():
     p.add_argument("--reference")
     p.add_argument("--key", help="Background key colour used to crop a subject ROI, e.g. 00FF00")
     p.add_argument("--output-dir", required=True)
+    p = sub.add_parser("keyframes", help="Extract frames (video_layers working size) for hand-painted object masks")
+    p.add_argument("--video", required=True)
+    p.add_argument("--frames", default="0", help="Comma list, e.g. 0,24 (frame 0 is required later)")
+    p.add_argument("--width", type=int, help="Working width (even, 256..1280); default source width capped at 1280")
+    p.add_argument("--output-dir", required=True)
+    p = sub.add_parser("segment-plan", help="Hand-painted masks -> video_layers segment plan (mask prompts)")
+    p.add_argument("--video", required=True)
+    p.add_argument("--mask", action="append", required=True, help="FRAME=PATH of a painted mask (white = object)")
+    p.add_argument("--object-id", type=int, default=1)
+    p.add_argument("--width", type=int)
+    p.add_argument("--output-dir", required=True)
+    p = sub.add_parser("unpack-masks", help="video_layers layers.zip -> per-frame L masks (optionally at source size)")
+    p.add_argument("--segment-dir", required=True, help="video_layers run output dir or its layers.zip")
+    p.add_argument("--object-id", type=int, default=1)
+    p.add_argument("--video", help="Resize masks (nearest) to this video's size")
+    p.add_argument("--output-dir", required=True)
+    p = sub.add_parser("mask-preview", help="Magenta mask overlay strip for human confirmation")
+    p.add_argument("--video", required=True)
+    p.add_argument("--masks", required=True)
+    p.add_argument("--frames", help="Comma list; default 5 evenly spaced frames")
+    p.add_argument("--output", required=True)
     return parser
 
 
 COMMANDS = {"luma-alpha": _cmd_alpha, "chroma-alpha": _cmd_alpha, "birefnet-alpha": _cmd_alpha,
             "metrics": _cmd_metrics, "board": _cmd_board, "pack": _cmd_pack,
             "sam-to-edit-mask": _cmd_sam_to_edit, "mask-recolor": _cmd_mask_recolor,
-            "mask-composite": _cmd_mask_composite, "loop-metrics": _cmd_loop}
+            "mask-composite": _cmd_mask_composite, "loop-metrics": _cmd_loop,
+            "keyframes": _cmd_keyframes, "segment-plan": _cmd_segment_plan,
+            "unpack-masks": _cmd_unpack_masks, "mask-preview": _cmd_mask_preview}
 
 
 def main(argv=None):

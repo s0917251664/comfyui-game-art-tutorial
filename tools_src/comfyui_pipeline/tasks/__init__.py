@@ -19,16 +19,16 @@ from .. import image_runtime
 from ..client import DEFAULT_HTTP_TIMEOUT, _fetch_comfy_object_info
 from ..image_capabilities import PREFLIGHT_IMAGE_PLACEHOLDER, check_image_graph_against_object_info
 from ..image_graphs import attach_bg_removal
-from . import control, flux2, image_basic, inpaint, layer, upscale, video, video_local
+from . import control, flux2, image_basic, inpaint, layer, upscale, video, video_edit, video_local
 
-MODULES = (image_basic, flux2, control, inpaint, upscale, layer, video, video_local)
+MODULES = (image_basic, flux2, control, inpaint, upscale, layer, video, video_edit, video_local)
 
 # CLI 子命令的順序(--help 的列表順序由這裡決定,跟模組分組無關)。
 TASK_ORDER = (
     "concept", "flux2_concept", "flux2_edit", "icon_asset", "character_action", "inpaint",
     "guided_inpaint", "pose_only", "style_lock", "refine", "upscale", "layer_split",
     "img2video", "fx_loop", "transition", "clip_extend", "video_concat", "video_composite",
-    "camera_move", "character_video", "pose_drive",
+    "camera_move", "character_video", "pose_drive", "video_inpaint",
 )
 
 _OWNERS = {}

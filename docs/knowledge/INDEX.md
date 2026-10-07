@@ -42,6 +42,7 @@ status: current
 - [遮罩格式、Simple Mask、GrabCut 與 SAM](art/masking.md)：準備局部修改或拆層選區時查閱，遮罩預覽仍需人工確認。
 - [本機圖片編修工具](art/edit-tools.md)：遮罩內 recolor、composite、compare、有限 sweep、參考圖板與 Alpha 稽核的契約及驗證。
 - [物件平面組裝流程](art/object-design-workflows.md)：`scene`／`sheet`／`pattern` 的使用範圍與限制。
+- [特效去背、物件標記局部重繪與 Idle 首尾規則](video/vfx-tools.md)：`gameart.py vfx` 與 `video_inpaint` 的操作契約和 2026-10-07 實測。
 - [ComfyUI Video Layers](video/layers.md)：SAM 影片遮罩候選、ordered layer/明確遮擋 matte、部署與已知驗證缺口。
 - [單一物件換色](art/single-object-color.md)：HSV 色相旋轉案例、像素保留證據與限制。
 

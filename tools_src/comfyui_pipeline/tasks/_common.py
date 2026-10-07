@@ -113,6 +113,8 @@ class VideoPlan:
     contract: dict
     continuity_refs: dict = field(default_factory=dict)
     prompt: str = None  # sidecar 記錄的 prompt;None 代表沿用 args.prompt
+    # 選用:原始 mp4 通過契約驗證並寫完 sidecar 後才呼叫 finalize(mp4_path),做本機後處理(例如貼回原片)。
+    finalize: object = None
 
 
 def validate_explore_args(args):

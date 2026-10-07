@@ -11,6 +11,8 @@ description: 以 ComfyUI server-side SAM 2.1 propagation 與固定 ordered layer
 
 先讀 [CLI、部署、plan 與實測限制](references/local-tool.md)。只使用固定 `SteveVideoLayers` 單節點；`preflight` 核對 runtime、client/package/shared helper 檔案 hash、SAM 模型（segment 時）與 ComfyUI live schema，任一不符就停止，不 queue。Server node 另在工作開始時比對已載入 package hash，這項 gate 發生於執行階段。影片解碼、SAM propagation、仿射對齊、合成、編碼及完整輸出驗證都在 server；client 只查檔案/hash、送 queue 與下載。
 
+要讓美術自己指定物件時，用 `gameart.py vfx keyframes` 抽關鍵幀 → `mask_session.py` 手繪 → `vfx segment-plan` 產生以手繪遮罩為提示的 plan（第 0 幀必填，大動作片中段要加修正幀）→ 本工具 `run` → `vfx unpack-masks`／`mask-preview` 給美術確認；要只重畫遮罩內就交給 `generate.py video_inpaint`，見 [vfx-tools](../../docs/knowledge/video/vfx-tools.md#2-影片物件標記與局部重繪)。
+
 `segment` 適合對 5 秒內片段，以 SAM 2.1 small 依首幀提示傳播 1–4 個物件遮罩；每個物件可在後續影格加提示修正。輸出白色選取、黑色排除的 `L` mask sequence，並附彩色遮罩預覽影片。這與 ComfyUI image edit 的反向 alpha 選區契約不同，不要直接互換。
 
 `compose` 將靜態 RGB 背景與 1–8 個有順序的 source/image layer 合成。Source layer 需來自同來源影片、相同片段時間與畫布尺寸的 segment manifest，錨點由來源移動至目標固定位置；image layer 需 RGBA 圖與錨點，錨點從圖片位置追隨來源移動。image layer 使用 LK `track` 時可額外指定 `destination` 三點作起始 target placement，將跟蹤錨點映射到 target space，再帶動圖片錨點；`keyframes` 錨點則直接定義在 target space。兩者擇一。三點 LK forward/backward tracking（誤差大於 2 px 或追蹤失敗即停止）；keyframes 要首尾錨點，中間影格可選並線性插值。本機 Kabuto 原片 LK 曾在 frame 1 失敗，因此真實素材要逐段檢視；不能據合成平移單元測試推論實片追蹤可靠。需要前景後方保留底圖時提供目標尺寸白色遮擋 `L` mask。

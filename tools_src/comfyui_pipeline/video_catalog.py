@@ -41,6 +41,9 @@ VIDEO_WAN_UNET = "wan2.2_ti2v_5B_fp16.safetensors"
 VIDEO_WAN_FUN_UNET = "wan2.2_fun_control_5B_bf16.safetensors"
 VIDEO_WAN_CLIP = "umt5_xxl_fp8_e4m3fn_scaled.safetensors"
 VIDEO_WAN_VAE = "wan2.2_vae.safetensors"
+# video_inpaint (VACE masked edit) is a Wan2.1-family model: it needs the Wan2.1 VAE, not the 2.2 one.
+VIDEO_WAN_VACE_UNET = "wan2.1_vace_1.3B_fp16.safetensors"
+VIDEO_WAN21_VAE = "wan_2.1_vae.safetensors"
 VIDEO_H3_UNET = "minimax_h3_fl2va_pruned_int8_convrot.safetensors"
 VIDEO_H3_REF_UNET = "minimax_h3_ref2va_pruned_int8_convrot.safetensors"
 VIDEO_H3_CLIP = "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors"
@@ -66,6 +69,18 @@ VIDEO_CAPABILITY_CONFIG_FILENAME = "video_capabilities.json"
 VIDEO_NEG_DEFAULT = (
     "blurry, low quality, morphing face, extra limbs, camera movement, "
     "zoom, pan, text, watermark, still image, frozen"
+)
+# VACE masked edit: sampling follows the official ComfyUI template
+# video_wan_vace_inpainting.json (non-turbo branch); 1.3B is a 480P model.
+VACE_SHIFT = 5.0
+VACE_STEPS = 20
+VACE_CFG = 6.0
+VACE_MAX_FRAMES = 81
+VACE_MAX_PIXELS = 832 * 480
+VACE_NEGATIVE_DEFAULT = (
+    "过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，"
+    "多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，"
+    "背景人很多，倒着走,过曝，"
 )
 VIDEO_LOOP_SUFFIX = (
     "seamless looping animation, cyclical motion that returns to the first frame, "
@@ -139,16 +154,19 @@ VIDEO_BACKEND_SPECS = {
         },
     },
     "wan": {
-        "capabilities": frozenset({"i2v", "control_video"}),
+        "capabilities": frozenset({"i2v", "control_video", "masked_edit"}),
         "models": {
             "i2v_unet": VIDEO_WAN_UNET,
             "control_unet": VIDEO_WAN_FUN_UNET,
             "clip": VIDEO_WAN_CLIP,
             "vae": VIDEO_WAN_VAE,
+            "vace_unet": VIDEO_WAN_VACE_UNET,
+            "vace_vae": VIDEO_WAN21_VAE,
         },
         "required_models": {
             "i2v": ("i2v_unet", "clip", "vae"),
             "control_video": ("control_unet", "clip", "vae"),
+            "masked_edit": ("vace_unet", "clip", "vace_vae"),
         },
         "required_nodes": {
             "i2v": (
@@ -158,6 +176,11 @@ VIDEO_BACKEND_SPECS = {
             ),
             "control_video": (
                 "Wan22FunControlToVideo", "LoadVideo", "GetVideoComponents",
+            ),
+            "masked_edit": (
+                "UNETLoader", "CLIPLoader", "VAELoader", "ModelSamplingSD3", "CLIPTextEncode",
+                "LoadVideo", "GetVideoComponents", "ImageToMask", "WanVaceToVideo", "KSampler",
+                "TrimVideoLatent", "VAEDecode", "CreateVideo", "SaveVideo",
             ),
         },
     },
@@ -179,6 +202,7 @@ VIDEO_TASK_CAPS = {
     "transition": "last_frame",
     "character_video": "character_ref",
     "pose_drive": "control_video",
+    "video_inpaint": "masked_edit",
 }
 VIDEO_TASK_EXTRA_CAPS = {
     "fx_loop": ("i2v",),

@@ -218,7 +218,14 @@ H3 鎖首尾的機制（`nodes_minimax_h3.py`、`comfy/ldm/minimax/model.py`）�
 - `tests/test_vfx_alpha_tools.py`：16 項，全部用合成資料。系統 Python 缺 libvpx，WebM 那項會略過；ComfyUI venv 下 16 項全部通過。
 - 全套測試 `PYTHONPATH=tools_src python -m unittest discover -s tests`：系統 Python（miniconda 3.13.9）274 項通過、略過 10 項（原本 9 項，加上缺 libvpx 的 WebM 那項）；ComfyUI venv 326 項全部通過、沒有略過。基準（本分支開始前）：258 項通過、略過 9 項。
 
-## 需要 Steve 決定的事項
+## 2026-10-07 實作結果（Steve 決定：VACE 接成 task、vfx 工具接入產線、需求 3 規則寫入技能，並要求可人工指定物件）
+
+- `generate.py video_inpaint`（wan `masked_edit`）：自動工作區、keep／replace 模式、無損 FFV1 上傳、貼回並檢查遮罩外為 0。實機 smoke 技術 pass，結果 candidate。
+- 人工指定物件：`gameart.py vfx keyframes` → `mask_session.py` 手繪 → `vfx segment-plan` → `video_layers.py run` → `vfx unpack-masks`／`mask-preview`。實測只塗第 0 幀時尾巴會被漏選，需在中段加修正幀。
+- `vfx_alpha_tools.py` 已加入部署清單和 `gameart.py vfx`；需求 3 的規則已寫入技能、動作表和 task help。
+- 操作契約：[`docs/knowledge/video/vfx-tools.md`](../../knowledge/video/vfx-tools.md)。
+
+## 需要 Steve 決定的事項（研究當時）
 
 1. ~~是否下載 Wan2.1 VACE 1.3B~~：已同意並完成實測（results §2B）。下一步是否把 VACE 接成固定 task，以及是否需要 14B 版（約 35 GB）。
 2. 特效交付格式：是否採用「黑底 RGB（additive）＋ straight alpha PNG」為預設，WebM、APNG、sprite sheet 是否需要，以及 sprite sheet 的單張尺寸上限（目前 5632×2912）。

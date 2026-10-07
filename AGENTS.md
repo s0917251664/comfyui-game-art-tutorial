@@ -18,6 +18,8 @@
 | 劇情多鏡、配音 | `comfyui-film-workflow` | `film_audio.py voices` / `tts` / `dub` |
 | 影片換臉 | `comfyui-face-swap-workflow` | `face_swap.py preflight` / `swap` |
 | 影片遮罩分層 | `comfyui-video-layers` | `video_layers.py preflight` / `run` |
+| 影片局部重繪（美術標記物件，只改遮罩內） | `comfyui-video-gen` | `gameart.py vfx keyframes` / `segment-plan` → `video_layers.py run` → `generate.py video_inpaint` |
+| 特效去背輸出、sprite sheet／WebM 打包、Idle 首尾量測 | `comfyui-video-gen` | `gameart.py vfx luma-alpha` / `chroma-alpha` / `pack` / `loop-metrics` |
 | 安裝 ComfyUI／模型 | `comfyui-install` | `verify_portable_install.py` |
 | 部署 repo 工具到 ComfyUI | `comfyui-install` | `gameart.py deploy`（dry run）／ `deploy --yes` ／ `deploy --rollback` |
 | 固定煙霧測試與驗證紀錄 | `comfyui-install` | `gameart.py smoke [run] --output-dir DIR [--tasks ..] [--record <repo>]` ／ `smoke record <report>` ／ `validation propose|status`（技術檢查，見 `docs/knowledge/maintenance/validation-workflow.md`） |
