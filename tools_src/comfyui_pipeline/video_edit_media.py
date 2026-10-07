@@ -47,6 +47,18 @@ def validate_source(frames, fps):
         raise ValueError("video_inpaint 至少需要 5 幀")
 
 
+def _gray_mask(im):
+    """Return (ok, L array). Accept L/1 and R=G=B RGB (e.g. SAM3 SaveImage); reject alpha modes and colour."""
+    np = _np()
+    if im.mode in ("L", "1"):
+        return True, np.asarray(im.convert("L"))
+    if im.mode == "RGB":
+        rgb = np.asarray(im)
+        if np.array_equal(rgb[..., 0], rgb[..., 1]) and np.array_equal(rgb[..., 1], rgb[..., 2]):
+            return True, rgb[..., 0].copy()
+    return False, None
+
+
 def read_masks(source, count, size, object_id=1):
     """Read selected-white masks from a PNG directory or a video_layers ``layers.zip``."""
     from PIL import Image
@@ -57,7 +69,7 @@ def read_masks(source, count, size, object_id=1):
         names = sorted(n for n in os.listdir(source) if n.lower().endswith(".png"))
         for n in names:
             with Image.open(os.path.join(source, n)) as im:
-                items.append((n, im.mode, im.size, np.asarray(im.convert("L"))))
+                items.append((n, im.mode, im.size) + _gray_mask(im))
     elif zipfile.is_zipfile(source):
         prefix = f"masks/object-{int(object_id):03d}/"
         with zipfile.ZipFile(source) as archive:
@@ -66,15 +78,15 @@ def read_masks(source, count, size, object_id=1):
                 raise ValueError(f"{source} 沒有物件 {object_id} 的遮罩（找 {prefix}*.png）")
             for n in names:
                 with Image.open(io.BytesIO(archive.read(n))) as im:
-                    items.append((n, im.mode, im.size, np.asarray(im.convert("L"))))
+                    items.append((n, im.mode, im.size) + _gray_mask(im))
     else:
         raise ValueError(f"--masks 必須是遮罩 PNG 資料夾或 video_layers 的 layers.zip: {source}")
     if len(items) != count:
         raise ValueError(f"遮罩數量 {len(items)} 和影片幀數 {count} 不一致；不會自動補幀或重採樣")
     masks = []
-    for name, mode, msize, arr in items:
-        if mode not in ("L", "1"):
-            raise ValueError(f"遮罩 {name} 必須是白色=選取的 L 灰階 PNG，目前 mode={mode}（圖片 inpaint 的 alpha 遮罩方向相反，不能直接用）")
+    for name, mode, msize, ok, arr in items:
+        if not ok:
+            raise ValueError(f"遮罩 {name} 必須是白色=選取的灰階 PNG（L，或 R=G=B 的 RGB），目前 mode={mode}（圖片 inpaint 的 alpha 遮罩方向相反，不能直接用）")
         if tuple(msize) != tuple(size):
             raise ValueError(f"遮罩 {name} 尺寸 {msize} 和影片 {size} 不同；不會自動縮放")
         masks.append(arr)

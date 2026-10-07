@@ -82,13 +82,25 @@ def read_frames(source, mode="RGB"):
     return frames, fps
 
 
+def gray_mask_array(im, name="mask"):
+    """Selected-white mask as L array. Accept L/1 and R=G=B RGB (SAM3 SaveImage); reject alpha and colour."""
+    if im.mode in ("L", "1"):
+        return np.asarray(im.convert("L"))
+    if im.mode == "RGB":
+        rgb = np.asarray(im)
+        if np.array_equal(rgb[..., 0], rgb[..., 1]) and np.array_equal(rgb[..., 1], rgb[..., 2]):
+            return rgb[..., 0].copy()
+    raise ValueError(f"Mask {name} must be selected-white grayscale (L, or RGB with R=G=B); got mode {im.mode}. "
+                     "Alpha masks (image inpaint, 0=edit) use the opposite convention")
+
+
 def read_masks(directory, count=None, size=None):
     masks = []
     for p in _png_paths(directory):
         with Image.open(p) as im:
             if size is not None and im.size != size:
                 raise ValueError(f"Mask {p.name} is {im.size}, expected {size}; automatic resizing is not allowed")
-            masks.append(np.asarray(im.convert("L")))
+            masks.append(gray_mask_array(im, p.name))
     if count is not None and len(masks) != count:
         raise ValueError(f"Mask count {len(masks)} does not match frame count {count}")
     return masks
@@ -510,6 +522,66 @@ def loop_metrics(frames, reference=None, key=None):
     return report, ref
 
 
+# ---------------------------------------------------------------- prop master paste-back (green screen)
+
+def green_screen(rgb):
+    """Green-screen pixels: G > 180, R < 120, B < 120 (pipeline #00FF00 backgrounds after H.264/AI drift)."""
+    x = rgb[..., :3]
+    return (x[..., 1] > 180) & (x[..., 0] < 120) & (x[..., 2] < 120)
+
+
+def prop_paste(source, edited, painted, grow=6, near=30, key="auto", tolerance=40.0, softness=40.0):
+    """Paste a re-designed prop from an AI-edited still back onto the untouched source still.
+
+    ``source``/``edited``: RGB arrays of the same size on a green screen. ``painted``: selected-white L
+    array of the prop to replace. The selection is the painted area grown by ``grow`` plus the new prop's
+    non-green pixels within ``near`` of the painting, minus source character pixels outside the grown
+    painting (hands, grip). The new prop is chroma-keyed (unmix + despill) from the edited still and
+    laid over the *source's* green, so the background matches the rest of the frame. Pixels with zero
+    selection weight are byte-identical to ``source``.
+    """
+    from PIL import ImageFilter
+    if source.shape != edited.shape or source.shape[:2] != painted.shape:
+        raise ValueError("source, edited and mask must have the same size; automatic resizing is not allowed")
+    for name, value, upper in (("grow", grow, 64), ("near", near, 256)):
+        if isinstance(value, bool) or not isinstance(value, int) or not 0 <= value <= upper:
+            raise ValueError(f"{name} must be an integer 0..{upper}")
+    paint_img = Image.fromarray(((painted > 127) * 255).astype(np.uint8))
+    if not (painted > 127).any():
+        raise ValueError("painted mask is empty")
+    paint = np.asarray(paint_img.filter(ImageFilter.MaxFilter(2 * grow + 1))) > 127 if grow else painted > 127
+    near_zone = np.asarray(paint_img.filter(ImageFilter.MaxFilter(2 * near + 1))) > 127 if near else paint
+    src_green, ed_green = green_screen(source), green_screen(edited)
+    if not src_green.any() or not ed_green.any():
+        raise ValueError("prop-paste needs a green-screen background in both stills")
+    sel = paint | (~ed_green & near_zone)
+    sel &= ~(~src_green & ~paint)
+    weight = Image.fromarray((sel * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(3)).filter(ImageFilter.GaussianBlur(1.2))
+    w = np.asarray(weight).astype(np.float32)[..., None] / 255.0
+    bg = np.median(source[src_green][:, :3], axis=0).astype(np.float32)
+    if key == "auto":
+        key_rgb = np.median(edited[ed_green][:, :3], axis=0)
+        key = "%02X%02X%02X" % tuple(int(round(v)) for v in key_rgb)
+    rgba = chroma_alpha(edited, key=key, tolerance=tolerance, softness=softness, unmix=True, despill=True)
+    a = rgba[..., 3:4].astype(np.float32) / 255.0
+    prop = rgba[..., :3].astype(np.float32) * a + bg * (1.0 - a)
+    out = np.round(prop * w + source[..., :3].astype(np.float32) * (1.0 - w)).astype(np.uint8)
+    zero = np.asarray(weight) == 0
+    out[zero] = source[..., :3][zero]
+    changed_outside = int(np.any(out[zero] != source[..., :3][zero], axis=1).sum())
+    if changed_outside:
+        raise RuntimeError("prop-paste preservation invariant failed")
+    region_bg = (np.asarray(weight) > 0) & (a[..., 0] < 0.02)
+    stats = {
+        "key": key, "source_green_median": [float(v) for v in bg],
+        "selected_pixels": int((np.asarray(weight) > 0).sum()),
+        "outside_changed_pixels": changed_outside,
+        "pasted_region_background_mean": [float(v) for v in out[region_bg].mean(axis=0)] if region_bg.any() else None,
+        "pasted_region_background_std": [float(v) for v in out[region_bg].std(axis=0)] if region_bg.any() else None,
+    }
+    return out, np.asarray(weight), stats
+
+
 # ---------------------------------------------------------------- manual region marking (video_layers bridge)
 
 SEGMENT_MIN_WIDTH, SEGMENT_MAX_WIDTH = 256, 1280
@@ -799,6 +871,27 @@ def _cmd_mask_preview(args):
     return {"status": "complete", "output": str(Path(args.output).resolve()), "frames": picks}
 
 
+
+def _cmd_prop_paste(args):
+    def rgb(path):
+        with Image.open(path) as im:
+            return np.asarray(im.convert("RGB"))
+    with Image.open(args.mask) as im:
+        painted = np.asarray(im.convert("RGB").convert("L"))  # editor export: white paint on black, alpha ignored
+    out, weight, stats = prop_paste(rgb(args.source), rgb(args.edited), painted, args.grow, args.near,
+                                    args.key, args.tolerance, args.softness)
+    directory = new_directory(args.output_dir)
+    Image.fromarray(out).save(directory / "composited.png")
+    Image.fromarray(weight).save(directory / "selection.png")
+    report = {"schema_version": 1, "kind": "vfx_prop_paste", "status": "candidate",
+              "inputs": {"source": file_record(args.source), "edited": file_record(args.edited), "mask": file_record(args.mask)},
+              "parameters": {"grow": args.grow, "near": args.near, "tolerance": args.tolerance, "softness": args.softness},
+              **stats, "outputs": [file_record(directory / "composited.png"), file_record(directory / "selection.png")],
+              "acceptance": "pending Steve review; this only replaces the prop region, it does not judge the design"}
+    save_json(directory / "result.json", report)
+    return report
+
+
 def build_parser():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -888,6 +981,16 @@ def build_parser():
     p.add_argument("--masks", required=True)
     p.add_argument("--frames", help="Comma list; default 5 evenly spaced frames")
     p.add_argument("--output", required=True)
+    p = sub.add_parser("prop-paste", help="Paste a re-designed prop from an edited still onto the source green screen")
+    p.add_argument("--source", required=True, help="Original still (green screen)")
+    p.add_argument("--edited", required=True, help="AI-edited still with the new prop (e.g. flux2_edit output)")
+    p.add_argument("--mask", required=True, help="Painted prop mask, white = prop (mask_session mask_editor.png)")
+    p.add_argument("--grow", type=int, default=6)
+    p.add_argument("--near", type=int, default=30, help="How far (px) the new prop may extend beyond the painting")
+    p.add_argument("--key", default="auto", help="Edited still's green, RRGGBB or auto (median)")
+    p.add_argument("--tolerance", type=float, default=40.0)
+    p.add_argument("--softness", type=float, default=40.0)
+    p.add_argument("--output-dir", required=True)
     return parser
 
 
@@ -896,7 +999,8 @@ COMMANDS = {"luma-alpha": _cmd_alpha, "chroma-alpha": _cmd_alpha, "birefnet-alph
             "sam-to-edit-mask": _cmd_sam_to_edit, "mask-recolor": _cmd_mask_recolor,
             "mask-composite": _cmd_mask_composite, "loop-metrics": _cmd_loop,
             "keyframes": _cmd_keyframes, "segment-plan": _cmd_segment_plan,
-            "unpack-masks": _cmd_unpack_masks, "mask-preview": _cmd_mask_preview}
+            "unpack-masks": _cmd_unpack_masks, "mask-preview": _cmd_mask_preview,
+            "prop-paste": _cmd_prop_paste}
 
 
 def main(argv=None):

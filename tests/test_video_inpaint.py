@@ -109,6 +109,17 @@ class MediaTests(unittest.TestCase):
             Image.new("RGBA", (96, 64)).save(rgba / f"{i:05d}.png")
         with self.assertRaisesRegex(ValueError, "L"):
             media.read_masks(rgba, len(frames), (96, 64))
+        gray = self.root / "gray_rgb"
+        gray.mkdir()
+        for i, m in enumerate(masks):
+            Image.fromarray(np.dstack([m, m, m])).save(gray / f"{i:05d}.png")
+        np.testing.assert_array_equal(media.read_masks(gray, len(frames), (96, 64))[3], masks[3])
+        colour = self.root / "colour"
+        colour.mkdir()
+        for i, m in enumerate(masks):
+            Image.fromarray(np.dstack([m, np.zeros_like(m), m])).save(colour / f"{i:05d}.png")
+        with self.assertRaises(ValueError):
+            media.read_masks(colour, len(frames), (96, 64))
         z = self.root / "layers.zip"
         with zipfile.ZipFile(z, "w") as archive:
             for i, m in enumerate(masks):

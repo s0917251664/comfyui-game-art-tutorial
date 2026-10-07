@@ -22,22 +22,32 @@ last_updated: 2026-10-07
 
 ## 2. 影片物件標記與局部重繪
 
-### 2.1 人工指定物件（美術操作）
+### 2.1 指定物件並追蹤整支影片
+
+**預設：SAM3 固定 graph**，詳見 [sam3-track reference](../../../skills/comfyui-video-layers/references/sam3-track.md)。
 
 ```text
-gameart.py vfx keyframes --video <src.mp4> --frames 0,<中段幀> --output-dir <dir>/keyframes
-mask_session.py create --image <dir>/keyframes/frame_00000.png --output-dir <dir>   # 每張關鍵幀各開一次
-    → 把 EDITOR_URL 給美術，用白色塗出要改的物件 → 完成後 mask_session.py fetch
-gameart.py vfx segment-plan --video <src.mp4> --mask 0=<mask_editor.png> [--mask <幀>=<mask_editor.png>] --output-dir <dir>/plan
-video_layers.py run --config <local_config.json> --plan <dir>/plan/segment_plan.json --output-dir <dir>/segment
-gameart.py vfx unpack-masks --segment-dir <dir>/segment --video <src.mp4> --output-dir <dir>/masks
+gameart.py vfx keyframes --video <src.mp4> --frames 0 --output-dir <dir>/keyframes      # 抽第 0 幀
+mask_session.py create --image <dir>/keyframes/frame_00000.png --output-dir <dir>      # 把 EDITOR_URL 給美術，只塗要改的物件
+mask_session.py fetch --session-id <id> --output-dir <dir>                             # 取得 mask_editor.png
+直接 HTTP 送 skills/comfyui-video-layers/assets/sam3-track-mask-api.json                # 或 sam3-track-text-api.json（只打英文名詞）
+    → 下載 SaveImage 逐幀遮罩到 <dir>/masks
 gameart.py vfx mask-preview --video <src.mp4> --masks <dir>/masks --output <dir>/mask_preview.png   # 給美術確認
 ```
 
-- 一定要有第 0 幀的手繪遮罩；動作幅度大的片要在中段再塗 1–2 張修正幀。實測只塗第 0 幀時，SAM 在第 14 幀之後把尾巴也選進去；加了第 18 幀修正後，第 28 幀以後恢復正常，但第 14 幀仍有漏選。
-- 手繪頁輸出的是黑底白色的 RGBA，`segment-plan` 會忽略 alpha，轉成白色＝選取的 L 遮罩，並縮放到 video_layers 的工作尺寸（偶數寬 256–1280）。
-- 外圍光點等想一起改的東西要一起塗，或另外標成第二個物件；不在遮罩內的不會被改。
-- 遮罩預覽要給美術確認後才進下一步。
+- 手繪起手時「塗多少就追多少」：只塗要改的部分，不要塗到手或尾巴。只要塗第 0 幀，不需要補塗中段幀。隨手框一個方塊不可用。
+- 文字起手時名詞要具體：實測 `hammer` 在第 0–1 幀只抓到握柄，`mallet` 每一幀都正確。
+- 下載的遮罩是 R=G=B 的 RGB 灰階 PNG，`video_inpaint` 和 `gameart.py vfx` 都可以直接讀。
+- 外圍光點等想一起改的東西要一起塗，或另外追蹤後再合併；不在遮罩內的不會被改。
+
+**備用：SAM2.1（video_layers）**。只在 SAM3 不可用時使用。需要在中段加修正幀；實測只塗第 0 幀時，第 14 幀以後會把尾巴也選進去。
+
+```text
+gameart.py vfx keyframes --video <src.mp4> --frames 0,<中段幀> --output-dir <dir>/keyframes
+gameart.py vfx segment-plan --video <src.mp4> --mask 0=<mask_editor.png> [--mask <幀>=<mask_editor.png>] --output-dir <dir>/plan
+video_layers.py run --config <local_config.json> --plan <dir>/plan/segment_plan.json --output-dir <dir>/segment
+gameart.py vfx unpack-masks --segment-dir <dir>/segment --video <src.mp4> --output-dir <dir>/masks
+```
 
 ### 2.2 只換顏色（不用 AI）
 
@@ -111,17 +121,17 @@ gameart.py vfx mask-preview --video <src.mp4> --masks <dir>/masks --output <dir>
 
 需求是「把影片裡的道具換成另一種材質或造型」（例如魔法槌 → 純木槌）時，**不要用 `video_inpaint` 局部重畫**。改成「先定母版靜幀 → 整幀套用原片動作」。
 
-### 步驟
+### 步驟（只用正式入口）
 
-1. **標記道具**：在第 0 幀用 `mask_session.py` 手繪道具範圍，只塗要換的部分，不要塗到手。
+1. **標記道具**：照 2.1 節用 `mask_session.py` 在第 0 幀手繪，只塗要換的部分，不要塗到手。
 2. **做母版靜幀**：
-   - 用 `flux2_edit` 對第 0 幀整張下指令，例如「把槌子換成木槌，角色、姿勢、手、握把、畫風、綠幕保持不變」，跑 2–3 個 seed，選道具最好、又沒改到手和握把的那張。
-   - FLUX 會微幅重畫角色（實測角色區平均差 21.6），所以只把新道具貼回原圖：先用 `gameart.py vfx chroma-alpha` 的同一套公式（key 設成 FLUX 圖的綠色，加 `--unmix --despill`）把道具去背，再疊到**原圖的綠色**上。貼回範圍＝手繪遮罩擴張 6 px ∪ 新道具的非綠像素，但排除原圖裡遮罩外的角色像素。直接貼 FLUX 圖的背景會看得出綠色色差。
-   - 母版給美術確認。
-3. **整幀套動作**：`generate.py pose_drive --backend h3 --control-type canny --image <母版> --motion-ref <原片>`，prompt 要描述新道具和動作。
-   - canny 的邊緣會帶入道具的位置，所以道具會跟著原片動。
-   - `--control-type pose` 的骨架沒有道具資訊，道具動作會跑掉，不要用。
-4. **驗收**：整幀都是重新生成的，角色不是逐像素保留原本的樣子，臉、服裝、尾巴要人工比對；快速動作的幀可能有動態模糊。
+   - `generate.py flux2_edit --image <第 0 幀> --prompt "把〔道具〕換成〔新道具〕；角色、姿勢、手、握把、畫風、綠幕保持不變"`，跑 2–3 個 seed，選道具最好、沒改到手和握把的那張。
+   - `gameart.py vfx prop-paste --source <第 0 幀> --edited <選中的 FLUX 圖> --mask <mask_editor.png> --output-dir <新資料夾>`：只把新道具貼回原圖，背景用原圖的綠。FLUX 會微幅重畫角色（實測角色區平均差 21.6），所以不要直接用 FLUX 整張圖。
+   - 把 `composited.png` 給美術確認，這張就是母版。
+3. **整幀套動作**：`generate.py pose_drive --backend h3 --control-type canny --image <母版> --motion-ref <原片> --prompt "<新道具＋動作描述>"`。不要用 `--control-type pose`：骨架裡沒有道具資訊，道具動作會跑掉。
+4. **驗收**：整幀都是重新生成的，角色不是逐像素保留，臉、服裝、尾巴要人工比對；快速動作的幀可能有動態模糊。
+
+`prop-paste` 只適用綠幕素材。選取範圍是：手繪遮罩擴張 `--grow`（預設 6 px），加上新道具在 `--near`（預設 30 px）內的非綠像素，再排除原圖在遮罩外的角色像素。新道具以 unmix＋despill 去背後疊到原圖綠色上；選取外的像素會由程式檢查是否逐 byte 不變。
 
 ### 2026-10-07 實測（Skye 召槌 FINAL → 純木槌，RTX 4080）
 
@@ -130,10 +140,10 @@ gameart.py vfx mask-preview --video <src.mp4> --masks <dir>/masks --output <dir>
 | `video_inpaint` replace（只有文字描述，沒有母版） | 遮罩外 0 變動；但快速揮動時糊成一團、槌頭形狀歪扭、沒有描邊、和握把接不起來、遮罩外的光點還留著。**不採用** |
 | `video_inpaint` keep | 保留原本的金框和晶窗，只把顏色改成橘金色，不像木頭。**不採用** |
 | SDXL `inpaint` 做母版（denoise 1.0，綠幕素材） | 綠色滲進木頭、木頭變成扁平色塊、描邊髒。**不採用** |
-| `flux2_edit` 做母版，再去背疊回原圖的綠幕 | 木紋清楚、描邊和角色一致、背景綠色均勻（貼回區平均 (0.5, 253.6, 0.7)，原圖 (0, 254, 0)）。採用為母版 |
+| `flux2_edit` 做母版＋`vfx prop-paste` 疊回原圖的綠幕 | 木紋清楚、描邊和角色一致、背景綠色均勻（貼回區平均 (0.5, 253.6, 0.7)，原圖 (0, 254, 0)）。正式指令的輸出和實驗時的母版逐像素相同。採用為母版 |
 | **H3 `pose_drive` canny**（母版＋原片） | 動作和原片幾乎一致，木槌前後穩定，光點自然消失；768² × 56 幀，耗時 294.8 秒，技術 pass。**最佳 candidate** |
 | H3 `pose_drive` pose | 道具舉起的時間和位置跑掉 |
-| SCAIL-2 動畫模式（固定範本，原片先轉 16 FPS、取 33 幀） | 動作有跟上，但背景變成藍紫色斑塊、無法去背，還把原片光點畫成白色，只有 384². **不適合綠幕素材** |
+| SCAIL-2 動畫模式（只是比較測試，不是流程步驟；固定範本，原片先轉 16 FPS、取 33 幀） | 動作有跟上，但背景變成藍紫色斑塊、無法去背，還把原片光點畫成白色，只有 384². **不適合綠幕素材** |
 
 - 證據：`output/experiments/vfx-manual-mask-trial-20261007/`
   - `master_wood_mallet_v3.png`
@@ -153,4 +163,4 @@ gameart.py vfx mask-preview --video <src.mp4> --masks <dir>/masks --output <dir>
 | SAM3 用第 0 幀手繪遮罩（`SAM3_VideoTrack.initial_mask`，不給文字） | 塗多少就追多少，從頭到尾不會自己修正；Steve 實際手繪的遮罩只追到槌頭和槌柄，握把、手、尾巴都沒被選進去，7.4 秒 |
 | SAM3 用隨手框的方塊當第 0 幀遮罩 | 前段把背景和整個角色都選進去，不可用 |
 
-SAM3 追蹤是純 ComfyUI graph（`LoadVideo` → `SAM3_VideoTrack` → `SAM3_TrackToMask`），之後若要正式化，應做成固定 API graph 素材，不要再包一層 Python 指令。實驗腳本在 `output/experiments/vfx-sam3-text-20261007/`。
+SAM3 追蹤已做成固定 API graph（`skills/comfyui-video-layers/assets/sam3-track-*.json`）。2026-10-07 的直接 HTTP smoke：遮罩版 56 幀，和實驗遮罩平均 IoU 0.998；文字版 `mallet` 56 幀，IoU 1.0（`output/experiments/vfx-sam3-graph-smoke-20261007/smoke.json`）。研究用腳本放在 [`docs/experiments/vfx-research/scripts/`](../../experiments/vfx-research/scripts/README.md)，不是產線入口。

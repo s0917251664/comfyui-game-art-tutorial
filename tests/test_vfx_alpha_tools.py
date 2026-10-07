@@ -199,3 +199,69 @@ class LoopTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PropPasteTests(unittest.TestCase):
+    def scene(self):
+        green_src = np.array([0, 254, 0], np.uint8)
+        src = np.tile(green_src, (64, 64, 1))
+        src[20:40, 10:30] = (30, 40, 160)        # old prop (blue)
+        src[24:36, 40:52] = (250, 220, 200)      # character hand beside it, outside the painting
+        edited = np.tile(np.array([8, 241, 0], np.uint8), (64, 64, 1))  # AI still with drifted green
+        edited[16:44, 6:34] = (150, 100, 50)     # new prop, larger than the old one
+        edited[24:36, 40:52] = (200, 180, 160)   # AI also redrew the hand
+        painted = np.zeros((64, 64), np.uint8)
+        painted[20:40, 10:30] = 255
+        return src, edited, painted
+
+    def test_prop_pasted_with_source_green_and_character_kept(self):
+        src, edited, painted = self.scene()
+        out, weight, stats = tool.prop_paste(src, edited, painted, grow=2, near=8)
+        np.testing.assert_array_equal(out[weight == 0], src[weight == 0])
+        np.testing.assert_array_equal(out[24:36, 40:52], src[24:36, 40:52])   # hand untouched
+        np.testing.assert_array_equal(out[18, 8], [150, 100, 50])             # larger new prop not clipped
+        self.assertEqual("08F100", stats["key"])
+        self.assertEqual([0.0, 254.0, 0.0], stats["source_green_median"])
+        self.assertEqual(0, stats["outside_changed_pixels"])
+        bg = stats["pasted_region_background_mean"]
+        self.assertLess(abs(bg[1] - 254), 2)
+        self.assertLess(bg[0], 2)
+
+    def test_prop_paste_validates_inputs(self):
+        src, edited, painted = self.scene()
+        with self.assertRaises(ValueError):
+            tool.prop_paste(src, edited[:32], painted)
+        with self.assertRaises(ValueError):
+            tool.prop_paste(src, edited, np.zeros_like(painted))
+        with self.assertRaises(ValueError):
+            tool.prop_paste(np.zeros_like(src), edited, painted)
+
+    def test_cli_prop_paste_ignores_editor_alpha(self):
+        src, edited, painted = self.scene()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            Image.fromarray(src).save(root / "s.png")
+            Image.fromarray(edited).save(root / "e.png")
+            editor = np.zeros((64, 64, 4), np.uint8)
+            editor[..., 3] = 255
+            editor[painted > 0, :3] = 255
+            Image.fromarray(editor, "RGBA").save(root / "m.png")
+            self.assertEqual(0, tool.main(["prop-paste", "--source", str(root / "s.png"), "--edited", str(root / "e.png"),
+                                           "--mask", str(root / "m.png"), "--grow", "2", "--near", "8",
+                                           "--output-dir", str(root / "out")]))
+            result = json.loads((root / "out" / "result.json").read_text(encoding="utf-8"))
+            self.assertEqual(0, result["outside_changed_pixels"])
+            self.assertTrue((root / "out" / "composited.png").is_file())
+
+
+class GrayMaskTests(unittest.TestCase):
+    def test_gray_rgb_accepted_alpha_and_colour_rejected(self):
+        g = np.zeros((4, 4), np.uint8)
+        g[1:3, 1:3] = 255
+        np.testing.assert_array_equal(tool.gray_mask_array(Image.fromarray(np.dstack([g, g, g]))), g)
+        np.testing.assert_array_equal(tool.gray_mask_array(Image.fromarray(g)), g)
+        with self.assertRaises(ValueError):
+            tool.gray_mask_array(Image.fromarray(np.dstack([g, g, g, g]), "RGBA"))
+        colour = np.dstack([g, np.zeros_like(g), g])
+        with self.assertRaises(ValueError):
+            tool.gray_mask_array(Image.fromarray(colour))
