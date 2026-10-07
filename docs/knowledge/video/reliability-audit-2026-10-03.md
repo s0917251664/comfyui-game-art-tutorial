@@ -16,7 +16,7 @@
 
 `output/video_reliability_20261003/existing_outputs.json` 遞迴掃描 repo 的 `output`，並掃描 ComfyUI `output` 根層，共列出 304 個 MP4 路徑；全部都完成完整影片解碼。這個數字包含副本與測試檔，不代表 304 次獨立生成，也不代表任何一支已獲美術接受。音軌只讀取 metadata，沒有完整解碼或聆聽。
 
-304 支中有 61 支具 sidecar。其中 60 支有非空 `requested_contract`，重新尺寸、FPS、影格數、時長與音軌存在性契約均通過；另 1 支沒有可判定契約，屬 unverifiable。該筆合成測試檔名含 `accepted_clip`，名稱不代表 Steve 曾驗收。其餘 243 支沒有 sidecar，不能據此宣稱可重現。
+304 支中有 61 支具 sidecar。其中 60 支有非空 `requested_contract`，重新尺寸、FPS、影格數、時長與音軌存在性契約均通過；另 1 支沒有可判定契約，屬 unverifiable。該筆合成測試檔名含 `accepted_clip`，名稱不代表美術審核者曾驗收。其餘 243 支沒有 sidecar，不能據此宣稱可重現。
 
 60 筆具輸出契約的 sidecar，其 task/backend 分布如下：
 

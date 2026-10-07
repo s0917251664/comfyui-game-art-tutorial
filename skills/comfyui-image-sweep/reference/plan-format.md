@@ -28,7 +28,7 @@ runtime config 必須包含 `python_exe`、`generate_script`、`comfyui_url`、`
 
 sweep 會依次呼叫既有 `generate.py` task，每次寫入 `generation.json`、stdout/stderr log，並驗證唯一輸出圖、manifest 與 SHA-256。具有 `image` 輸入的 task 會建立 `raw_comparison/`；沒有 `image` 輸入的 `character_action` 不會建立 raw comparison。中途錯誤會將已完成候選與失敗狀態留在 `sweep.json`，停止後續提交；不要直接重跑整組。若 CLI timeout，先檢查 ComfyUI queue 是否仍在工作。
 
-每次候選會更新 `candidates.png` 接觸圖。輸出不是已接受版本；Steve 逐支檢視並作決定後，才可依專案 result-records 規則記錄 accepted/rejected。`--dry-run` 只驗證計畫並產生命令，不檢查 server、模型或生成結果。
+每次候選會更新 `candidates.png` 接觸圖。輸出不是已接受版本；美術審核者逐支檢視並作決定後，才可依專案 result-records 規則記錄 accepted/rejected。`--dry-run` 只驗證計畫並產生命令，不檢查 server、模型或生成結果。
 
 ## 範例調整
 

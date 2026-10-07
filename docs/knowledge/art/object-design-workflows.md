@@ -2,7 +2,7 @@
 
 **日期：** 2026-10-03  
 **適用範圍：** 本機 Windows / CUDA / RTX 4080 的 ComfyUI Core 與既有 SDXL 圖片 task。  
-**狀態：** 固定 Core 合成 helper 與部分素材路徑已有實機候選；各項輸出均待 Steve 美術驗收。這不是 `generate.py` 新 task 或模型驗證。
+**狀態：** 固定 Core 合成 helper 與部分素材路徑已有實機候選；各項輸出均待美術審核者驗收。這不是 `generate.py` 新 task 或模型驗證。
 
 ## 結論
 

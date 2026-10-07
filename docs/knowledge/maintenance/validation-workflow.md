@@ -32,7 +32,7 @@ profile 的 `validation[<platform_key>]` 是證據項目清單：
 {"report": "docs/knowledge/validation/macos-mps/2026-10-06-image-core-sdxl_standard.json",
  "report_sha256": "...", "tasks": ["concept", "..."], "profile_sha256": "...",
  "env": {"comfyui_version": "0.34.0", "comfyui_commit": "...", "models_hash": "...", "custom_nodes_hash": "..."},
- "min_memory_mb": 18432, "approved_by": "steve", "approved_at": "2026-10-07T10:00:00+00:00"}
+ "min_memory_mb": 18432, "approved_by": "reviewer", "approved_at": "2026-10-07T10:00:00+00:00"}
 ```
 
 - task 在該平台是 `verified`：有證據項目涵蓋它，且可用記憶體不低於 `min_memory_mb`。

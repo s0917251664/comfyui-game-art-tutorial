@@ -2,7 +2,7 @@
 
 日期：2026-10-07｜平台：windows-cuda（RTX 4080 16 GB）｜分支：`research/vfx-alpha-mask-idle`｜數據：[results.md](results.md)
 
-主軸是用明確的控制取代文字描述，例如 alpha、遮罩、首尾幀和量測。第一輪沒有下載任何模型、套件或權重；追加實測時經 Steve 同意，只下載了 Wan2.1 VACE 1.3B（4.31 GB，見需求 2）。本研究沒有修改既有 task、graph 或技能，只新增研究用的本機工具 `tools_src/vfx_alpha_tools.py`（附單元測試）。所有產物都是 candidate，是否接受由 Steve 決定。
+主軸是用明確的控制取代文字描述，例如 alpha、遮罩、首尾幀和量測。第一輪沒有下載任何模型、套件或權重；追加實測時經使用者同意，只下載了 Wan2.1 VACE 1.3B（4.31 GB，見需求 2）。本研究沒有修改既有 task、graph 或技能，只新增研究用的本機工具 `tools_src/vfx_alpha_tools.py`（附單元測試）。所有產物都是 candidate，是否接受由美術審核者決定。
 
 ---
 
@@ -21,7 +21,7 @@
 | 3. 綠幕 chroma key（現況） | ✅ | ✅ 基準和 unmix/despill 版 | 不透明主體 | 綠色系、青色系特效最難處理；半透明部分大量殘綠；unmix 會讓軟邊偏暗 |
 | 4a. Wan-Alpha（原生 RGBA） | ❌ 缺權重 | 未測 | T2V 生成透明特效 | 只有 T2V，I2V 權重尚未釋出，不能指定起始幀；ComfyUI 官方整合寫「coming soon」，社群版需要額外 custom node |
 | 4b. TransPixar／TransPixeler | ❌ | 未測 | T2V RGBA | 基於 CogVideoX-5B，官方說明約需 24 GB VRAM，超過 16 GB |
-| 4c. MatAnyone／MatAnyone2（時序 matting） | ❌ 缺權重和節點 | 未測 | 不透明主體、頭髮邊緣 | 需要首幀遮罩（可接 SAM）；授權為 NTU S-Lab License 1.0，商用條件需 Steve 自行確認全文 |
+| 4c. MatAnyone／MatAnyone2（時序 matting） | ❌ 缺權重和節點 | 未測 | 不透明主體、頭髮邊緣 | 需要首幀遮罩（可接 SAM）；授權為 NTU S-Lab License 1.0，商用條件需使用者自行確認全文 |
 | 4d. `BriaTransparentVideoBackground`（ComfyUI API 節點） | 節點存在，但屬於付費外部 API | 不測 | — | 專案目前無預算，依 AGENTS 須由使用者明確選擇才可使用 |
 
 ### 實測重點（詳見 results §1）
@@ -218,14 +218,14 @@ H3 鎖首尾的機制（`nodes_minimax_h3.py`、`comfy/ldm/minimax/model.py`）�
 - `tests/test_vfx_alpha_tools.py`：16 項，全部用合成資料。系統 Python 缺 libvpx，WebM 那項會略過；ComfyUI venv 下 16 項全部通過。
 - 全套測試 `PYTHONPATH=tools_src python -m unittest discover -s tests`：系統 Python（miniconda 3.13.9）274 項通過、略過 10 項（原本 9 項，加上缺 libvpx 的 WebM 那項）；ComfyUI venv 326 項全部通過、沒有略過。基準（本分支開始前）：258 項通過、略過 9 項。
 
-## 2026-10-07 實作結果（Steve 決定：VACE 接成 task、vfx 工具接入產線、需求 3 規則寫入技能，並要求可人工指定物件）
+## 2026-10-07 實作結果（使用者決定：VACE 接成 task、vfx 工具接入產線、需求 3 規則寫入技能，並要求可人工指定物件）
 
 - `generate.py video_inpaint`（wan `masked_edit`）：自動工作區、keep／replace 模式、無損 FFV1 上傳、貼回並檢查遮罩外為 0。實機 smoke 技術 pass，結果 candidate。
 - 人工指定物件：`gameart.py vfx keyframes` → `mask_session.py` 手繪 → `vfx segment-plan` → `video_layers.py run` → `vfx unpack-masks`／`mask-preview`。實測只塗第 0 幀時尾巴會被漏選，需在中段加修正幀。
 - `vfx_alpha_tools.py` 已加入部署清單和 `gameart.py vfx`；需求 3 的規則已寫入技能、動作表和 task help。
 - 操作契約：[`docs/knowledge/video/vfx-tools.md`](../../video/vfx-tools.md)。
 
-## 需要 Steve 決定的事項（研究當時）
+## 需要使用者決定的事項（研究當時）
 
 1. ~~是否下載 Wan2.1 VACE 1.3B~~：已同意並完成實測（results §2B）。下一步是否把 VACE 接成固定 task，以及是否需要 14B 版（約 35 GB）。
 2. 特效交付格式：是否採用「黑底 RGB（additive）＋ straight alpha PNG」為預設，WebM、APNG、sprite sheet 是否需要，以及 sprite sheet 的單張尺寸上限（目前 5632×2912）。

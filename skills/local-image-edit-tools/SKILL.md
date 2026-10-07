@@ -22,7 +22,7 @@ description: 使用 Pillow/NumPy 做既有圖片的遮罩合成、純換色、�
    `composite --keep-source-alpha` 會令輸出沿用 source Alpha；只在需要保留來源透明度時加此旗標。省略時仍依原有遮罩方向對完整 RGBA byte 插值。這不影響 `recolor`，後者本來就保留來源 Alpha。
    `recolor` 的 mask 同樣須為同尺寸、帶 Alpha 的單影格 PNG；Alpha 小於 255 表示可編輯選區，255 排除。只改可見、符合色相範圍及最低飽和度條件的像素，並保留 HSV saturation/value 到 RGB 量化前；不呼叫生成模型、不新增紋理、不保證精確 RGB、不換材質或重打光，也沒有語意分割／畫遮罩功能。來源 Alpha 與未匹配 RGBA 精確保留，選區品質仍須人工確認。
 3. 每次指定全新的 output directory；工具會拒絕已存在的路徑，避免混合或覆寫既有結果。
-4. 開啟輸出檢視圖及候選，依共用工作流程檢查內容。像素統計只描述 RGBA bytes，包含透明像素的隱藏 RGB，不判斷美術品質或接受狀態；候選由 Steve 明確驗收。
+4. 開啟輸出檢視圖及候選，依共用工作流程檢查內容。像素統計只描述 RGBA bytes，包含透明像素的隱藏 RGB，不判斷美術品質或接受狀態；候選由美術審核者明確驗收。
 
 ## 命令入口
 
@@ -41,6 +41,6 @@ description: 使用 Pillow/NumPy 做既有圖片的遮罩合成、純換色、�
 
 ## 驗證狀態
 
-2026-10-01 本機 smoke 已覆蓋 standalone composite/compare、dry-run，以及 `guided_inpaint`、`refine`、`inpaint`、`character_action` 共六張 832×1232 候選。guided preserve_outside 的原始生成在 mask 外有 815,312/846,943 個變動像素；composite 後 mask 外為 0，保留區 902,053 像素另經 NumPy 比對。部署 verifier 17 項通過，單元與部署測試 30 項通過。生成候選仍待 Steve 驗收；畫面觀察與限制見 [知識手冊](../../docs/knowledge/art/edit-tools.md)。這些結果不會自動更新 image profile/task validation。
+2026-10-01 本機 smoke 已覆蓋 standalone composite/compare、dry-run，以及 `guided_inpaint`、`refine`、`inpaint`、`character_action` 共六張 832×1232 候選。guided preserve_outside 的原始生成在 mask 外有 815,312/846,943 個變動像素；composite 後 mask 外為 0，保留區 902,053 像素另經 NumPy 比對。部署 verifier 17 項通過，單元與部署測試 30 項通過。生成候選仍待美術審核者驗收；畫面觀察與限制見 [知識手冊](../../docs/knowledge/art/edit-tools.md)。這些結果不會自動更新 image profile/task validation。
 
-2026-10-03 增補 `recolor` 與 `composite --keep-source-alpha` 實測；43 項單元測試及 19 項部署 verifier 通過。玻璃瓶案例仍是待 Steve 驗收的 candidate，生成未命中紅色的兩次試跑及色相旋轉限制見[單一物件換色紀錄](../../docs/knowledge/art/single-object-color.md)。日期化觀察不會改寫 image profile 或 task validation。
+2026-10-03 增補 `recolor` 與 `composite --keep-source-alpha` 實測；43 項單元測試及 19 項部署 verifier 通過。玻璃瓶案例仍是待美術審核者驗收的 candidate，生成未命中紅色的兩次試跑及色相旋轉限制見[單一物件換色紀錄](../../docs/knowledge/art/single-object-color.md)。日期化觀察不會改寫 image profile 或 task validation。

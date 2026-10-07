@@ -26,7 +26,7 @@ status: current
 
 seed、prompt、來源與參考固定；只能在現有 task 白名單的 0–1 權重參數中建立笛卡兒積，最多 16 次，禁止重複值。空 `sweep` 代表固定輸入下單次執行。這用於使用者明確提出、事前界定的多組參數比較，不能取代一般任務的產後驗收或作為盲目重抽工具。`preserve_outside` 僅支援 `inpaint`、`guided_inpaint`，每次生成後另外用同一遮罩合成並產生 raw/final comparison。
 
-每次 run 透過 `generate.py` 寫入原生 `generation.json` manifest；總目錄含 `sweep.json`、逐 run log、比較資料夾與 `candidates.png`。Queue 需在開始前為空。未完成或失敗時停止後續提交並保存狀態，不自動重送。timeout 後先查 queue。所有輸出都是待 Steve 逐張檢視的 candidate，不會由程式自動評定 accepted/rejected。
+每次 run 透過 `generate.py` 寫入原生 `generation.json` manifest；總目錄含 `sweep.json`、逐 run log、比較資料夾與 `candidates.png`。Queue 需在開始前為空。未完成或失敗時停止後續提交並保存狀態，不自動重送。timeout 後先查 queue。所有輸出都是待美術審核者逐張檢視的 candidate，不會由程式自動評定 accepted/rejected。
 
 ### 參考圖板與 Alpha 稽核
 
@@ -42,13 +42,13 @@ seed、prompt、來源與參考固定；只能在現有 task 白名單的 0–1 
 
 2026-10-01 在 Windows / `windows-cuda`、NVIDIA GeForce RTX 4080（16,376 MiB VRAM）、`sdxl` tier 環境完成 standalone composite、standalone compare 與 sweep dry-run；四個既有圖片 task 共產生六張 832×1232 候選，所選 profile 均為 `sdxl_standard`。`guided_inpaint`、`inpaint`、`character_action` 使用 `sd_xl_base_1.0.safetensors`；`refine` anime 使用 `ponyDiffusionV6XL_v6StartWithThisOne.safetensors`。guided 與 character action 使用既有 IPAdapter、CLIP Vision 與 Canny。`guided_inpaint` 固定 seed `180806271566581`、source/mask/material reference/Canny control，分別以 denoise 0.8 與 1.0 產圖；raw comparison 在 alpha=255 保留區分別量到 815,312 與 846,943 個改動像素。composite 後 mask 外改動為 0，保留區共 902,053 像素，並由獨立 NumPy 比對確認。
 
-畫面觀察：guided 0.8 結果是低飽和淺藍細絲，1.0 是鮮亮藍細絲，且 mask 內輪廓外仍可見淡色暈邊；不能據此宣稱「短絨」要求達標。`inpaint` 的單張候選把頭髮改成灰褐色且髮型大幅改變。`refine` anime seed `278787708121530` 的 denoise 0.4、0.6 各一張，0.6 對髮型、衣服和腰帶的改動更明顯。`character_action` 使用角色來源與 `reports/.../pose-reference-isolated.png` 姿勢 Canny reference，產生一張；姿勢與槌方向接近姿勢圖，但帶入毛邊帽造型，臉與服裝也不是原角色。所有候選均是待 Steve 驗收的輸出，這些單案例觀察不構成引擎排名或 task quality validation。
+畫面觀察：guided 0.8 結果是低飽和淺藍細絲，1.0 是鮮亮藍細絲，且 mask 內輪廓外仍可見淡色暈邊；不能據此宣稱「短絨」要求達標。`inpaint` 的單張候選把頭髮改成灰褐色且髮型大幅改變。`refine` anime seed `278787708121530` 的 denoise 0.4、0.6 各一張，0.6 對髮型、衣服和腰帶的改動更明顯。`character_action` 使用角色來源與 `reports/.../pose-reference-isolated.png` 姿勢 Canny reference，產生一張；姿勢與槌方向接近姿勢圖，但帶入毛邊帽造型，臉與服裝也不是原角色。所有候選均是待美術審核者驗收的輸出，這些單案例觀察不構成引擎排名或 task quality validation。
 
 部署 verifier `verify_portable_install.py --require-image` 回報 17 pass、0 fail；單元與部署測試共 30 項通過，Python syntax 檢查通過。重現命令與耗時在 `output/local_edit_tools_20261001/execution.json`，獨立尺寸、通道、秒數與保留區核對在 `independent-validation.json`；完整腳本為 `run_smoke.py`。原始輸出在同目錄下的 guided、refine、inpaint、character 子目錄，以及 standalone-composite、standalone-compare。耗時受首張模型載入快取影響，不可用來比較 task 效率。ComfyUI server 曾出現既有 `comfyui.db` 權限警告，但六張生成完成；本次未更動資料庫。離線驗證、CLI smoke 與單案例畫面觀察不會自動改寫 image profile 或 task 的 validation 狀態。
 
 2026-10-02 新增的參考圖板與 Alpha 稽核在 Windows／RTX 4080 環境實跑：33 項工具測試通過，部署 verifier 18 項通過，並確認拒絕既有 output 目錄。三張參考圖輸出 1080×420 board，中文職責完整、縮圖未裁切；2048×2048 RGBA cutout 記錄 2,708,657 透明、192,410 半透明、1,293,237 不透明像素，bbox `[134, 59, 1910, 2003]`；832×1232 RGB 圖則正確標出無 Alpha、無透明像素與內容碰邊。輸出證據與預覽在 [`output/scenario_tools_20261002/`](../../../output/scenario_tools_20261002/)；此驗證只證明板面整理與機械 Alpha 檢查，不驗收生成圖或去背美術品質。
 
-2026-10-03 單件青綠玻璃瓶測試中，既有 `refine` denoise 0.5 與 0.75 兩次均未得到紅色，且 0.75 對瓶塞／形狀改動較多；停止抽樣後以本機 `recolor` 產生紅色 candidate。單元測試 43 項通過，部署 verifier 19 項通過；candidate 尚待 Steve 驗收。具體遮罩、像素數、Alpha／區域比對及本機 trace 連結見[單一物件換色紀錄](single-object-color.md)；其 `output/` 證據只在原實驗工作樹保存，乾淨 clone 不一定含有。這項紀錄不改變 profile 或 task validation。
+2026-10-03 單件青綠玻璃瓶測試中，既有 `refine` denoise 0.5 與 0.75 兩次均未得到紅色，且 0.75 對瓶塞／形狀改動較多；停止抽樣後以本機 `recolor` 產生紅色 candidate。單元測試 43 項通過，部署 verifier 19 項通過；candidate 尚待美術審核者驗收。具體遮罩、像素數、Alpha／區域比對及本機 trace 連結見[單一物件換色紀錄](single-object-color.md)；其 `output/` 證據只在原實驗工作樹保存，乾淨 clone 不一定含有。這項紀錄不改變 profile 或 task validation。
 
 ## 官方參考與本機適配
 

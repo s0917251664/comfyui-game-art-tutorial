@@ -1,6 +1,6 @@
 # VFX 研究實測數據（2026-10-07，windows-cuda／RTX 4080）
 
-所有數字都對應 `output/experiments/vfx-research-20261007/` 下的檔案（`output/` 不進版控，只在這台機器上）。量測腳本與產物放在同一個資料夾：`req1/run_req1.py`、`req1/run_req1_c.py`、`req2/run_req2.py`、`req3/run_req3.py`，工具為 `tools_src/vfx_alpha_tools.py`。以下數字都是技術指標，不代表美術驗收；所有輸出都是 candidate，需 Steve 決定。
+所有數字都對應 `output/experiments/vfx-research-20261007/` 下的檔案（`output/` 不進版控，只在這台機器上）。量測腳本與產物放在同一個資料夾：`req1/run_req1.py`、`req1/run_req1_c.py`、`req2/run_req2.py`、`req3/run_req3.py`，工具為 `tools_src/vfx_alpha_tools.py`。以下數字都是技術指標，不代表美術驗收；所有輸出都是 candidate，需美術審核者決定。
 
 ## 0. 環境與前置
 
@@ -98,7 +98,7 @@
 - B 的槌子金框變成米白、Z 字消失，第 40 幀的光又回到青色。
 - B' 的洋紅光暈在遮罩邊緣被硬切，外圍光點仍是原本的青色。
 
-### 2B. VACE 1.3B 遮罩局部重繪（2026-10-07 追加，Steve 同意下載）
+### 2B. VACE 1.3B 遮罩局部重繪（2026-10-07 追加，使用者同意下載）
 
 **模型**：`wan2.1_vace_1.3B_fp16.safetensors`，來源 Comfy-Org/Wan_2.1_ComfyUI_repackaged，4,309,519,800 bytes，SHA-256 `640ccc0577e6a5d4bb15cd91b11b699ef914fc55f126c5a1c544e152130784f2`（和 Hugging Face 公布值一致）。存放在 `ComfyUI/models/diffusion_models/`。text encoder 和 VAE 沿用本機既有的 `umt5_xxl_fp8_e4m3fn_scaled`、`wan_2.1_vae`。下載後執行 `doctor --refresh`（模型數 109→110，H3／Wan 能力不變），舊快照備份在 `capability_snapshot_before_vace_refresh/`。
 

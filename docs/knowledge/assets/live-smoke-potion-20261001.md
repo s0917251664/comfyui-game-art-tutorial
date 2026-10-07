@@ -10,7 +10,7 @@ date: 2026-10-01
 
 - 圖片：![SDXL concept 實機候選](../../../output/live_smoke_20261001_01/concept_00070_.png)
 - Manifest：[concept.result.json](../../../output/live_smoke_20261001_01/concept.result.json)
-- 狀態：candidate（待 Steve 驗收；未收到 accepted／rejected 決定）
+- 狀態：candidate（待美術審核者驗收；未收到 accepted／rejected 決定）
 - 日期：2026-10-01（使用者端日期）
 - Task／profile：`concept`／`sdxl_standard`
 - Checkpoint／seed：`sd_xl_base_1.0.safetensors`／`2026100101`
@@ -22,4 +22,4 @@ date: 2026-10-01
 - 本次視覺觀察：單一圓玻璃瓶、綠液、棕色軟木塞，完整置中，未見文字；背景偏淡灰並有投影，未完全符合純白背景要求。這是單次輸出觀察，不代表所有 prompt 或模型表現。
 - 原始 prompt 留在 manifest，不複製長 prompt 到素材頁。圖片與 JSON 保留於 `output/live_smoke_20261001_01/`；本頁只連結原檔，是否隨 repo 版控依 `.gitignore` 與實際提交狀態為準。
 
-`technical_validation=pass` 不等於美術驗收通過；需由 Steve 看圖後決定是否接受。
+`technical_validation=pass` 不等於美術驗收通過；需由美術審核者看圖後決定是否接受。

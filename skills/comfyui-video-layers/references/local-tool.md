@@ -78,7 +78,7 @@ Server 原子建立新輸出目錄，包含 `candidate.mp4`、`manifest.json`、
 
 `arm-segment-v1` 只在下方甲片有效；`arm-segment-v2/v3` 的後續提示未生效，因 Transformers 5.15 在 frame-0 `obj_with_new_inputs` 會消耗多影格提示。修正為逐影格 just-in-time prompt 注入並聚合多物件 IDs 後，`arm-segment-v4`（plan-v3）於 frame 22 面積 25,229→39,261、frame 38 面積 15,064→36,642；新增區域仍粗糙、甲片輪廓不準且中間漏選。Production current 雙物件 mask 可運作，但仍需逐幀人工修邊；technical pass 不代表準確 matte。
 
-肉眼 current QA 顯示甲片貼在靜態 Steve 的畫面左側衣袖，後段位置、比例和裁切仍錯；armor mask 到 frame 22 含部分背景，外溢 glow 漏選。`independent-png-qa.json` 直接讀實際 39 張輸出 PNG：production compose protected head/collar 區每幀 666,624 pixels，total changed 0；`prop-occlusion-current` fingers white matte 每幀 14,785 pixels；`belt-occlusion-current` jacket matte 每幀 958,351 pixels；後兩者遮擋區 total changed 都為 0。三者 manifest outside-mask changed max 均為 0。這些數值代表 PNG matte 區域像素驗證，不等於 MP4 無損或美術接受。
+肉眼 current QA 顯示甲片貼在靜態人物的畫面左側衣袖，後段位置、比例和裁切仍錯；armor mask 到 frame 22 含部分背景，外溢 glow 漏選。`independent-png-qa.json` 直接讀實際 39 張輸出 PNG：production compose protected head/collar 區每幀 666,624 pixels，total changed 0；`prop-occlusion-current` fingers white matte 每幀 14,785 pixels；`belt-occlusion-current` jacket matte 每幀 958,351 pixels；後兩者遮擋區 total changed 都為 0。三者 manifest outside-mask changed max 均為 0。這些數值代表 PNG matte 區域像素驗證，不等於 MP4 無損或美術接受。
 
 `prop-occlusion-current`（8.338 秒）與 `belt-occlusion-current`（7.903 秒）都為 39 幀、1024 square、60 FPS、H.264/AAC、31,744 samples、full decode pass、technical warning/candidate。Props 由使用者照片去背／旋轉而來，沒有生成道具；靜態照片重複 39 幀，拇指離物、指緣不自然。腰帶 matte 遮擋有效，但照片透視、3D 繞腰接觸與動態尚未解決，手勢和腰帶素材均未 accepted。
 

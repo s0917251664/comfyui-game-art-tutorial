@@ -8,7 +8,7 @@
 - 成品音訊統一為 48 kHz、雙聲道、PCM 16-bit WAV；Animatic/Dub 輸出 H.264、24 FPS MP4，可帶 AAC。單次片段最長 10 分鐘；單次 TTS 文字上限 5,000 字，Qwen3 單段上限 500 字；Animatic 每份最多 200 鏡。較長作品分段製作。
 - 輸出路徑必須是新檔名；同名檔案或 sidecar 已存在時會停止。每個輸出旁寫 `.json` 技術 manifest，技術 pass 的內容狀態仍為 `candidate`。
 - 不提供字幕燒錄、ducking、time stretch、音樂生成或自動播放。唇形同步是另一個選配 helper，狀態見[本機唇形同步 helper](lipsync-tools.md)。配音長短不符需調整計畫，或對 `dub` 明確選擇補靜音／裁切；`mix` 超峰值預設報錯，需明確指定正規化政策。
-- TTS 先作聲線草稿與台詞量時；聽取並調整台詞、停頓與鏡頭時間後，才把實測秒數寫回計畫。所有音訊、靜幀、Animatic 與影片先列 `candidate`，由 Steve 決定是否接受。
+- TTS 先作聲線草稿與台詞量時；聽取並調整台詞、停頓與鏡頭時間後，才把實測秒數寫回計畫。所有音訊、靜幀、Animatic 與影片先列 `candidate`，由美術審核者決定是否接受。
 
 ## CLI 範例
 
