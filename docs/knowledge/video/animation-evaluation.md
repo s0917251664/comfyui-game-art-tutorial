@@ -12,7 +12,7 @@ last_updated: 2026-10-06
 
 本筆記整理 2026-10-06 已有的 Wan2.2 Animate 技術證據，以及 SCAIL-2 是否值得作為下一個研究方向。目標是建立可比較、可回溯的學習方式；本筆記不代表生成內容已驗收，也不授權安裝 SCAIL-2 權重或自動 queue。
 
-目前機器為 RTX 4080（16,376 MiB VRAM）、31.1 GiB RAM。本機已安裝 Wan Animate 14B FP8 scaled。已測設定為 384×384、33 幀、16 FPS、6 steps、CFG 1、Euler/simple、seed 20261005。Mix 與 Move 的 API 技術 smoke 通過，但 Mix/Move 有攝影機頭身份漂移，Move 另憑空出現吉他；結果仍是 candidate，沒有 Steve 的 accepted 決定。此原生 UI workflow 尚未接入 `generate.py` task/backend。完整安裝 pins、執行紀錄及輸出位置見[安裝紀錄](wan-animate-install.md)。
+目前機器為 RTX 4080（16,376 MiB VRAM）、31.1 GiB RAM。本機已安裝 Wan Animate 14B FP8 scaled。已測設定為 384×384、33 幀、16 FPS、6 steps、CFG 1、Euler/simple、seed 20261005。Mix 與 Move 的 API 技術 smoke 通過，但 Mix/Move 有攝影機頭身份漂移，Move 另憑空出現吉他；結果仍是 candidate，沒有美術審核者的 accepted 決定。此原生 UI workflow 尚未接入 `generate.py` task/backend。完整安裝 pins、執行紀錄及輸出位置見[安裝紀錄](wan-animate-install.md)。
 
 ## 優先檢查的可驗證假說
 
@@ -40,13 +40,13 @@ last_updated: 2026-10-06
 2. **遮罩理解：** 對照官方範本檢視 SCAIL-2 mask 黑／白／彩色語義；產物是標註語義的 mask 預覽。若只有一般二值 SAM mask 或顏色身份映射不清，停止 SCAIL-2 執行規劃。
 3. **Prompt 對齊：** 逐句核對 prompt 是否描述角色參考及實際來源動作，並依 Mix／Move 分別寫鏡頭背景要求；產物是鎖定的 prompt 版本。若描述加入來源不存在的動作或道具，先修 brief。
 4. **受控比較：** 固定輸入與參數，只改一項，保存實際 graph、manifest 及候選輸出；產物是逐候選測試紀錄。若技術 preflight 缺 node／模型、輸入 hash 改變，或輸出無法解碼，停止本輪並記錄，不將失敗候選混入品質比較。
-5. **品質檢視與決定：** 查看首／中／末幀並對照 brief，寫下技術結果、內容缺陷與 Steve 決定；產物是帶 candidate／accepted／rejected 狀態的驗收紀錄。若身份漂移、幻覺道具或必要錨點不符，保持 candidate 或由 Steve 決定拒絕；不得自動重送或升格。
+5. **品質檢視與決定：** 查看首／中／末幀並對照 brief，寫下技術結果、內容缺陷與美術審核者的決定；產物是帶 candidate／accepted／rejected 狀態的驗收紀錄。若身份漂移、幻覺道具或必要錨點不符，保持 candidate 或由美術審核者決定拒絕；不得自動重送或升格。
 
 先完成 Wan Animate 內部受控比較，再評估是否值得加入 SCAIL-2；後者需另確認彩色 mask 製作、環境相容、輔助權重、磁碟及實際 VRAM。官方提供訓練程式碼不表示本機已具備可重現的訓練環境，本機微調能力尚未驗證。
 
 另外已有兩份僅更改 positive prompt 的 Wan Animate UI workflow 候選，供 UI 載入檢視： [Mix identity candidate](../../../output/animation-evaluation/WanAnimate-RTX4080-mix-identity-candidate.json) 與 [Move identity candidate](../../../output/animation-evaluation/WanAnimate-RTX4080-move-identity-candidate.json)。新 prompt 聚焦粉紅金屬、相機形機械頭、白藍針織衫、黃色長褲及來源中的頭手動作；檔案結構檢查通過，但兩份都尚未 queue 或做美術驗收。hash 與變更欄位見 [template manifest](../../../output/animation-evaluation/template-manifest.json)。這些是額外候選檔，不替換已部署 workflow。
 
-可使用[動畫 brief 模板](templates/animation-brief.md)固定需求與身份錨點，並用[動畫測試紀錄模板](templates/animation-test-record.md)逐候選追溯 graph、prompt、模型、技術檢查、內容觀察和 Steve 的決定。候選應保留 candidate 狀態，直到有明確人工驗收；不要因技術 smoke 通過或模型／prompt 看似更合適就自動標成 accepted。
+可使用[動畫 brief 模板](templates/animation-brief.md)固定需求與身份錨點，並用[動畫測試紀錄模板](templates/animation-test-record.md)逐候選追溯 graph、prompt、模型、技術檢查、內容觀察和美術審核者的決定。候選應保留 candidate 狀態，直到有明確人工驗收；不要因技術 smoke 通過或模型／prompt 看似更合適就自動標成 accepted。
 
 ## 來源與限制
 

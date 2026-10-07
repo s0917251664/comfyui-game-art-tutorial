@@ -58,7 +58,7 @@ RTX 4080（16,376 MiB VRAM）、31.1 GiB RAM；ComfyUI 位於 `C:/Users/XU/Comfy
 
 ## SCAIL-2 安裝與實測（2026-10-06）
 
-Steve 於 2026-10-06 同意下載並實測。以固定 revision 下載三個檔案並逐一核對 SHA-256，合計 20,667,070,257 bytes（19.25 GiB）：SCAIL-2 14B FP8 scaled 主模型與 DPO LoRA（`Comfy-Org/SCAIL-2` @ `fe3c728bc793ba21ca674688f822afb709ad44fb`）、SAM3.1 multiplex（`Comfy-Org/sam3.1` @ `7bb8374780a725b4353ed31f3a9395c9742b5621`）。UMT5、CLIP Vision H、LightX2V LoRA 與 VAE 重用 Wan Animate 既有檔案；官方範本寫的 `Wan2_1_VAE_bf16` 改用本機 `wan_2.1_vae.safetensors`，實測可解碼。ComfyUI 版本不變（`WanSCAILToVideo` 等節點為 core 內建），未新增 custom node 或 Python 套件。下載腳本與記錄在 ignored `output/scail2-install/`。
+使用者於 2026-10-06 同意下載並實測。以固定 revision 下載三個檔案並逐一核對 SHA-256，合計 20,667,070,257 bytes（19.25 GiB）：SCAIL-2 14B FP8 scaled 主模型與 DPO LoRA（`Comfy-Org/SCAIL-2` @ `fe3c728bc793ba21ca674688f822afb709ad44fb`）、SAM3.1 multiplex（`Comfy-Org/sam3.1` @ `7bb8374780a725b4353ed31f3a9395c9742b5621`）。UMT5、CLIP Vision H、LightX2V LoRA 與 VAE 重用 Wan Animate 既有檔案；官方範本寫的 `Wan2_1_VAE_bf16` 改用本機 `wan_2.1_vae.safetensors`，實測可解碼。ComfyUI 版本不變（`WanSCAILToVideo` 等節點為 core 內建），未新增 custom node 或 Python 套件。下載腳本與記錄在 ignored `output/scail2-install/`。
 
 替換 33 幀、替換 61 幀（兩段延伸）、動畫 33 幀三次 queue 全部技術通過，RTX 4080 16 GB 可執行 384×384。身份一致性比 Wan Animate 好，但兩種模式都變成全身構圖、未貼合來源近景鏡頭，內容仍為 candidate。檔案清單、模式、動態欄位與實測細節見 [SCAIL-2 reference](../../../skills/comfyui-wan-animate/references/scail2.md)；官方研究來源仍見[動畫評估筆記](animation-evaluation.md)。
 

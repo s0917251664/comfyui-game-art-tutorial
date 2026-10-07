@@ -16,4 +16,4 @@
 
 ## 為什麼不做「AI 自動判斷圖層邊界」
 
-2026-09-05 起可先用獨立 `sam_segment.py` 產生 SAM 2.1 候選遮罩，再把人工驗收通過的 `mask_comfy.png` 交給 `layer_split`。SAM 候選沒有語意名稱，也不會自動補畫交疊部位；無合適候選時仍要用 Simple Mask Tool 手動畫。完整證據與限制見 `reference/sam-segmentation.md`。
+2026-09-05 起可先用獨立 `sam_segment.py` 產生 SAM 2.1 候選遮罩，再把人工驗收通過的 `mask_comfy.png` 交給 `layer_split`。SAM 候選沒有語意名稱，也不會自動補畫交疊部位；無合適候選時仍要用 Simple Mask Tool 手動畫。完整證據與限制見 [sam-segmentation.md](sam-segmentation.md)。

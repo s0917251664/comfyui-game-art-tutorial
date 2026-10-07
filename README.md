@@ -9,7 +9,7 @@
 1. **說明要做的事**：例如從文字做概念圖、修改一張既有圖片、製作同系列物件、做短動態特效，或處理本機圖片檔。
 2. **說明來源與保留項**：指出哪張是編修目標，其他圖各自提供角色、姿勢、材質、結構或背景資訊；列出本輪要改什麼、哪些細節要保留，以及如何判斷結果可用。
 3. **選執行路線**：初次使用或尚未選引擎時，先依[初始化技能](skills/game-art-initialize/SKILL.md)整理需求並盤點能力；不由舊預設推定安裝意圖。若明確選 ComfyUI，已配置專案的日常工作沿用該引擎，按 task 核對其能力 gate；若選平台原生圖片工具，只使用當下會話實際提供的功能與欄位，不需本機 GPU 或 ComfyUI 設定。兩者不能互相代替實測結果。
-4. **逐項檢查並選版本**：確認內容、格式和素材規格，再由美術決定接受、退回修改或停止。技術檢查通過不等於美術接受。
+4. **逐項檢查並選版本**：確認內容、格式和素材規格，再由美術決定接受、退回修改或停止。[技術檢查通過不等於美術接受](docs/knowledge/rules/candidate-review.md)。
 
 | 工作情境 | 共用方法 | 執行路線與界線 |
 |---|---|---|
@@ -36,7 +36,7 @@
 
 2026-10-05，在當前會話使用平台原生圖片工具完成文字生圖與單張來源圖編修各一張：先生成透明背景的藍色魔法藥水瓶，再要求只把液體改成紅色。兩張輸出均為 1254×1254 RGBA PNG，具有實際透明像素。瓶身、瓶塞與金屬構圖目視接近，但玻璃高光、液體細節及部分 Alpha 有變化；藍版可見內容碰到畫布邊界，紅版未出現碰邊問題。這說明語意編修可完成顏色變更，但不能據此承諾其他細節或像素完全保留。
 
-兩張圖都只是待 Steve 驗收的 candidate。紅色修改沒有使用遮罩，因此不能判斷指定區域外是否精確保留；這次也沒有驗證多參考輸入、其他平台或任何影片能力。這是單一會話及兩個案例的紀錄，不代表通用平台能力或跨平台驗證。
+兩張圖都只是待美術審核者驗收的 candidate。紅色修改沒有使用遮罩，因此不能判斷指定區域外是否精確保留；這次也沒有驗證多參考輸入、其他平台或任何影片能力。這是單一會話及兩個案例的紀錄，不代表通用平台能力或跨平台驗證。
 
 實測詳細 JSON 位於本機 `output/platform-image-smoke-20261005/execution-review.json`。`output/` 與 `reports/` 依 `.gitignore` 忽略，相關報告、生成圖與 ZIP 不會納入一般 Git 提交，目前也未發布到 GitHub Pages；它們只能說明該次本機觀察，不能作為 repo 可攜能力或其他平台 runtime 已驗證的依據。
 
@@ -88,9 +88,9 @@ python -m pytest
 |---|---|
 | [`教學.md`](教學.md) | 完整建置紀錄、功能地圖、設備選型 |
 | [`AGENTS.md`](AGENTS.md) | agent 入口、原則與工具職責 |
-| [產圖技能](skills/comfyui-art-gen/SKILL.md) / [task 參數](skills/comfyui-art-gen/reference/full-params.md) | ComfyUI 圖片 task、輸入、能力 gate 與限制 |
+| [產圖技能](skills/comfyui-art-gen/SKILL.md) / [task 參數](docs/knowledge/art-parameters.md) | ComfyUI 圖片 task、輸入、能力 gate 與限制 |
 | [產影片技能](skills/comfyui-video-gen/SKILL.md) / [單角色動畫](skills/comfyui-character-animation-workflow/SKILL.md) | ComfyUI 影片 task、backend 與角色動作交付 |
-| [安裝流程](skills/comfyui-install/SKILL.md) / [模型清單](skills/comfyui-install/reference/models.md) | 新機器環境與模型準備 |
+| [安裝流程](skills/comfyui-install/SKILL.md) / [模型清單](docs/knowledge/installation/models-and-sources.md) | 新機器環境與模型準備 |
 | [模型設定檔設計](docs/model-profiles-design.md) | SDXL／SD1.5 設定檔與平台驗證狀態 |
 | [本機圖片工具](skills/local-image-edit-tools/SKILL.md) / [物件組裝](skills/comfyui-object-design/SKILL.md) / [工具總表](docs/knowledge/TOOLS.md) | 本機像素操作、固定 Core 組裝與能力入口 |
 | [單一物件換色紀錄](docs/knowledge/art/single-object-color.md) | HSV 色相旋轉案例與限制 |
@@ -108,7 +108,7 @@ python -m pytest
 | 某次實測的版本、hash 與結果 | `docs/tested-versions.md` 與已追蹤的日期化實測紀錄；`output/` 下的本機檔案不會隨 repository 發布 |
 | 架構理由與未實作構想 | 設計稿、歷史升級評估；不能據此宣稱能力已可用 |
 
-發現文件與實作衝突時，先核對實作並修正說明；不要為了符合舊文件而臨場改 graph、換模型或補不存在的旗標。
+發現文件與實作衝突時，先核對實作並修正說明；不要為了符合舊文件而臨場改 graph、換模型或補不存在的旗標（[R2](docs/knowledge/rules/fixed-graphs.md)）。
 
 ## 授權
 

@@ -32,7 +32,7 @@ profile 的 `validation[<platform_key>]` 是證據項目清單：
 {"report": "docs/knowledge/validation/macos-mps/2026-10-06-image-core-sdxl_standard.json",
  "report_sha256": "...", "tasks": ["concept", "..."], "profile_sha256": "...",
  "env": {"comfyui_version": "0.34.0", "comfyui_commit": "...", "models_hash": "...", "custom_nodes_hash": "..."},
- "min_memory_mb": 18432, "approved_by": "steve", "approved_at": "2026-10-07T10:00:00+00:00"}
+ "min_memory_mb": 18432, "approved_by": "reviewer", "approved_at": "2026-10-07T10:00:00+00:00"}
 ```
 
 - task 在該平台是 `verified`：有證據項目涵蓋它，且可用記憶體不低於 `min_memory_mb`。
@@ -71,7 +71,7 @@ profile 的 `validation[<platform_key>]` 是證據項目清單：
 適用調整 profile 預設參數，或換模型／新增 profile。原則：工具只收集證據、讓比較容易，決定一律由人做；不自動評分、不自動改 profile、不跨平台比較 A/B。
 
 1. profile 加 `stage: experimental | candidate | stable`；`experimental` 永不成為預設，需明確 `--profile`（FLUX.2 PoC 可用此表達）。stage 是採用決策，validation 是平台技術驗證，兩者分開。
-2. `experiment new <名稱>`：在 `docs/knowledge/experiments/<日期>-<名稱>/` 建 `plan.json`（假設、baseline、candidate、task、固定 prompt／seed，預設沿用 smoke 套件輸入）。
+2. `experiment new <名稱>`：在 `docs/knowledge/experiences/<日期>-<名稱>/` 建 `plan.json`（假設、baseline、candidate、task、固定 prompt／seed，預設沿用 smoke 套件輸入）。
 3. `experiment run`：A／B 同 prompt、同 seed 各跑一次，每組並排總覽圖（即把 sweep 擴充為可比較 profile／模型）；自動產生實驗筆記草稿，事實欄位（環境、hash、耗時、未安裝項目）自動填，結論留空。
 4. `experiment judge`：人逐組選 A 較好／B 較好／差不多／無法判斷，綁定兩邊輸出 hash、需 `--by`；彙整進筆記。這是人的判斷紀錄，不是工具分數。
 5. 採用時由實驗筆記產生 `decisions/` ADR 草稿，人確認後才改 profile（commit 引用 ADR）。profile 內容 hash 改變會使各平台驗證自動失效，需各平台重跑 smoke → `validation propose` → 使用者同意後 `approve`。

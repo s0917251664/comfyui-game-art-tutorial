@@ -8,7 +8,7 @@ withdrawn: true
 
 ## 適用範圍
 
-XU-Nano-PC；ComfyUI v0.34.0，既有本機安裝環境。這是 2026-10-01 Steve 撤回 SQLite 資產庫方案之前的歷史測試紀錄。它描述當時的 opt-in manifest 與短暫 SQLite 試作，不代表目前支援此工具或該版本數字仍適用；圖片內容也未通過 Steve 驗收。
+XU-Nano-PC；ComfyUI v0.34.0，既有本機安裝環境。這是 2026-10-01 使用者撤回 SQLite 資產庫方案之前的歷史測試紀錄。它描述當時的 opt-in manifest 與短暫 SQLite 試作，不代表目前支援此工具或該版本數字仍適用；圖片內容也未通過美術審核者驗收。
 
 ## 執行與證據
 

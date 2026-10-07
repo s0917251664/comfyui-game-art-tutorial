@@ -11,7 +11,7 @@ description: 執行 ComfyUI 遊戲圖片既有 task，負責本機能力檢查�
 
 12 個圖片 task 中，`layer_split` 是 ComfyUI Core 遮罩裁切，不需生成底模，但仍依現有 task/gate/ComfyUI 執行。平台圖片生成由[平台圖片技能](../platform-image-gen/SKILL.md)負責，不讀本機 config、不套用本機參數。缺本機能力時不得自行切到平台；依使用者已選定的引擎交接。
 
-每次先看[工具範圍總表](../../docs/knowledge/TOOLS.md)，再按任務只查本技能與 vault 的相關頁面；不要讀入整個知識庫。把自然語言需求轉成 `generate.py` 的固定 task 與必要參數；目標是可重複產圖，不臨場組 graph。適用於概念圖、角色／姿勢圖、構圖控制、局部修改、材質變體、圖示與去背。
+每次先看[工具範圍總表](../../docs/knowledge/TOOLS.md)，再按任務只查本技能與 vault 的相關頁面；不要讀入整個知識庫。把自然語言需求轉成 `generate.py` 的固定 task 與必要參數；目標是可重複產圖，不臨場組 graph（[R2](../../docs/knowledge/rules/fixed-graphs.md)）。適用於概念圖、角色／姿勢圖、構圖控制、局部修改、材質變體、圖示與去背。
 
 不適用於整張 UI 版面、Logo／中文字排版、影片或尚未接入的能力。單一 UI 圖示可用 `icon_asset`。影片需求改讀 [comfyui-video-gen](../comfyui-video-gen/SKILL.md)。未有 task 覆蓋的重複生產需求，依 [新能力清單](../comfyui-new-tool-checklist/SKILL.md) 評估；不可把圖片 task 假裝成影片或自行接線替代。
 
@@ -60,54 +60,6 @@ description: 執行 ComfyUI 遊戲圖片既有 task，負責本機能力檢查�
 ## 決策、模型與經驗
 
 只在 task 選擇、模型能力或驗收問題相關時，讀 [生效中決策](../../docs/knowledge/DECISIONS.md) 或依模型/task 查 [經驗索引](../../docs/knowledge/INDEX.md)；不要把歷史觀察當成預設生成規則。SDXL/SD1.5 validation 依本機能力快照；FLUX.2 依獨立 preflight 與適用平台證據。經驗只有累積可重現證據並人工核准後才能提升為正式規則。
-
-## 舊版段落入口
-
-以下標題保留舊技能錨點，正文已移至 vault：
-
-## 核心原則
-
-見 [art-generation.md](../../docs/knowledge/art-generation.md)。
-
-### 產出後自檢
-
-見上方步驟 6 及 [art-generation.md](../../docs/knowledge/art-generation.md)。
-
-## 環境
-
-見 [art-generation.md](../../docs/knowledge/art-generation.md)。
-
-### 這台機器能跑什麼（SDXL/SD1.5 模型設定檔）
-
-見 [art-generation.md](../../docs/knowledge/art-generation.md)。
-
-## 決策順序(這個需求該不該走這條管線)
-
-見 [art-generation.md](../../docs/knowledge/art-generation.md)。
-
-## 任務判斷(先分類,再決定要問什麼)
-
-見 [art-generation.md](../../docs/knowledge/art-generation.md)。
-
-## 各 task 必要輸入
-
-見 [art-generation.md](../../docs/knowledge/art-generation.md)。
-
-## 參數界線與送出前檢查
-
-見 [art-parameters.md](../../docs/knowledge/art-parameters.md)。
-
-## 執行
-
-見 [art-generation.md](../../docs/knowledge/art-generation.md)。
-
-## 離線檢查與實機 smoke test
-
-見 [art-generation.md](../../docs/knowledge/art-generation.md)。
-
-## 深入參考(邊界情況/踩過的坑,查這裡,不用每次都讀)
-
-按需知識連結見下方參考清單。
 
 ## 按需參考
 

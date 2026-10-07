@@ -4,7 +4,7 @@
 
 本次把六份技能入口改為漸進揭露路由，並將可重用的 task、參數、安裝、維護、影片、角色動畫、決策與經驗資料集中到 `docs/knowledge/`，作為可由 Obsidian 開啟的 vault。入口保留原有 skill name/description 與重要路由、能力 gate、平台限制、設定／URL／部署／輸出目錄契約、人工驗收和一次有理由修正。舊 art reference 頁保留標題與相容連結。知識頁按需載入；經驗不會自動改寫 profile 或生成規則。
 
-圖片結果 manifest 維持 opt-in：`--result-json` 記錄技術資訊，不改變既有 task 選擇或輸出策略，也不等同美術驗收。素材頁與人工驗收狀態以 `docs/knowledge/assets/*.md` 的標準 Markdown 記錄；技術測試候選必須維持 `candidate`，不得由技術檢查或遷移動作推定為 `accepted`。本次 `smoke-potion` 已由舊測試資料遷移到 [Markdown 素材頁](knowledge/assets/smoke-potion.md)，圖檔與 JSON manifest 留在 repo `output/` 內；遷移 hash 完整核對，沒有記錄 Steve 的 accepted 決定。舊 SQLite smoke database 已移除，原 PNG／JSON 證據保留。
+圖片結果 manifest 維持 opt-in：`--result-json` 記錄技術資訊，不改變既有 task 選擇或輸出策略，也不等同美術驗收。素材頁與人工驗收狀態以 `docs/knowledge/assets/*.md` 的標準 Markdown 記錄；技術測試候選必須維持 `candidate`，不得由技術檢查或遷移動作推定為 `accepted`。本次 `smoke-potion` 已由舊測試資料遷移到 [Markdown 素材頁](knowledge/assets/smoke-potion.md)，圖檔與 JSON manifest 留在 repo `output/` 內；遷移 hash 完整核對，沒有記錄美術審核者的 accepted 決定。舊 SQLite smoke database 已移除，原 PNG／JSON 證據保留。
 
 ## 主要文件
 
@@ -27,7 +27,7 @@
 - 撤回前歷史紀錄：當時曾報告 157 tests、0 skip，portable verifier 為 19 pass / 0 fail，另有 11 個 source/deployed `.py` 與 `.json` 檔案 hash 相符。這些數字包含後來撤回的 SQLite 資產庫工具與部署檔，不代表目前版本；僅 `asset_library` 部署副本及其 hash 檢查已移除，其餘 portable 部署核對保留。
 - 五個實機結果（SDXL concept、去背透明輸出、layer split、FLUX.2 concept、FLUX.2 edit）經最後 validator 重讀，對應 PNG hash、尺寸與 alpha 相符；技術驗證通過不代表內容已接受。
 - 同環境、同 seed 73101 的 concept legacy 呼叫與加上 `--result-json` 的呼叫，PNG bytes 與 pixels 相同。ComfyUI 允許同 graph 命中快取，因此這只驗證新旗標未改 graph／輸出，不是獨立重抽或跨 GPU 一致性證明。
-- `smoke-potion` 候選由 SQLite 歷史資料遷移至 Markdown 素材頁，所有保留檔案 hash 核對一致；狀態仍是 `candidate`，尚無 Steve accepted/rejected 決定。舊 smoke database 已移除，PNG 與 JSON manifest 證據保留。輸出仍可見多個瓶子與大面積灰底／陰影。
+- `smoke-potion` 候選由 SQLite 歷史資料遷移至 Markdown 素材頁，所有保留檔案 hash 核對一致；狀態仍是 `candidate`，尚無美術審核者的 accepted/rejected 決定。舊 smoke database 已移除，PNG 與 JSON manifest 證據保留。輸出仍可見多個瓶子與大面積灰底／陰影。
 - 撤回前歷史連結掃描曾記錄 287 個相對連結、0 個失效，並假設 vault 內連結不出 vault；此結果不代表目前連結拓撲。現況 root 重查 `docs/knowledge/` 有 72 個 vault 相對連結、0 個 broken。另有素材頁兩個 artifact link 指向 vault 外的 repo `output/`，以及一條 ADR link 指回本報告；這些連結是否有效以目標檔案實際存在為準。舊標題相容性已檢查；Obsidian UI 未安裝，未做 GUI 驗證。
 
 ## 入口檔 UTF-8 byte 數

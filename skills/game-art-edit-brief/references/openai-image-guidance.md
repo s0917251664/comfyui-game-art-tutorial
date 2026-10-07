@@ -22,4 +22,4 @@
 
 ## 本機輸入依據
 
-本機 task 欄位查[遊戲圖片編修需求整理技能](../SKILL.md)、[圖片完整參數規格](../../comfyui-art-gen/reference/full-params.md)所指向的 canonical [art-parameters.md](../../../docs/knowledge/art-parameters.md) 及 task 文件；工具契約和證據見 [edit-tools.md](../../../docs/knowledge/art/edit-tools.md)。`guided_inpaint` 需要已確認 Alpha mask，`character_action` 是角色與姿勢參考欄位，`flux2_edit` 僅支援單張來源圖且沒有 mask 或 denoise 控制。其他輸入不能從官方 API 文件推定。
+本機 task 欄位查[遊戲圖片編修需求整理技能](../SKILL.md)、[圖片完整參數規格 art-parameters.md](../../../docs/knowledge/art-parameters.md) 及 task 文件；工具契約和證據見 [edit-tools.md](../../../docs/knowledge/art/edit-tools.md)。`guided_inpaint` 需要已確認 Alpha mask，`character_action` 是角色與姿勢參考欄位，`flux2_edit` 僅支援單張來源圖且沒有 mask 或 denoise 控制。其他輸入不能從官方 API 文件推定。

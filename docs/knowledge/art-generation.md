@@ -52,7 +52,7 @@ FLUX.2 不屬於上述 image profile 或 SDXL tier；`generate.py` 會以 `valid
 
 1. **有沒有現成 task 覆蓋這個需求?** 對照下面「任務判斷」表跟 `docs/knowledge/art-parameters.md`。有覆蓋就用它,不要因為「MCP 比較彈性」或「自己組 graph 比較快」就繞過去——這條產線存在的目的就是要比臨場組圖穩定、可重現,能用鎖死 task 就不要繞道。
 2. **這台機器能不能跑、驗證過沒有?** SDXL/SD1.5 task 照上面小節讀 `image_capabilities.json`；FLUX.2 依上節核對獨立 preflight 所需內容與實測紀錄，先告知是實驗性路線；沒有適用硬體的實測紀錄時，說明尚未驗證並依使用者同意進行試跑。task 不可用或設定檔不提供(例如 `sd15_light` 要 `style_lock`)就不要硬送——`generate.py` 會在上傳前 fail-fast 拒絕,不會產出爛結果,但也不會自動找替代方案。如實告訴使用者「這台機器目前跑不了這個 task」和缺什麼,選項是補裝(照 `skills/comfyui-install/SKILL.md`)、換一台已裝好的機器(`--comfy-url` 指過去)、或先不做;`unverified` 要先講清楚再做。**不要為了避開錯誤自行換設定檔或降級**(使用者明確要求換管線時才加 `--profile`,規則見 `docs/knowledge/art-parameters.md`「選用模型設定檔」),也**不要因為 task 存在就假設任何機器都能跑**。影片是同一套邏輯,查 `video_capabilities.json` 有沒有可用 backend,見 `skills/comfyui-video-gen/SKILL.md`。
-3. **⚠️ 尚未實作,先別當成可用選項——沒有現成 task 覆蓋,而且是一次性/探索性需求**(使用者在旁邊看效果、不是要排程量產、不是要當最終交付物)→ 規劃中是改用 ComfyUI MCP 直接操作,並跟使用者明講這次輸出沒有走鎖死管線,沒有 output contract/capability 驗證/resume 保障,品質自負,不要悄悄把 MCP 產出當成跟 `generate.py` 同等可靠。**這個 repo 目前還沒接 ComfyUI MCP,這條規則接上之前不適用——遇到這種需求,現在只能如實跟使用者說「目前沒有對應工具,做不到」,不要假裝有 MCP 可以救援,也不要自己臨場亂組 graph 頂替。**
+3. **⚠️ 尚未實作,先別當成可用選項——沒有現成 task 覆蓋,而且是一次性/探索性需求**(使用者在旁邊看效果、不是要排程量產、不是要當最終交付物)→ 規劃中是改用 ComfyUI MCP 直接操作,並跟使用者明講這次輸出沒有走鎖死管線,沒有 output contract/capability 驗證/resume 保障,品質自負,不要悄悄把 MCP 產出當成跟 `generate.py` 同等可靠。**這個 repo 目前還沒接 ComfyUI MCP,這條規則接上之前不適用——遇到這種需求,現在只能如實跟使用者說「目前沒有對應工具,做不到」,不要假裝有 MCP 可以救援,也不要自己臨場亂組 graph 頂替（[R2](rules/fixed-graphs.md)）。**
 4. **沒有現成 task 覆蓋,而且這個需求會重複用到**(使用者說「以後常常要這樣」、或這其實要上生產線)→ 不要一直停在 MCP 或手動操作,照 `skills/comfyui-new-tool-checklist/SKILL.md` 把它轉正成真正的 task。
 
 ## 任務判斷(先分類,再決定要問什麼)

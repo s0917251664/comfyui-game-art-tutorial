@@ -18,7 +18,7 @@ description: 在選定 ComfyUI 路線時，以既有圖片 task 和 Core helper 
 3. 需要放置時，依情境用已部署的 `comfyui_design.py` 固定 Core graph：`scene` 把一張透明物件放進一張不透明背景；`sheet` 把 1–16 張透明素材排成檢視表；`pattern` 將同一張透明素材按格重複。這些是確定性合成，不會生成或修補輸入內容。
 4. 先從 `local_config.json` 取得 `comfyui_path`、`python_exe`、`generate_script`、`comfyui_url`、`output_dir`。helper 在 `<comfyui_path>\tools\comfyui_design.py`；同目錄需有既有 `generate.py` facade、`image_edit_tools.py` 與 `comfyui_pipeline/`。執行時明確傳 `--comfy-url <設定值>`、`--output-dir <新資料夾>`；輸出資料夾不得已存在。helper 會先檢查 Core node schema，通過後才上傳輸入及排程；遇錯不自動重試。
 5. 中文標題、品牌字、長文案和精細版面交給外部文字／向量排版工具；目前 helper 標題僅支援 ASCII，且只有固定頂端／底端位置。Comfy Core 合成輸出為不透明 RGB，不能當作透明資產交付。
-6. 開啟實際輸出檢查物件完整性、位置、縮放、接縫、背景關係及尺寸；manifest 的 `candidate` 和技術成功都不代表美術驗收。保存 request、graph、history、manifest 及輸出路徑，等待使用者決定接受與否。
+6. 開啟實際輸出檢查物件完整性、位置、縮放、接縫、背景關係及尺寸；manifest 的 `candidate` 和技術成功都不代表美術驗收（[R1](../../docs/knowledge/rules/candidate-review.md)）。保存 request、graph、history、manifest 及輸出路徑，等待使用者決定接受與否。
 
 
 ## 已知能力界線
@@ -27,7 +27,7 @@ description: 在選定 ComfyUI 路線時，以既有圖片 task 和 Core helper 
 - `sheet` 是排版檢視圖，可統一格子與可見範圍留白，不會讓生成的多個物件自動共享風格或相同物件比例。
 - `pattern` 重複一個母圖樣，不做 seamless（無縫）接縫生成或檢查。
 - `TextOverlay` 目前只接受可列印 ASCII，不支援中文字型與一般海報排版。
-- 不得臨場組 graph，也不新增 `generate.py` task、模型或 profile。需要新生成能力時先走[新能力清單](../comfyui-new-tool-checklist/SKILL.md)。
+- 不得臨場組 graph（[R2](../../docs/knowledge/rules/fixed-graphs.md)），也不新增 `generate.py` task、模型或 profile。需要新生成能力時先走[新能力清單](../comfyui-new-tool-checklist/SKILL.md)。
 
 
 ## 固定 CLI 範例

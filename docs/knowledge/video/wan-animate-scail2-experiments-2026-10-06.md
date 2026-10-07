@@ -110,7 +110,7 @@ last_updated: 2026-10-06
 
 ## 使用者決定
 
-待審。所有候選維持 candidate 狀態，未獲 Steve 的明確美術驗收。
+待審。所有候選維持 candidate 狀態，未獲美術審核者的明確驗收。
 
 ## 來源與追溯
 
@@ -125,7 +125,7 @@ last_updated: 2026-10-06
 - [安裝記錄](wan-animate-install.md)：模型版本與 pins
 - [官方 SCAIL-2 workflow](https://github.com/Comfy-Org/workflow_templates/blob/main/templates/video_wan21_scail2_character_replacement.json)
 
-**SCAIL-2 下載記錄**（2026-10-06 Steve 同意下載；逐檔核對 SHA-256）
+**SCAIL-2 下載記錄**（2026-10-06 使用者同意下載；逐檔核對 SHA-256）
 
 | 檔案 | Bytes | SHA-256 | Repo @ Revision |
 |---|---:|---|---|

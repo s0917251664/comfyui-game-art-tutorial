@@ -14,6 +14,8 @@ status: current
 
 ## 先找工具，再查知識
 
+跨路線的執行規則（R1 候選與美術驗收、R2 固定流程、R3 Idle 錨定）只寫在 [rules/](rules/README.md)。
+
 1. 讀 [TOOLS.md](TOOLS.md) 了解現在有的工具、能力狀態與各技能觸發條件。
 2. 新圖片需求由 [art-generation.md](art-generation.md) 分類，只有使用者提出特定參數時查 [art-parameters.md](art-parameters.md)。
 3. 影片由 [video/README.md](video/README.md) 路由；同一角色的一組動作由 [animation/workflow.md](animation/workflow.md) 編排。
@@ -42,7 +44,7 @@ status: current
 - [遮罩格式、Simple Mask、GrabCut 與 SAM](art/masking.md)：準備局部修改或拆層選區時查閱，遮罩預覽仍需人工確認。
 - [本機圖片編修工具](art/edit-tools.md)：遮罩內 recolor、composite、compare、有限 sweep、參考圖板與 Alpha 稽核的契約及驗證。
 - [物件平面組裝流程](art/object-design-workflows.md)：`scene`／`sheet`／`pattern` 的使用範圍與限制。
-- [特效去背、物件標記局部重繪與 Idle 首尾規則](video/vfx-tools.md)：`gameart.py vfx` 與 `video_inpaint` 的操作契約和 2026-10-07 實測。
+- [特效去背、物件標記局部重繪與 Idle 首尾量測](video/vfx-tools.md)：`gameart.py vfx` 與 `video_inpaint` 的操作契約和 2026-10-07 實測；Idle 規則本身見 [R3](rules/idle-anchoring.md)。
 - [ComfyUI Video Layers](video/layers.md)：SAM 影片遮罩候選、ordered layer/明確遮擋 matte、部署與已知驗證缺口。
 - [單一物件換色](art/single-object-color.md)：HSV 色相旋轉案例、像素保留證據與限制。
 
@@ -51,8 +53,11 @@ status: current
 - [生效中決策](DECISIONS.md)
 - [日期化決策紀錄](decisions/)
 - [依任務、工具與執行路線查經驗](experiences/)
+- [已移除轉址檔的舊路徑對照](archive/redirect-stubs.md)：舊連結打不開時，從這裡找 canonical 位置。
 - [資產紀錄實測](experiences/asset-records-2026-10-01.md)
 - [FLUX.2 與結構鎖觀察](experiences/flux2-and-structure-lock-observations.md)
+- [VFX 研究：去背、遮罩局部重繪、Idle 首尾（2026-10-07）](experiences/2026-10-07-vfx-research/design.md)：設計與[實測數據](experiences/2026-10-07-vfx-research/results.md)；`scripts/` 只供追溯，不是產線入口。
+- [Skye 修圖平台 A／B 對照實驗（2026-10-07）](experiences/2026-10-07-skye-repair/platform-task-prompt.md)：平台用 prompt 與操作說明（進行中）。
 
 ## Obsidian 內建功能
 
@@ -71,5 +76,5 @@ repo 附最小 `.obsidian/app.json` 和 `core-plugins.json`，使用檔案瀏覽
 ## 技能庫與執行路線維護
 
 - [技能庫現況與路線界線](maintenance/skill-library.md)：17 個美術技能現行實作、直接 API 與後續候選。
-- [平台驗證流程（smoke suite）](maintenance/validation-workflow.md)：`deploy --yes` → `smoke` → `--record`，技術紀錄不等於美術接受。
+- [平台驗證流程（smoke suite）](maintenance/validation-workflow.md)：`deploy --yes` → `smoke` → `--record`，技術紀錄不等於美術接受（[R1](rules/candidate-review.md)）。
 - [路線化新增能力清單](maintenance/new-capability-checklist.md)與[技能／產線審視流程](maintenance/pipeline-review.md)：依任務選驗證與研究範圍。

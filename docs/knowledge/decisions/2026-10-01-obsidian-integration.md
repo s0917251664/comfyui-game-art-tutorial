@@ -13,7 +13,7 @@ date: 2026-10-01
 
 現有 Markdown 知識庫已可讀寫，不需額外程式。Obsidian app 是可選編輯器，WSL 不是現有筆記讀寫的依賴。仍須區分「既有 Markdown 可用」與「上游完整 ingest/query runtime 已就緒」：上游 Windows guide 將若干唯讀／預覽、檢查、dry-run、retrieval 與需 WSL 的寫入流程分開；本機 `doctor --vault docs/knowledge` 結果為 `legacy_layout=true`、`ok=false`，因 vault 不含上游預期的 `wiki/`、`.raw/` 等結構，因此不宣稱其完整 ingest/query 已接通。
 
-此決策不改模型 profile、圖片／影片 capability gate 或人工資產驗收。`accepted`／`rejected` 與 profile 升級仍由 Steve 明確決定。
+此決策不改模型 profile、圖片／影片 capability gate 或人工資產驗收。`accepted`／`rejected` 與 profile 升級仍由使用者明確決定。
 
 ## 來源
 

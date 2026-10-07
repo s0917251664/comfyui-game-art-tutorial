@@ -1,6 +1,6 @@
 # `sdxl_standard` 設定檔：調校經驗
 
-對應 `tools_src/comfyui_pipeline/profiles/sdxl_standard.json`。這份文件放「用這份設定檔產圖時要知道的經驗」；模型檔名、下載來源與授權見 `skills/comfyui-install/reference/models.md`，參數規則見 `../full-params.md`。
+對應 `tools_src/comfyui_pipeline/profiles/sdxl_standard.json`。這份文件放「用這份設定檔產圖時要知道的經驗」；模型檔名、下載來源與授權見 `docs/knowledge/installation/models-and-sources.md`，參數規則見 `docs/knowledge/art-parameters.md`。
 
 **這裡只記實測發現的事，沒列出的代表還沒實測過，不要當成已驗證。**
 

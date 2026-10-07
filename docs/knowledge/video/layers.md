@@ -31,6 +31,6 @@ Plan schema v1 含 `segment`、`compose`。影片最多 5 秒／300 幀，來源
 
 Python 3.13 Windows `tempfile.mkdtemp()` 建立的 private DACL 會在 rename 後保留，導致不同 desktop/tool identity 無法讀取結果。新 Video Layers client/server 改用 output parent 下隨機 UUID stage path 與一般 `mkdir()` 繼承父目錄 ACL，仍拒絕覆寫並用 atomic rename 發佈。已在一般與核准程序跨身份測試，current results 可由預設 tools 跨呼叫讀取。這次修正只屬 Video Layers，不修改 face-swap media 或既有 generation source。Manifest `output.path` 指向最終 server 檔案，不是暫存目錄。
 
-## Steve Kabuto 目標完成度
+## Kabuto 變身目標完成度
 
 可用能力包括人工可檢視的短片 SAM 遮罩候選、source RGB layer 搬移、2D affine scale/position、ordered layers 和 explicit front/behind matte。無法證明 baked VFX 可 exact 分離為獨立 RGBA；scene mask 含入背景、材質和光照時無法還原。Armor 遮罩與定位仍錯，人物靜態。手部接觸、自然持物、腰帶繞身與動畫身體接觸尚未解決。完整 Kabuto 變身影片未完成。這台本機技術 gate 通過，不代表跨平台 verified 或美術 accepted。最新使用者需求稽核見[completion-audit.md](../../../output/steve-kabuto-upper-body/video-layers/completion-audit.md)。

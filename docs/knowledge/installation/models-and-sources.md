@@ -105,7 +105,7 @@ Video Layers 使用的 `facebook/sam2.1-hiera-small` 為短影片遮罩傳播模
 | MiniMax H3 video VAE | `vae` | `minimax_h3_video_vae_fp16.safetensors` | 同上 `vae/` | 4.85 GiB | 2026-08-26 |
 | MiniMax H3 audio VAE | `vae` | `minimax_h3_audio_vae_fp32.safetensors` | 同上 `vae/` | 0.56 GiB | 2026-08-26 |
 
-Wan I2V + H3 FL2VA 約 56.4 GiB；加上 Ref2VA 約 76 GiB；若再安裝表內 Wan Fun Control 5B，另加 9.32 GiB，全表約 85.3 GiB。Ref2VA 跟 FL2VA 是不同 UNET,h3 的 `character_ref` / `control_video` 不能拿 FL2VA 頂替。h3 的 `pose_drive` 也用這顆 Ref2VA,不用再下 Fun ControlNet。`camera_move` 不另外下模型(走已有 I2V backend)。對照見 `skills/comfyui-video-gen/reference/backends.md`。torch 需 cu130 才能走 H3 的 `int8_convrot`(這台已是 2.13.0+cu130)。LTX-2.5 本輪不裝(Hugging Face gated)。下載前先講空間,原則同風格底模。
+Wan I2V + H3 FL2VA 約 56.4 GiB；加上 Ref2VA 約 76 GiB；若再安裝表內 Wan Fun Control 5B，另加 9.32 GiB，全表約 85.3 GiB。Ref2VA 跟 FL2VA 是不同 UNET,h3 的 `character_ref` / `control_video` 不能拿 FL2VA 頂替。h3 的 `pose_drive` 也用這顆 Ref2VA,不用再下 Fun ControlNet。`camera_move` 不另外下模型(走已有 I2V backend)。對照見 `docs/knowledge/video/README.md#backend模型與-runtime`。torch 需 cu130 才能走 H3 的 `int8_convrot`(這台已是 2.13.0+cu130)。LTX-2.5 本輪不裝(Hugging Face gated)。下載前先講空間,原則同風格底模。
 
 模型安裝完成後，若要開影片能力，執行 `tools_src/detect_video_capabilities.py` 產生 machine-specific `video_capabilities.json`。它會把每個 backend 的模型路徑與可用 capability 寫入設定，預設只記 size；明確帶 `--hash-models` 才計算 SHA-256，也不會下載缺檔；可重現的 SHA-256 仍要在 smoke test 收尾時填入 `docs/tested-versions.md`。`generate.py` 每次影片 task 都會重新檢查模型檔案、runtime 與 ComfyUI nodes，避免把「檔案曾經存在」誤當成目前可跑。
 

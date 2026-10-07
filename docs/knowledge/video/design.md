@@ -6,7 +6,7 @@ status: mixed-implemented-and-planned
 # 影片產線設計稿
 
 > **狀態:第一波 CLI 已上線並實測。** 對外契約是 **task 名 + `--backend`**,不是模型名。`img2video` / `fx_loop` / `transition` / `clip_extend` / `video_concat` / `video_composite` / `character_video` / `camera_move` / `pose_drive` 都在 `generate.py`。目前 backend/runtime 契約見 [`README.md`](README.md)。
-> 實際操作走 repo 的 `skills/comfyui-video-gen/SKILL.md`（由 [工具總表](../TOOLS.md) 路由），不要臨場組節點或自動播放成品。
+> 實際操作走 repo 的 `skills/comfyui-video-gen/SKILL.md`（由 [工具總表](../TOOLS.md) 路由），不要臨場組節點（[R2](../rules/fixed-graphs.md)）或自動播放成品。
 >
 > 初稿日期:2026-08-26；文件契約校對:2026-09-15（未新增實機驗證）。本文保留歷史設計；尚未接入的構想不能作為可執行選項。
 > 分支:`feature/video-pipeline`
@@ -118,7 +118,7 @@ status: mixed-implemented-and-planned
 
 > **歷史設計註記(2026-08-26):** 當時原本預期首尾幀畫質可能要靠 14B,且尚未把 A→B `transition` 寫進操作手冊。
 
-目前 `transition` CLI 已上線，H3 backend 可用首尾靜幀；5B/16GB 的畫質與穩定度仍受素材與 backend 影響，14B 仍只是有需求時的選用升級，不是預設依賴。操作契約以 `SKILL.md` 與 `reference/backends.md` 為準。
+目前 `transition` CLI 已上線，H3 backend 可用首尾靜幀；5B/16GB 的畫質與穩定度仍受素材與 backend 影響，14B 仍只是有需求時的選用升級，不是預設依賴。操作契約以 `skills/comfyui-video-gen/SKILL.md` 與 [影片知識總覽的 backend 段](README.md#backend模型與-runtime) 為準。
 
 ### 3.4 使用者沒點名、但影視工程師會立刻補上的方向
 

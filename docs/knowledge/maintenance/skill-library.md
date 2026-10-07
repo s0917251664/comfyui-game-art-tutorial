@@ -36,7 +36,7 @@ Repo 內新增、改名或責任變更的技能，應更新 `AGENTS.md` 核心�
 
 ## 技能庫盤點
 
-盤點基準：本 repository 的 `skills/*/SKILL.md`，共 **33 個技能目錄**。其中包括 17 個專案自有遊戲美術技能、1 個 project-knowledge skill，及 15 個固定來源的 Obsidian 上游技能。下表涵蓋 17 個美術技能；其餘 16 個不屬於本次美術執行路線盤點，並未要求修改它們。
+盤點基準：本 repository 的 `skills/*/SKILL.md`，共 **18 個技能目錄**：17 個專案自有遊戲美術技能，加 1 個 project-knowledge skill。15 個固定來源的 Obsidian 上游技能盤點時也在 `skills/`，2026-10-07 已移到 `third_party/claude-obsidian-skills/`。下表涵蓋 17 個美術技能；project-knowledge 與上游技能不屬於本次美術執行路線盤點，並未要求修改它們。
 
 「API 後續適配度」表示日後可研究是否適合，**不是已完成遷移**。只有 Wan Animate 欄明確列出目前直接 API graph；其他技能仍依其現行 implementation 運作。
 

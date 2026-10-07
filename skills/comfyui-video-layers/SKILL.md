@@ -1,6 +1,6 @@
 ---
 name: comfyui-video-layers
-description: 以 ComfyUI server-side SAM 2.1 propagation 與固定 ordered layer graph，製作短鏡頭遮罩或 2D 層合成候選。
+description: 影片物件遮罩與 2D 層合成。物件追蹤預設用 SAM3 固定 API graph；SAM3 不可用時，以 ComfyUI server-side SAM 2.1 propagation（本工具）備援；另以固定 ordered layer graph 製作 2D 層合成候選。
 ---
 
 # 影片圖層工具
@@ -19,4 +19,4 @@ description: 以 ComfyUI server-side SAM 2.1 propagation 與固定 ordered layer
 
 來源遮罩可從原片 RGB 取用並搬移選中區域，未選部分由靜態底圖保留；仿射變換、混色與影片編碼會重採樣／改變像素，不能當作逐位元無損保留。它不會把已烘焙（baked）特效從背景、光照或材質中精確抽離。`screen` 只是帶來源污染的近似亮度疊加。這是 2D affine compositing，不做 3D 接觸、隱藏表面重建、重新打光或動畫目標身體替換；換臉也不等於替換整頭或身體。
 
-實測輸出皆為 candidate。`segment` 的技術 pass 表示格式、影格 PTS/CFR grid、codec、音訊及完整解碼符合契約，不表示遮罩畫得準；`compose` technical status 固定 warning。2026-10-04 生產 8188 fresh preflight 及 production current segment/compose/occlusion smoke 均通過本次有界工具的技術檢查。獨立讀取逐幀 PNG 的 head/collar、手指遮擋與外套遮擋區域逐幀零變動；這不代表 MP4 無損或美術接受。甲片遮罩仍粗糙並漏選 glow，合成甲片貼到靜態 Steve 的畫面左側衣袖且後段位置／比例／裁切錯。完整作品仍缺動態目標身體替換、形變／接觸處理及可用的精確特效遮罩；工具不承諾能從 baked effects exact 反演。道具手勢拇指離物、指緣不自然；腰帶尚未解決 3D 繞身接觸。每次仍需人工逐段檢查並由 Steve 決定接受與否。完整目標稽核見 [completion audit](../../output/steve-kabuto-upper-body/video-layers/completion-audit.md)。
+實測輸出皆為 candidate。`segment` 的技術 pass 表示格式、影格 PTS/CFR grid、codec、音訊及完整解碼符合契約，不表示遮罩畫得準；`compose` technical status 固定 warning。2026-10-04 生產 8188 fresh preflight 及 production current segment/compose/occlusion smoke 均通過本次有界工具的技術檢查。獨立讀取逐幀 PNG 的 head/collar、手指遮擋與外套遮擋區域逐幀零變動；這不代表 MP4 無損或美術接受。甲片遮罩仍粗糙並漏選 glow，合成甲片貼到靜態人物的畫面左側衣袖且後段位置／比例／裁切錯。完整作品仍缺動態目標身體替換、形變／接觸處理及可用的精確特效遮罩；工具不承諾能從 baked effects exact 反演。道具手勢拇指離物、指緣不自然；腰帶尚未解決 3D 繞身接觸。每次仍需人工逐段檢查並由美術審核者決定接受與否。完整目標稽核見 [completion audit](../../output/steve-kabuto-upper-body/video-layers/completion-audit.md)。

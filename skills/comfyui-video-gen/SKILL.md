@@ -11,7 +11,7 @@ description: 將短片、循環特效與鏡頭需求路由到已接入的影片 
 
 上述本機處理不需 ComfyUI server，但仍依賴 `generate.py` facade、整個 `comfyui_pipeline/` 及相關 PyAV/Pillow/NumPy runtime，不是任意平台可執行的獨立單檔。平台圖片工具只能生成靜態素材；目前沒有平台影片執行技能或已接入 provider，不能把共用 VFX 計畫當成影片執行能力。
 
-先查[工具範圍總表](../../docs/knowledge/TOOLS.md)，了解當前可用能力；本技能只用既有 CLI，不臨場組 ComfyUI graph。Backend、模型/runtime、影格、驗收細節與實測經驗見[影片知識庫](../../docs/knowledge/video/README.md)。歷史設計（包含未實作項目）見[影片設計稿](../../docs/knowledge/video/design.md)，不可把規劃當作可用 task。
+先查[工具範圍總表](../../docs/knowledge/TOOLS.md)，了解當前可用能力；本技能只用既有 CLI，不臨場組 ComfyUI graph（[R2](../../docs/knowledge/rules/fixed-graphs.md)）。Backend、模型/runtime、影格、驗收細節與實測經驗見[影片知識庫](../../docs/knowledge/video/README.md)。歷史設計（包含未實作項目）見[影片設計稿](../../docs/knowledge/video/design.md)，不可把規劃當作可用 task。
 
 ## 何時使用
 
@@ -21,7 +21,7 @@ description: 將短片、循環特效與鏡頭需求路由到已接入的影片 
 
 劇情多鏡製作、長影片規劃與分鏡，先走 [劇情影片流程](../comfyui-film-workflow/SKILL.md) 建立鏡頭表與連續性紀錄，再回本技能逐鏡執行。單支影片仍直接使用本技能。
 
-首尾幀：H3 的 `img2video` 鎖首幀，`fx_loop` 把同一張圖當首幀和尾幀，`transition` 鎖 `--start`／`--end`；`pose_drive`／`character_video` 不鎖首幀。角色動作要從已驗收 Idle 開始時，依[動作規則](../../docs/knowledge/video/vfx-tools.md#3-idle-起始幀與首尾呼應)選 task。
+首尾幀：哪些 task 會鎖首／尾幀，以及角色動作要從已驗收 Idle 開始時怎麼選 task，見 [R3 Idle 錨定](../../docs/knowledge/rules/idle-anchoring.md)。
 
 不以 `transition` 做傳統硬切／疊化／擦除；Logo 或中文字效果不可靠，直接說明限制。成品不自動以系統播放器開啟，只回報檔案路徑。
 
@@ -43,7 +43,7 @@ description: 將短片、循環特效與鏡頭需求路由到已接入的影片 
 | A 畫面變成 B | `transition`，要兩張靜幀 |
 | 同場接續前鏡 | `clip_extend` |
 | 接片／乾淨綠幕合成 | `video_concat`／`video_composite`（本機）|
-| 只改影片中某個物件（美術手繪標記 → SAM 傳播 → 只重畫遮罩內） | `video_inpaint`（wan `masked_edit`），遮罩流程見 [vfx-tools](../../docs/knowledge/video/vfx-tools.md#2-影片物件標記與局部重繪) |
+| 只改影片中某個物件（美術手繪標記 → SAM3 追蹤（SAM2 為備援）→ 只重畫遮罩內） | `video_inpaint`（wan `masked_edit`），遮罩流程見 [vfx-tools](../../docs/knowledge/video/vfx-tools.md#2-影片物件標記與局部重繪) |
 | 影片裡的道具換材質／造型（例如魔法槌 → 木槌） | 先用 `flux2_edit`＋`gameart.py vfx prop-paste` 做母版，再用 H3 `pose_drive --control-type canny` 整幀套原片動作；不要用 `video_inpaint`，見 [vfx-tools §4](../../docs/knowledge/video/vfx-tools.md#4-換道具材質造型先定母版再整幀套原片動作) |
 | 特效要透明成品（PNG 序列／sprite sheet／WebM） | 黑底生成後 `gameart.py vfx luma-alpha`＋`pack`；不透明主體用綠幕＋`chroma-alpha --unmix --despill`，見 [vfx-tools](../../docs/knowledge/video/vfx-tools.md#1-特效去背輸出) |
 | 有劇情的短片 | 先逐鏡建表，再呼叫現有 task、最後 concat；不可一條超長 prompt |
