@@ -9,7 +9,7 @@ status: active
 
 ## 狀態與工具範圍
 
-CLI 對外契約是 task 名與可選 `--backend`，不是模型名。已存在 task：`img2video`、`fx_loop`、`transition`、`clip_extend`、`video_concat`、`video_composite`、`character_video`、`camera_move`、`pose_drive`、`video_inpaint`。細部旗標與必要輸入見技能入口。模型節點、prompt tag、圖形只由程式鎖定，不得為單次要求臨場組 ComfyUI graph。
+CLI 對外契約是 task 名與可選 `--backend`，不是模型名。已存在 task：`img2video`、`fx_loop`、`transition`、`clip_extend`、`video_concat`、`video_composite`、`character_video`、`camera_move`、`pose_drive`、`video_inpaint`。細部旗標與必要輸入見技能入口。模型節點、prompt tag、圖形只由程式鎖定（[R2](../rules/fixed-graphs.md)）。
 
 生成 task 走已安裝的 ComfyUI；`video_concat`、`video_composite` 與 `extract_video_frames` 是本機處理，不需要 server/backend。`detect_video_capabilities.py` 僅盤點既有模型、runtime、nodes，缺依賴時在 upload/queue 前停止，不下載或靜默切換 backend。
 
@@ -58,7 +58,7 @@ H3 曾以 4080 16GB 實測較能保留身份且可有聲，Wan 跑得快但無�
 
 `--shot-id`／`--name` 用於安全、可追溯的輸出前綴；同一多鏡任務逐鏡命名後，sidecar 與素材可互相追查。
 
-尺寸、FPS、幀數、duration、audio 不符合契約是 `fail`，不可交付；`warning` 保留原片並按訊息人工檢查；`pass` 只代表技術契約通過，不代表美術內容合格。連續性指標目前 warning-only，跨題材閾值未校準，不能代替身份、動作或 loop 品質判斷。`--resume` 僅當 sidecar 的 task/backend/seed/input/config/contract 全相符且影片重驗通過才跳過。同名輸出預設拒絕覆寫，除非明確 `--overwrite`。
+尺寸、FPS、幀數、duration、audio 不符合契約是 `fail`，不可交付；`warning` 保留原片並按訊息人工檢查；`pass` 只代表技術契約通過，不代表美術內容合格（[R1](../rules/candidate-review.md)）。連續性指標目前 warning-only，跨題材閾值未校準，不能代替身份、動作或 loop 品質判斷。`--resume` 僅當 sidecar 的 task/backend/seed/input/config/contract 全相符且影片重驗通過才跳過。同名輸出預設拒絕覆寫，除非明確 `--overwrite`。
 
 timeout 會保存 `prompt_id` 及精確 queue/running ownership；只有確認該 prompt 仍在 pending queue 才精確移除。不可全域 `/interrupt`，也不可對 running/未知狀態自動重送。
 

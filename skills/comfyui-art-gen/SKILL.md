@@ -11,7 +11,7 @@ description: 執行 ComfyUI 遊戲圖片既有 task，負責本機能力檢查�
 
 12 個圖片 task 中，`layer_split` 是 ComfyUI Core 遮罩裁切，不需生成底模，但仍依現有 task/gate/ComfyUI 執行。平台圖片生成由[平台圖片技能](../platform-image-gen/SKILL.md)負責，不讀本機 config、不套用本機參數。缺本機能力時不得自行切到平台；依使用者已選定的引擎交接。
 
-每次先看[工具範圍總表](../../docs/knowledge/TOOLS.md)，再按任務只查本技能與 vault 的相關頁面；不要讀入整個知識庫。把自然語言需求轉成 `generate.py` 的固定 task 與必要參數；目標是可重複產圖，不臨場組 graph。適用於概念圖、角色／姿勢圖、構圖控制、局部修改、材質變體、圖示與去背。
+每次先看[工具範圍總表](../../docs/knowledge/TOOLS.md)，再按任務只查本技能與 vault 的相關頁面；不要讀入整個知識庫。把自然語言需求轉成 `generate.py` 的固定 task 與必要參數；目標是可重複產圖，不臨場組 graph（[R2](../../docs/knowledge/rules/fixed-graphs.md)）。適用於概念圖、角色／姿勢圖、構圖控制、局部修改、材質變體、圖示與去背。
 
 不適用於整張 UI 版面、Logo／中文字排版、影片或尚未接入的能力。單一 UI 圖示可用 `icon_asset`。影片需求改讀 [comfyui-video-gen](../comfyui-video-gen/SKILL.md)。未有 task 覆蓋的重複生產需求，依 [新能力清單](../comfyui-new-tool-checklist/SKILL.md) 評估；不可把圖片 task 假裝成影片或自行接線替代。
 

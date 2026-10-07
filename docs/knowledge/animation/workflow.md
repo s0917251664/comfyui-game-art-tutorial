@@ -24,7 +24,7 @@ status: active
 | Idle | 等待狀態 | 是 | 使用者指定 | 已驗收 Idle 圖 | `fx_loop`（H3，首＝尾＝Idle） | `h3` | MP4；需要時 PNG frames |
 | Attack／Win／Fail 等回到 Idle 的動作 | 依用途 | 否 | 使用者指定 | 已驗收 Idle 圖（首尾） | `transition --start <Idle> --end <Idle>` | `h3` | MP4；需要時 PNG frames |
 
-所有動作第一幀用已驗收 Idle 圖：只有 H3 的 `img2video`（首幀）、`fx_loop`（首尾同圖）、`transition`（首尾）會鎖幀；`pose_drive`／`character_video` 不鎖首幀，Wan `img2video` 實測 2 秒內身份漂移。規則、量測與實測數字見 [Idle 規則](../video/vfx-tools.md#3-idle-起始幀與首尾呼應)。`img2video` 適用原構圖 idle/展示與只出不回的動作，`fx_loop` 用於明確需要無縫循環的元素，`character_video` 適用換場景/新表演且首幀可變，`pose_drive` 使用動作參考片，`camera_move` 主體不動只運鏡。不要為整組一致而把所有動作塞進同一 task。需要更貼近動作影片的表情與手勢、或把影片中人物換成角色時，可改走獨立的 [Wan Animate／SCAIL-2 技能](../../../skills/comfyui-wan-animate/SKILL.md)（固定 API graph，另有自己的 gate，不在 video_capabilities.json）。
+所有動作第一幀用已驗收 Idle 圖；哪些 task 會鎖首／尾幀、補邊與驗收量測依 [R3 Idle 錨定](../rules/idle-anchoring.md)。`img2video` 適用原構圖 idle/展示與只出不回的動作，`fx_loop` 用於明確需要無縫循環的元素，`character_video` 適用換場景/新表演且首幀可變，`pose_drive` 使用動作參考片，`camera_move` 主體不動只運鏡。不要為整組一致而把所有動作塞進同一 task。需要更貼近動作影片的表情與手勢、或把影片中人物換成角色時，可改走獨立的 [Wan Animate／SCAIL-2 技能](../../../skills/comfyui-wan-animate/SKILL.md)（固定 API graph，另有自己的 gate，不在 video_capabilities.json）。
 
 ## 製作與驗收
 

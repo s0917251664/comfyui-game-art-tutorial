@@ -11,7 +11,7 @@ description: 將短片、循環特效與鏡頭需求路由到已接入的影片 
 
 上述本機處理不需 ComfyUI server，但仍依賴 `generate.py` facade、整個 `comfyui_pipeline/` 及相關 PyAV/Pillow/NumPy runtime，不是任意平台可執行的獨立單檔。平台圖片工具只能生成靜態素材；目前沒有平台影片執行技能或已接入 provider，不能把共用 VFX 計畫當成影片執行能力。
 
-先查[工具範圍總表](../../docs/knowledge/TOOLS.md)，了解當前可用能力；本技能只用既有 CLI，不臨場組 ComfyUI graph。Backend、模型/runtime、影格、驗收細節與實測經驗見[影片知識庫](../../docs/knowledge/video/README.md)。歷史設計（包含未實作項目）見[影片設計稿](../../docs/knowledge/video/design.md)，不可把規劃當作可用 task。
+先查[工具範圍總表](../../docs/knowledge/TOOLS.md)，了解當前可用能力；本技能只用既有 CLI，不臨場組 ComfyUI graph（[R2](../../docs/knowledge/rules/fixed-graphs.md)）。Backend、模型/runtime、影格、驗收細節與實測經驗見[影片知識庫](../../docs/knowledge/video/README.md)。歷史設計（包含未實作項目）見[影片設計稿](../../docs/knowledge/video/design.md)，不可把規劃當作可用 task。
 
 ## 何時使用
 
@@ -21,7 +21,7 @@ description: 將短片、循環特效與鏡頭需求路由到已接入的影片 
 
 劇情多鏡製作、長影片規劃與分鏡，先走 [劇情影片流程](../comfyui-film-workflow/SKILL.md) 建立鏡頭表與連續性紀錄，再回本技能逐鏡執行。單支影片仍直接使用本技能。
 
-首尾幀：H3 的 `img2video` 鎖首幀，`fx_loop` 把同一張圖當首幀和尾幀，`transition` 鎖 `--start`／`--end`；`pose_drive`／`character_video` 不鎖首幀。角色動作要從已驗收 Idle 開始時，依[動作規則](../../docs/knowledge/video/vfx-tools.md#3-idle-起始幀與首尾呼應)選 task。
+首尾幀：哪些 task 會鎖首／尾幀，以及角色動作要從已驗收 Idle 開始時怎麼選 task，見 [R3 Idle 錨定](../../docs/knowledge/rules/idle-anchoring.md)。
 
 不以 `transition` 做傳統硬切／疊化／擦除；Logo 或中文字效果不可靠，直接說明限制。成品不自動以系統播放器開啟，只回報檔案路徑。
 

@@ -13,7 +13,7 @@ last_updated: 2026-10-06
 - [ ] 觸發條件、目的、輸入／輸出、使用者如何操作及結果存在哪裡。
 - [ ] 明確選定路線、依賴、已知平台／版本與資產來源；不由相似能力推定可用。
 - [ ] 在 skill metadata 寫可被發現的名稱與描述，於 body 解釋觸發、不可跳過的 gate、最短操作和交付狀態；詳細欄位、錯誤與邊界放 references。
-- [ ] 分開記錄技術狀態、內容候選及使用者驗收。`pass` 不代表畫面 accepted；未實測標為 `unverified` 或 `pending`。
+- [ ] 分開記錄技術狀態、內容候選及使用者驗收。`pass` 不代表畫面 accepted（[R1](../rules/candidate-review.md)）；未實測標為 `unverified` 或 `pending`。
 - [ ] 更新相關技能、知識頁和專案入口；不是每份文件都要同步，只改實際路由依賴的頁面。
 - [ ] 保存可回溯的最小證據（版本／hash、請求或 CLI 設定、輸出 metadata、必要時抽幀或人工觀察）；避免把完整大型 log 複製進 skill。
 

@@ -24,4 +24,4 @@ Wan Animate 是已安裝的獨立 ComfyUI 原生能力：Mix 將參考角色置�
 4. 先依契約上傳 reference 和 source video，收到 server path 後才填入[固定 API graph template](references/comfyui-api.md)；設定 prompt、所有 seed 欄位、唯一 prefix、幀數、需要時的寬高與音訊連線，及 Mix 點位（SCAIL-2 則是 SAM3 物件文字與模式）。queue 前驗證所有占位符已替換且 inputs 符合 schema，再提交 prompt、輪詢該 `prompt_id` 並下載輸出。只以 `/history/{prompt_id}` 顯示 success 且 `completed=true` 判定完成。逾時保存 prompt ID 與狀態，不重送、不全域 interrupt，也不自動 queue retry。
 5. 將完整輸入／輸出、manifest 與首／中／末幀抽取至全新輸出目錄。技術檢查通過後仍須逐幀依 brief 人工檢視；依[測試紀錄模板](../../docs/knowledge/video/templates/animation-test-record.md)記錄結果，美術審核者未明確驗收前保持 candidate。
 
-除 API reference 明列的欄位與音訊連線外，不得臨場另組或改接節點圖、增加 Python client／CLI、改模型 profiles 或假裝能力已接入 `generate.py`。不覆寫舊候選、不因瑕疵自動重送。brief 與受控比較方式見[動畫 brief 模板](../../docs/knowledge/video/templates/animation-brief.md)及[評估筆記](../../docs/knowledge/video/animation-evaluation.md)。
+除 API reference 明列的欄位與音訊連線外，不得臨場另組或改接節點圖（[R2](../../docs/knowledge/rules/fixed-graphs.md)）、增加 Python client／CLI、改模型 profiles 或假裝能力已接入 `generate.py`。不覆寫舊候選、不因瑕疵自動重送。brief 與受控比較方式見[動畫 brief 模板](../../docs/knowledge/video/templates/animation-brief.md)及[評估筆記](../../docs/knowledge/video/animation-evaluation.md)。

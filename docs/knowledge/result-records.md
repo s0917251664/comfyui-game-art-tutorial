@@ -56,7 +56,7 @@ manifest 是可選的追溯摘要，不足以保證逐像素重現。若使用�
 - 生成條件（選用）：task、profile、必要輸入與適用平台證據。
 ```
 
-狀態只用 `candidate`、`accepted` 或 `rejected`。agent 可記 candidate 和客觀檢查結果，但不能代美術審核者選 accepted／rejected；只有美術審核者明確決定後，才更新狀態並逐字意涵忠實地摘要其理由和日期。`technical_validation=pass` 代表技術檢查通過，不代表圖像內容符合需求。新生成的輸出是新版本，必須從 candidate 開始，絕不繼承舊版 accepted 狀態。拒絕時保留版本紀錄與理由，不刪除來源圖片或證據。
+狀態值、誰能決定 `accepted`／`rejected`、新版本不繼承 `accepted`、拒絕時保留紀錄等規則見 [R1 候選與美術驗收](rules/candidate-review.md)；本頁只說明怎麼記錄。agent 可記 `candidate` 和客觀檢查結果。
 
 素材頁是決策紀錄，不是 prompt log 或學習資料。長篇執行 log 留在原位置，不複製進頁面或 prompt；筆記不會自動更動技能、profile、CLI 預設或生成規則。要將觀察升為正式規則，須有可重現證據、明確適用範圍並經人工核准，再更新相應決策／設定。
 

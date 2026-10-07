@@ -30,23 +30,24 @@
 
 - 共用 brief、參考用途、修改／保留項、版本與美術驗收：[`skills/game-art-workflow/SKILL.md`](skills/game-art-workflow/SKILL.md)。物件系列、VFX、角色動作方法按需讀 `references/production.md`；完整職責盤點只在維護／移植時讀 `references/responsibilities.md`。
 - 新使用者初始化或尚未選路線：[`skills/game-art-initialize/SKILL.md`](skills/game-art-initialize/SKILL.md)，先整理需求與能力，不預設安裝。已配置 ComfyUI 專案的日常工作沿用所選引擎。選平台圖片工具讀 [`skills/platform-image-gen/SKILL.md`](skills/platform-image-gen/SKILL.md)；平台圖片、ComfyUI、外部付費 API／CLI 是不同路線，不能推定模型或參數可用。
-- ComfyUI 圖片生成與編修：[`skills/comfyui-art-gen/SKILL.md`](skills/comfyui-art-gen/SKILL.md)；編修 brief 相容入口 [`skills/game-art-edit-brief/SKILL.md`](skills/game-art-edit-brief/SKILL.md)。依 task 選 executor 與自身 gate；不可一律要求本機 Python/config、臨場改 API 或組 graph。缺能力不自動換引擎；只整理需求不啟動生成。
+- ComfyUI 圖片生成與編修：[`skills/comfyui-art-gen/SKILL.md`](skills/comfyui-art-gen/SKILL.md)；編修 brief 相容入口 [`skills/game-art-edit-brief/SKILL.md`](skills/game-art-edit-brief/SKILL.md)。依 task 選 executor 與自身 gate；不可一律要求本機 Python/config，也不臨場改 API 或組 graph（[R2](docs/knowledge/rules/fixed-graphs.md)）。缺能力不自動換引擎；只整理需求不啟動生成。
 - 物件系列、展示背景、檢視表與圖樣重複：[`skills/comfyui-object-design/SKILL.md`](skills/comfyui-object-design/SKILL.md)。本機像素操作：[`skills/local-image-edit-tools/SKILL.md`](skills/local-image-edit-tools/SKILL.md)；有限參數比較：[`skills/comfyui-image-sweep/SKILL.md`](skills/comfyui-image-sweep/SKILL.md)。五個 Pillow／NumPy 操作不需 GPU、ComfyUI 或 `local_config.json`；Agent 須能執行程式並讀寫來源圖。
-- 影片生成：[`skills/comfyui-video-gen/SKILL.md`](skills/comfyui-video-gen/SKILL.md)；角色動作組編排：[`skills/comfyui-character-animation-workflow/SKILL.md`](skills/comfyui-character-animation-workflow/SKILL.md)；劇情多鏡、聲音與 Animatic：[`skills/comfyui-film-workflow/SKILL.md`](skills/comfyui-film-workflow/SKILL.md)。既有影片能力及其 gate 不等於圖片 task；平台影片尚未整合。**不要自行組影片 graph 或自動用系統播放器開成品。**
+- 影片生成：[`skills/comfyui-video-gen/SKILL.md`](skills/comfyui-video-gen/SKILL.md)；角色動作組編排：[`skills/comfyui-character-animation-workflow/SKILL.md`](skills/comfyui-character-animation-workflow/SKILL.md)；劇情多鏡、聲音與 Animatic：[`skills/comfyui-film-workflow/SKILL.md`](skills/comfyui-film-workflow/SKILL.md)。既有影片能力及其 gate 不等於圖片 task；平台影片尚未整合。**不要自動用系統播放器開成品。**
 - 既有換臉讀 [`skills/comfyui-face-swap-workflow/SKILL.md`](skills/comfyui-face-swap-workflow/SKILL.md)；SAM 遮罩／ordered video layers 讀 [`skills/comfyui-video-layers/SKILL.md`](skills/comfyui-video-layers/SKILL.md)；Wan Animate（含延伸段、音訊、寬高）與 SCAIL-2 固定 workflow/API 查詢讀 [`skills/comfyui-wan-animate/SKILL.md`](skills/comfyui-wan-animate/SKILL.md)。這些路線各有部署和驗收契約，依技能 reference 操作。
 - 明確要求安裝，或已選本機 executor 且其依賴缺失時，讀 [`skills/comfyui-install/SKILL.md`](skills/comfyui-install/SKILL.md)；單純缺 `local_config.json` 不代表安裝意圖。新增／擴充能力讀 [`skills/comfyui-new-tool-checklist/SKILL.md`](skills/comfyui-new-tool-checklist/SKILL.md)；明確要求技能庫、架構或新技術審視才讀 [`skills/comfyui-pipeline-review/SKILL.md`](skills/comfyui-pipeline-review/SKILL.md)。專案知識庫依 [`skills/project-knowledge/SKILL.md`](skills/project-knowledge/SKILL.md) 和 [`docs/knowledge/TOOLS.md`](docs/knowledge/TOOLS.md) 按需讀取，不載入整庫；文件草稿由小模型撰寫、主 agent 審核實際差異、來源、連結與規則影響。
 
 ## 執行與驗收原則
 
-- `tools_src/generate.py` 只是 CLI 入口（`main()` 與少數唯讀 re-export）；邏輯在 `comfyui_pipeline/`（task 在 `tasks/`，執行期狀態用明確傳入的 `RunContext`，不用全域），部署時須連同整個 `tools_src/comfyui_pipeline/`。固定流程按既有契約使用，不臨場改 graph。API-format assets、CLI 與 server-side helper/custom node 是不同執行方式，不能把 CLI 假寫為 API。
+- `tools_src/generate.py` 只是 CLI 入口（`main()` 與少數唯讀 re-export）；邏輯在 `comfyui_pipeline/`（task 在 `tasks/`，執行期狀態用明確傳入的 `RunContext`，不用全域），部署時須連同整個 `tools_src/comfyui_pipeline/`。固定流程按既有契約使用，見 [R2 只用已登記的固定流程](docs/knowledge/rules/fixed-graphs.md)。
 - SDXL／SD1.5 模型檔名、取樣參數與平台驗證狀態由 `tools_src/comfyui_pipeline/profiles/*.json` 管理，不改 `image_graphs.py`；FLUX.2 使用獨立 preflight。大機器指定較小 profile 用 `--profile` 或 detector 選項，不手改 `device_config.json`。profile 驗證以 `platform_key` 為準。
 - 生成前按路線查能力：圖片查 `image_capabilities.json`，影片查 `video_capabilities.json`；FLUX.2、遮罩、抽幀、合成等依各自 gate。`unverified` 先告知；能力不足在 upload／queue 前停止。換機／換 GPU、ComfyUI／node／模型／runtime 改變後，先 `python tools_src/gameart.py doctor` 看快照是否過期，再用 `doctor --refresh` 重跑三個 detector 並更新指紋（生成時若偵測到過期會在 stderr 提醒，不阻擋）。detector 只掃描，不下載；不能從圖片 tier 推定影片 backend。
 - 平台驗證升格（`gameart.py validation approve --by <使用者>`，寫入 profile 的 `validation`）是使用者的決定：agent 不得在使用者沒有明確要求時執行 approve；`propose`／`status`／`smoke record` 可自行執行。證據綁報告與環境，環境不同顯示 `verified_other_env`（只提醒）。
-- 技術檢查不等於美術接受。候選素材需由使用者決定；不可捏造 accepted/rejected，也不可讓新輸出繼承舊版本驗收。圖片預設寫技術 manifest（`*.result.json`），使用者明確決定後才可用 `gameart.py review accept|reject --by <使用者>` 記錄，agent 不得自行決定；素材紀錄格式見 [`docs/knowledge/result-records.md`](docs/knowledge/result-records.md)。
+- 候選與驗收依 [R1 技術檢查不等於美術接受](docs/knowledge/rules/candidate-review.md)。圖片預設寫技術 manifest（`*.result.json`），使用者明確決定後才可用 `gameart.py review accept|reject --by <使用者>` 記錄，agent 不得自行決定；素材紀錄格式見 [`docs/knowledge/result-records.md`](docs/knowledge/result-records.md)。
 - 本專案目前無預算，使用本機免費模型；日後外部雲端服務須依使用者明確選擇的路線處理，參考 [`教學.md`](教學.md) 第 0.5 章 C 段。新增 `.ps1` 必須使用帶 BOM 的 UTF-8，以支援 Windows PowerShell 5.1。
 
 ## 入口與參考
 
+- [`docs/knowledge/rules/`](docs/knowledge/rules/README.md)：跨路線規則只在這裡完整寫一次（R1 候選與美術驗收、R2 固定流程、R3 Idle 錨定），其他文件只引用編號。
 - 技能分組（產線 vs. Obsidian 上游）見 [`skills/README.md`](skills/README.md)；產線工作不讀 wiki／obsidian 類技能。
 - 文件分工：README 說明開始方式，AGENTS 保留路由與必要原則，TOOLS 提供能力索引；精確操作契約留在技能 references，日期化實測與狀態留在對應知識頁。入口引用主要紀錄，避免複製整段測試狀態。
 - [`教學.md`](教學.md)：環境建置、功能地圖與設備／預算選型。

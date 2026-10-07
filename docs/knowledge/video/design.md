@@ -6,7 +6,7 @@ status: mixed-implemented-and-planned
 # 影片產線設計稿
 
 > **狀態:第一波 CLI 已上線並實測。** 對外契約是 **task 名 + `--backend`**,不是模型名。`img2video` / `fx_loop` / `transition` / `clip_extend` / `video_concat` / `video_composite` / `character_video` / `camera_move` / `pose_drive` 都在 `generate.py`。目前 backend/runtime 契約見 [`README.md`](README.md)。
-> 實際操作走 repo 的 `skills/comfyui-video-gen/SKILL.md`（由 [工具總表](../TOOLS.md) 路由），不要臨場組節點或自動播放成品。
+> 實際操作走 repo 的 `skills/comfyui-video-gen/SKILL.md`（由 [工具總表](../TOOLS.md) 路由），不要臨場組節點（[R2](../rules/fixed-graphs.md)）或自動播放成品。
 >
 > 初稿日期:2026-08-26；文件契約校對:2026-09-15（未新增實機驗證）。本文保留歷史設計；尚未接入的構想不能作為可執行選項。
 > 分支:`feature/video-pipeline`
