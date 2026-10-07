@@ -51,6 +51,7 @@ status: current
 - [生效中決策](DECISIONS.md)
 - [日期化決策紀錄](decisions/)
 - [依任務、工具與執行路線查經驗](experiences/)
+- [已移除轉址檔的舊路徑對照](archive/redirect-stubs.md)：舊連結打不開時，從這裡找 canonical 位置。
 - [資產紀錄實測](experiences/asset-records-2026-10-01.md)
 - [FLUX.2 與結構鎖觀察](experiences/flux2-and-structure-lock-observations.md)
 - [VFX 研究：去背、遮罩局部重繪、Idle 首尾（2026-10-07）](experiences/2026-10-07-vfx-research/design.md)：設計與[實測數據](experiences/2026-10-07-vfx-research/results.md)；`scripts/` 只供追溯，不是產線入口。
