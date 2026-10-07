@@ -53,6 +53,8 @@ status: current
 - [依任務、工具與執行路線查經驗](experiences/)
 - [資產紀錄實測](experiences/asset-records-2026-10-01.md)
 - [FLUX.2 與結構鎖觀察](experiences/flux2-and-structure-lock-observations.md)
+- [VFX 研究：去背、遮罩局部重繪、Idle 首尾（2026-10-07）](experiences/2026-10-07-vfx-research/design.md)：設計與[實測數據](experiences/2026-10-07-vfx-research/results.md)；`scripts/` 只供追溯，不是產線入口。
+- [Skye 修圖平台 A／B 對照實驗（2026-10-07）](experiences/2026-10-07-skye-repair/platform-task-prompt.md)：平台用 prompt 與操作說明（進行中）。
 
 ## Obsidian 內建功能
 

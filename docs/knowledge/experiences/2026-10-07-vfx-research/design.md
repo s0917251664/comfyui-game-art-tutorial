@@ -223,7 +223,7 @@ H3 鎖首尾的機制（`nodes_minimax_h3.py`、`comfy/ldm/minimax/model.py`）�
 - `generate.py video_inpaint`（wan `masked_edit`）：自動工作區、keep／replace 模式、無損 FFV1 上傳、貼回並檢查遮罩外為 0。實機 smoke 技術 pass，結果 candidate。
 - 人工指定物件：`gameart.py vfx keyframes` → `mask_session.py` 手繪 → `vfx segment-plan` → `video_layers.py run` → `vfx unpack-masks`／`mask-preview`。實測只塗第 0 幀時尾巴會被漏選，需在中段加修正幀。
 - `vfx_alpha_tools.py` 已加入部署清單和 `gameart.py vfx`；需求 3 的規則已寫入技能、動作表和 task help。
-- 操作契約：[`docs/knowledge/video/vfx-tools.md`](../../knowledge/video/vfx-tools.md)。
+- 操作契約：[`docs/knowledge/video/vfx-tools.md`](../../video/vfx-tools.md)。
 
 ## 需要 Steve 決定的事項（研究當時）
 

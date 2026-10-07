@@ -6,7 +6,7 @@ last_updated: 2026-10-07
 
 # 特效去背、物件標記局部重繪與 Idle 首尾規則
 
-這頁是 `vfx_alpha_tools.py`（`gameart.py vfx`）與 `generate.py video_inpaint` 的操作契約和證據入口。研究過程與完整數據見 [`docs/experiments/vfx-research/`](../../experiments/vfx-research/design.md)。所有輸出都是 candidate，技術通過不等於美術接受，由 Steve 決定。
+這頁是 `vfx_alpha_tools.py`（`gameart.py vfx`）與 `generate.py video_inpaint` 的操作契約和證據入口。研究過程與完整數據見 [`experiences/2026-10-07-vfx-research/`](../experiences/2026-10-07-vfx-research/design.md)。所有輸出都是 candidate，技術通過不等於美術接受，由 Steve 決定。
 
 ## 1. 特效去背輸出
 
@@ -163,4 +163,4 @@ gameart.py vfx unpack-masks --segment-dir <dir>/segment --video <src.mp4> --outp
 | SAM3 用第 0 幀手繪遮罩（`SAM3_VideoTrack.initial_mask`，不給文字） | 塗多少就追多少，從頭到尾不會自己修正；Steve 實際手繪的遮罩只追到槌頭和槌柄，握把、手、尾巴都沒被選進去，7.4 秒 |
 | SAM3 用隨手框的方塊當第 0 幀遮罩 | 前段把背景和整個角色都選進去，不可用 |
 
-SAM3 追蹤已做成固定 API graph（`skills/comfyui-video-layers/assets/sam3-track-*.json`）。2026-10-07 的直接 HTTP smoke：遮罩版 56 幀，和實驗遮罩平均 IoU 0.998；文字版 `mallet` 56 幀，IoU 1.0（`output/experiments/vfx-sam3-graph-smoke-20261007/smoke.json`）。研究用腳本放在 [`docs/experiments/vfx-research/scripts/`](../../experiments/vfx-research/scripts/README.md)，不是產線入口。
+SAM3 追蹤已做成固定 API graph（`skills/comfyui-video-layers/assets/sam3-track-*.json`）。2026-10-07 的直接 HTTP smoke：遮罩版 56 幀，和實驗遮罩平均 IoU 0.998；文字版 `mallet` 56 幀，IoU 1.0（`output/experiments/vfx-sam3-graph-smoke-20261007/smoke.json`）。研究用腳本放在 [`experiences/2026-10-07-vfx-research/scripts/`](../experiences/2026-10-07-vfx-research/scripts/README.md)，不是產線入口。

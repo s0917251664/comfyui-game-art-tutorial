@@ -1,6 +1,6 @@
 # 2026-10-07 VFX 研究用量測腳本（不是產線入口）
 
-這些是研究時臨時寫的一次性腳本，用來產生 [results.md](../results.md) 和 [vfx-tools.md](../../../knowledge/video/vfx-tools.md) 裡的數據與對照圖。保留在這裡只為了可以追溯和重現。
+這些是研究時臨時寫的一次性腳本，用來產生 [results.md](../results.md) 和 [vfx-tools.md](../../../video/vfx-tools.md) 裡的數據與對照圖。保留在這裡只為了可以追溯和重現。
 
 - 路徑都寫死在當時的 `output/experiments/...`，`REPO = Path(__file__).parents[...]` 也是依照原本在 `output/` 的位置計算。要重跑時，先把腳本放回原位置，或手動修改路徑。
 - 部分腳本裡直接組了 ComfyUI graph（`run_vace.py`、`run_sam3*.py`），那是研究當下的做法。**正式入口**是：
