@@ -11,7 +11,7 @@ Wan Animate 是已安裝的獨立 ComfyUI 原生能力：Mix 將參考角色置�
 
 ## 選 template
 
-固定 graph 在 repo 頂層 `templates/video/wan-animate/<名稱>/graph.api.json`（下面以名稱稱呼）；每份的 `template.json` 列出可替換欄位與模型 pin，`python tools_src/gameart.py run show video/wan-animate/<名稱>` 可以直接查看。
+固定 graph 在 repo 頂層 `templates/video/wan-animate/<名稱>/graph.api.json`（下面以名稱稱呼）；每份的 `template.json` 列出可替換欄位與模型 pin，`python tools_src/gameart.py run show video/wan-animate/<名稱>` 可以直接查看。送出前可以用 `run video/wan-animate/<名稱> --preflight` 檢查平台、ComfyUI 節點與模型檔（只讀；加 `--verify-hashes` 核對 sha256）。
 
 - 一般角色替換／動作驅動，片長 ≤ 33 幀：`mix`／`move`。
 - 需要 61 幀（約 3.8 秒）：`mix-extend`／`move-extend`。更長的片段沒有固定 template，停止並告知，不要臨場複製延伸節點。

@@ -20,7 +20,7 @@
 | 影片遮罩分層 | `comfyui-video-layers` | `video_layers.py preflight` / `run` |
 | 影片局部重繪（美術標記物件，只改遮罩內） | `comfyui-video-gen` | 預設：SAM3 固定 graph（`templates/video/sam3/track-{mask,text}/`）→ `gameart.py vfx mask-preview` → `generate.py video_inpaint`；SAM3 不可用時才改用 SAM2：`gameart.py vfx keyframes` / `segment-plan` → `video_layers.py run` → `vfx unpack-masks` |
 | 特效去背輸出、sprite sheet／WebM 打包、Idle 首尾量測 | `comfyui-video-gen` | `gameart.py vfx luma-alpha` / `chroma-alpha` / `pack` / `loop-metrics` |
-| 查詢／試算固定 API graph template（Wan Animate、SCAIL-2、SAM3） | `comfyui-wan-animate`、`comfyui-video-layers` | `<python_exe> tools_src/gameart.py run list` ／ `run show <id>` ／ `run <id> --dry-run --set NAME=VALUE ...`（目前只產生 graph，不送出；見 `templates/README.md`） |
+| 查詢／試算固定 API graph template（Wan Animate、SCAIL-2、SAM3） | `comfyui-wan-animate`、`comfyui-video-layers` | `<python_exe> tools_src/gameart.py run list` ／ `run show <id>` ／ `run <id> --dry-run --set NAME=VALUE ...` ／ `run <id> --preflight [--verify-hashes]`（只讀檢查；目前不送出，見 `templates/README.md`） |
 | 安裝 ComfyUI／模型 | `comfyui-install` | `verify_portable_install.py` |
 | 部署 repo 工具到 ComfyUI | `comfyui-install` | `gameart.py deploy`（dry run）／ `deploy --yes` ／ `deploy --rollback` |
 | 固定煙霧測試與驗證紀錄 | `comfyui-install` | `<python_exe> tools_src/gameart.py smoke run --output-dir DIR [--config local_config.json] [--tasks ..] [--record .]` ／ `smoke record <report>` ／ `validation propose|status`（技術檢查，見 `docs/knowledge/maintenance/validation-workflow.md`） |

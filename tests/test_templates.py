@@ -345,7 +345,8 @@ class CliTests(unittest.TestCase):
     def test_show(self):
         code, out, _ = self.run_cli("show", "video/wan-animate/mix")
         self.assertEqual(0, code)
-        for fragment in ("positive_points", "keep_audio", "dw-ll_ucoco_384.onnx", "724f4ff2439e", "windows-cuda"):
+        for fragment in ("positive_points", "keep_audio", "dw-ll_ucoco_384.onnx", "724f4ff2439e", "缺檔會自動下載",
+                         "windows-cuda"):
             self.assertIn(fragment, out)
         code, out, _ = self.run_cli("show", "video/sam3/track-text", "--json")
         self.assertEqual("video/sam3/track-text", json.loads(out)["id"])
