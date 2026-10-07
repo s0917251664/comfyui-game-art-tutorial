@@ -75,7 +75,8 @@ class VerifyPortableInstallTests(unittest.TestCase):
         self._copy_source(tools_dir / "image_edit_tools.py", self.image_edit_tools_bytes)
         self._copy_source(tools_dir / "comfyui_design.py", (ROOT / "tools_src/comfyui_design.py").read_bytes())
         for name in ("film_audio.py", "film_sapi.ps1", "film_qwen.py", "film_lipsync.py", "face_swap.py", "video_layers.py",
-                     "detect_video_capabilities.py", "gameart.py", "doctor.py", "asset_review.py", "smoke.py"):
+                     "detect_video_capabilities.py", "gameart.py", "doctor.py", "asset_review.py", "smoke.py",
+                     "vfx_alpha_tools.py"):
             self._copy_source(tools_dir / name, (ROOT / "tools_src" / name).read_bytes())
         for name in ("__init__.py", "contracts.py", "media.py", "nodes.py"):
             for location in (tools_dir / "comfyui_face_swap_video", comfyui_path / "custom_nodes/comfyui-face-swap-video"):

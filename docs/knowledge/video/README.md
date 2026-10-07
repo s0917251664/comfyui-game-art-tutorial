@@ -9,7 +9,7 @@ status: active
 
 ## 狀態與工具範圍
 
-CLI 對外契約是 task 名與可選 `--backend`，不是模型名。已存在 task：`img2video`、`fx_loop`、`transition`、`clip_extend`、`video_concat`、`video_composite`、`character_video`、`camera_move`、`pose_drive`。細部旗標與必要輸入見技能入口。模型節點、prompt tag、圖形只由程式鎖定，不得為單次要求臨場組 ComfyUI graph。
+CLI 對外契約是 task 名與可選 `--backend`，不是模型名。已存在 task：`img2video`、`fx_loop`、`transition`、`clip_extend`、`video_concat`、`video_composite`、`character_video`、`camera_move`、`pose_drive`、`video_inpaint`。細部旗標與必要輸入見技能入口。模型節點、prompt tag、圖形只由程式鎖定，不得為單次要求臨場組 ComfyUI graph。
 
 生成 task 走已安裝的 ComfyUI；`video_concat`、`video_composite` 與 `extract_video_frames` 是本機處理，不需要 server/backend。`detect_video_capabilities.py` 僅盤點既有模型、runtime、nodes，缺依賴時在 upload/queue 前停止，不下載或靜默切換 backend。
 
@@ -20,6 +20,7 @@ CLI 對外契約是 task 名與可選 `--backend`，不是模型名。已存在 
 | `character_ref`：圖參考角色，首幀可改場景 | `h3` | `character_video` |
 | `control_video`：角色圖 + 動作影片 | `h3`, `wan` | `pose_drive` |
 | `audio` | `h3` | H3 支援音訊；Wan I2V/Fun Control 輸出無聲 |
+| `masked_edit`：遮罩內局部重繪（VACE） | `wan` | `video_inpaint`；操作與實測見 [`vfx-tools.md`](vfx-tools.md) |
 
 實際可用性仍以本機 `video_capabilities.json` 的 backend/task 能力及 `default_backend` 為準。config 的預設為 null 時必須明確提供 `--backend`。不能因某 task 缺少 node、模型或 backend 而改 task，也不能假設 H3/Wan 自動替代。
 
@@ -33,6 +34,7 @@ CLI 對外契約是 task 名與可選 `--backend`，不是模型名。已存在 
 | H3 角色參考 / 動作驅動 | `minimax_h3_ref2va_pruned_int8_convrot.safetensors` | backend 內處理私有 `<Picture i>` / `<Video k>` tags；不是 Fun ControlNet Union |
 | Wan I2V | `wan2.2_ti2v_5B_fp16.safetensors` | 較快、無聲、沒有尾幀能力 |
 | Wan 動作驅動 | `wan2.2_fun_control_5B_bf16.safetensors` | 只供 Wan `pose_drive`，不可與 I2V 權重混用 |
+| Wan 遮罩局部重繪 | `wan2.1_vace_1.3B_fp16.safetensors` ＋ `wan_2.1_vae.safetensors` | 只供 `video_inpaint`；Wan2.1 家族，VAE 不能用 2.2 版；480P 級，task 會自動裁工作區 |
 
 `detect_video_capabilities.py` 只檢查指定 ComfyUI `.venv`、現有模型與（有 URL 時）`/object_info`；`generate.py` 送 input 前會再檢查 backend、模型 metadata、Python/PyTorch/Pillow/PyAV/CUDA/GPU 與 graph nodes。`device_config.json` 的圖片 tier 不決定影片 backend。使用 `pose`/`depth` 前需確認 `comfyui_controlnet_aux` 前處理模型已存在；不要讓第一次 smoke test 未經同意觸發下載。
 

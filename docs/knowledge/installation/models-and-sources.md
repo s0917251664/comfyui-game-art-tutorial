@@ -96,6 +96,7 @@ Video Layers 使用的 `facebook/sam2.1-hiera-small` 為短影片遮罩傳播模
 |---|---|---|---|---|---|
 | Wan 2.2 5B UNET | `diffusion_models` | `wan2.2_ti2v_5B_fp16.safetensors` | `Comfy-Org/Wan_2.2_ComfyUI_Repackaged` `split_files/diffusion_models/` | 9.31 GiB | 2026-08-26 |
 | Wan 2.2 Fun Control 5B UNET(wan 的 control_video 能力) | `diffusion_models` | `wan2.2_fun_control_5B_bf16.safetensors` | 同上 `split_files/diffusion_models/` | 9.32 GiB | 2026-08-27 |
+| Wan2.1 VACE 1.3B UNET（wan 的 `masked_edit`，`video_inpaint`） | `diffusion_models` | `wan2.1_vace_1.3B_fp16.safetensors` | [Comfy-Org/Wan_2.1_ComfyUI_repackaged](https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged) `split_files/diffusion_models/`；另需同 repo `split_files/vae/wan_2.1_vae.safetensors`（Wan2.1 VAE，不能用 2.2 版） | 4.01 GiB（4,309,519,800 bytes，SHA-256 `640ccc05…784f2`） | 2026-10-07 |
 | Wan 2.2 VAE | `vae` | `wan2.2_vae.safetensors` | 同上 `split_files/vae/` | 1.31 GiB | 2026-08-26 |
 | Wan / 共用文字編碼器 | `text_encoders` | `umt5_xxl_fp8_e4m3fn_scaled.safetensors` | `Comfy-Org/Wan_2.1_ComfyUI_repackaged` `split_files/text_encoders/` | 6.27 GiB | 2026-08-26 |
 | MiniMax H3 UNET(I2V / 首尾幀) | `diffusion_models` | `minimax_h3_fl2va_pruned_int8_convrot.safetensors` | `Comfy-Org/MiniMax-H3` `diffusion_models/` | 19.53 GiB | 2026-08-26 |

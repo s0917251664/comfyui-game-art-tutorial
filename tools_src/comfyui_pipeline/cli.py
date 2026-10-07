@@ -392,3 +392,5 @@ def run(argv=None, context=None):
         print(f"[完成] {p}")
         if p.lower().endswith(".mp4") and plan is not None:
             _verify_video_output(ctx, args, plan, p, history, video_started, video_prompt, video_negative)
+            if plan.finalize is not None:
+                plan.finalize(p)

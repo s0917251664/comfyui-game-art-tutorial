@@ -1,0 +1,82 @@
+{
+  "1": {
+    "class_type": "LoadVideo",
+    "inputs": {
+      "file": "__SOURCE_VIDEO__"
+    }
+  },
+  "2": {
+    "class_type": "GetVideoComponents",
+    "inputs": {
+      "video": [
+        "1",
+        0
+      ]
+    }
+  },
+  "30": {
+    "class_type": "CheckpointLoaderSimple",
+    "inputs": {
+      "ckpt_name": "sam3.1_multiplex_fp16.safetensors"
+    }
+  },
+  "31": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "clip": [
+        "30",
+        1
+      ],
+      "text": "__TRACK_TEXT__"
+    }
+  },
+  "33": {
+    "class_type": "SAM3_VideoTrack",
+    "inputs": {
+      "images": [
+        "2",
+        0
+      ],
+      "model": [
+        "30",
+        0
+      ],
+      "conditioning": [
+        "31",
+        0
+      ],
+      "detection_threshold": 0.5,
+      "max_objects": 4,
+      "detect_interval": 1
+    }
+  },
+  "34": {
+    "class_type": "SAM3_TrackToMask",
+    "inputs": {
+      "track_data": [
+        "33",
+        0
+      ],
+      "object_indices": ""
+    }
+  },
+  "35": {
+    "class_type": "MaskToImage",
+    "inputs": {
+      "mask": [
+        "34",
+        0
+      ]
+    }
+  },
+  "36": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "35",
+        0
+      ],
+      "filename_prefix": "__OUTPUT_PREFIX__"
+    }
+  }
+}

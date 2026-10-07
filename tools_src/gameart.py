@@ -23,6 +23,7 @@ TOOLS = {
     "sam": ("sam_segment.py", "SAM 2.1 自動遮罩候選"),
     "mask-refine": ("mask_refine.py", "以圖像引導精修使用者繪製的選取遮罩"),
     "mask-session": ("mask_session.py", "本機簡易遮罩工具 session client"),
+    "vfx": ("vfx_alpha_tools.py", "特效去背(黑底亮度/綠幕)、打包、影片物件標記與遮罩貼回、Idle 首尾量測"),
     "detect-device": ("detect_device.py", "偵測硬體並寫 device_config.json"),
     "detect-image": ("detect_image_capabilities.py", "偵測圖片能力並寫 image_capabilities.json"),
     "detect-video": ("detect_video_capabilities.py", "偵測影片能力並寫 video_capabilities.json"),

@@ -3,7 +3,10 @@
 從 generate.py 抽出,graph 內容未改動。
 """
 from .image_graphs import build_control_preprocessor, seed_or_random
-from .video_catalog import CHARACTER_REF_MAX, VIDEO_FPS, VIDEO_NEG_DEFAULT, VIDEO_STEPS
+from .video_catalog import (
+    CHARACTER_REF_MAX, VACE_CFG, VACE_NEGATIVE_DEFAULT, VACE_SHIFT, VACE_STEPS, VIDEO_FPS,
+    VIDEO_NEG_DEFAULT, VIDEO_STEPS,
+)
 from .video_config import _video_model_file_name
 from .video_graphs import h3_frame_count, h3_pose_drive_prompt, h3_ref_prompt, wan_frame_count
 
@@ -266,3 +269,45 @@ def build_pose_drive_h3(prompt, image_filename, motion_filename, width=768, heig
             "format": "mp4", "codec": "h264"}},
     }
     return g, "92"
+
+
+def build_video_inpaint_wan(prompt, control_filename, mask_filename, width, height, length, seed=None,
+                            negative=None, strength=1.0, filename_prefix="video_inpaint",
+                            video_config=None):
+    """video_inpaint 的 wan 實作:Wan2.1 VACE 遮罩局部重繪。
+
+    取樣參數照官方 ComfyUI 模板 video_wan_vace_inpainting.json(非 turbo 分支)。control/mask 都是
+    task 端在本機裁好、縮好、編成無損影片後上傳的同尺寸片段,節點內不再縮放裁切;mask 白色=重畫。
+    """
+    seed = seed_or_random(seed)
+    negative = negative or VACE_NEGATIVE_DEFAULT
+    g = {
+        "37": {"class_type": "UNETLoader", "inputs": {
+            "unet_name": _video_model_file_name("wan", "vace_unet", video_config), "weight_dtype": "default"}},
+        "38": {"class_type": "CLIPLoader", "inputs": {
+            "clip_name": _video_model_file_name("wan", "clip", video_config), "type": "wan", "device": "default"}},
+        "39": {"class_type": "VAELoader", "inputs": {"vae_name": _video_model_file_name("wan", "vace_vae", video_config)}},
+        "48": {"class_type": "ModelSamplingSD3", "inputs": {"model": ["37", 0], "shift": VACE_SHIFT}},
+        "6": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": ["38", 0]}},
+        "7": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": ["38", 0]}},
+        "80": {"class_type": "LoadVideo", "inputs": {"file": control_filename}},
+        "81": {"class_type": "GetVideoComponents", "inputs": {"video": ["80", 0]}},
+        "82": {"class_type": "LoadVideo", "inputs": {"file": mask_filename}},
+        "83": {"class_type": "GetVideoComponents", "inputs": {"video": ["82", 0]}},
+        "84": {"class_type": "ImageToMask", "inputs": {"image": ["83", 0], "channel": "red"}},
+        "55": {"class_type": "WanVaceToVideo", "inputs": {
+            "positive": ["6", 0], "negative": ["7", 0], "vae": ["39", 0],
+            "width": width, "height": height, "length": length, "batch_size": 1, "strength": float(strength),
+            "control_video": ["81", 0], "control_masks": ["84", 0]}},
+        "3": {"class_type": "KSampler", "inputs": {
+            "model": ["48", 0], "positive": ["55", 0], "negative": ["55", 1],
+            "latent_image": ["55", 2], "seed": seed, "steps": VACE_STEPS, "cfg": VACE_CFG,
+            "sampler_name": "uni_pc", "scheduler": "simple", "denoise": 1.0}},
+        "56": {"class_type": "TrimVideoLatent", "inputs": {"samples": ["3", 0], "trim_amount": ["55", 3]}},
+        "8": {"class_type": "VAEDecode", "inputs": {"samples": ["56", 0], "vae": ["39", 0]}},
+        "57": {"class_type": "CreateVideo", "inputs": {"images": ["8", 0], "fps": float(VIDEO_FPS)}},
+        "58": {"class_type": "SaveVideo", "inputs": {
+            "video": ["57", 0], "filename_prefix": filename_prefix,
+            "format": "mp4", "codec": "h264"}},
+    }
+    return g, "58"

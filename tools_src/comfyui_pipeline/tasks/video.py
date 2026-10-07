@@ -45,7 +45,7 @@ def _add_img2video(sub, parents):
 def _add_fx_loop(sub, parents):
     p_fx = sub.add_parser(
         "fx_loop",
-        help="鏡頭鎖定的循環特效/環境元素(火、法陣、旗幟)。要能接首尾幀的 backend。預設抽幀交引擎。",
+        help="鏡頭鎖定的循環特效/環境元素/角色 Idle 循環。H3 會把 --image 同時當首幀與尾幀。預設抽幀交引擎。",
         parents=[parents["video"]],
     )
     p_fx.add_argument("--prompt", required=True, help="循環怎麼動,會自動補上 seamless loop 約束")
@@ -63,7 +63,7 @@ def _add_fx_loop(sub, parents):
 def _add_transition(sub, parents):
     p_tr = sub.add_parser(
         "transition",
-        help="內容轉場:已知 A、已知 B,模型只負責中間。要能接首尾幀的 backend。傳統硬切/疊化不要用這個。",
+        help="內容轉場:已知 A、已知 B,模型只負責中間;--start 與 --end 可同一張 Idle 做「Idle→動作→Idle」。傳統硬切/疊化不要用這個。",
         parents=[parents["video"]],
     )
     p_tr.add_argument("--prompt", required=True, help="中間發生什麼")
@@ -119,7 +119,7 @@ def _add_camera_move(sub, parents):
 def _add_character_video(sub, parents):
     p_cv = sub.add_parser(
         "character_video",
-        help="角色參考生影片:參考圖鎖身份,第一幀不必是那張定稿圖。對應靜態 style_lock,不是 img2video。",
+        help="角色參考生影片:參考圖鎖身份,第一幀不保證是那張定稿圖。對應靜態 style_lock,不是 img2video。",
         parents=[parents["video"]],
     )
     p_cv.add_argument("--prompt", required=True, help="新鏡頭裡這個角色在做什麼(英文較穩)")
@@ -137,7 +137,7 @@ def _add_character_video(sub, parents):
 def _add_pose_drive(sub, parents):
     p_pd = sub.add_parser(
         "pose_drive",
-        help="表演驅動:角色靜幀 + 動作參考影片。對應靜態 character_action,姿勢來源是影片不是一張 pose 圖。",
+        help="表演驅動:角色靜幀 + 動作參考影片。靜幀只當身份參考,第一幀不保證是它。對應靜態 character_action。",
         parents=[parents["video"]],
     )
     p_pd.add_argument("--prompt", required=True, help="這段鏡頭裡角色在做什麼(英文較穩)")

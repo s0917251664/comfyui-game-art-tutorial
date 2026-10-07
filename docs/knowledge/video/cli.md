@@ -55,6 +55,14 @@ status: active
 <python_exe> <generate_script> pose_drive --config <local_config.json> [--video-config <video_capabilities.json>] --timeout 1800 --image <char.png> --motion-ref <motion.mp4> --prompt "..." [--control-type pose|canny|depth] [--backend h3|wan] [--duration 2] [--extract-frames] [--overwrite] --output-dir <output_dir>
 ```
 
+## `video_inpaint`
+
+```text
+<python_exe> <generate_script> video_inpaint --config <local_config.json> [--video-config <video_capabilities.json>] --backend wan --timeout 1800 --video <src.mp4> --masks <masks_dir|layers.zip> [--mask-object 1] --mode keep|replace --prompt "..." [--seed N] [--grow 8] [--feather 4] [--pad 48] [--crop x0,y0,x1,y1] [--name <name>] --output-dir <output_dir>
+```
+
+遮罩為白色＝重畫的 L PNG（通常由 `gameart.py vfx segment-plan` → `video_layers.py run` → `vfx unpack-masks` 產生）。輸出原始工作區 MP4＋sidecar，以及 `<stem>_composited/`（無損 PNG 主檔、H.264 預覽、`result.json`）。完整流程與限制見 [`vfx-tools.md`](vfx-tools.md)。
+
 ## `video_concat`（本機）
 
 ```text

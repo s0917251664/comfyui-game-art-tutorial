@@ -7,7 +7,7 @@ description: 將短片、循環特效與鏡頭需求路由到已接入的影片 
 
 ## 職責與交接
 
-短動態特效的需求、時間階段、交付與內容驗收方法由[共用製作流程](../game-art-workflow/references/production.md)維護。本技能負責 ComfyUI 七個影片生成 task 的 backend/capability gate、執行及影片技術契約；本機 `video_concat`、`video_composite` 與抽幀亦沿用既有入口。
+短動態特效的需求、時間階段、交付與內容驗收方法由[共用製作流程](../game-art-workflow/references/production.md)維護。本技能負責 ComfyUI 八個影片生成 task（含 `video_inpaint`）的 backend/capability gate、執行及影片技術契約；本機 `video_concat`、`video_composite` 與抽幀亦沿用既有入口。
 
 上述本機處理不需 ComfyUI server，但仍依賴 `generate.py` facade、整個 `comfyui_pipeline/` 及相關 PyAV/Pillow/NumPy runtime，不是任意平台可執行的獨立單檔。平台圖片工具只能生成靜態素材；目前沒有平台影片執行技能或已接入 provider，不能把共用 VFX 計畫當成影片執行能力。
 
@@ -20,6 +20,8 @@ description: 將短片、循環特效與鏡頭需求路由到已接入的影片 
 若需求明確是已安裝的 Wan2.2 Animate 固定原生 API graph（Mix 原影片角色替換、Move 參考角色動作驅動、兩段延伸，或 SCAIL-2），改讀[Wan Animate 技能](../comfyui-wan-animate/SKILL.md)：它未接入本技能列出的 `generate.py` task/backend，不能由本技能的 H3/Wan capability gate 推定可用。
 
 劇情多鏡製作、長影片規劃與分鏡，先走 [劇情影片流程](../comfyui-film-workflow/SKILL.md) 建立鏡頭表與連續性紀錄，再回本技能逐鏡執行。單支影片仍直接使用本技能。
+
+首尾幀：H3 的 `img2video` 鎖首幀，`fx_loop` 把同一張圖當首幀和尾幀，`transition` 鎖 `--start`／`--end`；`pose_drive`／`character_video` 不鎖首幀。角色動作要從已驗收 Idle 開始時，依[動作規則](../../docs/knowledge/video/vfx-tools.md#3-idle-起始幀與首尾呼應)選 task。
 
 不以 `transition` 做傳統硬切／疊化／擦除；Logo 或中文字效果不可靠，直接說明限制。成品不自動以系統播放器開啟，只回報檔案路徑。
 
@@ -36,11 +38,14 @@ description: 將短片、循環特效與鏡頭需求路由到已接入的影片 
 | 原構圖靜幀動起來、idle | `img2video` |
 | 主體靜止，只推拉搖鏡 | `camera_move` |
 | 角色參考圖演新動作／換場景，首幀可改 | `character_video` |
-| 角色靜幀由動作影片驅動 | `pose_drive` |
+| 角色靜幀由動作影片驅動（首幀不保證是該靜幀） | `pose_drive` |
 | 循環特效、火焰、法陣、旗幟 | `fx_loop` |
 | A 畫面變成 B | `transition`，要兩張靜幀 |
 | 同場接續前鏡 | `clip_extend` |
 | 接片／乾淨綠幕合成 | `video_concat`／`video_composite`（本機）|
+| 只改影片中某個物件（美術手繪標記 → SAM 傳播 → 只重畫遮罩內） | `video_inpaint`（wan `masked_edit`），遮罩流程見 [vfx-tools](../../docs/knowledge/video/vfx-tools.md#2-影片物件標記與局部重繪) |
+| 影片裡的道具換材質／造型（例如魔法槌 → 木槌） | 先用 `flux2_edit`＋`gameart.py vfx prop-paste` 做母版，再用 H3 `pose_drive --control-type canny` 整幀套原片動作；不要用 `video_inpaint`，見 [vfx-tools §4](../../docs/knowledge/video/vfx-tools.md#4-換道具材質造型先定母版再整幀套原片動作) |
+| 特效要透明成品（PNG 序列／sprite sheet／WebM） | 黑底生成後 `gameart.py vfx luma-alpha`＋`pack`；不透明主體用綠幕＋`chroma-alpha --unmix --despill`，見 [vfx-tools](../../docs/knowledge/video/vfx-tools.md#1-特效去背輸出) |
 | 有劇情的短片 | 先逐鏡建表，再呼叫現有 task、最後 concat；不可一條超長 prompt |
 
 生成影片沒指定時長預設 2 秒，可指定 2–6 秒；更長拆鏡。影片固定 24 FPS，沒有 `--fps`。`--width` 和 `--height` 成對；生成畫布縮至長邊 768 內並向下對齊 32，不能保證任意交付尺寸。Backend 對齊影格後的實際時長未必正好等於要求；有其他規格要求時先說明差距，不虛構旗標。
@@ -69,6 +74,6 @@ description: 將短片、循環特效與鏡頭需求路由到已接入的影片 
 
 人工核對角色身份、prompt 動作、構圖/運鏡方向、起訖幀或多輪 loop 接縫，以及 concat/composite 的順序、縮放、音訊和綠幕邊緣。連續性指標只找候選問題，未跨題材校準，不判定角色品質。由使用者決定接受、調整或放棄；未接受仍保留供比較。報告檔案路徑與待判斷點，不自動開播放器、不自動重送或覆寫。
 
-目前未接入第三方付費 provider、透明影片、逐幀 AI 去背、APNG 或 sprite-sheet 打包。若將來接入付費 provider，每次付費前先列 provider/backend、輸入素材、時長、輸出數量與估價，取得使用者確認後才送出；失敗不自動付費重試。外部輸出若沒有本機 sidecar，不能宣稱有相同追溯性。
+透明成品、APNG、sprite sheet、WebM alpha 由本機 `gameart.py vfx` 後處理產生，不是模型原生 RGBA；目前未接入第三方付費 provider 或原生 RGBA 影片模型。若將來接入付費 provider，每次付費前先列 provider/backend、輸入素材、時長、輸出數量與估價，取得使用者確認後才送出；失敗不自動付費重試。外部輸出若沒有本機 sidecar，不能宣稱有相同追溯性。
 
 Wan Animate 的固定原生 API 路徑獨立於本技能列出的 `generate.py` task/backend；日常使用依[專用技能](../comfyui-wan-animate/SKILL.md)，安裝與歷史測試見[安裝紀錄](../../docs/knowledge/video/wan-animate-install.md)。

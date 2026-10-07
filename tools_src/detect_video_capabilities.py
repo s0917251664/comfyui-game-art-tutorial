@@ -35,6 +35,8 @@ MODEL_DIRECTORIES = {
         "control_unet": "diffusion_models",
         "clip": "text_encoders",
         "vae": "vae",
+        "vace_unet": "diffusion_models",
+        "vace_vae": "vae",
     },
 }
 
