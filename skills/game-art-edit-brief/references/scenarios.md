@@ -50,7 +50,7 @@ Plan JSON 只能有 `items` 鍵，含 1–12 筆；每筆只能有 `path`、`lab
 }
 ```
 
-輸出 `reference_board.png` 及含原檔路徑、SHA-256、尺寸和 role 的 `references.json`。縮圖保持比例，最長邊不超過格子範圍；JSON 仍記原圖尺寸和路徑。原圖才是 task 輸入，board 只供人工檢視。repo 範例：[plan](../../../output/scenario_tools_20261002/references-plan.json)、[board](../../../output/scenario_tools_20261002/board/reference_board.png)。
+輸出 `reference_board.png` 及含原檔路徑、SHA-256、尺寸和 role 的 `references.json`。縮圖保持比例，最長邊不超過格子範圍；JSON 仍記原圖尺寸和路徑。原圖才是 task 輸入，board 只供人工檢視。repo 範例：plan（本機證據：`output/scenario_tools_20261002/references-plan.json`）、board（本機證據：`output/scenario_tools_20261002/board/reference_board.png`）。
 
 ### 稽核 Alpha 與基本素材狀態
 
@@ -84,21 +84,21 @@ python tools_src/image_edit_tools.py asset-audit --image <image.png> --output-di
 
 2026-10-02 Windows／RTX 4080 專案環境：兩新工具及既有 image edit tools 共 33 項測試通過；部署驗證 18 項通過，拒絕覆寫既有輸出目錄的錯誤案例也已實測。
 
-- 三張來源、appearance、mask-preview 參考圖產生 1080×420 board；中文標籤完整，縮圖保留比例且未裁切。root 目視檢查版面：[board 圖](../../../output/scenario_tools_20261002/board/reference_board.png)、[references.json](../../../output/scenario_tools_20261002/board/references.json)。工具仍只作人工參考整理。
-- 2048×2048 RGBA cutout 記錄 2,708,657 個透明像素、192,410 個半透明像素、1,293,237 個不透明像素，visible bbox `[134, 59, 1910, 2003]`，沒有列出的 Alpha／碰邊 finding：[audit.json](../../../output/scenario_tools_20261002/alpha/audit.json)。
-- 832×1232 RGB 角色圖正確報告 `no_alpha_channel`、`no_fully_transparent_pixels`、`visible_pixels_touch_canvas_edge`：[audit.json](../../../output/scenario_tools_20261002/opaque/audit.json)。這只表示該圖不含 Alpha 且內容貼邊，不代表它不適合其他用途。
-- 部署輸出：[deployed-board](../../../output/scenario_tools_20261002/deployed-board/)、[deployed-alpha](../../../output/scenario_tools_20261002/deployed-alpha/)。實際部署位置仍遵循 `image_edit_tools.py` 的既有部署契約。
+- 三張來源、appearance、mask-preview 參考圖產生 1080×420 board；中文標籤完整，縮圖保留比例且未裁切。root 目視檢查版面：board 圖（本機證據：`output/scenario_tools_20261002/board/reference_board.png`）、references.json（本機證據：`output/scenario_tools_20261002/board/references.json`）。工具仍只作人工參考整理。
+- 2048×2048 RGBA cutout 記錄 2,708,657 個透明像素、192,410 個半透明像素、1,293,237 個不透明像素，visible bbox `[134, 59, 1910, 2003]`，沒有列出的 Alpha／碰邊 finding：audit.json（本機證據：`output/scenario_tools_20261002/alpha/audit.json`）。
+- 832×1232 RGB 角色圖正確報告 `no_alpha_channel`、`no_fully_transparent_pixels`、`visible_pixels_touch_canvas_edge`：audit.json（本機證據：`output/scenario_tools_20261002/opaque/audit.json`）。這只表示該圖不含 Alpha 且內容貼邊，不代表它不適合其他用途。
+- 部署輸出：deployed-board（本機證據：`output/scenario_tools_20261002/deployed-board/`）、deployed-alpha（本機證據：`output/scenario_tools_20261002/deployed-alpha/`）。實際部署位置仍遵循 `image_edit_tools.py` 的既有部署契約。
 
 上述證據只確認工具整理與基本 Alpha 檢查行為，不驗收生成結果、去背邊緣或美術品質。reference board 的狀態為 `candidate`；asset audit 的狀態為 `observed`，都保留人工判斷。
 
 ## 三個代表案例實跑觀察
 
-2026-10-02 以 `sdxl_standard`、seed `20261002` 跑了三個代表 task，共四張生成圖（圖示含一次有理由修正）。以下是 root 對輸出畫面的觀察與技術記錄；**所有輸出仍是待美術審核者檢視的 candidate，只代表這三個情境，不代表其餘情境已驗證，也沒有更動 profile 或 task validation。**完整 argv／prompt 在 [`execution.json`](../../../output/scenario_generation_20261002/execution.json)，task manifest 各在案例資料夾的 `generation.json`，人工觀察在 [`review.json`](../../../output/scenario_generation_20261002/review.json)。
+2026-10-02 以 `sdxl_standard`、seed `20261002` 跑了三個代表 task，共四張生成圖（圖示含一次有理由修正）。以下是 root 對輸出畫面的觀察與技術記錄；**所有輸出仍是待美術審核者檢視的 candidate，只代表這三個情境，不代表其餘情境已驗證，也沒有更動 profile 或 task validation。**完整 argv／prompt 在 `execution.json`（本機證據：`output/scenario_generation_20261002/execution.json`），task manifest 各在案例資料夾的 `generation.json`，人工觀察在 `review.json`（本機證據：`output/scenario_generation_20261002/review.json`）。
 
-- **局部材質，`guided_inpaint`（21.08 秒）**：832×1232 藍髮呈現密集細纖維、部分纖維偏長，髮型輪廓大致保留，但沒有精準呈現短絨參考材質。raw comparison 在 926,576 個保留區像素中有 870,763 個 byte 改動；按已確認 mask 合成後保留區改動為 0。手繪 mask 中未選到的小洞仍保留。輸出見 [`material`](../../../output/scenario_generation_20261002/material/) 與 [`material-final-diff`](../../../output/scenario_generation_20261002/material-final-diff/)。
-- **角色姿勢，`character_action`（11.05 秒）**：832×1232 輸出大致跟上斜向跳躍、雙手持槌的姿勢；帽緣、捲髮與衣服形狀受 pose reference 污染，原角色的藍色馬耳、bob 髮型及水手服身份沒有保住，因此角色身份要求未達成。輸出見 [`action`](../../../output/scenario_generation_20261002/action/)。
-- **`character_action` 控制方式比較（2026-10-02，Windows CUDA）**：以 `sdxl_standard`、相同 prompt 與 seed `20261002` 重跑，生成條件唯一變更為 `--control-type canny`→`pose`。pose 輸出較接近藍髮、動物耳朵與深藍短褲，但成了站姿且沒有槌子，動作要求未達成；輸出仍是待美術審核者檢視的 candidate。ComfyUI history 的 node 8 `openpose_json` 為 `people=[]`、512×512 畫布，顯示這次沒有偵測骨架，因此不能稱為成功的 pose 控制；資料見 [`pose-keypoints.json`](../../../output/scenario_generation_20261002/action-pose/pose-keypoints.json)。原角色與姿勢參考分別是 [`character-master.png`](../../../output/platform_retest_20261001/inputs/character-master.png) 與 `reports/skye-ai-art-pipeline-v9/assets/images/pose-reference-isolated.png`（`reports/` 不進版控，只在原實驗機器上），pose 輸出見 [`character_action_00038_.png`](../../../output/scenario_generation_20261002/action-pose/character_action_00038_.png)。task 的 `verified` 只表示執行能力／輸出契約有驗證，不保證角色身份、姿勢或美術品質。
-- **透明道具圖示，`icon_asset`（7.50 秒，另有一次有理由修正）**：1024×1024 RGBA 初版是青藍冰槌搭金色細節。原始 RGB 可見的徽記區域 Alpha 全為 0，所以黑底預覽中不顯示。固定 seed 後以 negative prompt 排除文字／標記／徽記等再生成，槌頭輪廓也改變；單一修正不足以證明品質改善。見 [`icon`](../../../output/scenario_generation_20261002/icon/)、[`icon-correction`](../../../output/scenario_generation_20261002/icon-correction/) 與 [`icon-audit`](../../../output/scenario_generation_20261002/icon-audit/)。
+- **局部材質，`guided_inpaint`（21.08 秒）**：832×1232 藍髮呈現密集細纖維、部分纖維偏長，髮型輪廓大致保留，但沒有精準呈現短絨參考材質。raw comparison 在 926,576 個保留區像素中有 870,763 個 byte 改動；按已確認 mask 合成後保留區改動為 0。手繪 mask 中未選到的小洞仍保留。輸出見 `material`（本機證據：`output/scenario_generation_20261002/material/`） 與 `material-final-diff`（本機證據：`output/scenario_generation_20261002/material-final-diff/`）。
+- **角色姿勢，`character_action`（11.05 秒）**：832×1232 輸出大致跟上斜向跳躍、雙手持槌的姿勢；帽緣、捲髮與衣服形狀受 pose reference 污染，原角色的藍色馬耳、bob 髮型及水手服身份沒有保住，因此角色身份要求未達成。輸出見 `action`（本機證據：`output/scenario_generation_20261002/action/`）。
+- **`character_action` 控制方式比較（2026-10-02，Windows CUDA）**：以 `sdxl_standard`、相同 prompt 與 seed `20261002` 重跑，生成條件唯一變更為 `--control-type canny`→`pose`。pose 輸出較接近藍髮、動物耳朵與深藍短褲，但成了站姿且沒有槌子，動作要求未達成；輸出仍是待美術審核者檢視的 candidate。ComfyUI history 的 node 8 `openpose_json` 為 `people=[]`、512×512 畫布，顯示這次沒有偵測骨架，因此不能稱為成功的 pose 控制；資料見 `pose-keypoints.json`（本機證據：`output/scenario_generation_20261002/action-pose/pose-keypoints.json`）。原角色與姿勢參考分別是 `character-master.png`（本機證據：`output/platform_retest_20261001/inputs/character-master.png`） 與 `reports/skye-ai-art-pipeline-v9/assets/images/pose-reference-isolated.png`（`reports/` 不進版控，只在原實驗機器上），pose 輸出見 `character_action_00038_.png`（本機證據：`output/scenario_generation_20261002/action-pose/character_action_00038_.png`）。task 的 `verified` 只表示執行能力／輸出契約有驗證，不保證角色身份、姿勢或美術品質。
+- **透明道具圖示，`icon_asset`（7.50 秒，另有一次有理由修正）**：1024×1024 RGBA 初版是青藍冰槌搭金色細節。原始 RGB 可見的徽記區域 Alpha 全為 0，所以黑底預覽中不顯示。固定 seed 後以 negative prompt 排除文字／標記／徽記等再生成，槌頭輪廓也改變；單一修正不足以證明品質改善。見 `icon`（本機證據：`output/scenario_generation_20261002/icon/`）、`icon-correction`（本機證據：`output/scenario_generation_20261002/icon-correction/`） 與 `icon-audit`（本機證據：`output/scenario_generation_20261002/icon-audit/`）。
 
 三例展示的是 brief、既有 task 與本機工具可如何串接，以及需要如何記錄失配；不能據此宣稱 task 已保證達成需求，亦不把 tool audit、像素統計或 root 觀察當作美術審核者的驗收。
 

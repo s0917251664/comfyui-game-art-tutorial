@@ -34,10 +34,10 @@ python <ComfyUI>\tools\image_edit_tools.py recolor --source <source.png> --mask 
 
 為了避免柔邊碰到瓶頸與瓶身接合處，將後處理選區更新為 `body-mask-v2.png`，強制 y<350 全部保留；沒有增加生成次數。最終輸出匹配 65,562 像素、改動 65,398 像素。獨立比對確認來源最上方 350 列、全圖 Alpha 及遮罩保留區 RGBA 完全相同；比較報告中 510,083 個 mask-preserved 像素皆未變。瓶身轉紅，但仍有少量青綠邊緣與底部原色，維持 candidate。Hue rotation 保留飽和度／HSV value 到 RGB 量化前，並非物理亮度保留或重打光；工具也不新增紋理、金屬／玻璃反射等材質特徵。
 
-- 執行與人工觀察摘要：[review.json](../../../output/single_object_color_20261003/review.json)
-- ComfyUI 執行追溯：[execution-proof.json](../../../output/single_object_color_20261003/execution-proof.json)
-- 本機換色 manifest：[result.json](../../../output/single_object_color_20261003/final-red/result.json)
-- RGBA 差異與選區統計：[comparison.json](../../../output/single_object_color_20261003/final-red-diff/comparison.json)
-- 最終換色候選：[recolored.png](../../../output/single_object_color_20261003/final-red/recolored.png)
+- 執行與人工觀察摘要：review.json（本機證據：`output/single_object_color_20261003/review.json`）
+- ComfyUI 執行追溯：execution-proof.json（本機證據：`output/single_object_color_20261003/execution-proof.json`）
+- 本機換色 manifest：result.json（本機證據：`output/single_object_color_20261003/final-red/result.json`）
+- RGBA 差異與選區統計：comparison.json（本機證據：`output/single_object_color_20261003/final-red-diff/comparison.json`）
+- 最終換色候選：recolored.png（本機證據：`output/single_object_color_20261003/final-red/recolored.png`）
 
 單元測試 43 項通過；部署 verifier 19 項通過、0 項失敗，且部署版 recolor 與 `composite --keep-source-alpha` 的解碼像素均與原始碼一致。此次記錄只證明此版本工具的色相旋轉、Alpha／未匹配像素保留及本案例輸出；沒有建立新的生成 task、graph 或 profile，也不代表一般材質控制能力。無新增套件或模型，部署只需同步 `image_edit_tools.py`。

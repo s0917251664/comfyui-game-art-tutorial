@@ -46,7 +46,7 @@ seed、prompt、來源與參考固定；只能在現有 task 白名單的 0–1 
 
 部署 verifier `verify_portable_install.py --require-image` 回報 17 pass、0 fail；單元與部署測試共 30 項通過，Python syntax 檢查通過。重現命令與耗時在 `output/local_edit_tools_20261001/execution.json`，獨立尺寸、通道、秒數與保留區核對在 `independent-validation.json`；完整腳本為 `run_smoke.py`。原始輸出在同目錄下的 guided、refine、inpaint、character 子目錄，以及 standalone-composite、standalone-compare。耗時受首張模型載入快取影響，不可用來比較 task 效率。ComfyUI server 曾出現既有 `comfyui.db` 權限警告，但六張生成完成；本次未更動資料庫。離線驗證、CLI smoke 與單案例畫面觀察不會自動改寫 image profile 或 task 的 validation 狀態。
 
-2026-10-02 新增的參考圖板與 Alpha 稽核在 Windows／RTX 4080 環境實跑：33 項工具測試通過，部署 verifier 18 項通過，並確認拒絕既有 output 目錄。三張參考圖輸出 1080×420 board，中文職責完整、縮圖未裁切；2048×2048 RGBA cutout 記錄 2,708,657 透明、192,410 半透明、1,293,237 不透明像素，bbox `[134, 59, 1910, 2003]`；832×1232 RGB 圖則正確標出無 Alpha、無透明像素與內容碰邊。輸出證據與預覽在 [`output/scenario_tools_20261002/`](../../../output/scenario_tools_20261002/)；此驗證只證明板面整理與機械 Alpha 檢查，不驗收生成圖或去背美術品質。
+2026-10-02 新增的參考圖板與 Alpha 稽核在 Windows／RTX 4080 環境實跑：33 項工具測試通過，部署 verifier 18 項通過，並確認拒絕既有 output 目錄。三張參考圖輸出 1080×420 board，中文職責完整、縮圖未裁切；2048×2048 RGBA cutout 記錄 2,708,657 透明、192,410 半透明、1,293,237 不透明像素，bbox `[134, 59, 1910, 2003]`；832×1232 RGB 圖則正確標出無 Alpha、無透明像素與內容碰邊。輸出證據與預覽在 `output/scenario_tools_20261002/`（本機證據）；此驗證只證明板面整理與機械 Alpha 檢查，不驗收生成圖或去背美術品質。
 
 2026-10-03 單件青綠玻璃瓶測試中，既有 `refine` denoise 0.5 與 0.75 兩次均未得到紅色，且 0.75 對瓶塞／形狀改動較多；停止抽樣後以本機 `recolor` 產生紅色 candidate。單元測試 43 項通過，部署 verifier 19 項通過；candidate 尚待美術審核者驗收。具體遮罩、像素數、Alpha／區域比對及本機 trace 連結見[單一物件換色紀錄](single-object-color.md)；其 `output/` 證據只在原實驗工作樹保存，乾淨 clone 不一定含有。這項紀錄不改變 profile 或 task validation。
 

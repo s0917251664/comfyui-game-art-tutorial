@@ -49,7 +49,7 @@
 
 ## Live baseline：H3 `img2video`
 
-本次另完成一支 H3 `img2video` live baseline：[`shot_reliability_20261003_idle_img2video_00001_.mp4`](../../../output/video_reliability_20261003/live_baseline/shot_reliability_20261003_idle_img2video_00001_.mp4)，sidecar 為同名 `.mp4.json`。輸出為 768×768、24 FPS、56 frames、2.333333 秒、H.264 與 AAC stereo（32,000 Hz），耗時 95.053 秒；technical contract pass，沒有 warnings。`--extract-frames` 產生 56 張 PNG，逐張載入解碼成功且數量符合影片影格數；音訊完整解碼為 73 audio frames，但未聆聽，沒有音質驗收。輸入 source hash 與紀錄相符。
+本次另完成一支 H3 `img2video` live baseline：`shot_reliability_20261003_idle_img2video_00001_.mp4`（本機證據：`output/video_reliability_20261003/live_baseline/shot_reliability_20261003_idle_img2video_00001_.mp4`），sidecar 為同名 `.mp4.json`。輸出為 768×768、24 FPS、56 frames、2.333333 秒、H.264 與 AAC stereo（32,000 Hz），耗時 95.053 秒；technical contract pass，沒有 warnings。`--extract-frames` 產生 56 張 PNG，逐張載入解碼成功且數量符合影片影格數；音訊完整解碼為 73 audio frames，但未聆聽，沒有音質驗收。輸入 source hash 與紀錄相符。
 
 基準輸入為 `baseline_source.png`，SHA-256 `AFE83960DCEE3BCB728AAEA70A0AF5E835FF88F8DF27F919EA6075BFF7E08A05`；seed 為 `20260831`。使用既有 `img2video` task 參數，prompt 為 `subtle idle motion, cloth and hair move gently, camera locked`，negative 為 `blurry, low quality, text, watermark`，請求 2 秒、768×768，並使用 `--extract-frames`。輸入是多視圖角色設定板，刻意沿用歷史 smoke，因此這支影片不能當作單角色 idle 製作品質基準。六幀抽樣配置大致保留；動作自然度、音質與美術驗收仍 pending。這支 live baseline 在原 304 路徑盤點完成後生成，不計入該統計。
 
@@ -61,7 +61,7 @@
 
 修正後已將 `generate.py`、整個 `comfyui_pipeline/` 與 `detect_video_capabilities.py` 部署到 ComfyUI。`capabilities_fixed.json` 的 fingerprint 與 `fingerprint_live.json` 中上傳 `upload_inventory_probe.png` 前、後及 snapshot 值一致（`57b26425…2499058`），證明本次標記為 upload 的動態清單不再造成 fingerprint 漂移。此觀察不代表未標記的所有 schema 欄位都已驗證為穩定。
 
-其後使用相同 source、seed、prompt、negative 與請求參數再次完成 H3 `img2video`，結果為 [`shot_reliability_fixed_20261003_idle_img2video_00001_.mp4`](../../../output/video_reliability_20261003/live_fixed/shot_reliability_fixed_20261003_idle_img2video_00001_.mp4)：768×768、24 FPS、56 frames、2.333333 秒，technical pass 且無 warnings，56 張 PNG 均可解碼。sidecar 耗時記為 1.145 秒，推測受 ComfyUI cache 影響，不能當作效能推論。隨後對該輸出執行 `--resume`，現場成功重新驗證並恢復既有輸出，沒有進入生成送出流程。原始 95.053 秒 baseline 仍保留；新 snapshot 的簽名不能假裝與舊 sidecar 相同，舊 sidecar 未重寫，也未補造 hash。修復造成設定 digest 改變，舊 sidecar 會與新 snapshot digest 不同；原輸出與舊 snapshot 均保留，沒有放寬 resume 簽章條件。
+其後使用相同 source、seed、prompt、negative 與請求參數再次完成 H3 `img2video`，結果為 `shot_reliability_fixed_20261003_idle_img2video_00001_.mp4`（本機證據：`output/video_reliability_20261003/live_fixed/shot_reliability_fixed_20261003_idle_img2video_00001_.mp4`）：768×768、24 FPS、56 frames、2.333333 秒，technical pass 且無 warnings，56 張 PNG 均可解碼。sidecar 耗時記為 1.145 秒，推測受 ComfyUI cache 影響，不能當作效能推論。隨後對該輸出執行 `--resume`，現場成功重新驗證並恢復既有輸出，沒有進入生成送出流程。原始 95.053 秒 baseline 仍保留；新 snapshot 的簽名不能假裝與舊 sidecar 相同，舊 sidecar 未重寫，也未補造 hash。修復造成設定 digest 改變，舊 sidecar 會與新 snapshot digest 不同；原輸出與舊 snapshot 均保留，沒有放寬 resume 簽章條件。
 
 ## 目前有證據支持的範圍
 

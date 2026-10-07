@@ -68,9 +68,9 @@ SCAIL2ColoredMask 會依模式自動決定遮罩背景色（替換：來源遮�
 
 | 測試 | Template | 輸出 | Prompt ID | Server execution time | 證據 |
 |---|---|---|---|---:|---|
-| 替換 33（首次載入模型） | `scail2-api.json` | 33 幀／2.0625 秒 | `624c9e12-4227-44e6-8cad-4dbb7cb1f1ec` | 68.1 秒 | [validation](../../../output/scail2-test/replace33/validation.json) |
-| 替換 61 | `scail2-extend-api.json` | 61 幀／3.8125 秒 | `1da41c66-4300-4a9d-8c34-32fc835acd96` | 39.8 秒 | [validation](../../../output/scail2-test/replace61/validation.json) |
-| 動畫 33 | `scail2-api.json`，`replacement_mode=false` | 33 幀 | `b7e59189-d2be-4cc5-8b62-47512797bd0a` | 39.0 秒 | [validation](../../../output/scail2-test/animate33/validation.json) |
+| 替換 33（首次載入模型） | `scail2-api.json` | 33 幀／2.0625 秒 | `624c9e12-4227-44e6-8cad-4dbb7cb1f1ec` | 68.1 秒 | validation（本機證據：`output/scail2-test/replace33/validation.json`） |
+| 替換 61 | `scail2-extend-api.json` | 61 幀／3.8125 秒 | `1da41c66-4300-4a9d-8c34-32fc835acd96` | 39.8 秒 | validation（本機證據：`output/scail2-test/replace61/validation.json`） |
+| 動畫 33 | `scail2-api.json`，`replacement_mode=false` | 33 幀 | `b7e59189-d2be-4cc5-8b62-47512797bd0a` | 39.0 秒 | validation（本機證據：`output/scail2-test/animate33/validation.json`） |
 
 這表示 FP8 版本可在 16 GB 顯卡以 384×384／33 幀分段執行；本次沒有成功抽樣顯存，峰值未知。耗時受模型快取影響，不作與 Wan Animate 的速度比較。
 

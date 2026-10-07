@@ -47,10 +47,10 @@
 
 ## 可重現證據與執行界線
 
-- 實際執行證據：[`review.json`](../../../output/design_workflows_20261003/review.json) 摘要記錄 2026-10-03、Windows CUDA RTX 4080、6 次 fresh generation、26 項測試及部署 19 項通過；各 task 均有 sampler/decode 證據，完整參數與來源 hash 見對應 `generation.json`、[`execution-proof.json`](../../../output/design_workflows_20261003/execution-proof.json)。
-- Core 合成輸出和 graph：[`core-scene`](../../../output/design_workflows_20261003/core-scene/manifest.json)、[`core-sheet`](../../../output/design_workflows_20261003/core-sheet/manifest.json)、[`core-pattern`](../../../output/design_workflows_20261003/core-pattern/manifest.json)。
-- 實機部署輸出：[`deployed-scene`](../../../output/design_workflows_20261003/deployed-scene/manifest.json)、[`deployed-sheet`](../../../output/design_workflows_20261003/deployed-sheet/manifest.json)、[`deployed-pattern`](../../../output/design_workflows_20261003/deployed-pattern/manifest.json)。實際尺寸為 square 1024×1024、portrait 1024×1280、banner 1536×768；scene 仍無接觸陰影。
-- Alpha 技術統計：[`object-audit`](../../../output/design_workflows_20261003/object-audit/audit.json)；只作透明通道統計，不能判定去背邊緣的美術品質。
-- Core node schema 與當前安裝資源：[`node-evidence.json`](../../../output/design_workflows_20261003/node-evidence.json)。`Load3D`／`RenderMesh` 節點雖存在，`Load3D` 檔案選單目前只有 `none`；沒有固定 3D 生成／渲染 task，檢查目錄也未找到 Blender／`bpy`、Hunyuan3D 或 Trellis 模型。本次僅做 preflight，沒有 mesh 渲染實驗；這不代表 ComfyUI 3D 整體不可行。
+- 實際執行證據：`review.json`（本機證據：`output/design_workflows_20261003/review.json`） 摘要記錄 2026-10-03、Windows CUDA RTX 4080、6 次 fresh generation、26 項測試及部署 19 項通過；各 task 均有 sampler/decode 證據，完整參數與來源 hash 見對應 `generation.json`、`execution-proof.json`（本機證據：`output/design_workflows_20261003/execution-proof.json`）。
+- Core 合成輸出和 graph：`core-scene`（本機證據：`output/design_workflows_20261003/core-scene/manifest.json`）、`core-sheet`（本機證據：`output/design_workflows_20261003/core-sheet/manifest.json`）、`core-pattern`（本機證據：`output/design_workflows_20261003/core-pattern/manifest.json`）。
+- 實機部署輸出：`deployed-scene`（本機證據：`output/design_workflows_20261003/deployed-scene/manifest.json`）、`deployed-sheet`（本機證據：`output/design_workflows_20261003/deployed-sheet/manifest.json`）、`deployed-pattern`（本機證據：`output/design_workflows_20261003/deployed-pattern/manifest.json`）。實際尺寸為 square 1024×1024、portrait 1024×1280、banner 1536×768；scene 仍無接觸陰影。
+- Alpha 技術統計：`object-audit`（本機證據：`output/design_workflows_20261003/object-audit/audit.json`）；只作透明通道統計，不能判定去背邊緣的美術品質。
+- Core node schema 與當前安裝資源：`node-evidence.json`（本機證據：`output/design_workflows_20261003/node-evidence.json`）。`Load3D`／`RenderMesh` 節點雖存在，`Load3D` 檔案選單目前只有 `none`；沒有固定 3D 生成／渲染 task，檢查目錄也未找到 Blender／`bpy`、Hunyuan3D 或 Trellis 模型。本次僅做 preflight，沒有 mesh 渲染實驗；這不代表 ComfyUI 3D 整體不可行。
 - helper 在部署端需與既有 `generate.py` facade、`image_edit_tools.py` 和 `comfyui_pipeline/` 同目錄；ComfyUI 路徑與 Python 從當機 `local_config.json` 解析，不寫死其他機器路徑。Core 節點 schema 在上傳／排程前檢查；新輸出資料夾避免覆蓋舊結果。Alpha 單元測試與已部署 CLI 實測的具體通過數請以 `review.json` 為準，並非圖片美術通過數。
 - ComfyUI 內建節點存在只證明當前 `/object_info` 列出節點，不等於該 3D 功能已跑通。新的節點、生成 task、模型/profile 或 custom node 都要另按新增能力清單評估。

@@ -31,7 +31,7 @@ RTX 4080（16,376 MiB VRAM）、31.1 GiB RAM；ComfyUI 位於 `C:/Users/XU/Comfy
 - 既有 comfyui_controlnet_aux 保持原狀；DWPose 使用 ONNX。
 - 新增 color-matcher 0.6.0、mss 10.2.0、ddt 1.7.2、docutils 0.23；pip check 通過。optional Triton 未安裝，測試 graph 不使用該 optional node。
 
-七個模型的 repository revision、目標路徑、bytes、SHA-256 見[模型來源](../installation/models-and-sources.md)與[下載 manifest](../../../output/wan-animate-install/download-manifest.json)。所有新增檔案完成完整雜湊驗證。重用 UMT5 `umt5_xxl_fp8_e4m3fn_scaled.safetensors`：6,735,906,897 bytes；SHA-256 `c3355d30191f1f066b26d93fba017ae9809dce6c627dda5f6a66eaa651204f68`。
+七個模型的 repository revision、目標路徑、bytes、SHA-256 見[模型來源](../installation/models-and-sources.md)與下載 manifest（本機證據：`output/wan-animate-install/download-manifest.json`）。所有新增檔案完成完整雜湊驗證。重用 UMT5 `umt5_xxl_fp8_e4m3fn_scaled.safetensors`：6,735,906,897 bytes；SHA-256 `c3355d30191f1f066b26d93fba017ae9809dce6c627dda5f6a66eaa651204f68`。
 
 ## 安裝期歷史實測與品質限制
 
@@ -39,22 +39,22 @@ RTX 4080（16,376 MiB VRAM）、31.1 GiB RAM；ComfyUI 位於 `C:/Users/XU/Comfy
 
 | 測試 | 輸出 | 整體耗時 | 5 秒抽樣 GPU 使用最大值 | 紀錄 |
 |---|---|---:|---:|---|
-| Mix 17，首次載入 | 384×384／17 幀／16 FPS，1.0625 秒 | 70.96 秒 | 15,002 MiB | [validation](../../../output/wan-animate-install/mix-validation.json) |
-| Mix 33，模型已載入 | 384×384／33 幀／16 FPS，2.0625 秒 | 25.37 秒 | 15,148 MiB | [validation](../../../output/wan-animate-install/mix33-validation.json) |
-| Move 33，正式服務重新啟動後 | 384×384／33 幀／16 FPS，2.0625 秒 | 76.06 秒 | 14,815 MiB | [validation](../../../output/wan-animate-install/move33-validation.json) |
+| Mix 17，首次載入 | 384×384／17 幀／16 FPS，1.0625 秒 | 70.96 秒 | 15,002 MiB | validation（本機證據：`output/wan-animate-install/mix-validation.json`） |
+| Mix 33，模型已載入 | 384×384／33 幀／16 FPS，2.0625 秒 | 25.37 秒 | 15,148 MiB | validation（本機證據：`output/wan-animate-install/mix33-validation.json`） |
+| Move 33，正式服務重新啟動後 | 384×384／33 幀／16 FPS，2.0625 秒 | 76.06 秒 | 14,815 MiB | validation（本機證據：`output/wan-animate-install/move33-validation.json`） |
 
 全部 MP4 H.264、無音訊，完整解碼核對尺寸、幀數與 CFR／PTS 通過；記憶體為包含其他應用程式的抽樣總量，非模型精確峰值。系統 RAM 抽樣最高約 29.55 GiB，餘裕有限。耗時受模型快取與來源影響。
 
 **安裝期內容檢查有明確瑕疵：** Mix33 結尾機器人攝影機頭變成粉紅人形／精靈頭；Move33 也有同樣身份漂移，且前景憑空出現吉他。Mix17 較接近參考，但手部仍有缺陷。技術通過不等於角色一致性通過；所有輸出保持 candidate，沒有使用者 accepted 決定。不因品質瑕疵自動重送生成。
 
-- [Mix33 影片](../../../output/wan-animate-install/mix33-smoke.mp4)、[末幀](../../../output/wan-animate-install/mix33-frame-32.png)。
-- [Move33 影片](../../../output/wan-animate-install/move33-smoke.mp4)、[首幀](../../../output/wan-animate-install/move33-frame-00.png)、[末幀](../../../output/wan-animate-install/move33-frame-32.png)。
+- Mix33 影片（本機證據：`output/wan-animate-install/mix33-smoke.mp4`）、末幀（本機證據：`output/wan-animate-install/mix33-frame-32.png`）。
+- Move33 影片（本機證據：`output/wan-animate-install/move33-smoke.mp4`）、首幀（本機證據：`output/wan-animate-install/move33-frame-00.png`）、末幀（本機證據：`output/wan-animate-install/move33-frame-32.png`）。
 
 ## 產線界線與安裝收尾
 
 這項能力未新增 Python client、production CLI、`generate.py` task/backend 或 capability catalog。安裝專用 `prepare_smoke.py`／`run_smoke.py` 留在 ignored output 作歷史追溯，不當成正式產線入口。可重用 API graph templates 已在 2026-10-06 以直接 HTTP 完成 Mix17／Move17 技術驗證；仍須依技能於每次工作執行前做正式 live preflight。即使通過，仍屬本機獨立 API 路徑，不會自動成為 `generate.py` backend。舊 WanVideoWrapper complex workflow 的未接入狀態另見原 integration 文件。
 
-已重跑影片 detector，既有 h3／wan 仍 available，原預設 h3 保留；該 detector 不涵蓋 Animate。安裝後 portable verification：43 passed、0 failed；pip check 無依賴衝突。此回歸檢查不替代上方 Animate smoke。[正式節點 preflight](../../../output/wan-animate-install/production-node-preflight.json)、[portable report](../../../output/wan-animate-install/portable-final.txt)。
+已重跑影片 detector，既有 h3／wan 仍 available，原預設 h3 保留；該 detector 不涵蓋 Animate。安裝後 portable verification：43 passed、0 failed；pip check 無依賴衝突。此回歸檢查不替代上方 Animate smoke。正式節點 preflight（本機證據：`output/wan-animate-install/production-node-preflight.json`）、portable report（本機證據：`output/wan-animate-install/portable-final.txt`）。
 
 ## SCAIL-2 安裝與實測（2026-10-06）
 

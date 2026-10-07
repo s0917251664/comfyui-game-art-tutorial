@@ -29,7 +29,7 @@ $musePython = '.\output\audio_runtime\muse\Scripts\python.exe'
 
 ## 隔離環境與狀態
 
-本機隔離安裝位於 repo 的 `output/audio_runtime/MuseTalk/`（MuseTalk source root）和 `output/audio_runtime/muse/Scripts/python.exe`（Python runtime）。模型檔案需依 helper 的 `MODEL_FILES` 常數存在，包含 MuseTalk v1.5 UNet/config、SD-VAE、Whisper、DWPose、face-parse-bisent、S3FD 權重及 `scripts/inference.py`；缺任一檔案即停止。source revision 必須精確為 `0a89dec45a0192b824e3cf4daf96c239440c5ed8`。隔離環境套件 freeze 證據見 [`muse-environment.txt`](../../../output/film_audio_smoke/muse-environment.txt)，`pip check` 無依賴問題。helper 執行時會核對固定套件版本、CUDA、必要權重和來源 revision，檢查失敗即停止，不會降級到 ComfyUI runtime。
+本機隔離安裝位於 repo 的 `output/audio_runtime/MuseTalk/`（MuseTalk source root）和 `output/audio_runtime/muse/Scripts/python.exe`（Python runtime）。模型檔案需依 helper 的 `MODEL_FILES` 常數存在，包含 MuseTalk v1.5 UNet/config、SD-VAE、Whisper、DWPose、face-parse-bisent、S3FD 權重及 `scripts/inference.py`；缺任一檔案即停止。source revision 必須精確為 `0a89dec45a0192b824e3cf4daf96c239440c5ed8`。隔離環境套件 freeze 證據見 `muse-environment.txt`（本機證據：`output/film_audio_smoke/muse-environment.txt`），`pip check` 無依賴問題。helper 執行時會核對固定套件版本、CUDA、必要權重和來源 revision，檢查失敗即停止，不會降級到 ComfyUI runtime。
 
 2026-10-03 官方腳本初步 smoke 使用 yongen 插畫角色首幀來源：148 幀、24 FPS、352×608，搭配 Qwen Uncle_Fu 6.16 秒台詞；官方 MuseTalk 產出 147 幀、6.125 秒可解碼影片，contact sheet 可見嘴部變化。
 

@@ -100,10 +100,10 @@ $viewUrl = "$base/view?$query"
 
 | 模式 | Prompt ID | Server execution time | 證據 |
 |---|---|---:|---|
-| Move17 | `56566acd-9d48-41b4-abf1-11bdb1cbc0b1` | 59.946 秒 | [validation](../../../output/wan-animate-api-direct/move17-validation.json) |
-| Mix17 | `78498f85-514d-418f-b512-7e58cc7b6b86` | 25.608 秒 | [validation](../../../output/wan-animate-api-direct/mix17-validation.json) |
+| Move17 | `56566acd-9d48-41b4-abf1-11bdb1cbc0b1` | 59.946 秒 | validation（本機證據：`output/wan-animate-api-direct/move17-validation.json`） |
+| Mix17 | `78498f85-514d-418f-b512-7e58cc7b6b86` | 25.608 秒 | validation（本機證據：`output/wan-animate-api-direct/mix17-validation.json`） |
 
-模型快取／前處理條件不同，以上不作兩模式速度優劣比較。完整 [preflight](../../../output/wan-animate-api-direct/preflight.json)、[上傳回應及輸入 hash](../../../output/wan-animate-api-direct/uploads.json)、實際 `*-api.json`、`*-queue.json`、`*-history.json` 與 MP4／首中末幀同存該目錄。無額外顯存抽樣，不沿用安裝期數字冒充本次量測。
+模型快取／前處理條件不同，以上不作兩模式速度優劣比較。完整 preflight（本機證據：`output/wan-animate-api-direct/preflight.json`）、上傳回應及輸入 hash（本機證據：`output/wan-animate-api-direct/uploads.json`）、實際 `*-api.json`、`*-queue.json`、`*-history.json` 與 MP4／首中末幀同存該目錄。無額外顯存抽樣，不沿用安裝期數字冒充本次量測。
 
 使用的正向 prompt 描述機器人攝影機頭、粉紅金屬、白藍針織衫與來源頭手動作；抽幀仍見肩膀、手臂與手部變形，內容維持 candidate，沒有美術審核者的 accepted 決定。不能宣稱 prompt 已解決身份漂移。33 幀單段僅有先前安裝期 smoke 證據；61 幀延伸段、音訊連線與 384×640 已如上實測；三段以上、其他解析度與多角色未測。不要改既有 profiles 或將此獨立能力登記為 `generate.py` task/backend。
 
@@ -113,8 +113,8 @@ $viewUrl = "$base/view?$query"
 
 | 測試 | Template | 輸出 | Prompt ID | Server execution time | 證據 |
 |---|---|---|---|---:|---|
-| Mix61＋音訊 | `mix-extend-api.json` | 384×384／61 幀／3.8125 秒，AAC 3.82 秒 | `f15941e6-27a9-4a80-a073-ee2aaaf98c1c` | 95.5 秒 | [validation](../../../output/wan-animate-extend/mix61-audio/validation.json) |
-| Move61（音訊未接） | `move-extend-api.json` | 384×384／61 幀，無音軌 | `aa2550ec-1135-4213-8188-8f04d2145ec8` | 42.0 秒 | [validation](../../../output/wan-animate-extend/move61/validation.json) |
-| Move17 直式 | `move-api.json`，寬高改 384×640 | 384×640／17 幀 | `db670069-2278-495c-8961-9977a577311b` | 18.0 秒 | [validation](../../../output/wan-animate-extend/move17-384x640/validation.json) |
+| Mix61＋音訊 | `mix-extend-api.json` | 384×384／61 幀／3.8125 秒，AAC 3.82 秒 | `f15941e6-27a9-4a80-a073-ee2aaaf98c1c` | 95.5 秒 | validation（本機證據：`output/wan-animate-extend/mix61-audio/validation.json`） |
+| Move61（音訊未接） | `move-extend-api.json` | 384×384／61 幀，無音軌 | `aa2550ec-1135-4213-8188-8f04d2145ec8` | 42.0 秒 | validation（本機證據：`output/wan-animate-extend/move61/validation.json`） |
+| Move17 直式 | `move-api.json`，寬高改 384×640 | 384×640／17 幀 | `db670069-2278-495c-8961-9977a577311b` | 18.0 秒 | validation（本機證據：`output/wan-animate-extend/move17-384x640/validation.json`） |
 
 抽幀觀察（候選，未驗收）：兩支 61 幀在第 32→33 幀接縫連續，第二段仍維持相機頭機器人與針織衫；Move61 這次沒有出現安裝期的幻覺吉他，但手指與手掌仍有變形。直式 384×640 輸出變成全身構圖，角色比正方形結果更接近 reference，但來源是頭手近景，動作對應是否合格需人工判斷。這次驗證由維護用 harness 執行與本文相同的 HTTP 步驟（放在 ignored `output/`，不是產線 client）。音訊輸入是合成測試音，不代表真實對白的嘴型同步。
