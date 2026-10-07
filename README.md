@@ -88,9 +88,9 @@ python -m pytest
 |---|---|
 | [`教學.md`](教學.md) | 完整建置紀錄、功能地圖、設備選型 |
 | [`AGENTS.md`](AGENTS.md) | agent 入口、原則與工具職責 |
-| [產圖技能](skills/comfyui-art-gen/SKILL.md) / [task 參數](skills/comfyui-art-gen/reference/full-params.md) | ComfyUI 圖片 task、輸入、能力 gate 與限制 |
+| [產圖技能](skills/comfyui-art-gen/SKILL.md) / [task 參數](docs/knowledge/art-parameters.md) | ComfyUI 圖片 task、輸入、能力 gate 與限制 |
 | [產影片技能](skills/comfyui-video-gen/SKILL.md) / [單角色動畫](skills/comfyui-character-animation-workflow/SKILL.md) | ComfyUI 影片 task、backend 與角色動作交付 |
-| [安裝流程](skills/comfyui-install/SKILL.md) / [模型清單](skills/comfyui-install/reference/models.md) | 新機器環境與模型準備 |
+| [安裝流程](skills/comfyui-install/SKILL.md) / [模型清單](docs/knowledge/installation/models-and-sources.md) | 新機器環境與模型準備 |
 | [模型設定檔設計](docs/model-profiles-design.md) | SDXL／SD1.5 設定檔與平台驗證狀態 |
 | [本機圖片工具](skills/local-image-edit-tools/SKILL.md) / [物件組裝](skills/comfyui-object-design/SKILL.md) / [工具總表](docs/knowledge/TOOLS.md) | 本機像素操作、固定 Core 組裝與能力入口 |
 | [單一物件換色紀錄](docs/knowledge/art/single-object-color.md) | HSV 色相旋轉案例與限制 |

@@ -30,7 +30,7 @@ description: 在新機器上依硬體與既有狀態完成 ComfyUI 遊戲美術�
     **已存在的安裝**:先記錄 `git -C <ComfyUI 安裝路徑> rev-parse HEAD` 與 `git status --short`。HEAD 跟 manifest 的 `comfyui.commit` 不同時,**不要自己判定「沒關係」,也不要自己 checkout**——使用者可能刻意用別的版本、或有未提交的修改。把兩個 commit 與工作區是否乾淨告訴使用者,讓使用者選:(a) checkout manifest 的 commit(工作區不乾淨時先講清楚會影響什麼);(b) 維持現有版本,但明講這台不是已驗證的版本組合,之後 smoke test 的結果要以這台實際 commit 記錄。注意 manifest 目前的 `verified` 紀錄來自 Windows + CUDA 機器,在其他平台 checkout 同一個 commit 也只代表「版本一致」,不代表該平台已驗證。
 3. **Python 虛擬環境**:`<ComfyUI 安裝路徑>/.venv`。已存在就跳過建立,但確認裡面的 python 可以正常執行。
 4. **設備偵測**:把這個 repo 的 `tools_src/detect_device.py` 複製到 `<ComfyUI 安裝路徑>/tools/detect_device.py`,執行它；預設會把 `device_config.json` 寫在腳本同一個 `tools/` 目錄，也可用 `--out <明確路徑>` 覆寫。這支腳本本身是固定邏輯,不要修改它。輸出除了 tier，還有模型設定檔要用的平台欄位：`platform_key`（如 `windows-cuda`、`macos-mps`）、`usable_memory_mb`、`memory_kind`、`compute_capability`、`precision_support`；缺這些欄位的舊版 `device_config.json` 一律視為過期，要重跑。
-4b. **選擇模型設定檔(下載任何模型之前)**:先把 `tools_src/detect_image_capabilities.py` 與整個 `tools_src/comfyui_pipeline/`(含 `profiles/`)部署到 `<ComfyUI 安裝路徑>/tools/`,執行 `detect_image_capabilities.py --comfyui-path <ComfyUI 安裝路徑> --out <ComfyUI 安裝路徑>/tools/image_capabilities.preview.json`。此時還沒裝模型,只看每份設定檔的 `eligible`/`eligibility_reasons` 與各 task 的 `validation`。**這個階段 `available` 只反映掃描到的安裝狀態，不能拿來說明設定檔設計上提供什麼**（例如 `layer_split` 不需模型，既有安裝也可能已有部分模型）;「提供哪些 task」要讀設定檔 JSON(`tools_src/comfyui_pipeline/profiles/<id>.json`)的 `tasks` 鍵,各 task 的限制見 `skills/comfyui-art-gen/reference/profiles/<id>.md`。把**所有 `eligible: true` 的設定檔**(都算符合這台平台,都要列為選項)、各自提供的 task、在這台平台與記憶體級距的驗證狀態(`verified`/`experimental`/`unverified`)、概估模型空間(見 `docs/knowledge/installation/models-and-sources.md` 各設定檔的空間表)念給使用者,讓使用者選:
+4b. **選擇模型設定檔(下載任何模型之前)**:先把 `tools_src/detect_image_capabilities.py` 與整個 `tools_src/comfyui_pipeline/`(含 `profiles/`)部署到 `<ComfyUI 安裝路徑>/tools/`,執行 `detect_image_capabilities.py --comfyui-path <ComfyUI 安裝路徑> --out <ComfyUI 安裝路徑>/tools/image_capabilities.preview.json`。此時還沒裝模型,只看每份設定檔的 `eligible`/`eligibility_reasons` 與各 task 的 `validation`。**這個階段 `available` 只反映掃描到的安裝狀態，不能拿來說明設定檔設計上提供什麼**（例如 `layer_split` 不需模型，既有安裝也可能已有部分模型）;「提供哪些 task」要讀設定檔 JSON(`tools_src/comfyui_pipeline/profiles/<id>.json`)的 `tasks` 鍵,各 task 的限制見 `docs/knowledge/art/profiles/<id>.md`。把**所有 `eligible: true` 的設定檔**(都算符合這台平台,都要列為選項)、各自提供的 task、在這台平台與記憶體級距的驗證狀態(`verified`/`experimental`/`unverified`)、概估模型空間(見 `docs/knowledge/installation/models-and-sources.md` 各設定檔的空間表)念給使用者,讓使用者選:
     - 預設建議 tier 對應的設定檔(`sdxl_high`/`sdxl`/`sdxl_light` → `sdxl_standard`,`sd15` → `sd15_light`)。**tier 與設定檔 id 是兩套不同的名稱**:tier 是 `device_config.json` 的硬體級距,設定檔 id 是 `profiles/*.json` 的檔名;目前只有 `sdxl_standard` 與 `sd15_light` 兩份設定檔,沒有 `sdxl_light` 設定檔,`--profile`/`--default-profile` 只能填設定檔 id
     - `device_config.json` 不在 `<ComfyUI 安裝路徑>/tools/` 時(例如步驟 4 用了 `--out`),執行時加 `--device-config <路徑>`
     - 使用者想在較大的機器上用較小的管線(例如省空間、只做基礎產圖)可以選較小的,之後步驟 8b 要加 `--default-profile`
@@ -86,7 +86,7 @@ description: 在新機器上依硬體與既有狀態完成 ComfyUI 遊戲美術�
 
 ## 進階(選配):LoRA 訓練工具
 
-**只有使用者明確要準備訓練角色/風格 LoRA 時才裝,不是每台機器的基本配備。** 跟 ComfyUI 完全獨立的另一套工具(`kohya_ss`),裝法跟已知的編碼/踩坑細節見 `skills/comfyui-install/reference/lora-training.md`。
+**只有使用者明確要準備訓練角色/風格 LoRA 時才裝,不是每台機器的基本配備。** 跟 ComfyUI 完全獨立的另一套工具(`kohya_ss`),裝法跟已知的編碼/踩坑細節見 `docs/knowledge/installation/lora-training.md`。
 
 ## 進階(選配):風格底模(`--style`)
 
@@ -97,11 +97,11 @@ description: 在新機器上依硬體與既有狀態完成 ComfyUI 遊戲美術�
 1. 先問使用者要哪幾個風格方向,不用三個全裝
 2. **動手下載任何一顆之前,先告知該顆的檔名跟概估大小(每顆 ~6.5~7GB),加總這台機器目前已用空間 + 想裝的這幾顆,確認硬碟還有沒有足夠可用空間**——原則同前面「開始裝之前先告知硬碟空間需求」,不是另一套邏輯
 3. 下載到 `<ComfyUI 安裝路徑>/models/checkpoints/`,不用額外裝 ControlNet/IPAdapter/CLIP Vision(這些綁的是 SDXL 架構,不是特定微調版,現有那份就夠用)
-4. 裝完不用改程式碼(檔名定義在 `sdxl_standard.json` 的 `variants`),使用者之後用 `--style realistic`/`illustration`/`anime` 就能直接切換;各風格的 prompt 眉角見 `skills/comfyui-art-gen/reference/profiles/sdxl_standard.md`
+4. 裝完不用改程式碼(檔名定義在 `sdxl_standard.json` 的 `variants`),使用者之後用 `--style realistic`/`illustration`/`anime` 就能直接切換;各風格的 prompt 眉角見 `docs/knowledge/art/profiles/sdxl-standard.md`
 
 ## 進階(選配):影片模型(`img2video` / `character_video`)
 
-**只有使用者明確要產短片才裝,不是每台機器的基本配備。** 跟 SDXL 完全不同的一組模型,清單/大小見 `docs/knowledge/installation/models-and-sources.md`「選用影片模型」。該段的日期與大小是歷史安裝/實測紀錄，不等於已捕捉的可重現版本；實際 ComfyUI、PyAV、模型 SHA-256 與影片 smoke test 要填回 `docs/tested-versions.md`，在 `pending_on_installed_machine` 期間不可捏造或宣稱已鎖定。動手下載前先講空間(Wan + H3 FL2VA 約 56GB;若要 `character_video` / h3 的 `pose_drive` 再加 H3 Ref2VA ~19.5GB,合計約 76GB)。不要把影片 checkpoint 寫進 `device_config.json` 的圖片 `CKPT` 欄位。h3 的角色參考跟動作驅動都用 Ref2VA UNET(跟 I2V 那顆 FL2VA 不同),對照表見 `skills/comfyui-video-gen/reference/backends.md`。
+**只有使用者明確要產短片才裝,不是每台機器的基本配備。** 跟 SDXL 完全不同的一組模型,清單/大小見 `docs/knowledge/installation/models-and-sources.md`「選用影片模型」。該段的日期與大小是歷史安裝/實測紀錄，不等於已捕捉的可重現版本；實際 ComfyUI、PyAV、模型 SHA-256 與影片 smoke test 要填回 `docs/tested-versions.md`，在 `pending_on_installed_machine` 期間不可捏造或宣稱已鎖定。動手下載前先講空間(Wan + H3 FL2VA 約 56GB;若要 `character_video` / h3 的 `pose_drive` 再加 H3 Ref2VA ~19.5GB,合計約 76GB)。不要把影片 checkpoint 寫進 `device_config.json` 的圖片 `CKPT` 欄位。h3 的角色參考跟動作驅動都用 Ref2VA UNET(跟 I2V 那顆 FL2VA 不同),對照表見 `docs/knowledge/video/README.md#backend模型與-runtime`。
 
 ## 進階（選配）：FLUX.2 Klein 4B PoC
 

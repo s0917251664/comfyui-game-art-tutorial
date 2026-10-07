@@ -118,7 +118,7 @@ status: mixed-implemented-and-planned
 
 > **歷史設計註記(2026-08-26):** 當時原本預期首尾幀畫質可能要靠 14B,且尚未把 A→B `transition` 寫進操作手冊。
 
-目前 `transition` CLI 已上線，H3 backend 可用首尾靜幀；5B/16GB 的畫質與穩定度仍受素材與 backend 影響，14B 仍只是有需求時的選用升級，不是預設依賴。操作契約以 `SKILL.md` 與 `reference/backends.md` 為準。
+目前 `transition` CLI 已上線，H3 backend 可用首尾靜幀；5B/16GB 的畫質與穩定度仍受素材與 backend 影響，14B 仍只是有需求時的選用升級，不是預設依賴。操作契約以 `skills/comfyui-video-gen/SKILL.md` 與 [影片知識總覽的 backend 段](README.md#backend模型與-runtime) 為準。
 
 ### 3.4 使用者沒點名、但影視工程師會立刻補上的方向
 

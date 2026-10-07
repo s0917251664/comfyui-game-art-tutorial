@@ -104,4 +104,4 @@ python tools_src/image_edit_tools.py asset-audit --image <image.png> --output-di
 
 ## task 輸入依據
 
-需求入口見[遊戲圖片編修 brief 技能](../SKILL.md)，task 欄位見[完整參數規格](../../comfyui-art-gen/reference/full-params.md)與 [art-parameters.md](../../../docs/knowledge/art-parameters.md)。工具契約見 [local-image-edit-tools 技能](../../local-image-edit-tools/SKILL.md)及[ edit-tools 知識頁](../../../docs/knowledge/art/edit-tools.md)。`guided_inpaint` 需已確認 Alpha mask；`character_action` 是角色與 pose reference；`flux2_edit` 僅單張來源、不支援多參考、mask 或自訂 denoise。不能從 OpenAI API 文件推定本機 task 支援其他輸入。
+需求入口見[遊戲圖片編修 brief 技能](../SKILL.md)，task 欄位見[完整參數規格 art-parameters.md](../../../docs/knowledge/art-parameters.md)。工具契約見 [local-image-edit-tools 技能](../../local-image-edit-tools/SKILL.md)及[ edit-tools 知識頁](../../../docs/knowledge/art/edit-tools.md)。`guided_inpaint` 需已確認 Alpha mask；`character_action` 是角色與 pose reference；`flux2_edit` 僅單張來源、不支援多參考、mask 或自訂 denoise。不能從 OpenAI API 文件推定本機 task 支援其他輸入。
