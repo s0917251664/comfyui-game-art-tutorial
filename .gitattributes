@@ -1,4 +1,16 @@
-# Preserve imported skill and binding byte hashes across platforms.
-# The 15 claude-obsidian upstream skills live outside skills/ since 2026-10-07.
+# 有 hash 紀錄的檔案一律保持 repo 內的位元組，不做換行轉換（Windows core.autocrlf 也不例外）。
+# 規則見 docs/knowledge/decisions/2026-10-07-phase2-template-runner.md（D11）。
+
+# claude-obsidian 上游：vendor 樹由 SHA256SUMS／RELEASE_MANIFEST.json 核對；
+# 15 個改編技能與 project-knowledge 的 hash 記在 third_party/claude-obsidian-source.json。
+third_party/claude-obsidian/** -text
 third_party/claude-obsidian-skills/** -text
+skills/project-knowledge/** -text
+
+# 固定 ComfyUI API graph：Wan Animate 的 sha256 記在 template-manifest.json；SAM3 的兩份同樣視為固定位元組。
 skills/comfyui-wan-animate/assets/** -text
+skills/comfyui-video-layers/assets/** -text
+
+# smoke 報告記錄套件檔的 sha256；validation 證據記錄報告檔的 sha256。
+tools_src/comfyui_pipeline/smoke_suites/** -text
+docs/knowledge/validation/** -text
