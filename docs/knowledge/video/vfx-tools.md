@@ -106,3 +106,51 @@ gameart.py vfx mask-preview --video <src.mp4> --masks <dir>/masks --output <dir>
 - `fx_loop` 中段有位置晃動和表情改變。
 - `transition` 中段鏡頭推近、頭部被裁掉。
 - 首尾差低不代表動作或 loop 品質好，仍要人工看片。
+
+## 4. 換道具材質／造型：先定母版，再整幀套原片動作
+
+需求是「把影片裡的道具換成另一種材質或造型」（例如魔法槌 → 純木槌）時，**不要用 `video_inpaint` 局部重畫**。改成「先定母版靜幀 → 整幀套用原片動作」。
+
+### 步驟
+
+1. **標記道具**：在第 0 幀用 `mask_session.py` 手繪道具範圍，只塗要換的部分，不要塗到手。
+2. **做母版靜幀**：
+   - 用 `flux2_edit` 對第 0 幀整張下指令，例如「把槌子換成木槌，角色、姿勢、手、握把、畫風、綠幕保持不變」，跑 2–3 個 seed，選道具最好、又沒改到手和握把的那張。
+   - FLUX 會微幅重畫角色（實測角色區平均差 21.6），所以只把新道具貼回原圖：先用 `gameart.py vfx chroma-alpha` 的同一套公式（key 設成 FLUX 圖的綠色，加 `--unmix --despill`）把道具去背，再疊到**原圖的綠色**上。貼回範圍＝手繪遮罩擴張 6 px ∪ 新道具的非綠像素，但排除原圖裡遮罩外的角色像素。直接貼 FLUX 圖的背景會看得出綠色色差。
+   - 母版給美術確認。
+3. **整幀套動作**：`generate.py pose_drive --backend h3 --control-type canny --image <母版> --motion-ref <原片>`，prompt 要描述新道具和動作。
+   - canny 的邊緣會帶入道具的位置，所以道具會跟著原片動。
+   - `--control-type pose` 的骨架沒有道具資訊，道具動作會跑掉，不要用。
+4. **驗收**：整幀都是重新生成的，角色不是逐像素保留原本的樣子，臉、服裝、尾巴要人工比對；快速動作的幀可能有動態模糊。
+
+### 2026-10-07 實測（Skye 召槌 FINAL → 純木槌，RTX 4080）
+
+| 路線 | 結果 |
+|---|---|
+| `video_inpaint` replace（只有文字描述，沒有母版） | 遮罩外 0 變動；但快速揮動時糊成一團、槌頭形狀歪扭、沒有描邊、和握把接不起來、遮罩外的光點還留著。**不採用** |
+| `video_inpaint` keep | 保留原本的金框和晶窗，只把顏色改成橘金色，不像木頭。**不採用** |
+| SDXL `inpaint` 做母版（denoise 1.0，綠幕素材） | 綠色滲進木頭、木頭變成扁平色塊、描邊髒。**不採用** |
+| `flux2_edit` 做母版，再去背疊回原圖的綠幕 | 木紋清楚、描邊和角色一致、背景綠色均勻（貼回區平均 (0.5, 253.6, 0.7)，原圖 (0, 254, 0)）。採用為母版 |
+| **H3 `pose_drive` canny**（母版＋原片） | 動作和原片幾乎一致，木槌前後穩定，光點自然消失；768² × 56 幀，耗時 294.8 秒，技術 pass。**最佳 candidate** |
+| H3 `pose_drive` pose | 道具舉起的時間和位置跑掉 |
+| SCAIL-2 動畫模式（固定範本，原片先轉 16 FPS、取 33 幀） | 動作有跟上，但背景變成藍紫色斑塊、無法去背，還把原片光點畫成白色，只有 384². **不適合綠幕素材** |
+
+- 證據：`output/experiments/vfx-manual-mask-trial-20261007/`
+  - `master_wood_mallet_v3.png`
+  - `fullframe/wood_posedrive_canny_00001_.mp4`
+  - `fullframe_compare_board.png`
+  - `wood_board.png`
+- 輸出都是 candidate，尚未驗收。
+- 只測了一支片和一種道具，這個結論不能直接推到所有道具或所有動作。
+
+## 5. 物件追蹤方式比較（2026-10-07，同一支召槌片）
+
+| 提示方式 | 結果 |
+|---|---|
+| SAM2.1（video_layers），框選或手繪第 0 幀 | 抓得到槌子，但前段會漏選到尾巴，要在中段補修正幀 |
+| SAM3 打字 `hammer` | 第 0–1 幀槌子橫放時只抓到握柄 |
+| SAM3 打字 `mallet`／`big hammer with gold frame` | 56 幀都抓到整把槌子，尾巴完全沒被誤選，約 9 秒 |
+| SAM3 用第 0 幀手繪遮罩（`SAM3_VideoTrack.initial_mask`，不給文字） | 塗多少就追多少，從頭到尾不會自己修正；Steve 實際手繪的遮罩只追到槌頭和槌柄，握把、手、尾巴都沒被選進去，7.4 秒 |
+| SAM3 用隨手框的方塊當第 0 幀遮罩 | 前段把背景和整個角色都選進去，不可用 |
+
+SAM3 追蹤是純 ComfyUI graph（`LoadVideo` → `SAM3_VideoTrack` → `SAM3_TrackToMask`），之後若要正式化，應做成固定 API graph 素材，不要再包一層 Python 指令。實驗腳本在 `output/experiments/vfx-sam3-text-20261007/`。
