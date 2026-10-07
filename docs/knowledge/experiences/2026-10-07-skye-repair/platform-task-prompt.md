@@ -1,6 +1,6 @@
 # Skye 修圖對照實驗：平台用 Prompt（A／B 組）
 
-本檔交給 Steve 貼到 ChatGPT 或 Grok。實驗規則見 [protocol.md](protocol.md)。
+本檔交給 Steve 貼到 ChatGPT 或 Grok。實驗規則檔 `protocol.md` 沒有收錄在 repo 中（本資料夾只有這份平台操作說明）；需要追溯規則全文時，向使用者索取原檔。
 
 - 母圖：`output\experiments\skye-repair-20261007\source\skye_master.png`（1254×1254，SHA-256 `e0f9cb9c…acb89`，即 v9 報告的 APPROVED KEY VISUAL `pose-cover-final-v5.png`）。
 - A 組只用自然語言；B 組可使用平台內建的局部編輯（例如 ChatGPT 的框選編輯）。兩組各開**新對話**，不要在同一個對話裡接著做。
