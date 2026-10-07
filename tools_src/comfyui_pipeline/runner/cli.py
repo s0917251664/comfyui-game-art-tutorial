@@ -1,0 +1,292 @@
+"""`gameart.py run`:固定 API graph template 的 list／show／--dry-run。
+
+    python tools_src/gameart.py run list [--json]
+    python tools_src/gameart.py run show <template> [--json]
+    python tools_src/gameart.py run <template> --dry-run [--set NAME=VALUE ...] [--values FILE.json]
+        [--option NAME] [--no-option NAME] [--output-dir DIR] [--json]
+
+2.1 只做 --dry-run:不連 ComfyUI、不上傳、不 queue。上傳欄位在 graph 裡顯示為 ``<upload:slot>``。
+實際送出(preflight、上傳、queue、下載、result manifest)在 PR 2.2／2.3 才加入。
+"""
+import argparse
+import json
+import os
+import sys
+import uuid
+from pathlib import Path
+
+from .. import runtime_config as rc
+from . import template as T
+
+DRYRUN_GRAPH = "workflow_api.dryrun.json"
+DRYRUN_SUMMARY = "dryrun.json"
+
+
+class CliError(Exception):
+    """使用者可修正的錯誤(結束碼 2)。"""
+
+
+def _utf8_stdio():
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            try:
+                stream.reconfigure(encoding="utf-8")
+            except (ValueError, OSError):
+                pass
+
+
+def default_templates_root():
+    tools_src = Path(__file__).resolve().parents[2]
+    repo_root = rc.find_repo_root(tools_src)
+    if not repo_root:
+        raise CliError("run 只能從 repo 的 tools_src/gameart.py 執行(templates/ 不會部署)")
+    return T.templates_root(repo_root)
+
+
+def _dump(obj):
+    return json.dumps(obj, ensure_ascii=False, indent=2)
+
+
+# ---------- list / show ----------
+
+def cmd_list(args, root, out):
+    rows = []
+    for tid in T.discover(root):
+        try:
+            template = T.load_template(root, tid)
+        except T.TemplateError as exc:
+            rows.append({"id": tid, "error": str(exc)})
+            continue
+        rows.append({"id": tid, "version": template.version, "status": template.data["status"],
+                     "title": template.data["title"], "platforms": T.platform_summary(template)})
+    if args.json:
+        print(_dump(rows), file=out)
+    else:
+        for row in rows:
+            if "error" in row:
+                print(f"{row['id']}  [無法載入] {row['error']}", file=out)
+                continue
+            platforms = "、".join(f"{k}={v}" for k, v in row["platforms"].items())
+            print(f"{row['id']}  v{row['version']}  {row['status']}  {row['title']}  ({platforms})", file=out)
+    return 1 if any("error" in row for row in rows) else 0
+
+
+def _slot_line(name, slot):
+    parts = [slot["type"]]
+    if slot.get("required"):
+        parts.append("必填")
+    if "default" in slot:
+        parts.append(f"預設 {json.dumps(slot['default'], ensure_ascii=False)}")
+    if "default_from" in slot:
+        parts.append(f"預設同 {slot['default_from']}")
+    if slot.get("validate"):
+        parts.append("規則 " + json.dumps(slot["validate"], ensure_ascii=False))
+    if slot.get("tested_values"):
+        parts.append(f"實測過 {slot['tested_values']}")
+    targets = "、".join(f"{t['node']}.{t['input']}" for t in slot["targets"])
+    line = f"  {name}: {'；'.join(parts)} → {targets}"
+    if slot.get("help"):
+        line += f"\n      {slot['help']}"
+    return line
+
+
+def cmd_show(args, root, out):
+    template = T.load_template(root, args.template)
+    data = template.data
+    if args.json:
+        payload = dict(data, graph_sha256=template.graph_sha256, graph_canonical_sha256=template.graph_canonical_sha256,
+                       template_json_sha256=template.template_json_sha256)
+        print(_dump(payload), file=out)
+        return 0
+    print(f"{template.id}  v{template.version}  {data['status']}", file=out)
+    print(f"{data['title']}\n{data['summary']}", file=out)
+    if data.get("status_note"):
+        print(f"狀態說明: {data['status_note']}", file=out)
+    print(f"graph: {data['graph']['file']}  sha256 {template.graph_sha256[:16]}…  canonical {template.graph_canonical_sha256[:16]}…",
+          file=out)
+    print("\nslots:", file=out)
+    for name, slot in data["slots"].items():
+        if slot["type"] == "output_prefix":
+            print(f"  {name}: 由 runner 產生(gameart/<template>/<run_id>)", file=out)
+        else:
+            print(_slot_line(name, slot), file=out)
+    if template.options:
+        print("\noptions:", file=out)
+        for name, option in template.options.items():
+            print(f"  {name}: 預設 {str(option['default']).lower()}  {option.get('help', '')}", file=out)
+    for rule in data.get("constraints") or []:
+        print(f"constraint: {rule['rule']} {rule['slot']} 在 {rule['width']}×{rule['height']} 內", file=out)
+    if data.get("fixed_notes"):
+        print(f"\n固定參數: {data['fixed_notes']}", file=out)
+    anchor = data["frame_anchoring"]
+    print(f"首尾幀: first={anchor['first']} last={anchor['last']}  參考圖用途={anchor['reference_role']}  "
+          f"時間對齊={anchor['time_alignment']}" + ("  接縫=第 " + "/".join(map(str, anchor["continuity"]["seam_frames"])) + " 幀" if anchor["continuity"] else ""),
+          file=out)
+    print("\nmodels:", file=out)
+    for model in data["models"]:
+        pin = "sha256 " + model["sha256"][:12] + "…" if model.get("sha256") else f"pin 未補齊: {model.get('pin_status')}"
+        size = f"{model['size_bytes']:,} bytes" if model.get("size_bytes") else "大小未知"
+        print(f"  {model['role']}: {model['filename']}  ({model.get('path') or '路徑未確認'}, {size}, {pin})", file=out)
+    print("\n平台:", file=out)
+    for key, value in data["capability_gate"]["platforms"].items():
+        extra = value.get("evidence") or value.get("notes") or ""
+        print(f"  {key}: {value['status']}  {extra}", file=out)
+    print("\noutputs: " + "、".join(f"{o['id']}(node {o['node']}, {o['kind']}, {o['role']})" for o in data["outputs"]),
+          file=out)
+    return 0
+
+
+# ---------- dry-run ----------
+
+def _read_text_file(path):
+    with open(path, encoding="utf-8-sig") as handle:
+        return handle.read().rstrip("\r\n")
+
+
+def parse_sets(items):
+    values = {}
+    for item in items or []:
+        if "=" not in item:
+            raise CliError(f"--set 要寫成 NAME=VALUE,收到 {item!r}")
+        name, value = item.split("=", 1)
+        name = name.strip()
+        if value.startswith("@"):
+            path = value[1:]
+            try:
+                value = _read_text_file(path)
+            except OSError as exc:
+                raise CliError(f"--set {name}=@{path}: 讀不到檔案: {exc}") from exc
+        values[name] = value
+    return values
+
+
+def load_values_file(path):
+    if not path:
+        return {}
+    try:
+        data = T.read_json(path)
+    except (OSError, ValueError) as exc:
+        raise CliError(f"--values 讀取失敗: {exc}") from exc
+    if not isinstance(data, dict):
+        raise CliError("--values 必須是 JSON object({slot: 值})")
+    return data
+
+
+def _prepare_output_dir(path):
+    out = Path(os.path.abspath(os.path.expanduser(path)))
+    if out.exists() and (not out.is_dir() or any(out.iterdir())):
+        raise CliError(f"--output-dir 必須是不存在或空的資料夾: {out}")
+    out.mkdir(parents=True, exist_ok=True)
+    return out
+
+
+def cmd_dry_run(args, root, out, err, rng=None):
+    if not args.dry_run:
+        raise CliError("目前只支援 --dry-run;preflight 與實際送出在 PR 2.2／2.3 才加入")
+    template = T.load_template(root, args.template)
+    values = load_values_file(args.values)
+    values.update(parse_sets(args.set))  # --set 優先
+    options = {name: True for name in args.option or []}
+    for name in args.no_option or []:
+        if name in options:
+            raise CliError(f"--option 與 --no-option 同時指定了 {name}")
+        options[name] = False
+    run_id = args.run_id or uuid.uuid4().hex[:12]
+    resolution = T.resolve(template, values, options, run_id=run_id, dry_run=True, rng=rng)
+    graph, changes = T.patch(template, resolution, require_uploads=False)
+    warnings = list(resolution["warnings"])
+    for name, path in resolution["inputs"].items():
+        if not os.path.isfile(path):
+            warnings.append(f"slot {name} 的檔案不存在: {path}(dry-run 不上傳,只提醒)")
+    summary = {
+        "kind": "template_dry_run", "template": {"id": template.id, "version": template.version,
+                                                 "status": template.data["status"],
+                                                 "graph_sha256": template.graph_sha256,
+                                                 "graph_canonical_sha256": template.graph_canonical_sha256,
+                                                 "template_json_sha256": template.template_json_sha256},
+        "run_id": run_id, "slot_values": resolution["slot_values"], "seed_sources": resolution["seed_sources"],
+        "options": resolution["options"],
+        "inputs": {name: os.path.abspath(path) for name, path in resolution["inputs"].items()},
+        "changed_inputs": changes, "patched_graph_sha256": T.canonical_sha256(graph),
+        "platforms": T.platform_summary(template), "warnings": warnings,
+        "note": "dry-run:沒有連線 ComfyUI、沒有上傳、沒有 queue;上傳欄位以 <upload:slot> 表示",
+    }
+    if args.output_dir:
+        folder = _prepare_output_dir(args.output_dir)
+        (folder / DRYRUN_GRAPH).write_text(_dump(graph) + "\n", encoding="utf-8")
+        (folder / DRYRUN_SUMMARY).write_text(_dump(summary) + "\n", encoding="utf-8")
+        summary["files"] = {"graph": str(folder / DRYRUN_GRAPH), "summary": str(folder / DRYRUN_SUMMARY)}
+    if args.json:
+        print(_dump(dict(summary, graph=graph)), file=out)
+    else:
+        if not args.output_dir:
+            print(_dump(graph), file=out)
+        for line in _summary_lines(summary):
+            print(line, file=err)
+    return 0
+
+
+def _summary_lines(summary):
+    lines = [f"[run] dry-run {summary['template']['id']} v{summary['template']['version']}  run_id={summary['run_id']}"]
+    for name, source in summary["seed_sources"].items():
+        lines.append(f"[run] {name} = {summary['slot_values'][name]}({source})")
+    if summary["options"]:
+        lines.append("[run] options: " + "、".join(f"{k}={str(v).lower()}" for k, v in summary["options"].items()))
+    lines.append(f"[run] 改到的欄位({len(summary['changed_inputs'])}): {', '.join(summary['changed_inputs'])}")
+    lines.append("[run] 平台: " + "、".join(f"{k}={v}" for k, v in summary["platforms"].items()))
+    for warning in summary["warnings"]:
+        lines.append(f"[run] 提醒: {warning}")
+    if "files" in summary:
+        lines.append(f"[run] 已寫入 {summary['files']['graph']}")
+        lines.append(f"[run] 已寫入 {summary['files']['summary']}")
+    lines.append(f"[run] {summary['note']}")
+    return lines
+
+
+# ---------- 進入點 ----------
+
+def build_list_parser():
+    p = argparse.ArgumentParser(prog="gameart.py run list", description="列出 templates")
+    p.add_argument("--json", action="store_true")
+    return p
+
+
+def build_show_parser():
+    p = argparse.ArgumentParser(prog="gameart.py run show", description="顯示 template 的 slots、models、平台狀態")
+    p.add_argument("template", help="template id,例如 video/wan-animate/mix")
+    p.add_argument("--json", action="store_true")
+    return p
+
+
+def build_run_parser():
+    p = argparse.ArgumentParser(
+        prog="gameart.py run",
+        description="依 template 產生要送出的 graph。目前只支援 --dry-run(不連 ComfyUI);"
+                    "子命令: run list、run show <template>")
+    p.add_argument("template", help="template id,例如 video/wan-animate/mix")
+    p.add_argument("--dry-run", action="store_true", help="只驗證並輸出 patched graph,不連線")
+    p.add_argument("--set", action="append", metavar="NAME=VALUE",
+                   help="指定 slot 值,可重複;VALUE 以 @ 開頭表示從 UTF-8 檔讀取(可帶 BOM)")
+    p.add_argument("--values", metavar="FILE.json", help="一次給多個 slot 的 JSON 檔;--set 優先")
+    p.add_argument("--option", action="append", metavar="NAME", help="啟用 option(例如 keep_audio)")
+    p.add_argument("--no-option", action="append", metavar="NAME", help="停用 option")
+    p.add_argument("--output-dir", help="寫入 workflow_api.dryrun.json 與 dryrun.json(必須不存在或是空資料夾)")
+    p.add_argument("--run-id", help=argparse.SUPPRESS)  # 測試與比對用:固定 output prefix
+    p.add_argument("--json", action="store_true", help="stdout 只輸出一個 JSON(摘要＋graph)")
+    return p
+
+
+def main(argv=None, *, root=None, out=None, err=None, rng=None):
+    _utf8_stdio()
+    argv = list(sys.argv[1:] if argv is None else argv)
+    out, err = out or sys.stdout, err or sys.stderr
+    try:
+        root = Path(root) if root else default_templates_root()
+        if argv and argv[0] == "list":
+            return cmd_list(build_list_parser().parse_args(argv[1:]), root, out)
+        if argv and argv[0] == "show":
+            return cmd_show(build_show_parser().parse_args(argv[1:]), root, out)
+        return cmd_dry_run(build_run_parser().parse_args(argv), root, out, err, rng=rng)
+    except (CliError, T.TemplateError) as exc:
+        print(f"run: {exc}", file=err)
+        return 2

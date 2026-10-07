@@ -28,7 +28,7 @@ RTX 4080（16,376 MiB VRAM）、31.1 GiB RAM；ComfyUI 位於 `C:/Users/XU/Comfy
 - ComfyUI 保持 `12d5279438bfefc058a269eae805ceab6047777f`。
 - ComfyUI-KJNodes：`d3cfe21625e5170126ce06fbfcfe1d88108688c3`。
 - ComfyUI-segment-anything-2：`0c35fff5f382803e2310103357b5e985f5437f32`。
-- 既有 comfyui_controlnet_aux 保持原狀；DWPose 使用 ONNX。
+- 既有 comfyui_controlnet_aux 保持原狀；DWPose 使用 ONNX。`yolox_l.onnx` 已 pin（見 `templates/video/wan-animate/*/template.json`）；pose estimator `dw-ll_ucoco_384.onnx` 尚未記錄路徑、大小與 sha256，**TODO（PR 2.2）：在 Windows 確認後補上**，補齊前四份 Wan Animate template 維持 `draft`。
 - 新增 color-matcher 0.6.0、mss 10.2.0、ddt 1.7.2、docutils 0.23；pip check 通過。optional Triton 未安裝，測試 graph 不使用該 optional node。
 
 七個模型的 repository revision、目標路徑、bytes、SHA-256 見[模型來源](../installation/models-and-sources.md)與下載 manifest（本機證據：`output/wan-animate-install/download-manifest.json`）。所有新增檔案完成完整雜湊驗證。重用 UMT5 `umt5_xxl_fp8_e4m3fn_scaled.safetensors`：6,735,906,897 bytes；SHA-256 `c3355d30191f1f066b26d93fba017ae9809dce6c627dda5f6a66eaa651204f68`。
