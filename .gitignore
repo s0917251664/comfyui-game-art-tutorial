@@ -21,3 +21,12 @@ docs/knowledge/.obsidian/workspace.json
 docs/knowledge/.obsidian/workspace-mobile.json
 docs/knowledge/.obsidian/cache/
 docs/knowledge/.obsidian/plugins/
+docs/knowledge/.obsidian/appearance.json
+docs/knowledge/.obsidian/graph.json
+# Obsidian 新建後未命名的空白 canvas（本機草稿）
+docs/knowledge/未命名*.canvas
+docs/knowledge/Untitled*.canvas
+
+# macOS metadata (AppleDouble resource forks, Finder state)
+._*
+.DS_Store
