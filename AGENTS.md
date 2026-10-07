@@ -22,7 +22,7 @@
 | 特效去背輸出、sprite sheet／WebM 打包、Idle 首尾量測 | `comfyui-video-gen` | `gameart.py vfx luma-alpha` / `chroma-alpha` / `pack` / `loop-metrics` |
 | 安裝 ComfyUI／模型 | `comfyui-install` | `verify_portable_install.py` |
 | 部署 repo 工具到 ComfyUI | `comfyui-install` | `gameart.py deploy`（dry run）／ `deploy --yes` ／ `deploy --rollback` |
-| 固定煙霧測試與驗證紀錄 | `comfyui-install` | `<python_exe> <ComfyUI>/tools/gameart.py smoke run --output-dir DIR --config <絕對路徑>/local_config.json [--tasks ..] [--record <repo>]` ／ `smoke record <report>` ／ `validation propose|status`（技術檢查，見 `docs/knowledge/maintenance/validation-workflow.md`） |
+| 固定煙霧測試與驗證紀錄 | `comfyui-install` | `<python_exe> tools_src/gameart.py smoke run --output-dir DIR [--config local_config.json] [--tasks ..] [--record .]` ／ `smoke record <report>` ／ `validation propose|status`（技術檢查，見 `docs/knowledge/maintenance/validation-workflow.md`） |
 
 各 task 完整參數以 `generate.py <task> --help` 為準；其他入口見下方路由，指令不在表內者不要自行推定。
 
