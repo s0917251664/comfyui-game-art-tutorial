@@ -20,14 +20,12 @@ TASKS = ("video_inpaint",)
 
 
 def add_parser(sub, parents, task):
-    p = sub.add_parser(
-        task,
-        help="影片局部重繪(VACE):只重畫遮罩內,遮罩外貼回原片且逐 byte 不變。遮罩來自 video_layers segment(白色=重畫)。",
-        parents=[parents["video"]],
-    )
+    summary = ("影片局部重繪(VACE):只重畫遮罩內,遮罩外貼回原片且逐 byte 不變。"
+               "遮罩(白色=重畫)預設來自 SAM3 固定 graph;SAM3 不可用時用 SAM2.1 的 video_layers segment。")
+    p = sub.add_parser(task, help=summary, description=summary, parents=[parents["video"]])
     p.add_argument("--video", required=True, help="來源影片(24 FPS,最多 81 幀)")
     p.add_argument("--masks", required=True,
-                   help="逐幀遮罩:白色=重畫的 L PNG 資料夾,或 video_layers segment 的 layers.zip")
+                   help="逐幀遮罩:白色=重畫的 PNG 資料夾(SAM3 graph 下載的遮罩可直接用),或 video_layers segment(SAM2.1 備用)的 layers.zip")
     p.add_argument("--mask-object", type=int, default=1, help="--masks 是 layers.zip 時取哪個物件 id,預設 1")
     p.add_argument("--prompt", required=True, help="描述整個畫面、特別是遮罩內要變成什麼(英文較穩)")
     p.add_argument("--mode", choices=["keep", "replace"], default="keep",
