@@ -13,3 +13,6 @@ templates/** -text
 # smoke 報告記錄套件檔的 sha256；validation 證據記錄報告檔的 sha256。
 tools_src/comfyui_pipeline/smoke_suites/** -text
 docs/knowledge/validation/** -text
+
+# 影片 graph golden 記錄 graph_sha256(第 6.1 階段);保持 LF,和產生器寫出的位元組一致。
+tests/fixtures/video_graphs_golden/** -text

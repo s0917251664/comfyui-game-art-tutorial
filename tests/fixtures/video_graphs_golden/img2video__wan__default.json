@@ -1,0 +1,161 @@
+{
+  "args": {},
+  "backend": "wan",
+  "builder": {
+    "args": [
+      "the character breathes slowly in an idle stance",
+      "golden/still.png"
+    ],
+    "kwargs": {
+      "duration": 2.0,
+      "filename_prefix": "img2video",
+      "height": 448,
+      "negative": null,
+      "seed": 20261008,
+      "width": 768
+    },
+    "name": "build_img2video_wan"
+  },
+  "case": "default",
+  "graph": {
+    "3": {
+      "class_type": "KSampler",
+      "inputs": {
+        "cfg": 5.0,
+        "denoise": 1.0,
+        "latent_image": [
+          "55",
+          0
+        ],
+        "model": [
+          "48",
+          0
+        ],
+        "negative": [
+          "7",
+          0
+        ],
+        "positive": [
+          "6",
+          0
+        ],
+        "sampler_name": "uni_pc",
+        "scheduler": "simple",
+        "seed": 20261008,
+        "steps": 20
+      }
+    },
+    "37": {
+      "class_type": "UNETLoader",
+      "inputs": {
+        "unet_name": "wan2.2_ti2v_5B_fp16.safetensors",
+        "weight_dtype": "default"
+      }
+    },
+    "38": {
+      "class_type": "CLIPLoader",
+      "inputs": {
+        "clip_name": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+        "device": "default",
+        "type": "wan"
+      }
+    },
+    "39": {
+      "class_type": "VAELoader",
+      "inputs": {
+        "vae_name": "wan2.2_vae.safetensors"
+      }
+    },
+    "48": {
+      "class_type": "ModelSamplingSD3",
+      "inputs": {
+        "model": [
+          "37",
+          0
+        ],
+        "shift": 8.0
+      }
+    },
+    "55": {
+      "class_type": "Wan22ImageToVideoLatent",
+      "inputs": {
+        "batch_size": 1,
+        "height": 448,
+        "length": 49,
+        "start_image": [
+          "56",
+          0
+        ],
+        "vae": [
+          "39",
+          0
+        ],
+        "width": 768
+      }
+    },
+    "56": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "golden/still.png"
+      }
+    },
+    "57": {
+      "class_type": "CreateVideo",
+      "inputs": {
+        "fps": 24.0,
+        "images": [
+          "8",
+          0
+        ]
+      }
+    },
+    "58": {
+      "class_type": "SaveVideo",
+      "inputs": {
+        "codec": "h264",
+        "filename_prefix": "img2video",
+        "format": "mp4",
+        "video": [
+          "57",
+          0
+        ]
+      }
+    },
+    "6": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "clip": [
+          "38",
+          0
+        ],
+        "text": "the character breathes slowly in an idle stance"
+      }
+    },
+    "7": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "clip": [
+          "38",
+          0
+        ],
+        "text": "blurry, low quality, morphing face, extra limbs, camera movement, zoom, pan, text, watermark, still image, frozen"
+      }
+    },
+    "8": {
+      "class_type": "VAEDecode",
+      "inputs": {
+        "samples": [
+          "3",
+          0
+        ],
+        "vae": [
+          "39",
+          0
+        ]
+      }
+    }
+  },
+  "graph_sha256": "ec36d0700ecee3167e061b9e3be4eaa4ee670b12c19b015a3234051819492572",
+  "output_node": "58",
+  "task": "img2video"
+}

@@ -80,7 +80,7 @@ python -m pytest
 
 只跑單一測試模組時，把 `tests` 也加進 `PYTHONPATH`，用模組名稱執行，例如 `PYTHONPATH=tools_src:tests python -m unittest test_doc_links`（Windows 的 `PYTHONPATH` 用 `;` 分隔）。不要寫成 `tests.test_xxx`：ComfyUI venv 裡的 color_matcher 會裝一個頂層 `tests` 套件，把 repo 的 `tests/` 蓋掉。
 
-要跑完整測試（含 av／cv2／torch 相關），建議直接用 ComfyUI 的 venv，例如 `<ComfyUI>/.venv/bin/python -m unittest discover -s tests`（Windows 為 `.venv\Scripts\python.exe`），其中已有這些套件。用系統 Python 時缺套件的模組會被 skip。Graph golden fixture 在 `tests/fixtures/image_graphs_golden/<tier>.json`，只在刻意改 graph 時以 `python tests/golden_image_graphs.py --write` 重產。
+要跑完整測試（含 av／cv2／torch 相關），建議直接用 ComfyUI 的 venv，例如 `<ComfyUI>/.venv/bin/python -m unittest discover -s tests`（Windows 為 `.venv\Scripts\python.exe`），其中已有這些套件。用系統 Python 時缺套件的模組會被 skip。Graph golden fixture 在 `tests/fixtures/image_graphs_golden/<tier>.json`，只在刻意改 graph 時以 `python tests/golden_image_graphs.py --write` 重產。影片 task 的 graph golden 在 `tests/fixtures/video_graphs_golden/<task>__<backend>__<case>.json`，同樣只在刻意改影片 graph 時以 `python tests/golden_video_graphs.py --write` 重產。
 
 測試會 mock 掉 ComfyUI 與模型，不能取代實機 smoke test。
 
