@@ -1,0 +1,364 @@
+{
+  "draft_schema": "option-ops-v0",
+  "base": "image/sdxl/pose-only",
+  "options": {
+    "control": {
+      "default": "canny",
+      "choices": {
+        "canny": {},
+        "pose": {
+          "ops": [
+            {
+              "op": "replace_node",
+              "id": "5",
+              "node": {
+                "class_type": "OpenposePreprocessor",
+                "inputs": {
+                  "image": [
+                    "4",
+                    0
+                  ]
+                }
+              }
+            },
+            {
+              "op": "set_value",
+              "node": "6",
+              "input": "control_net_name",
+              "value": "controlnet-openpose-sdxl-1.0.safetensors"
+            }
+          ],
+          "models": [
+            {
+              "role": "controlnet",
+              "node": "6",
+              "input": "control_net_name",
+              "filename": "controlnet-openpose-sdxl-1.0.safetensors",
+              "path": "models/controlnet/controlnet-openpose-sdxl-1.0.safetensors",
+              "directory": "controlnet",
+              "url": null,
+              "sha256": null,
+              "pin_status": "原型(PR 4.1):sha256 留到正式 template(PR 4.2)補齊"
+            }
+          ],
+          "requires_custom_nodes": [
+            {
+              "id": "comfyui_controlnet_aux",
+              "source": "registry"
+            }
+          ]
+        },
+        "depth": {
+          "ops": [
+            {
+              "op": "replace_node",
+              "id": "5",
+              "node": {
+                "class_type": "DepthAnythingV2Preprocessor",
+                "inputs": {
+                  "image": [
+                    "4",
+                    0
+                  ]
+                }
+              }
+            },
+            {
+              "op": "set_value",
+              "node": "6",
+              "input": "control_net_name",
+              "value": "controlnet-depth-sdxl-1.0.safetensors"
+            }
+          ],
+          "models": [
+            {
+              "role": "controlnet",
+              "node": "6",
+              "input": "control_net_name",
+              "filename": "controlnet-depth-sdxl-1.0.safetensors",
+              "path": "models/controlnet/controlnet-depth-sdxl-1.0.safetensors",
+              "directory": "controlnet",
+              "url": null,
+              "sha256": null,
+              "pin_status": "原型(PR 4.1):sha256 留到正式 template(PR 4.2)補齊"
+            }
+          ],
+          "requires_custom_nodes": [
+            {
+              "id": "comfyui_controlnet_aux",
+              "source": "registry"
+            }
+          ]
+        },
+        "union_canny": {
+          "ops": [
+            {
+              "op": "set_value",
+              "node": "6",
+              "input": "control_net_name",
+              "value": "xinsir-controlnet-union-sdxl-1.0-promax.safetensors"
+            },
+            {
+              "op": "add_node",
+              "id": "6u",
+              "node": {
+                "class_type": "SetUnionControlNetType",
+                "inputs": {
+                  "control_net": [
+                    "6",
+                    0
+                  ],
+                  "type": "canny/lineart/anime_lineart/mlsd"
+                }
+              }
+            },
+            {
+              "op": "relink",
+              "node": "7",
+              "input": "control_net",
+              "from": [
+                "6u",
+                0
+              ]
+            }
+          ],
+          "models": [
+            {
+              "role": "controlnet",
+              "node": "6",
+              "input": "control_net_name",
+              "filename": "xinsir-controlnet-union-sdxl-1.0-promax.safetensors",
+              "path": "models/controlnet/xinsir-controlnet-union-sdxl-1.0-promax.safetensors",
+              "directory": "controlnet",
+              "url": null,
+              "sha256": null,
+              "pin_status": "原型(PR 4.1):sha256 留到正式 template(PR 4.2)補齊"
+            }
+          ]
+        },
+        "union_pose": {
+          "ops": [
+            {
+              "op": "replace_node",
+              "id": "5",
+              "node": {
+                "class_type": "OpenposePreprocessor",
+                "inputs": {
+                  "image": [
+                    "4",
+                    0
+                  ]
+                }
+              }
+            },
+            {
+              "op": "set_value",
+              "node": "6",
+              "input": "control_net_name",
+              "value": "xinsir-controlnet-union-sdxl-1.0-promax.safetensors"
+            },
+            {
+              "op": "add_node",
+              "id": "6u",
+              "node": {
+                "class_type": "SetUnionControlNetType",
+                "inputs": {
+                  "control_net": [
+                    "6",
+                    0
+                  ],
+                  "type": "openpose"
+                }
+              }
+            },
+            {
+              "op": "relink",
+              "node": "7",
+              "input": "control_net",
+              "from": [
+                "6u",
+                0
+              ]
+            }
+          ],
+          "models": [
+            {
+              "role": "controlnet",
+              "node": "6",
+              "input": "control_net_name",
+              "filename": "xinsir-controlnet-union-sdxl-1.0-promax.safetensors",
+              "path": "models/controlnet/xinsir-controlnet-union-sdxl-1.0-promax.safetensors",
+              "directory": "controlnet",
+              "url": null,
+              "sha256": null,
+              "pin_status": "原型(PR 4.1):sha256 留到正式 template(PR 4.2)補齊"
+            }
+          ],
+          "requires_custom_nodes": [
+            {
+              "id": "comfyui_controlnet_aux",
+              "source": "registry"
+            }
+          ]
+        },
+        "union_depth": {
+          "ops": [
+            {
+              "op": "replace_node",
+              "id": "5",
+              "node": {
+                "class_type": "DepthAnythingV2Preprocessor",
+                "inputs": {
+                  "image": [
+                    "4",
+                    0
+                  ]
+                }
+              }
+            },
+            {
+              "op": "set_value",
+              "node": "6",
+              "input": "control_net_name",
+              "value": "xinsir-controlnet-union-sdxl-1.0-promax.safetensors"
+            },
+            {
+              "op": "add_node",
+              "id": "6u",
+              "node": {
+                "class_type": "SetUnionControlNetType",
+                "inputs": {
+                  "control_net": [
+                    "6",
+                    0
+                  ],
+                  "type": "depth"
+                }
+              }
+            },
+            {
+              "op": "relink",
+              "node": "7",
+              "input": "control_net",
+              "from": [
+                "6u",
+                0
+              ]
+            }
+          ],
+          "models": [
+            {
+              "role": "controlnet",
+              "node": "6",
+              "input": "control_net_name",
+              "filename": "xinsir-controlnet-union-sdxl-1.0-promax.safetensors",
+              "path": "models/controlnet/xinsir-controlnet-union-sdxl-1.0-promax.safetensors",
+              "directory": "controlnet",
+              "url": null,
+              "sha256": null,
+              "pin_status": "原型(PR 4.1):sha256 留到正式 template(PR 4.2)補齊"
+            }
+          ],
+          "requires_custom_nodes": [
+            {
+              "id": "comfyui_controlnet_aux",
+              "source": "registry"
+            }
+          ]
+        }
+      }
+    },
+    "lora": {
+      "default": "off",
+      "choices": {
+        "off": {},
+        "on": {
+          "ops": [
+            {
+              "op": "add_node",
+              "id": "1b",
+              "node": {
+                "class_type": "LoraLoader",
+                "inputs": {
+                  "model": [
+                    "1",
+                    0
+                  ],
+                  "clip": [
+                    "1",
+                    1
+                  ],
+                  "lora_name": "__LORA_NAME__",
+                  "strength_model": 0.8,
+                  "strength_clip": 0.8
+                }
+              }
+            },
+            {
+              "op": "relink",
+              "node": "2",
+              "input": "clip",
+              "from": [
+                "1b",
+                1
+              ]
+            },
+            {
+              "op": "relink",
+              "node": "3",
+              "input": "clip",
+              "from": [
+                "1b",
+                1
+              ]
+            },
+            {
+              "op": "relink",
+              "node": "9",
+              "input": "model",
+              "from": [
+                "1b",
+                0
+              ]
+            }
+          ],
+          "slots": {
+            "lora_name": {
+              "type": "string",
+              "required": true,
+              "validate": {
+                "min_length": 1
+              },
+              "targets": [
+                {
+                  "node": "1b",
+                  "input": "lora_name",
+                  "placeholder": "__LORA_NAME__"
+                }
+              ],
+              "help": "models/loras/ 底下的檔名;使用者自備,不 pin"
+            },
+            "lora_strength": {
+              "type": "float",
+              "default": 0.8,
+              "validate": {
+                "min": 0,
+                "max": 1
+              },
+              "targets": [
+                {
+                  "node": "1b",
+                  "input": "strength_model"
+                },
+                {
+                  "node": "1b",
+                  "input": "strength_clip"
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

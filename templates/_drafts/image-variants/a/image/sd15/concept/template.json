@@ -1,0 +1,200 @@
+{
+  "schema_version": 1,
+  "id": "image/sd15/concept",
+  "version": "0.1.0",
+  "title": "[原型 A] sd15 concept",
+  "summary": "方案 A:concept 的固定 graph,結構變化各自一份",
+  "status": "draft",
+  "status_note": "PR 4.1 原型,只放在 templates/_drafts/,runner 不收錄",
+  "min_comfyui_version": "0.34.0",
+  "requires_custom_nodes": [],
+  "graph": {
+    "file": "graph.api.json",
+    "format": "comfyui-api",
+    "sha256": "8fae6d67e4fd217bd5efca3ef7b79915ff43ad68762b94d9fb5012b6e3b405dc",
+    "canonical_sha256": "efdcbbeafee5dd9b843fe0c53cf5f0aeec859872e02b4ef4dde89e2ae614ee0e"
+  },
+  "provenance": {
+    "derived_from": "tools_src/comfyui_pipeline/image_graphs.py(builder 以代表值產生,見 build_drafts.py)",
+    "upstream": {
+      "kind": "none",
+      "name": null,
+      "blob": null,
+      "comfyui_version": null,
+      "note": "原型沒有比對官方範本;正式 template(PR 4.2/4.3)再補"
+    },
+    "tested_source_sha256": null,
+    "evidence": [
+      {
+        "path": "tools_src/comfyui_pipeline/image_graphs.py",
+        "note": "graph 由產線 builder 產生(PR 4.1 原型)"
+      },
+      {
+        "path": "tests/fixtures/image_graphs_golden/sdxl.json",
+        "note": "等價判準:99 組圖片 golden"
+      }
+    ]
+  },
+  "slots": {
+    "prompt": {
+      "type": "text",
+      "required": true,
+      "validate": {
+        "min_length": 1
+      },
+      "targets": [
+        {
+          "node": "2",
+          "input": "text",
+          "placeholder": "__PROMPT__"
+        }
+      ],
+      "help": "正向提示詞"
+    },
+    "negative": {
+      "type": "text",
+      "default": "blurry, low quality, extra fingers, deformed, watermark",
+      "targets": [
+        {
+          "node": "3",
+          "input": "text"
+        }
+      ],
+      "help": "負向提示詞;預設是 builder 的 DEFAULT_NEGATIVE"
+    },
+    "width": {
+      "type": "int",
+      "default": 512,
+      "validate": {
+        "min": 8,
+        "multiple_of": 8
+      },
+      "targets": [
+        {
+          "node": "4",
+          "input": "width"
+        }
+      ],
+      "help": "預設是設定檔的原生尺寸;tier 的預設解析度由呼叫端明確傳入"
+    },
+    "height": {
+      "type": "int",
+      "default": 512,
+      "validate": {
+        "min": 8,
+        "multiple_of": 8
+      },
+      "targets": [
+        {
+          "node": "4",
+          "input": "height"
+        }
+      ]
+    },
+    "batch_size": {
+      "type": "int",
+      "default": 1,
+      "validate": {
+        "min": 1
+      },
+      "targets": [
+        {
+          "node": "4",
+          "input": "batch_size"
+        }
+      ]
+    },
+    "seed": {
+      "type": "seed",
+      "default": "auto",
+      "targets": [
+        {
+          "node": "5",
+          "input": "seed"
+        }
+      ]
+    },
+    "steps": {
+      "type": "int",
+      "default": 25,
+      "validate": {
+        "min": 1
+      },
+      "targets": [
+        {
+          "node": "5",
+          "input": "steps"
+        }
+      ]
+    },
+    "cfg": {
+      "type": "float",
+      "default": 7.0,
+      "validate": {
+        "min": 0
+      },
+      "targets": [
+        {
+          "node": "5",
+          "input": "cfg"
+        }
+      ]
+    },
+    "checkpoint": {
+      "type": "string",
+      "default": "dreamshaper_8.safetensors",
+      "targets": [
+        {
+          "node": "1",
+          "input": "ckpt_name"
+        }
+      ],
+      "help": "sd15 家族底模;--style 換成同家族的社群底模時由呼叫端傳入"
+    }
+  },
+  "options": {},
+  "fixed_notes": "sampler/scheduler 固定為設定檔值;filename_prefix 保留 builder 的值,讓 graph sha256 和切換前相同",
+  "pre": [],
+  "post": [],
+  "frame_anchoring": {
+    "first": "none",
+    "last": "none",
+    "reference_role": "none",
+    "time_alignment": "per_source_frame",
+    "continuity": null
+  },
+  "models": [
+    {
+      "role": "checkpoint",
+      "node": "1",
+      "input": "ckpt_name",
+      "filename": "dreamshaper_8.safetensors",
+      "path": "models/checkpoints/dreamshaper_8.safetensors",
+      "directory": "checkpoints",
+      "url": null,
+      "sha256": null,
+      "pin_status": "原型(PR 4.1):sha256 留到正式 template(PR 4.2)補齊"
+    }
+  ],
+  "capability_gate": {
+    "nodes": "from_graph",
+    "selectors": "from_models",
+    "files": "from_models",
+    "platforms": {
+      "windows-cuda": {
+        "status": "untested",
+        "notes": "原型,沒有實機執行"
+      }
+    },
+    "min_memory_mb": null,
+    "capability": "image_generation"
+  },
+  "outputs": [
+    {
+      "id": "image",
+      "node": "7",
+      "kind": "image",
+      "role": "candidate"
+    }
+  ]
+}

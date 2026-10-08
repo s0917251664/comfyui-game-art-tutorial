@@ -1,0 +1,283 @@
+{
+  "schema_version": 1,
+  "id": "image/sdxl/pose-only-union-pose-lora",
+  "version": "0.1.0",
+  "title": "[原型 A] sdxl pose_only(Union pose＋LoRA)",
+  "summary": "方案 A:pose_only(Union pose＋LoRA) 的固定 graph,結構變化各自一份",
+  "status": "draft",
+  "status_note": "PR 4.1 原型,只放在 templates/_drafts/,runner 不收錄",
+  "min_comfyui_version": "0.34.0",
+  "requires_custom_nodes": [
+    {
+      "id": "comfyui_controlnet_aux",
+      "source": "registry"
+    }
+  ],
+  "graph": {
+    "file": "graph.api.json",
+    "format": "comfyui-api",
+    "sha256": "5a463f250fe92517eb840c4976e3d0d4d4a60623047e14239b21eab27c967744",
+    "canonical_sha256": "2125b1e2d0aaf6c0bdadc6a540421c7368a0bbf7acfa39de1d42e29ff4e608b1"
+  },
+  "provenance": {
+    "derived_from": "tools_src/comfyui_pipeline/image_graphs.py(builder 以代表值產生,見 build_drafts.py)",
+    "upstream": {
+      "kind": "none",
+      "name": null,
+      "blob": null,
+      "comfyui_version": null,
+      "note": "原型沒有比對官方範本;正式 template(PR 4.2/4.3)再補"
+    },
+    "tested_source_sha256": null,
+    "evidence": [
+      {
+        "path": "tools_src/comfyui_pipeline/image_graphs.py",
+        "note": "graph 由產線 builder 產生(PR 4.1 原型)"
+      },
+      {
+        "path": "tests/fixtures/image_graphs_golden/sdxl.json",
+        "note": "等價判準:99 組圖片 golden"
+      }
+    ]
+  },
+  "slots": {
+    "prompt": {
+      "type": "text",
+      "required": true,
+      "validate": {
+        "min_length": 1
+      },
+      "targets": [
+        {
+          "node": "2",
+          "input": "text",
+          "placeholder": "__PROMPT__"
+        }
+      ],
+      "help": "正向提示詞"
+    },
+    "negative": {
+      "type": "text",
+      "default": "blurry, low quality, extra fingers, deformed, watermark",
+      "targets": [
+        {
+          "node": "3",
+          "input": "text"
+        }
+      ],
+      "help": "負向提示詞;預設是 builder 的 DEFAULT_NEGATIVE"
+    },
+    "width": {
+      "type": "int",
+      "default": 1024,
+      "validate": {
+        "min": 8,
+        "multiple_of": 8
+      },
+      "targets": [
+        {
+          "node": "8",
+          "input": "width"
+        }
+      ],
+      "help": "預設是設定檔的原生尺寸;tier 的預設解析度由呼叫端明確傳入"
+    },
+    "height": {
+      "type": "int",
+      "default": 1024,
+      "validate": {
+        "min": 8,
+        "multiple_of": 8
+      },
+      "targets": [
+        {
+          "node": "8",
+          "input": "height"
+        }
+      ]
+    },
+    "batch_size": {
+      "type": "int",
+      "default": 1,
+      "validate": {
+        "min": 1
+      },
+      "targets": [
+        {
+          "node": "8",
+          "input": "batch_size"
+        }
+      ]
+    },
+    "seed": {
+      "type": "seed",
+      "default": "auto",
+      "targets": [
+        {
+          "node": "9",
+          "input": "seed"
+        }
+      ]
+    },
+    "steps": {
+      "type": "int",
+      "default": 25,
+      "validate": {
+        "min": 1
+      },
+      "targets": [
+        {
+          "node": "9",
+          "input": "steps"
+        }
+      ]
+    },
+    "cfg": {
+      "type": "float",
+      "default": 7.0,
+      "validate": {
+        "min": 0
+      },
+      "targets": [
+        {
+          "node": "9",
+          "input": "cfg"
+        }
+      ]
+    },
+    "checkpoint": {
+      "type": "string",
+      "default": "sd_xl_base_1.0.safetensors",
+      "targets": [
+        {
+          "node": "1",
+          "input": "ckpt_name"
+        }
+      ],
+      "help": "sdxl 家族底模;--style 換成同家族的社群底模時由呼叫端傳入"
+    },
+    "pose_ref": {
+      "type": "image",
+      "upload": true,
+      "required": true,
+      "targets": [
+        {
+          "node": "4",
+          "input": "image",
+          "placeholder": "__POSE_REF__"
+        }
+      ],
+      "help": "構圖控制來源圖"
+    },
+    "pose_strength": {
+      "type": "float",
+      "default": 1.0,
+      "validate": {
+        "min": 0,
+        "max": 1
+      },
+      "targets": [
+        {
+          "node": "7",
+          "input": "strength"
+        }
+      ]
+    },
+    "lora_name": {
+      "type": "string",
+      "required": true,
+      "validate": {
+        "min_length": 1
+      },
+      "targets": [
+        {
+          "node": "1b",
+          "input": "lora_name",
+          "placeholder": "__LORA_NAME__"
+        }
+      ],
+      "help": "models/loras/ 底下的檔名;使用者自備,不 pin"
+    },
+    "lora_strength": {
+      "type": "float",
+      "default": 0.8,
+      "validate": {
+        "min": 0,
+        "max": 1
+      },
+      "targets": [
+        {
+          "node": "1b",
+          "input": "strength_model"
+        },
+        {
+          "node": "1b",
+          "input": "strength_clip"
+        }
+      ]
+    }
+  },
+  "options": {},
+  "fixed_notes": "sampler/scheduler 固定為設定檔值;filename_prefix 保留 builder 的值,讓 graph sha256 和切換前相同",
+  "pre": [
+    {
+      "step": "upload",
+      "slots": [
+        "pose_ref"
+      ]
+    }
+  ],
+  "post": [],
+  "frame_anchoring": {
+    "first": "none",
+    "last": "none",
+    "reference_role": "none",
+    "time_alignment": "per_source_frame",
+    "continuity": null
+  },
+  "models": [
+    {
+      "role": "checkpoint",
+      "node": "1",
+      "input": "ckpt_name",
+      "filename": "sd_xl_base_1.0.safetensors",
+      "path": "models/checkpoints/sd_xl_base_1.0.safetensors",
+      "directory": "checkpoints",
+      "url": null,
+      "sha256": null,
+      "pin_status": "原型(PR 4.1):sha256 留到正式 template(PR 4.2)補齊"
+    },
+    {
+      "role": "controlnet",
+      "node": "6",
+      "input": "control_net_name",
+      "filename": "xinsir-controlnet-union-sdxl-1.0-promax.safetensors",
+      "path": "models/controlnet/xinsir-controlnet-union-sdxl-1.0-promax.safetensors",
+      "directory": "controlnet",
+      "url": null,
+      "sha256": null,
+      "pin_status": "原型(PR 4.1):sha256 留到正式 template(PR 4.2)補齊"
+    }
+  ],
+  "capability_gate": {
+    "nodes": "from_graph",
+    "selectors": "from_models",
+    "files": "from_models",
+    "platforms": {
+      "windows-cuda": {
+        "status": "untested",
+        "notes": "原型,沒有實機執行"
+      }
+    },
+    "min_memory_mb": null,
+    "capability": "image_generation"
+  },
+  "outputs": [
+    {
+      "id": "image",
+      "node": "11",
+      "kind": "image",
+      "role": "candidate"
+    }
+  ]
+}

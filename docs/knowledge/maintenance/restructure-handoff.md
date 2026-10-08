@@ -144,6 +144,7 @@ status: current
 | 項目 | 狀態 |
 |---|---|
 | `face_swap.py`、`video_layers.py` 印出誤導的 device_config 提醒 | PR 3.1 修正：兩支工具改從 `comfyui_pipeline.client` 取 HTTP client，不再載入 `image_graphs` |
+| 圖片 template 的結構變化（D13）與 profile／tier 對應 | PR 4.1 寫成 [ADR 草稿](../decisions/2026-10-08-image-template-variants.md)（`proposed`），原型在 `templates/_drafts/image-variants/`；**等使用者決定**後才開始 4.2 |
 | `comfyui_design.py` 改寫成純 Pillow | 建議改寫；**等使用者決定**（6′.3） |
 | Mix node 108 寫死 `device=cuda` | 非 CUDA 平台由 preflight 擋下；等 Mac 實測後才決定要不要宣告平台覆寫（D6） |
 | `extra_model_paths.yaml` | 不支援，模型只在 `<comfyui_path>/<path>` 找。要支援必須另外提案 |

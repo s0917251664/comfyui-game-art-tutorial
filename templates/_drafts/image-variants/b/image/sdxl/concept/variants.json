@@ -1,0 +1,206 @@
+{
+  "draft_schema": "option-ops-v0",
+  "base": "image/sdxl/concept",
+  "options": {
+    "lora": {
+      "default": "off",
+      "choices": {
+        "off": {},
+        "on": {
+          "ops": [
+            {
+              "op": "add_node",
+              "id": "1b",
+              "node": {
+                "class_type": "LoraLoader",
+                "inputs": {
+                  "model": [
+                    "1",
+                    0
+                  ],
+                  "clip": [
+                    "1",
+                    1
+                  ],
+                  "lora_name": "__LORA_NAME__",
+                  "strength_model": 0.8,
+                  "strength_clip": 0.8
+                }
+              }
+            },
+            {
+              "op": "relink",
+              "node": "2",
+              "input": "clip",
+              "from": [
+                "1b",
+                1
+              ]
+            },
+            {
+              "op": "relink",
+              "node": "3",
+              "input": "clip",
+              "from": [
+                "1b",
+                1
+              ]
+            },
+            {
+              "op": "relink",
+              "node": "5",
+              "input": "model",
+              "from": [
+                "1b",
+                0
+              ]
+            }
+          ],
+          "slots": {
+            "lora_name": {
+              "type": "string",
+              "required": true,
+              "validate": {
+                "min_length": 1
+              },
+              "targets": [
+                {
+                  "node": "1b",
+                  "input": "lora_name",
+                  "placeholder": "__LORA_NAME__"
+                }
+              ],
+              "help": "models/loras/ 底下的檔名;使用者自備,不 pin"
+            },
+            "lora_strength": {
+              "type": "float",
+              "default": 0.8,
+              "validate": {
+                "min": 0,
+                "max": 1
+              },
+              "targets": [
+                {
+                  "node": "1b",
+                  "input": "strength_model"
+                },
+                {
+                  "node": "1b",
+                  "input": "strength_clip"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "remove_bg": {
+      "default": "off",
+      "choices": {
+        "off": {},
+        "on": {
+          "ops": [
+            {
+              "op": "add_node",
+              "id": "8",
+              "node": {
+                "class_type": "LoadBackgroundRemovalModel",
+                "inputs": {
+                  "bg_removal_name": "birefnet.safetensors"
+                }
+              }
+            },
+            {
+              "op": "add_node",
+              "id": "9",
+              "node": {
+                "class_type": "RemoveBackground",
+                "inputs": {
+                  "bg_removal_model": [
+                    "8",
+                    0
+                  ],
+                  "image": [
+                    "6",
+                    0
+                  ]
+                }
+              }
+            },
+            {
+              "op": "add_node",
+              "id": "10",
+              "node": {
+                "class_type": "InvertMask",
+                "inputs": {
+                  "mask": [
+                    "9",
+                    0
+                  ]
+                }
+              }
+            },
+            {
+              "op": "add_node",
+              "id": "11",
+              "node": {
+                "class_type": "JoinImageWithAlpha",
+                "inputs": {
+                  "image": [
+                    "6",
+                    0
+                  ],
+                  "alpha": [
+                    "10",
+                    0
+                  ]
+                }
+              }
+            },
+            {
+              "op": "add_node",
+              "id": "12",
+              "node": {
+                "class_type": "SaveImage",
+                "inputs": {
+                  "images": [
+                    "11",
+                    0
+                  ],
+                  "filename_prefix": "transparent"
+                }
+              }
+            }
+          ],
+          "models": [
+            {
+              "role": "bg_removal",
+              "node": "8",
+              "input": "bg_removal_name",
+              "filename": "birefnet.safetensors",
+              "path": "models/background_removal/birefnet.safetensors",
+              "directory": "background_removal",
+              "url": null,
+              "sha256": null,
+              "pin_status": "原型(PR 4.1):sha256 留到正式 template(PR 4.2)補齊"
+            }
+          ],
+          "outputs": [
+            {
+              "id": "transparent",
+              "node": "12",
+              "kind": "image",
+              "role": "candidate"
+            },
+            {
+              "id": "opaque",
+              "node": "7",
+              "kind": "image",
+              "role": "preview"
+            }
+          ]
+        }
+      }
+    }
+  }
+}
