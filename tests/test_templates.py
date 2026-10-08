@@ -146,15 +146,15 @@ class LoadTemplatesTests(unittest.TestCase):
             for phrase in stale:
                 self.assertNotIn(phrase, text, f"{path}: {phrase}")
         for path in ("docs/knowledge/rules/fixed-graphs.md",
-                     "skills/comfyui-wan-animate/SKILL.md",
-                     "skills/comfyui-wan-animate/references/comfyui-api.md",
-                     "skills/comfyui-wan-animate/references/scail2.md",
-                     "skills/comfyui-video-layers/references/sam3-track.md"):
+                     "skills/comfyui-run/references/comfyui-wan-animate/README.md",
+                     "skills/comfyui-run/references/comfyui-wan-animate/references/comfyui-api.md",
+                     "skills/comfyui-run/references/comfyui-wan-animate/references/scail2.md",
+                     "skills/comfyui-run/references/comfyui-video-layers/references/sam3-track.md"):
             text = (ROOT / path).read_text(encoding="utf-8")
             self.assertIn("gameart.py run", text, path)
-        for path in ("skills/comfyui-wan-animate/SKILL.md",
-                     "skills/comfyui-wan-animate/references/comfyui-api.md",
-                     "skills/comfyui-video-layers/references/sam3-track.md"):
+        for path in ("skills/comfyui-run/references/comfyui-wan-animate/README.md",
+                     "skills/comfyui-run/references/comfyui-wan-animate/references/comfyui-api.md",
+                     "skills/comfyui-run/references/comfyui-video-layers/references/sam3-track.md"):
             self.assertIn("--preflight", (ROOT / path).read_text(encoding="utf-8"), path)
 
     def test_schema_required_matches_loader(self):

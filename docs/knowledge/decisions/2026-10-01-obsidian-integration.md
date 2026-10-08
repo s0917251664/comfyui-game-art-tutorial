@@ -7,7 +7,7 @@ date: 2026-10-01
 
 ## 決策
 
-沿用 `docs/knowledge/` 現有目錄、Markdown 筆記和文件規範，使用一般檔案工具讀寫。需要專案知識路由時讀 `skills/project-knowledge/SKILL.md`；小模型撰寫草稿，由 root review 後更新筆記。不新增本機專用知識 IO 程式。
+沿用 `docs/knowledge/` 現有目錄、Markdown 筆記和文件規範，使用一般檔案工具讀寫。需要專案知識路由時讀 `skills/game-art-brief/references/project-knowledge/README.md`；小模型撰寫草稿，由 root review 後更新筆記。不新增本機專用知識 IO 程式。
 
 ## 原因與界線
 

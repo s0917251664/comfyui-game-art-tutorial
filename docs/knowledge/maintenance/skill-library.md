@@ -36,6 +36,8 @@ Repo 內新增、改名或責任變更的技能，應更新 `AGENTS.md` 核心�
 
 ## 技能庫盤點
 
+> **現況（2026-10-08，PR 7.3）：** 18 個技能已收成 6 個：`game-art-brief`、`platform-image-gen`、`comfyui-run`、`local-media-tools`、`comfyui-extend`、`comfyui-install`。舊技能的內容都搬到新技能的 `references/<舊名>/`，對照見[技能收斂對照](skills-6-mapping.md)，目前的清單見 [skills/README](../../../skills/README.md)。下面是 7.3 之前的盤點，保留作歷史基準；表內的技能名稱現在是 reference 名稱。
+
 盤點基準：本 repository 的 `skills/*/SKILL.md`，共 **18 個技能目錄**：17 個專案自有遊戲美術技能，加 1 個 project-knowledge skill。15 個固定來源的 Obsidian 上游技能盤點時也在 `skills/`，2026-10-07 已移到 `third_party/claude-obsidian-skills/`。下表涵蓋 17 個美術技能；project-knowledge 與上游技能不屬於本次美術執行路線盤點，並未要求修改它們。
 
 「API 後續適配度」表示日後可研究是否適合，**不是已完成遷移**。只有 Wan Animate 欄明確列出目前的固定 template 路線；其他技能仍依其現行 implementation 運作。

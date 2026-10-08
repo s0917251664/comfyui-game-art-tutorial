@@ -1,6 +1,6 @@
 # --control-type 選擇判斷(canny / pose / depth)
 
-`skills/comfyui-art-gen/SKILL.md` 的 `pose_only`/`character_action` 章節指向這裡——平常用預設 `canny` 就好,只有參考圖比較特殊(人物照片、稀疏線稿、需要控制空間深度)時才需要主動判斷該不該換。
+`skills/comfyui-run/references/comfyui-art-gen/README.md` 的 `pose_only`/`character_action` 章節指向這裡——平常用預設 `canny` 就好,只有參考圖比較特殊(人物照片、稀疏線稿、需要控制空間深度)時才需要主動判斷該不該換。
 
 ## 三種來源分別適合什麼參考圖
 

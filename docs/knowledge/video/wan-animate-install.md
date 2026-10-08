@@ -7,7 +7,7 @@ last_updated: 2026-10-06
 
 # Wan2.2 Animate 本機安裝與驗證
 
-目前狀態：正式 8188 已完成安裝；固定 API templates 的 Mix17／Move17、兩段延伸 Mix61（含音訊）／Move61 與直式 384×640 Move17 已於 2026-10-06 直接 HTTP 實測（runner 出現前），live node／model preflight、queue、下載與完整解碼均技術通過。輸出有肩膀、手臂與手部變形，仍為 candidate，未獲使用者美術驗收。SCAIL-2 已於同日下載 FP8 權重並完成技術實測，見下方 SCAIL-2 段。日常操作、每次執行前的 live gate 及當次證據見[專用技能](../../../skills/comfyui-wan-animate/SKILL.md)與[操作契約](../../../skills/comfyui-wan-animate/references/comfyui-api.md)；2026-10-08 起一律用 `gameart.py run` 執行固定 template（[R2](../rules/fixed-graphs.md)），不要求瀏覽器。本頁以下保留安裝 pins 與安裝期歷史測試。輸出證據位於本機 ignored `output/`，clean clone 不含，連結不代表目前 live gate。
+目前狀態：正式 8188 已完成安裝；固定 API templates 的 Mix17／Move17、兩段延伸 Mix61（含音訊）／Move61 與直式 384×640 Move17 已於 2026-10-06 直接 HTTP 實測（runner 出現前），live node／model preflight、queue、下載與完整解碼均技術通過。輸出有肩膀、手臂與手部變形，仍為 candidate，未獲使用者美術驗收。SCAIL-2 已於同日下載 FP8 權重並完成技術實測，見下方 SCAIL-2 段。日常操作、每次執行前的 live gate 及當次證據見[專用技能](../../../skills/comfyui-run/references/comfyui-wan-animate/README.md)與[操作契約](../../../skills/comfyui-run/references/comfyui-wan-animate/references/comfyui-api.md)；2026-10-08 起一律用 `gameart.py run` 執行固定 template（[R2](../rules/fixed-graphs.md)），不要求瀏覽器。本頁以下保留安裝 pins 與安裝期歷史測試。輸出證據位於本機 ignored `output/`，clean clone 不含，連結不代表目前 live gate。
 
 
 ## 本機設定與使用入口
@@ -60,7 +60,7 @@ RTX 4080（16,376 MiB VRAM）、31.1 GiB RAM；ComfyUI 位於 `C:/Users/XU/Comfy
 
 使用者於 2026-10-06 同意下載並實測。以固定 revision 下載三個檔案並逐一核對 SHA-256，合計 20,667,070,257 bytes（19.25 GiB）：SCAIL-2 14B FP8 scaled 主模型與 DPO LoRA（`Comfy-Org/SCAIL-2` @ `fe3c728bc793ba21ca674688f822afb709ad44fb`）、SAM3.1 multiplex（`Comfy-Org/sam3.1` @ `7bb8374780a725b4353ed31f3a9395c9742b5621`）。UMT5、CLIP Vision H、LightX2V LoRA 與 VAE 重用 Wan Animate 既有檔案；官方範本寫的 `Wan2_1_VAE_bf16` 改用本機 `wan_2.1_vae.safetensors`，實測可解碼。ComfyUI 版本不變（`WanSCAILToVideo` 等節點為 core 內建），未新增 custom node 或 Python 套件。下載腳本與記錄在 ignored `output/scail2-install/`。
 
-替換 33 幀、替換 61 幀（兩段延伸）、動畫 33 幀三次 queue 全部技術通過，RTX 4080 16 GB 可執行 384×384。身份一致性比 Wan Animate 好，但兩種模式都變成全身構圖、未貼合來源近景鏡頭，內容仍為 candidate。檔案清單、模式、動態欄位與實測細節見 [SCAIL-2 reference](../../../skills/comfyui-wan-animate/references/scail2.md)；官方研究來源仍見[動畫評估筆記](animation-evaluation.md)。
+替換 33 幀、替換 61 幀（兩段延伸）、動畫 33 幀三次 queue 全部技術通過，RTX 4080 16 GB 可執行 384×384。身份一致性比 Wan Animate 好，但兩種模式都變成全身構圖、未貼合來源近景鏡頭，內容仍為 candidate。檔案清單、模式、動態欄位與實測細節見 [SCAIL-2 reference](../../../skills/comfyui-run/references/comfyui-wan-animate/references/scail2.md)；官方研究來源仍見[動畫評估筆記](animation-evaluation.md)。
 
 ## 新增能力 checklist 適用性
 

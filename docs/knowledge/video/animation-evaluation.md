@@ -6,7 +6,7 @@ last_updated: 2026-10-06
 
 # Wan Animate 與 SCAIL-2 評估及可控學習方式
 
-執行方式已更新為[Wan Animate 專用技能](../../../skills/comfyui-wan-animate/SKILL.md)與[固定 template（`gameart.py run`）操作契約及實測](../../../skills/comfyui-wan-animate/references/comfyui-api.md)。**2026-10-06 更新：SCAIL-2 FP8 權重已下載並以固定 API templates 實測，操作與結果改以 [SCAIL-2 reference](../../../skills/comfyui-wan-animate/references/scail2.md) 為準；下方「SCAIL-2 評估」段保留為安裝前的研究紀錄。**2026-10-06 新一輪 Mix17／Move17 API 技術通過，內容仍為 candidate；下方原 UI 候選與安裝期觀察保留作比較，不因新測試而繼承驗收。
+執行方式已更新為[Wan Animate 專用技能](../../../skills/comfyui-run/references/comfyui-wan-animate/README.md)與[固定 template（`gameart.py run`）操作契約及實測](../../../skills/comfyui-run/references/comfyui-wan-animate/references/comfyui-api.md)。**2026-10-06 更新：SCAIL-2 FP8 權重已下載並以固定 API templates 實測，操作與結果改以 [SCAIL-2 reference](../../../skills/comfyui-run/references/comfyui-wan-animate/references/scail2.md) 為準；下方「SCAIL-2 評估」段保留為安裝前的研究紀錄。**2026-10-06 新一輪 Mix17／Move17 API 技術通過，內容仍為 candidate；下方原 UI 候選與安裝期觀察保留作比較，不因新測試而繼承驗收。
 
 ## 範圍與現況
 

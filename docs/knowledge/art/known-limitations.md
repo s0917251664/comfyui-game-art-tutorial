@@ -1,6 +1,6 @@
 # 已知限制
 
-`skills/comfyui-art-gen/SKILL.md` 指向這裡——如實告知使用者,不要假裝能做到。
+`skills/comfyui-run/references/comfyui-art-gen/README.md` 指向這裡——如實告知使用者,不要假裝能做到。
 
 - 歷史上在既有安裝機器完成過實機端到端驗證的主產線是 SDXL；這不代表目前 clean clone／本次分支已完成版本 manifest 與 smoke test。Logo/中文字排版品質不會好。`sd15` 的基礎 graph 雖已具備程式路徑，但仍缺實機模型載入與輸出驗收，不能把離線測試當成已驗證品質
 - **SD1.5 只開放不依賴 SDXL add-on 的基礎路徑。** `concept`、`refine`、一般 `inpaint`、`upscale`，以及不帶 `--structure-ref`/`--appearance-ref` 的 `icon_asset` 可建立 SD1.5 graph；`character_action`、`style_lock`、`pose_only` 與其他使用 ControlNet/IPAdapter 的組合目前不支援。`generate.py` 會在上傳參考圖或排隊前 fail-fast（提早拒絕），不會再把 SDXL 模型硬送進 SD1.5 graph 等到 shape mismatch。若要開通這些 add-on，必須在 `tools_src/comfyui_pipeline/profiles/sd15_light.json` 補上 SD1.5 對應模型與 task、更新 capability gate 並做實機 smoke test

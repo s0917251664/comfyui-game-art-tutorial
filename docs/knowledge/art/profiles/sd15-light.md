@@ -9,7 +9,7 @@
 - 原本的 `sd15` tier（可用記憶體低於 8GB，或偵測不到記憶體的機器）。也可以在較大的機器上用 `--profile sd15_light`／`--default-profile sd15_light` 主動選用。
 - 支援 CPU 後端，但速度以分鐘甚至十分鐘計。
 - 只提供不依賴 SDXL add-on 的基礎路徑：`concept`、`icon_asset`（不帶 `--structure-ref`/`--appearance-ref`）、`inpaint`、`guided_inpaint`（不帶 ControlNet 與外觀參考）、`refine`、`upscale`、`layer_split`。
-- **不支援** `pose_only`、`style_lock`、`character_action`、`--style`，以及任何 ControlNet/IPAdapter 參數。這些不是換一顆 SD1.5 模型就能開通，要照 `skills/comfyui-new-tool-checklist/SKILL.md`「情境 B」補齊 SD1.5 版 ControlNet/IPAdapter/CLIP Vision 並實機驗證。
+- **不支援** `pose_only`、`style_lock`、`character_action`、`--style`，以及任何 ControlNet/IPAdapter 參數。這些不是換一顆 SD1.5 模型就能開通，要照 `skills/comfyui-extend/references/comfyui-new-tool-checklist/README.md`「情境 B」補齊 SD1.5 版 ControlNet/IPAdapter/CLIP Vision 並實機驗證。
 
 ## 模型與參數
 

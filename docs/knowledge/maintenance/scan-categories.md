@@ -1,6 +1,6 @@
 # 現況掃描要涵蓋的技術類別
 
-`skills/comfyui-pipeline-review/SKILL.md` 步驟 2 指向這裡。用 WebSearch/WebFetch 查目前(以今天日期為準)每個類別公認的最佳選項,至少涵蓋:
+`skills/comfyui-extend/references/comfyui-pipeline-review/README.md` 步驟 2 指向這裡。用 WebSearch/WebFetch 查目前(以今天日期為準)每個類別公認的最佳選項,至少涵蓋:
 
 - **SDXL 底模**:現在用的是官方 stock `sd_xl_base_1.0`,有沒有社群微調版本(如 Juggernaut XL、RealVisXL,`教學.md` 裡本來就提過這個方向)畫質/穩定性更好、生態(LoRA/ControlNet 相容性)沒犧牲
 - **ControlNet**:有沒有出「Union」類型模型(一個模型檔案同時支援 canny/pose/depth 多種控制,取代現在分開下載三個檔案的作法)

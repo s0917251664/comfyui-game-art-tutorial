@@ -30,6 +30,17 @@ status: current
 | `skills/comfyui-character-animation-workflow/reference/templates.md` | [`docs/knowledge/animation/workflow.md`](../animation/workflow.md) |
 | `docs/knowledge/flux2-and-structure-lock-observations.md` | [`docs/knowledge/experiences/flux2-and-structure-lock-observations.md`](../experiences/flux2-and-structure-lock-observations.md) |
 
+## 保留中的轉址檔（PR 7.3）
+
+技能收斂（[對照表](../maintenance/skills-6-mapping.md)）時，只有這兩個舊路徑留下轉址檔：`tools_src/comfyui_pipeline/profiles/*.json` 的 `notes_ref` 指向它們，而 `notes_ref` 算在 profile 內容 hash 裡，改路徑會讓 hash 和既有 smoke 驗證報告對不上。
+
+| 轉址檔 | canonical 位置 |
+|---|---|
+| `skills/comfyui-art-gen/reference/profiles/sdxl_standard.md` | [`skills/comfyui-run/references/comfyui-art-gen/reference/profiles/sdxl_standard.md`](../../../skills/comfyui-run/references/comfyui-art-gen/reference/profiles/sdxl_standard.md) |
+| `skills/comfyui-art-gen/reference/profiles/sd15_light.md` | [`skills/comfyui-run/references/comfyui-art-gen/reference/profiles/sd15_light.md`](../../../skills/comfyui-run/references/comfyui-art-gen/reference/profiles/sd15_light.md) |
+
+其他舊技能路徑沒有轉址檔，對照見[技能收斂對照](../maintenance/skills-6-mapping.md)。
+
 ## 已刪除的舊資產（第二階段）
 
 不是轉址檔，但同樣是「舊路徑已不存在、內容改由別處負責」，依 [D12](../decisions/2026-10-07-phase2-template-runner.md) 記在這裡。原檔可從 git 歷史取得。
@@ -44,8 +55,8 @@ status: current
 
 | 轉址檔 | canonical 位置 | 引用來源 |
 |---|---|---|
-| `skills/comfyui-art-gen/reference/profiles/sd15_light.md` | [`docs/knowledge/art/profiles/sd15-light.md`](../art/profiles/sd15-light.md) | `tools_src/comfyui_pipeline/profiles/sd15_light.json` 的 `notes_ref`，以及 `tests/test_image_profiles.py` 的 `test_profile_notes_ref_points_to_existing_document`。改 profile JSON 會改變 profile 內容雜湊，影響已記錄的驗證證據 |
-| `skills/comfyui-art-gen/reference/profiles/sdxl_standard.md` | [`docs/knowledge/art/profiles/sdxl-standard.md`](../art/profiles/sdxl-standard.md) | `tools_src/comfyui_pipeline/profiles/sdxl_standard.json` 的 `notes_ref`＋同一個測試（理由同上） |
+| `skills/comfyui-run/references/comfyui-art-gen/reference/profiles/sd15_light.md` | [`docs/knowledge/art/profiles/sd15-light.md`](../art/profiles/sd15-light.md) | `tools_src/comfyui_pipeline/profiles/sd15_light.json` 的 `notes_ref`，以及 `tests/test_image_profiles.py` 的 `test_profile_notes_ref_points_to_existing_document`。改 profile JSON 會改變 profile 內容雜湊，影響已記錄的驗證證據 |
+| `skills/comfyui-run/references/comfyui-art-gen/reference/profiles/sdxl_standard.md` | [`docs/knowledge/art/profiles/sdxl-standard.md`](../art/profiles/sdxl-standard.md) | `tools_src/comfyui_pipeline/profiles/sdxl_standard.json` 的 `notes_ref`＋同一個測試（理由同上） |
 | `skills/comfyui-install/reference/models.md` | [`docs/knowledge/installation/models-and-sources.md`](../installation/models-and-sources.md) | `tools_src/comfyui_pipeline/tasks/_common.py:58` 的錯誤訊息、`tools_src/comfyui_pipeline/image_graphs.py:97` 的註解 |
-| `skills/comfyui-art-gen/reference/structure-ref.md` | [`docs/knowledge/art/structure-ref.md`](../art/structure-ref.md) | `tools_src/comfyui_pipeline/tasks/image_basic.py:22` 的 `--structure-ref` help 文字、`image_graphs.py:402` 的 docstring |
-| `skills/comfyui-art-gen/reference/masking.md` | [`docs/knowledge/art/masking.md`](../art/masking.md) | `tools_src/comfyui_pipeline/image_graphs.py:901` 的註解 |
+| `skills/comfyui-run/references/comfyui-art-gen/reference/structure-ref.md` | [`docs/knowledge/art/structure-ref.md`](../art/structure-ref.md) | `tools_src/comfyui_pipeline/tasks/image_basic.py:22` 的 `--structure-ref` help 文字、`image_graphs.py:402` 的 docstring |
+| `skills/comfyui-run/references/comfyui-art-gen/reference/masking.md` | [`docs/knowledge/art/masking.md`](../art/masking.md) | `tools_src/comfyui_pipeline/image_graphs.py:901` 的註解 |

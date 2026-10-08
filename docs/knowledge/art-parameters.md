@@ -1,6 +1,6 @@
 # 完整參數規格
 
-`skills/comfyui-art-gen/SKILL.md` 指向這裡——邊界情況查這裡,不用每次都問。平常只補 docs/knowledge/art-generation.md「各 task 必要輸入」缺少的項目，不重問前文或附件已提供的答案，也不要主動逐一念出下面所有參數。但如果使用者提出比較細的要求(例如「用跟上次一樣的種子」「圖再大一點」),對照這張表決定要不要加對應旗標。
+`skills/comfyui-run/references/comfyui-art-gen/README.md` 指向這裡——邊界情況查這裡,不用每次都問。平常只補 docs/knowledge/art-generation.md「各 task 必要輸入」缺少的項目，不重問前文或附件已提供的答案，也不要主動逐一念出下面所有參數。但如果使用者提出比較細的要求(例如「用跟上次一樣的種子」「圖再大一點」),對照這張表決定要不要加對應旗標。
 
 本表的「全部」只指本技能涵蓋的 `generate.py` 圖片 task；影片與獨立遮罩工具依各自技能。
 

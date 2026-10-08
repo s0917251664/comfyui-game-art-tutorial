@@ -22,7 +22,7 @@ status: current
 4. 安裝依 [installation/README.md](installation/README.md)；明確盤點升級依 [maintenance/README.md](maintenance/README.md)。
 5. 決策從 [DECISIONS.md](DECISIONS.md) 開始；經驗依任務、工具、CLI/API、模型或 workflow 到 [experiences/](experiences/) 找相符項目。
 
-需要查找或修改專案知識筆記時，先讀 `skills/project-knowledge/SKILL.md`，再依 `TOOLS.md` 使用標準 Markdown 和一般檔案讀寫方式操作。沿用既有目錄與文件規範，草稿由小模型撰寫、root review；整合來源與上游能力限制見[維護說明](maintenance/obsidian-integration.md)。
+需要查找或修改專案知識筆記時，先讀 `skills/game-art-brief/references/project-knowledge/README.md`，再依 `TOOLS.md` 使用標準 Markdown 和一般檔案讀寫方式操作。沿用既有目錄與文件規範，草稿由小模型撰寫、root review；整合來源與上游能力限制見[維護說明](maintenance/obsidian-integration.md)。
 
 若某分支已有更具體的 task 頁，只讀相關小節。能力是否可跑仍以當前機器的 capability snapshot、preflight 與適用平台實測為準，經驗頁不能代替這些 gate。
 
@@ -38,8 +38,8 @@ status: current
 
 ## 遊戲美術工具參考
 
-- [共用工作流程](../../skills/game-art-workflow/SKILL.md)：需求、版本與內容驗收；[物件／VFX／角色動作方法](../../skills/game-art-workflow/references/production.md)按需讀相關小節；[職責與移植盤點](../../skills/game-art-workflow/references/responsibilities.md)只在維護／移植時讀。
-- [平台原生圖片執行](../../skills/platform-image-gen/SKILL.md)與[ComfyUI 有限參數比較](../../skills/comfyui-image-sweep/SKILL.md)：分開的執行責任，不新增平台影片或外部 API backend。
+- [共用工作流程](../../skills/game-art-brief/references/game-art-workflow/README.md)：需求、版本與內容驗收；[物件／VFX／角色動作方法](../../skills/game-art-brief/references/game-art-workflow/references/production.md)按需讀相關小節；[職責與移植盤點](../../skills/game-art-brief/references/game-art-workflow/references/responsibilities.md)只在維護／移植時讀。
+- [平台原生圖片執行](../../skills/platform-image-gen/SKILL.md)與[ComfyUI 有限參數比較](../../skills/comfyui-run/references/comfyui-image-sweep/README.md)：分開的執行責任，不新增平台影片或外部 API backend。
 
 - [遮罩格式、Simple Mask、GrabCut 與 SAM](art/masking.md)：準備局部修改或拆層選區時查閱，遮罩預覽仍需人工確認。
 - [本機圖片編修工具](art/edit-tools.md)：遮罩內 recolor、composite、compare、有限 sweep、參考圖板與 Alpha 稽核的契約及驗證。
@@ -70,10 +70,10 @@ repo 附最小 `.obsidian/app.json` 和 `core-plugins.json`，使用檔案瀏覽
 ## Wan Animate／SCAIL-2 路由
 
 - [Wan Animate／SCAIL-2 評估與受控學習方式](video/animation-evaluation.md)：包含官方 UI 範本、prompt-only 候選、mask 語義與逐階段停止條件。
-- [SCAIL-2 API 操作契約與實測](../../skills/comfyui-wan-animate/references/scail2.md)：FP8 權重已安裝，替換／動畫與兩段延伸技術通過，內容 candidate。
+- [SCAIL-2 API 操作契約與實測](../../skills/comfyui-run/references/comfyui-wan-animate/references/scail2.md)：FP8 權重已安裝，替換／動畫與兩段延伸技術通過，內容 candidate。
 - [SCAIL-2 角色替換實驗（2026-10-07）](video/scail2-character-replacement-experiment-2026-10-07.md)：用本人照片替換影片主角，比較整畫面重畫、只換頭＋換臉等四種做法。
 - [Wan Animate／SCAIL-2 實驗紀錄（2026-10-06）](video/wan-animate-scail2-experiments-2026-10-06.md)：延伸段、音訊、直式寬高與 SCAIL-2 六支候選的條件、prompt、抽幀觀察與限制。
-- [Wan Animate 技能入口](../../skills/comfyui-wan-animate/SKILL.md)：Mix／Move（單段、兩段延伸、音訊、寬高）與 SCAIL-2 固定 API graph 的本機能力查詢、brief 與候選驗收流程；[API 操作 reference](../../skills/comfyui-wan-animate/references/comfyui-api.md)記錄 live preflight 與 request 契約。
+- [Wan Animate 技能入口](../../skills/comfyui-run/references/comfyui-wan-animate/README.md)：Mix／Move（單段、兩段延伸、音訊、寬高）與 SCAIL-2 固定 API graph 的本機能力查詢、brief 與候選驗收流程；[API 操作 reference](../../skills/comfyui-run/references/comfyui-wan-animate/references/comfyui-api.md)記錄 live preflight 與 request 契約。
 - [Wan Animate 安裝紀錄](video/wan-animate-install.md)：安裝 pins 與歷史 33 幀測試；目前的執行方式（`gameart.py run`）、證據及內容限制以技能與操作契約為準。輸出證據位於本機 ignored output，clean clone 不含。
 - [角色動畫 brief 模板](video/templates/animation-brief.md)與[候選測試紀錄模板](video/templates/animation-test-record.md)：先固定輸入、身份錨點與驗收條件，再記錄實際候選與使用者決定。
 
@@ -82,7 +82,8 @@ repo 附最小 `.obsidian/app.json` 和 `core-plugins.json`，使用檔案瀏覽
 - [重構交付脈絡 2026-10-08](maintenance/restructure-delivery-2026-10-08.md)：第 3–8 階段的完整交付說明，給人讀。
 - [重構進度 2026-10-08](maintenance/restructure-progress-2026-10-08.md)：第 3–8 階段做到哪、已 push 的 SHA、審查結論、未完成項。接手時先讀。
 - [重構交接：第 3–8 階段](maintenance/restructure-handoff.md)：Windows 本機 agent 的必守規則、PR 流程、各階段 PR 計畫與回報格式。
-- [技能庫現況與路線界線](maintenance/skill-library.md)：17 個美術技能現行實作、直接 API 與後續候選。
+- [技能庫現況與路線界線](maintenance/skill-library.md)：7.3 之前 17 個美術技能的實作、直接 API 與後續候選（歷史基準）。
+- [技能收斂對照](maintenance/skills-6-mapping.md)：PR 7.3 把 18 個技能收成 6 個；舊技能檔案的新位置與典型需求的路由走查。
 - [custom node 改名紀錄](maintenance/custom-node-renames.md)：`GameArt*` 新名稱；舊名稱已在 PR 8.2 移除，拼法只留在這一頁。
 - [平台驗證流程（smoke suite）](maintenance/validation-workflow.md)：`deploy --yes` → `smoke` → `--record`，技術紀錄不等於美術接受（[R1](rules/candidate-review.md)）。
 - [路線化新增能力清單](maintenance/new-capability-checklist.md)與[技能／產線審視流程](maintenance/pipeline-review.md)：依任務選驗證與研究範圍。

@@ -24,7 +24,7 @@ last_updated: 2026-10-07
 
 ### 2.1 指定物件並追蹤整支影片
 
-**預設：SAM3 固定 template（`gameart.py run`）**，詳見 [sam3-track reference](../../../skills/comfyui-video-layers/references/sam3-track.md)。
+**預設：SAM3 固定 template（`gameart.py run`）**，詳見 [sam3-track reference](../../../skills/comfyui-run/references/comfyui-video-layers/references/sam3-track.md)。
 
 ```text
 gameart.py vfx keyframes --video <src.mp4> --frames 0 --output-dir <dir>/keyframes      # 抽第 0 幀

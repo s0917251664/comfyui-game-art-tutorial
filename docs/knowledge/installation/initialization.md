@@ -10,9 +10,9 @@ status: current
 
 | 使用情境 | 入口與依賴 | 可執行範圍 |
 |---|---|---|
-| 整理圖片／特效需求、參考圖用途、修改與保留範圍、驗收方式 | `skills/game-art-workflow/SKILL.md`；不需生成 runtime 或 `local_config.json` | 交付可執行 brief／分階段規劃，不代表已生成 |
+| 整理圖片／特效需求、參考圖用途、修改與保留範圍、驗收方式 | `skills/game-art-brief/references/game-art-workflow/README.md`；不需生成 runtime 或 `local_config.json` | 交付可執行 brief／分階段規劃，不代表已生成 |
 | 使用平台原生圖片生成或編修 | `skills/platform-image-gen/SKILL.md`；依賴本次會話實際提供且 schema 有效的圖片工具，不依賴此 repo、ComfyUI、Python 或本機設定 | 只做當下工具明確支援的靜態圖片能力；schema 不符時交付 brief。不得由此推論免費、付費權限、外部 API 或影片能力 |
-| 使用本機既有 ComfyUI CLI | 圖片讀 `skills/comfyui-art-gen/SKILL.md`，影片讀 `skills/comfyui-video-gen/SKILL.md` 與 task 技能；需要各自 CLI 契約所列的 client/runtime、可連線 ComfyUI server、模型與 task gate。repo CLI 通常讀 `local_config.json`，先查既有配置 | 僅執行當前 capability、live preflight 與實測允許的 task |
+| 使用本機既有 ComfyUI CLI | 圖片讀 `skills/comfyui-run/references/comfyui-art-gen/README.md`，影片讀 `skills/comfyui-run/references/comfyui-video-gen/README.md` 與 task 技能；需要各自 CLI 契約所列的 client/runtime、可連線 ComfyUI server、模型與 task gate。repo CLI 通常讀 `local_config.json`，先查既有配置 | 僅執行當前 capability、live preflight 與實測允許的 task |
 | 透過明確 URL 使用既有 ComfyUI API | 需要使用者提供／指定的 server URL、該次連線授權，以及路線所需 server node、模型和 live schema；呼叫 agent 可透過 HTTP，不必因此安裝本機 Python。特定技能仍可要求更嚴格的 loopback／機器 gate | 僅限既有 API client 或 runner 支援的操作；固定 API graph 一律用 `gameart.py run` 執行（[R2](../rules/fixed-graphs.md)），不用手動 HTTP 代替。不得推廣成所有機器工具都可遠端使用 |
 | 安裝本機 ComfyUI 或缺失的特定本機工具 | 使用者明確選定該路線後讀 `skills/comfyui-install/SKILL.md` 和本頁的安裝文件；各工具按自身依賴核查 | 僅安裝本次所選能力所需項目；不把所有 helper、影片模型或選配模型當基本配備 |
 

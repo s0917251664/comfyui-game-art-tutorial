@@ -22,7 +22,7 @@
 
 OpenCV `cv2 5.0.0`、NumPy `2.4.4`、Pillow `12.2` 環境下，28 項相關 unit tests 通過。Edge headless UI 驗證包含筆刷／多邊形、貼合候選、原範圍比較、取消、原範圍顯示時套用、undo／redo、柔邊匯出與保存。832×1232 角色頭髮案例中，粗選區 122,971 個選取像素收窄至 103,256，manifest 記錄 `expanded_pixels: 0`；目視預覽輪廓合理。這只驗證工具輸出與互動行為；遮罩仍為 candidate，需由使用者檢視，不代表生成結果或美術接受。證據見 `output/mask_refine_20261002/ui-proof.json` 與 `output/mask_refine_20261002/hair-cli/manifest.json`。
 
-`skills/comfyui-art-gen/SKILL.md` 的 `inpaint` 章節指向這裡——平常執行 `inpaint` 不用先讀這份,只有遇到「遮罩好像沒生效」「局部修圖結果變差/變爛」這類狀況時才查。
+`skills/comfyui-run/references/comfyui-art-gen/README.md` 的 `inpaint` 章節指向這裡——平常執行 `inpaint` 不用先讀這份,只有遇到「遮罩好像沒生效」「局部修圖結果變差/變爛」這類狀況時才查。
 
 ## 遮罩檔案格式(alpha 通道陷阱,已實測踩過一次)
 
