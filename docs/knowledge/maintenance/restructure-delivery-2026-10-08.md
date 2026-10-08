@@ -278,7 +278,7 @@ Python 是 `C:\Users\XU\ComfyUI\.venv\Scripts\python.exe`。完整測試先設 `
 
 ## 還沒交的，以及建議順序
 
-1. **整合分支。** 上一節的 cherry-pick。審查可以合併再 push。這是下一手。
+1. ~~整合分支~~：已完成。**整合線已完成（2026-10-08 17:20 台北）：** `integrate/phase3-8`。從 `132201f` 切出，依序 cherry-pick 6.3、6′、7.2、5.1、5.2（`-x`，新 commit，沒有 rebase），再收進本頁所在的文件 commit。8 個 commit 的 `git patch-id` 和原 commit 相同；5.2 只有 `image_from_template.py` 的 seed 衝突，另加 `1d65de7`：有 seed slot 才抽、省略時只抽一次 48-bit、明確的 0 保持 0。整合後完整測試 Ran 612、OK、skipped 0（本機證據：`output/verify-20261008-integrate/`）。
 2. **7.3 技能收斂。** 用 6′ 當底，或等整合線含有 `39f669e` 再做。
 3. **8.3 刪 builder。** 等整合線含有 5.1、5.2、6.3。
 4. **8.4 部署與 verify-install。** queue 確認是空的之後。部署後重啟，再 `doctor --refresh`。
@@ -288,7 +288,7 @@ Python 是 `C:\Users\XU\ComfyUI\.venv\Scripts\python.exe`。完整測試先設 `
 
 ## 使用者現在可以做的決定
 
-合併進 `develop` 建議等整合線出現再做。若先合併 `132201f`，得到的是 VACE、圖片與影片 template、recipe、catalog、擴充協議、以及 repo 裡已刪掉的舊節點別名；圖片 task、影片 task、Pillow 物件組裝、template 能力偵測都不在裡面。
+整合線 `integrate/phase3-8` 已經出現，要合併進 `develop` 就合併這一條。若先合併 `132201f`，得到的是 VACE、圖片與影片 template、recipe、catalog、擴充協議、以及 repo 裡已刪掉的舊節點別名；圖片 task、影片 task、Pillow 物件組裝、template 能力偵測都不在裡面。
 
 不需要為了這份交付去做美術 accept，也不需要為了 8.1 再開一個 8199。8188 保持停止，直到使用者要求再啟動。下次要 queue 或 deploy 之前，先確認行程與 queue。
 

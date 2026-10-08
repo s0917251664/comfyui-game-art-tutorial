@@ -10,7 +10,11 @@ status: current
 
 ## 接手時從這裡開始
 
-下一手做整合分支。7.3、8.3、8.4 還沒開始。做到整合線可以合併並 push 之後，再向使用者回報，然後才進 7.3。
+**整合線已完成（2026-10-08 17:20 台北）：** `integrate/phase3-8`。從 `132201f` 切出，依序 cherry-pick 6.3、6′、7.2、5.1、5.2（`-x`，新 commit，沒有 rebase），再收進本頁所在的文件 commit。8 個 commit 的 `git patch-id` 和原 commit 相同；5.2 只有 `image_from_template.py` 的 seed 衝突，另加 `1d65de7`：有 seed slot 才抽、省略時只抽一次 48-bit、明確的 0 保持 0。整合後完整測試 Ran 612、OK、skipped 0（本機證據：`output/verify-20261008-integrate/`）。
+
+下一手是 7.3，底用 `integrate/phase3-8`。8.3、8.4 還沒開始。
+
+審查方式改了：使用者在 2026-10-08 要求不再用 grok 審核，改由實作的 agent 自己 review（範圍、正確性、測試、第 2 節規則），結果寫進 commit 或證據資料夾。
 
 ## 不要做
 
@@ -133,7 +137,7 @@ status: current
 
 依這個順序。每一項仍要：實作、測試、grok plan-mode 審查、結論是可以合併才 push。不開 PR。使用者自己 merge。
 
-1. **整合分支**。從 `132201f` 開新分支，依序 cherry-pick：`f6b3c75`，6′ 的 `ef70dfe` `e7d8ea4` `cab2f3a` `39f669e`，`00039a7`，再 `b35d3e3`、`1dd86fa`、`2d1e173`。衝突處理見上面。新 commit only。
+1. ~~整合分支~~：已完成，見「接手時從這裡開始」。
 2. **7.3 技能收斂**。底要用已含 Pillow 說明的 6′（`39f669e`），否則技能頁會和 6′ 衝突。18 個技能收成 6 個，目錄維持扁平 `skills/<name>/SKILL.md`：
    - `game-art-brief` ← game-art-workflow、game-art-edit-brief、game-art-initialize、project-knowledge
    - `platform-image-gen` 留著
