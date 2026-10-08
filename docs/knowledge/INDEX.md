@@ -54,6 +54,7 @@ status: current
 - [日期化決策紀錄](decisions/)
 - [ADR 2026-10-08：圖片 template 採方案 A，每個家族一份固定 graph](decisions/2026-10-08-image-template-variants.md)
 - [ADR 2026-10-08：不採用 comfy-cli／comfy-mcp，只對齊官方範本欄位與 core blueprints](decisions/2026-10-08-official-comfy-tooling.md)
+- [ADR 2026-10-08：影片 template 一份 graph，不按平台複製模型檔](decisions/2026-10-08-video-model-pins.md)
 - [依任務、工具與執行路線查經驗](experiences/)
 - [已移除轉址檔的舊路徑對照](archive/redirect-stubs.md)：舊連結打不開時，從這裡找 canonical 位置。
 - [資產紀錄實測](experiences/asset-records-2026-10-01.md)

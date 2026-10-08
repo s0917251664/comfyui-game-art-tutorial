@@ -1,0 +1,267 @@
+{
+  "template": "video/h3/character-video-6",
+  "case": "default",
+  "template_version": "0.1.0",
+  "graph_canonical_sha256": "e9c0c0889453df9d0b8574033de903c28a756e5a5faaf7c6268ab965dd7eac1d",
+  "values": {
+    "prompt": "the character breathes slowly in an idle stance",
+    "seed": 20261006
+  },
+  "options": {},
+  "uploads": {
+    "ref_image_1": "run/ref_1.png",
+    "ref_image_2": "run/ref_2.png",
+    "ref_image_3": "run/ref_3.png",
+    "ref_image_4": "run/ref_4.png",
+    "ref_image_5": "run/ref_5.png",
+    "ref_image_6": "run/ref_6.png"
+  },
+  "changed": {
+    "104.prompt": "the character breathes slowly in an idle stance",
+    "15.noise_seed": 20261006,
+    "56r0.image": "run/ref_1.png",
+    "56r1.image": "run/ref_2.png",
+    "56r2.image": "run/ref_3.png",
+    "56r3.image": "run/ref_4.png",
+    "56r4.image": "run/ref_5.png",
+    "56r5.image": "run/ref_6.png"
+  },
+  "patched_graph_sha256": "f3878285c1508f04a83e0a37a197349967d6601ea14a3a1ff7b71da855917fb7",
+  "graph": {
+    "6": {
+      "class_type": "UNETLoader",
+      "inputs": {
+        "unet_name": "minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+        "weight_dtype": "default"
+      }
+    },
+    "13": {
+      "class_type": "CLIPLoader",
+      "inputs": {
+        "clip_name": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+        "type": "minimax",
+        "device": "default"
+      }
+    },
+    "11": {
+      "class_type": "VAELoader",
+      "inputs": {
+        "vae_name": "minimax_h3_video_vae_fp16.safetensors"
+      }
+    },
+    "24": {
+      "class_type": "VAELoader",
+      "inputs": {
+        "vae_name": "minimax_h3_audio_vae_fp32.safetensors"
+      }
+    },
+    "shift": {
+      "class_type": "MiniMaxH3SigmaShift",
+      "inputs": {
+        "model": [
+          "6",
+          0
+        ],
+        "shift_video": 12.0,
+        "shift_audio": 3.0
+      }
+    },
+    "104": {
+      "class_type": "MiniMaxH3ReferenceToVideo",
+      "inputs": {
+        "clip": [
+          "13",
+          0
+        ],
+        "vae": [
+          "11",
+          0
+        ],
+        "audio_vae": [
+          "24",
+          0
+        ],
+        "prompt": "the character breathes slowly in an idle stance",
+        "width": 768,
+        "height": 768,
+        "length": 56,
+        "ref_image_size": "match",
+        "ref_images.ref_image_0": [
+          "56r0",
+          0
+        ],
+        "ref_images.ref_image_1": [
+          "56r1",
+          0
+        ],
+        "ref_images.ref_image_2": [
+          "56r2",
+          0
+        ],
+        "ref_images.ref_image_3": [
+          "56r3",
+          0
+        ],
+        "ref_images.ref_image_4": [
+          "56r4",
+          0
+        ],
+        "ref_images.ref_image_5": [
+          "56r5",
+          0
+        ]
+      }
+    },
+    "15": {
+      "class_type": "RandomNoise",
+      "inputs": {
+        "noise_seed": 20261006
+      }
+    },
+    "17": {
+      "class_type": "KSamplerSelect",
+      "inputs": {
+        "sampler_name": "res_multistep"
+      }
+    },
+    "9": {
+      "class_type": "BasicScheduler",
+      "inputs": {
+        "model": [
+          "shift",
+          0
+        ],
+        "scheduler": "simple",
+        "steps": 20,
+        "denoise": 1.0
+      }
+    },
+    "16": {
+      "class_type": "BasicGuider",
+      "inputs": {
+        "model": [
+          "shift",
+          0
+        ],
+        "conditioning": [
+          "104",
+          0
+        ]
+      }
+    },
+    "14": {
+      "class_type": "SamplerCustomAdvanced",
+      "inputs": {
+        "noise": [
+          "15",
+          0
+        ],
+        "guider": [
+          "16",
+          0
+        ],
+        "sampler": [
+          "17",
+          0
+        ],
+        "sigmas": [
+          "9",
+          0
+        ],
+        "latent_image": [
+          "104",
+          1
+        ]
+      }
+    },
+    "10": {
+      "class_type": "VAEDecode",
+      "inputs": {
+        "samples": [
+          "14",
+          0
+        ],
+        "vae": [
+          "11",
+          0
+        ]
+      }
+    },
+    "23": {
+      "class_type": "VAEDecodeAudio",
+      "inputs": {
+        "samples": [
+          "14",
+          0
+        ],
+        "vae": [
+          "24",
+          0
+        ]
+      }
+    },
+    "91": {
+      "class_type": "CreateVideo",
+      "inputs": {
+        "images": [
+          "10",
+          0
+        ],
+        "audio": [
+          "23",
+          0
+        ],
+        "fps": 24.0,
+        "bit_depth": 8
+      }
+    },
+    "92": {
+      "class_type": "SaveVideo",
+      "inputs": {
+        "video": [
+          "91",
+          0
+        ],
+        "filename_prefix": "character_video",
+        "format": "mp4",
+        "codec": "h264"
+      }
+    },
+    "56r0": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "run/ref_1.png"
+      }
+    },
+    "56r1": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "run/ref_2.png"
+      }
+    },
+    "56r2": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "run/ref_3.png"
+      }
+    },
+    "56r3": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "run/ref_4.png"
+      }
+    },
+    "56r4": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "run/ref_5.png"
+      }
+    },
+    "56r5": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "run/ref_6.png"
+      }
+    }
+  }
+}

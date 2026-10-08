@@ -25,15 +25,20 @@ STEPS = {
                        {"video", "masks", "control", "mask"}, set(), set()),
     "paste_back": ("post", {"output", "feather"}, set(), set(), {"output"}),
     "qa_outside_mask_unchanged": ("post", set(), set(), set(), set()),
+    # 抽上一鏡尾幀、運鏡終點靜幀。只呼叫既有函式，參數是字面值或 {slot} 引用。
+    "extract_last_frame": ("pre", {"video", "image"}, {"video", "image"}, set(), set()),
+    "camera_end_still": ("pre", {"image", "camera", "width", "height", "still"}, {"image", "still"}, set(), set()),
 }
 PRE_FIELDS = ("frames", "width", "height", "fps")
 # 會產生上傳檔的 pre 步驟:參數名 -> 這個參數指向的 slot 會拿到的檔案(slot 必須是 generated)
-GENERATES = {"vace_work_area": ("control", "mask")}
+GENERATES = {"vace_work_area": ("control", "mask"), "extract_last_frame": ("image",), "camera_end_still": ("still",)}
 # pre 步驟的結果可以用 {pre.<步驟>.<欄位>} 引用(例如 from_pre slot 的值)
 STEP_RESULTS = {"vace_work_area": ("frames", "width", "height", "length")}
 # 參數指向的 slot 必須是這些類型
 SLOT_PARAM_TYPES = {("vace_work_area", "video"): ("video",), ("vace_work_area", "masks"): ("path",),
-                    ("vace_work_area", "control"): ("video",), ("vace_work_area", "mask"): ("video",)}
+                    ("vace_work_area", "control"): ("video",), ("vace_work_area", "mask"): ("video",),
+                    ("extract_last_frame", "video"): ("video",), ("extract_last_frame", "image"): ("image",),
+                    ("camera_end_still", "image"): ("image",), ("camera_end_still", "still"): ("image",)}
 # post 步驟需要的前置步驟:(階段, 步驟)
 REQUIRES = {"paste_back": ("pre", "vace_work_area"), "qa_outside_mask_unchanged": ("post", "paste_back")}
 REF_RE = re.compile(r"^\{([a-z0-9_]+(?:\.[a-z0-9_]+)*)\}$")
@@ -303,6 +308,30 @@ def run_pre_checks(template, resolution, media, *, work_dir=None, context=None):
                 context["generated"][params["control"]] = info["control"]
                 context["generated"][params["mask"]] = info["mask"]
                 step_problems, step_warnings = [], []
+            elif name == "extract_last_frame":
+                target = step["video"]
+                if not work_dir:
+                    raise ValueError("extract_last_frame 需要 run 資料夾(work_dir)")
+                dest = os.path.join(work_dir, WORK_DIR, "last_frame.png")
+                os.makedirs(os.path.dirname(dest), exist_ok=True)
+                written = media.extract_last_frame(inputs[params["video"]], dest)
+                context["generated"][params["image"]] = written
+                info = {"path": written}
+                step_problems, step_warnings = [], []
+            elif name == "camera_end_still":
+                target = step["image"]
+                if not work_dir:
+                    raise ValueError("camera_end_still 需要 run 資料夾(work_dir)")
+                dest = os.path.join(work_dir, WORK_DIR, "camera_end.png")
+                os.makedirs(os.path.dirname(dest), exist_ok=True)
+                written = media.camera_end_still(
+                    inputs[params["image"]], params["camera"], int(params["width"]), int(params["height"]), dest)
+                info = {"path": written}
+                step_problems, step_warnings = [], []
+                if written:
+                    context["generated"][params["still"]] = written
+                else:
+                    step_problems.append("這個運鏡沒有終點靜幀(orbit 做不出畫面外的像素)")
             elif name == "check_image":
                 target = params["slot"]
                 info = media.probe_image(inputs[target])

@@ -8,6 +8,7 @@ status: current
 
 | 日期 | 決策 | ADR |
 |---|---|---|
+| 2026-10-08 | 影片 template 一份 graph，凍結成 `video_config=None` 時 builder 寫入的檔名。模型可記 `platforms.windows-cuda`（必須與頂層 pin 相同）。不為每個平台複製一份 graph，也不編造 macos-mps 的另一組檔名。預檢仍檢查頂層 pin。 | [影片模型 pin 不按平台分 graph](decisions/2026-10-08-video-model-pins.md) |
 | 2026-10-08 | 圖片 D13 採方案 A：每種會增刪或更換節點的組合各一份固定 template，runner 只填值。`image/sdxl/*` 對應 `sdxl_standard`，`image/sd15/*` 對應 `sd15_light`；tier 只改呼叫端寬高。`filename_prefix` 維持 builder 前綴。checkpoint 是 slot，LoRA 不 pin。圖片 `time_alignment` 允許 null。 | [圖片 template 的結構組合](decisions/2026-10-08-image-template-variants.md) |
 | 2026-10-08 | custom node 舊名稱直接移除，不再保留別名，也不採用 Node Replacement。缺少新名稱就是缺少節點。這一階段不部署、不重啟；部署與重啟留到第 8.4，且 queue 必須為空。 | [custom node 舊名稱直接移除](decisions/2026-10-08-node-alias-exit.md) |
 | 2026-10-08 | 不採用、不安裝 comfy-cli／comfy-mcp，也不用 Comfy Cloud；只參考官方 workflow_templates 的範本欄位與 ComfyUI core subgraph blueprints。`template.json` 補 `min_comfyui_version`、`requires_custom_nodes`、模型 `url`／`directory`、`provenance.upstream`。第 8 階段已評估 core 的 Node Replacement API，結論見[退場決定](decisions/2026-10-08-node-alias-exit.md)。 | [不採用官方 CLI／MCP，只對齊範本欄位與 blueprints](decisions/2026-10-08-official-comfy-tooling.md) |

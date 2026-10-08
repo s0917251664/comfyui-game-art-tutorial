@@ -79,6 +79,16 @@ VACE 的三個步驟（實作在 `tools_src/comfyui_pipeline/runner/vace_media.p
 
 清單外的步驟一律拒絕；`paste_back` 需要 pre 有 `vace_work_area`，`qa_outside_mask_unchanged` 需要排在 `paste_back` 之後。
 
+### 抽尾幀、運鏡終點靜幀與模型 platforms（第 6.2 階段）
+
+`extract_last_frame`（pre）從 `{video}` 抽出最後一幀 PNG，寫進 generated image slot，之後照一般 `upload` 上傳。實作是 `video_media.extract_last_frame`。
+
+`camera_end_still`（pre）呼叫 `video_graphs.build_camera_end_still`。orbit 沒有終點靜幀，步驟失敗且不產生檔案。參數只接受字面值或 `{slot}` 引用，不能放任意程式。
+
+這兩個步驟沒有接上 `templates/video/wan/**` 與 `templates/video/h3/**` 的 `pre`：同一份 graph 也要能吃使用者自己的圖（例如 transition 的尾幀），`generated` 會擋住使用者上傳。`tasks/video.py` 的執行路徑仍直接呼叫 builder（第 6.3 階段才改接 template）。
+
+模型物件可以寫選用的 `platforms`。有寫就必須含 `windows-cuda`，而且它的 `filename`、`sha256`、`size_bytes` 等於頂層 pin。預檢仍只檢查頂層 pin。不為每個平台複製一份 graph。見 [2026-10-08 影片模型 pin](../docs/knowledge/decisions/2026-10-08-video-model-pins.md)。
+
 ### 清理上傳到 ComfyUI 的輸入
 
 runner 不會刪除上傳的檔案：每次執行的輸入留在 `<comfyui_path>/input/<run_id>/`（`run_id` 記在 `run.result.json` 與 `uploads.json`）。這是目前的預設，是否改成自動清理還沒決定。要手動清理時：

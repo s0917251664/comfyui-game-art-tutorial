@@ -24,14 +24,19 @@ MOVED_IDS = [
     "video/wan-animate/mix", "video/wan-animate/mix-extend", "video/wan-animate/move",
     "video/wan-animate/move-extend", "video/wan-animate/scail2", "video/wan-animate/scail2-extend",
 ]
-VIDEO_IDS = sorted(MOVED_IDS + ["video/wan-vace/inpaint"])  # PR 3.4 新增 VACE
+# discover 用路徑各段排序（video/wan 排在 video/wan-animate 前面），不是整段字串的 '/' 與 '-'。
+def _id_key(template_id):
+    return tuple(template_id.split("/"))
+
+
+VIDEO_IDS = sorted(MOVED_IDS + ["video/wan-vace/inpaint", *golden.VIDEO_TEMPLATE_IDS], key=_id_key)
 
 
 def image_template_ids():
     return [template_id for template_id in T.discover(TEMPLATES) if template_id.startswith("image/")]
 
 
-ALL_IDS = sorted(VIDEO_IDS + image_template_ids())
+ALL_IDS = sorted(VIDEO_IDS + image_template_ids(), key=_id_key)
 # 舊位置 → 新位置與位元組 sha256(PR 2.1 搬移前後必須一致)
 MOVED_GRAPH_SHA256 = {
     "video/wan-animate/mix": "5ba22f287ef8f9cb9cb926c249724ae050a0b3bd3076863cdd25f4b6b64c6d6c",
@@ -336,11 +341,73 @@ class OfficialFieldsTests(TemplateFixture, unittest.TestCase):
                                                               note="測試"))
                 self.assertEqual(kind, loaded.data["provenance"]["upstream"]["kind"])
 
+    def test_model_platforms(self):
+        def pin(data, **override):
+            model = data["models"][0]
+            entry = {"filename": model["filename"], "sha256": model["sha256"], "size_bytes": model["size_bytes"]}
+            entry.update(override)
+            model["platforms"] = {"windows-cuda": entry}
+
+        def extra_key(data):
+            pin(data)
+            data["models"][0]["platforms"]["windows-cuda"]["extra"] = 1
+
+        def other_platform(data):
+            pin(data)
+            model = data["models"][0]
+            model["platforms"]["linux-cpu"] = {
+                "filename": "other.safetensors", "sha256": model["sha256"], "size_bytes": model["size_bytes"]}
+
+        shutil.rmtree(self.root, ignore_errors=True)
+        loaded = self.accepted(pin)
+        self.assertEqual(loaded.data["models"][0]["filename"],
+                         loaded.data["models"][0]["platforms"]["windows-cuda"]["filename"])
+        shutil.rmtree(self.root, ignore_errors=True)
+        self.accepted(other_platform)
+        cases = [
+            (lambda d: pin(d, filename="other.safetensors"), "必須等於頂層 filename"),
+            (lambda d: pin(d, sha256="0" * 64), "必須等於頂層 sha256"),
+            (lambda d: pin(d, size_bytes=1), "必須等於頂層 size_bytes"),
+            (lambda d: d["models"][0].__setitem__("platforms", {}), "非空"),
+            (lambda d: d["models"][0].__setitem__("platforms", {
+                "macos-mps": {"filename": "a.safetensors", "sha256": "ab", "size_bytes": 1}}), "必須有 windows-cuda"),
+            (extra_key, "必須剛好有"),
+        ]
+        for change, fragment in cases:
+            with self.subTest(fragment):
+                shutil.rmtree(self.root, ignore_errors=True)
+                self.rejected(change, fragment)
+
     def test_parse_version(self):
         self.assertEqual((0, 34, 0), T.parse_version("0.34.0"))
         self.assertEqual((0, 34, 1), T.parse_version("v0.34.1-dev"))
         self.assertIsNone(T.parse_version("nightly"))
         self.assertIsNone(T.parse_version(None))
+
+
+class VideoTemplatePlatformTests(unittest.TestCase):
+    def test_windows_cuda_duplicates_the_top_level_pin(self):
+        self.assertEqual(18, len(golden.VIDEO_TEMPLATE_IDS))
+        for template_id in golden.VIDEO_TEMPLATE_IDS:
+            data = T.load_template(TEMPLATES, template_id, repo_root=ROOT).data
+            with self.subTest(template_id):
+                self.assertEqual("draft", data["status"])
+                self.assertEqual("0.34.0", data["min_comfyui_version"])
+                self.assertEqual("untested", data["capability_gate"]["platforms"]["macos-mps"]["status"])
+                for model in data["models"]:
+                    self.assertEqual(["windows-cuda"], list(model["platforms"]))
+                    pin = model["platforms"]["windows-cuda"]
+                    self.assertEqual(model["filename"], pin["filename"])
+                    self.assertEqual(model["sha256"], pin["sha256"])
+                    self.assertEqual(model["size_bytes"], pin["size_bytes"])
+
+    def test_preflight_model_check_ignores_platforms(self):
+        import inspect
+        from comfyui_pipeline.runner import preflight as preflight_mod
+        text = inspect.getsource(preflight_mod.check_models)
+        self.assertNotIn("platforms", text)
+        self.assertIn("filename", text)
+        self.assertIn("sha256", text)
 
 
 class RealTemplateOfficialFieldsTests(unittest.TestCase):
@@ -484,9 +551,10 @@ class GoldenGraphTests(unittest.TestCase):
     def test_golden_cases_cover_all_templates(self):
         video_cases = [case for case in golden.CASES if case[0].startswith("video/")]
         image_cases = [case for case in golden.CASES if case[0].startswith("image/")]
-        self.assertEqual(24, len(video_cases))  # 影片案例維持 24；每個圖片 template 再加一個
+        self.assertEqual(18, len(golden.VIDEO_TEMPLATE_IDS))
+        self.assertEqual(24 + len(golden.VIDEO_TEMPLATE_IDS), len(video_cases))
         self.assertEqual(len(image_cases), len({case[0] for case in image_cases}))
-        self.assertEqual(24 + len(image_cases), len(golden.CASES))
+        self.assertEqual(len(video_cases) + len(image_cases), len(golden.CASES))
         self.assertEqual(set(ALL_IDS), {case[0] for case in golden.CASES})
         names = sorted(os.listdir(golden.FIXTURE_DIR))
         self.assertEqual(sorted(golden.fixture_name(c[0], c[1]) for c in golden.CASES), names)

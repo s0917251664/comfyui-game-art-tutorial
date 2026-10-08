@@ -19,6 +19,7 @@ if TOOLS_SRC not in sys.path:
     sys.path.insert(0, TOOLS_SRC)
 
 from comfyui_pipeline.runner import template as T  # noqa: E402
+from comfyui_pipeline.video_catalog import CHARACTER_REF_MAX  # noqa: E402
 
 RUN_ID = "golden"
 SEED = 20261006
@@ -26,7 +27,9 @@ UPLOADS = {"reference_image": "run/reference.png", "source_video": "run/source.m
            "control_video": "run/control.mkv", "mask_video": "run/mask.mkv",
            "image": "run/image.png", "mask": "run/mask.png", "pose_ref": "run/pose_ref.png",
            "character_ref": "run/character_ref.png", "structure_ref": "run/structure_ref.png",
-           "appearance_ref": "run/appearance_ref.png", "control_ref": "run/control_ref.png"}
+           "appearance_ref": "run/appearance_ref.png", "control_ref": "run/control_ref.png",
+           "start_image": "run/start.png", "last_image": "run/last.png", "motion_video": "run/motion.mp4"}
+UPLOADS.update({f"ref_image_{index}": f"run/ref_{index}.png" for index in range(1, CHARACTER_REF_MAX + 1)})
 PROMPT = "the robot from the reference image dances, same pose as the source video"
 POINTS = [{"x": 192, "y": 192}]
 WAN_BASE = {"prompt": PROMPT, "seed": SEED}
@@ -67,6 +70,15 @@ VIDEO_CASES = [
     ("video/wan-vace/inpaint", "strength_negative", dict(VACE_BASE, strength=0.6, negative="blurry, flicker"), {}),
     ("video/wan-vace/inpaint", "wide81_crop", dict(VACE_BASE, crop="0,0,832,480", pad=0), {}),
 ]
+# 第 6.2 階段：每個影片 template 至少一個案例。上傳檔名來自 UPLOADS，不進 values。
+VIDEO_TEMPLATE_IDS = [
+    "video/wan/img2video",
+    "video/h3/img2video",
+    "video/h3/img2video-last",
+    *[f"video/{backend}/pose-drive-{control}" for backend in ("wan", "h3") for control in ("canny", "pose", "depth")],
+    *[f"video/h3/character-video-{count}" for count in range(1, CHARACTER_REF_MAX + 1)],
+]
+VIDEO_PROMPT = "the character breathes slowly in an idle stance"
 
 
 def _image_case_values(template):
@@ -92,7 +104,9 @@ def _image_cases():
     return cases
 
 
-CASES = VIDEO_CASES + _image_cases()
+CASES = VIDEO_CASES + [
+    (template_id, "default", {"prompt": VIDEO_PROMPT, "seed": SEED}, {}) for template_id in VIDEO_TEMPLATE_IDS
+] + _image_cases()
 PRE_RESULTS = {("video/wan-vace/inpaint", "keep_1024"): VACE_1024, ("video/wan-vace/inpaint", "replace_small"): VACE_SMALL,
                ("video/wan-vace/inpaint", "strength_negative"): VACE_1024,
                ("video/wan-vace/inpaint", "wide81_crop"): VACE_WIDE}

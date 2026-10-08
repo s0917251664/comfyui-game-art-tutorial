@@ -1,0 +1,300 @@
+{
+  "schema_version": 1,
+  "id": "video/wan/pose-drive-canny",
+  "version": "0.1.0",
+  "title": "Wan Fun Control 動作驅動（canny）",
+  "summary": "Wan Fun Control 5B，動作片前處理是 canny。graph 由 build_pose_drive_wan（video_config=None）產生。變數是 placeholder，seed 是 -1。status draft，平台未實測。",
+  "status": "draft",
+  "status_note": "新 template；windows-cuda 實機執行前維持 draft",
+  "min_comfyui_version": "0.34.0",
+  "requires_custom_nodes": [],
+  "graph": {
+    "file": "graph.api.json",
+    "format": "comfyui-api",
+    "sha256": "aa4be30b95f755ad75f2f612bcc11cac070f1ab5420f5597db54419abdd75272",
+    "canonical_sha256": "63ffeb72e0015926cb12033f57311fb47f9b7e86546bca6560030989d520b97e"
+  },
+  "provenance": {
+    "derived_from": "build_pose_drive_wan（tools_src/comfyui_pipeline/video_builders.py），video_config=None",
+    "upstream": {
+      "kind": "workflow_templates",
+      "name": "video_wan2_2_5B_fun_control",
+      "blob": "92cd847090ae109ec9dec8182e021ac719243931",
+      "comfyui_version": "0.34.0",
+      "note": "官方 video_wan2_2_5B_fun_control 與這份同為 Fun Control 5B（wan2.2_fun_control_5B_bf16、Wan22FunControlToVideo、Canny）。官方 Canny 的 mode 是 4（旁路），而且多 PreviewImage 與 MarkdownNote；這份照 builder 一律執行 Canny（low 0.4、high 0.8），沒有那兩個節點。pose／depth 的前處理類別不同，不用這份 upstream。"
+    },
+    "tested_source_sha256": null,
+    "evidence": [
+      {
+        "path": "docs/knowledge/decisions/2026-10-08-video-model-pins.md",
+        "note": "一份 graph，不按平台複製"
+      },
+      {
+        "path": "docs/knowledge/video/design.md",
+        "note": "影片 task 與 backend 契約"
+      },
+      {
+        "path": "docs/knowledge/installation/models-and-sources.md",
+        "note": "模型檔名與下載來源；沒有固定 revision 的 source/url 維持 null"
+      }
+    ]
+  },
+  "slots": {
+    "start_image": {
+      "type": "image",
+      "upload": true,
+      "required": true,
+      "targets": [
+        {
+          "node": "56",
+          "input": "image",
+          "placeholder": "__START_IMAGE__"
+        }
+      ],
+      "help": "第一幀或角色靜幀"
+    },
+    "motion_video": {
+      "type": "video",
+      "upload": true,
+      "required": true,
+      "targets": [
+        {
+          "node": "80",
+          "input": "file",
+          "placeholder": "__MOTION_VIDEO__"
+        }
+      ],
+      "help": "動作參考影片。前處理節點讀它的影格"
+    },
+    "prompt": {
+      "type": "text",
+      "required": true,
+      "validate": {
+        "min_length": 1
+      },
+      "targets": [
+        {
+          "node": "6",
+          "input": "text",
+          "placeholder": "__PROMPT__"
+        }
+      ],
+      "help": "寫進 CLIPTextEncode 的正向詞。template 不改寫，要填最終進 graph 的文字。"
+    },
+    "negative": {
+      "type": "text",
+      "default": "blurry, low quality, morphing face, extra limbs, camera movement, zoom, pan, text, watermark, still image, frozen",
+      "validate": {
+        "min_length": 1
+      },
+      "targets": [
+        {
+          "node": "7",
+          "input": "text",
+          "placeholder": "__NEGATIVE__"
+        }
+      ],
+      "help": "負向詞。預設與 builder 的 VIDEO_NEG_DEFAULT 相同"
+    },
+    "width": {
+      "type": "int",
+      "default": 768,
+      "validate": {
+        "min": 8,
+        "multiple_of": 8
+      },
+      "targets": [
+        {
+          "node": "55",
+          "input": "width"
+        }
+      ],
+      "help": "輸出寬。預設是這份 builder 的代表值"
+    },
+    "height": {
+      "type": "int",
+      "default": 768,
+      "validate": {
+        "min": 8,
+        "multiple_of": 8
+      },
+      "targets": [
+        {
+          "node": "55",
+          "input": "height"
+        }
+      ],
+      "help": "輸出高。預設是這份 builder 的代表值"
+    },
+    "length": {
+      "type": "int",
+      "default": 49,
+      "validate": {
+        "min": 1,
+        "max": 10000
+      },
+      "targets": [
+        {
+          "node": "55",
+          "input": "length"
+        }
+      ],
+      "help": "影格數。預設是 duration 2 秒時 builder 算出的長度；案例要改長度時直接設這個 slot"
+    },
+    "seed": {
+      "type": "seed",
+      "default": "auto",
+      "targets": [
+        {
+          "node": "3",
+          "input": "seed"
+        }
+      ],
+      "help": "亂數種子。auto 由 runner 產生；graph 裡的 -1 會被換掉"
+    },
+    "filename_prefix": {
+      "type": "string",
+      "default": "pose_drive",
+      "validate": {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$",
+        "max_length": 96
+      },
+      "targets": [
+        {
+          "node": "58",
+          "input": "filename_prefix"
+        }
+      ],
+      "help": "SaveVideo 的 filename_prefix。預設是 builder 的預設值，不是 output_prefix"
+    }
+  },
+  "pre": [
+    {
+      "step": "check_image",
+      "slot": "start_image"
+    },
+    {
+      "step": "check_video",
+      "slot": "motion_video",
+      "fps": 24,
+      "cfr": true
+    },
+    {
+      "step": "upload",
+      "slots": [
+        "start_image",
+        "motion_video"
+      ]
+    }
+  ],
+  "post": [
+    {
+      "step": "check_video_output",
+      "output": "video",
+      "width": "{width}",
+      "height": "{height}",
+      "frames": "{length}",
+      "fps": 24,
+      "audio": false
+    }
+  ],
+  "frame_anchoring": {
+    "first": "none",
+    "last": "none",
+    "reference_role": "identity",
+    "time_alignment": "per_source_frame",
+    "continuity": null
+  },
+  "models": [
+    {
+      "role": "diffusion",
+      "node": "37",
+      "input": "unet_name",
+      "filename": "wan2.2_fun_control_5B_bf16.safetensors",
+      "path": "models/diffusion_models/wan2.2_fun_control_5B_bf16.safetensors",
+      "directory": "diffusion_models",
+      "size_bytes": 10003303280,
+      "sha256": "ace4718a7c87ee3e5606a68ab79142c4395e81aece76b8120bc886f0fbbe1d16",
+      "source": null,
+      "url": null,
+      "platforms": {
+        "windows-cuda": {
+          "filename": "wan2.2_fun_control_5B_bf16.safetensors",
+          "sha256": "ace4718a7c87ee3e5606a68ab79142c4395e81aece76b8120bc886f0fbbe1d16",
+          "size_bytes": 10003303280
+        }
+      },
+      "notes": "models-and-sources.md 沒有固定 git revision，source 與 url 是 null。platforms.windows-cuda 記同一份檔。"
+    },
+    {
+      "role": "text_encoder",
+      "node": "38",
+      "input": "clip_name",
+      "filename": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      "path": "models/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      "directory": "text_encoders",
+      "size_bytes": 6735906897,
+      "sha256": "c3355d30191f1f066b26d93fba017ae9809dce6c627dda5f6a66eaa651204f68",
+      "source": {
+        "repo": "Comfy-Org/Wan_2.1_ComfyUI_repackaged",
+        "revision": "123acf1cc74bccbb9bfff8ac1ee72edc08c2341d",
+        "file": "split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors"
+      },
+      "url": "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/123acf1cc74bccbb9bfff8ac1ee72edc08c2341d/split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      "platforms": {
+        "windows-cuda": {
+          "filename": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+          "sha256": "c3355d30191f1f066b26d93fba017ae9809dce6c627dda5f6a66eaa651204f68",
+          "size_bytes": 6735906897
+        }
+      },
+      "notes": "sha256 與大小和既有 Wan template 的 umt5 pin 相同，沿用同一個 Hugging Face revision。"
+    },
+    {
+      "role": "vae",
+      "node": "39",
+      "input": "vae_name",
+      "filename": "wan2.2_vae.safetensors",
+      "path": "models/vae/wan2.2_vae.safetensors",
+      "directory": "vae",
+      "size_bytes": 1409400960,
+      "sha256": "e40321bd36b9709991dae2530eb4ac303dd168276980d3e9bc4b6e2b75fed156",
+      "source": null,
+      "url": null,
+      "platforms": {
+        "windows-cuda": {
+          "filename": "wan2.2_vae.safetensors",
+          "sha256": "e40321bd36b9709991dae2530eb4ac303dd168276980d3e9bc4b6e2b75fed156",
+          "size_bytes": 1409400960
+        }
+      },
+      "notes": "models-and-sources.md 沒有固定 git revision，source 與 url 是 null。platforms.windows-cuda 記同一份檔。"
+    }
+  ],
+  "capability_gate": {
+    "nodes": "from_graph",
+    "selectors": "from_models",
+    "files": "from_models",
+    "platforms": {
+      "windows-cuda": {
+        "status": "untested",
+        "notes": "尚未實機執行"
+      },
+      "macos-mps": {
+        "status": "untested",
+        "notes": "沒有另一組模型檔名，也尚未實測"
+      }
+    },
+    "min_memory_mb": null,
+    "capability": "control_video"
+  },
+  "outputs": [
+    {
+      "id": "video",
+      "node": "58",
+      "kind": "video",
+      "role": "candidate"
+    }
+  ],
+  "fixed_notes": "取樣、FPS 與節點連接以 builder 為準。template 不改寫 prompt 前綴。執行路徑仍在 tasks/video.py，留到第 6.3 階段。"
+}

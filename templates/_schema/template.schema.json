@@ -550,7 +550,7 @@
           "type": "string"
         }
       },
-      "description": "可用步驟與參數以 tools_src/comfyui_pipeline/runner/steps.py 的 STEPS 為準。PR 3.3 新增 vace_work_area(pre)、paste_back、qa_outside_mask_unchanged(post)"
+      "description": "可用步驟與參數以 tools_src/comfyui_pipeline/runner/steps.py 的 STEPS 為準。包含 vace_work_area、paste_back、qa_outside_mask_unchanged、extract_last_frame、camera_end_still"
     },
     "model": {
       "type": "object",
@@ -636,6 +636,37 @@
             "null"
           ],
           "description": "對應官方 properties.models[].url,必須等於 https://huggingface.co/<repo>/resolve/<revision>/<file>;沒有 source 時是 null"
+        },
+        "platforms": {
+          "type": "object",
+          "description": "選用。同一份 graph 的每平台 pin，不另做 variant graph。有寫就必須含 windows-cuda，而且 filename、sha256、size_bytes 等於頂層。預檢仍檢查頂層 pin。不要為沒有另一組檔名的平台編造項目。",
+          "minProperties": 1,
+          "propertyNames": {
+            "pattern": "^[a-z0-9]+-[a-z0-9]+$"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "filename",
+              "sha256",
+              "size_bytes"
+            ],
+            "properties": {
+              "filename": {
+                "type": "string",
+                "minLength": 1
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "size_bytes": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
         },
         "notes": {
           "type": "string"

@@ -58,7 +58,9 @@ TIME_ALIGNMENTS = ("source_from_frame_0", "per_source_frame", None)
 OUTPUT_KINDS = ("video", "image", "image_sequence")
 OUTPUT_ROLES = ("candidate", "mask", "preview")
 MODEL_KEYS = {"role", "node", "input", "filename", "path", "directory", "url", "size_bytes", "sha256", "source",
-              "notes", "pin_status", "auto_download"}
+              "notes", "pin_status", "auto_download", "platforms"}
+# platforms 裡每個平台的 pin。windows-cuda 必須和頂層 filename 相同；預檢仍只看頂層 pin。
+PLATFORM_PIN_KEYS = frozenset({"filename", "sha256", "size_bytes"})
 SOURCE_KEYS = {"repo", "revision", "file"}
 # 對齊官方範本 properties.models[].url(Hugging Face 下載網址);我們固定 revision,不用 main。
 MODEL_URL = "https://huggingface.co/{repo}/resolve/{revision}/{file}"
@@ -581,6 +583,7 @@ def _validate_models(models, graph, status):
         if isinstance(path, str) and (path.startswith(("/", "\\")) or ":" in path or ".." in path.split("/")):
             problems.append(f"{where}: path 必須是相對 comfyui_path 的路徑(正斜線,不能有 ..)")
         problems.extend(_check_model_location(where, model))
+        problems.extend(_check_model_platforms(where, model))
     if missing_pin and status == "technical_pass":
         problems.append("有模型 pin 尚未補齊(sha256 為 null),status 不能是 technical_pass")
     return problems
@@ -612,6 +615,41 @@ def _check_model_location(where, model):
             problems.append(f"{where}: url 和 source 不一致,應該是 {MODEL_URL.format(**source)}")
     elif url is not None:
         problems.append(f"{where}: 沒有 source 時 url 必須是 null")
+    return problems
+
+
+def _check_model_platforms(where, model):
+    """選用的 platforms：有寫就必須含 windows-cuda，而且 filename（以及 sha256、size_bytes）等於頂層 pin。"""
+    if "platforms" not in model:
+        return []
+    platforms = model["platforms"]
+    if not isinstance(platforms, dict) or not platforms:
+        return [f"{where}: platforms 必須是非空 object"]
+    problems = []
+    if "windows-cuda" not in platforms:
+        problems.append(f"{where}: 有 platforms 時必須有 windows-cuda，且 filename 等於頂層 filename")
+    for key, entry in platforms.items():
+        if not isinstance(key, str) or not PLATFORM_RE.match(key):
+            problems.append(f"{where}: platforms 的平台名稱 {key!r} 格式不對(例如 windows-cuda)")
+            continue
+        if not isinstance(entry, dict) or set(entry) != PLATFORM_PIN_KEYS:
+            problems.append(f"{where}: platforms.{key} 必須剛好有 filename、sha256、size_bytes")
+            continue
+        filename = entry["filename"]
+        if not isinstance(filename, str) or not filename:
+            problems.append(f"{where}: platforms.{key}.filename 必填")
+        elif key == "windows-cuda" and filename != model.get("filename"):
+            problems.append(f"{where}: platforms.windows-cuda.filename 必須等於頂層 filename {model.get('filename')!r}")
+        sha = entry["sha256"]
+        if not isinstance(sha, str) or not SHA256_RE.match(sha):
+            problems.append(f"{where}: platforms.{key}.sha256 必須是 64 位小寫十六進位")
+        elif key == "windows-cuda" and sha != model.get("sha256"):
+            problems.append(f"{where}: platforms.windows-cuda.sha256 必須等於頂層 sha256")
+        size = entry["size_bytes"]
+        if not _is_int(size) or size < 0:
+            problems.append(f"{where}: platforms.{key}.size_bytes 必須是非負整數")
+        elif key == "windows-cuda" and size != model.get("size_bytes"):
+            problems.append(f"{where}: platforms.windows-cuda.size_bytes 必須等於頂層 size_bytes")
     return problems
 
 
