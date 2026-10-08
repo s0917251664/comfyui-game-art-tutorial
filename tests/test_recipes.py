@@ -144,7 +144,7 @@ class RecipeCatalogTests(unittest.TestCase):
         self.assertNotIn("queue", out)
         self.assertNotIn(PROMOTION, out)
 
-    def test_prop_swap_show_survives_missing_template_and_dry_run_is_unresolved(self):
+    def test_prop_swap_show_and_dry_run_stays_described(self):
         code, out, err = run_cli(["show", "prop-swap", "--draft", "--json"])
         self.assertEqual(0, code, err)
         shown = json.loads(out)
@@ -157,7 +157,11 @@ class RecipeCatalogTests(unittest.TestCase):
         self.assertEqual(["note", "local", "confirm", "template"], [step["kind"] for step in payload["steps"]])
         pose = payload["steps"][3]
         self.assertEqual("video/h3/pose-drive-canny", pose["template"])
-        self.assertEqual("unresolved", pose["resolution"])
+        self.assertEqual("described", pose["resolution"])
+        self.assertEqual("{steps.prop_paste.outputs.composited}", pose["slots"]["start_image"])
+        self.assertEqual("{inputs.motion_ref}", pose["slots"]["motion_video"])
+        self.assertNotIn("image", pose["slots"])
+        self.assertNotIn("motion_ref", pose["slots"])
         self.assertFalse(pose["executable"])
         self.assertFalse(pose["calls_comfyui"])
         self.assertTrue(payload["steps"][2]["confirmation_point"])
@@ -168,10 +172,12 @@ class RecipeCatalogTests(unittest.TestCase):
         self.assertEqual(0, code, err)
         steps = json.loads(out)["steps"]
         self.assertEqual("confirm", steps[0]["kind"])
-        self.assertEqual("video/h3/img2video", steps[1]["template"])
-        self.assertEqual("unresolved", steps[1]["resolution"])
-        self.assertEqual("image", steps[1]["frame_anchoring"]["first"])
-        self.assertEqual("image", steps[1]["frame_anchoring"]["last"])
+        self.assertEqual("video/h3/img2video-last", steps[1]["template"])
+        self.assertEqual("described", steps[1]["resolution"])
+        self.assertEqual("{inputs.idle}", steps[1]["slots"]["start_image"])
+        self.assertEqual("{inputs.idle}", steps[1]["slots"]["last_image"])
+        self.assertEqual("start_image", steps[1]["frame_anchoring"]["first"])
+        self.assertEqual("last_image", steps[1]["frame_anchoring"]["last"])
         self.assertIn("last", steps[1]["text"])
         self.assertLess(steps[0]["index"], steps[1]["index"])
         self.assertEqual("unsupported", steps[2]["resolution"])
@@ -192,6 +198,47 @@ class RecipeCatalogTests(unittest.TestCase):
         self.assertTrue(steps[1]["confirmation_point"])
         self.assertFalse(any(step["calls_comfyui"] for step in steps))
         self.assertNotIn("template", [step["kind"] for step in steps])
+
+    def test_missing_template_stays_unresolved_and_unknown_slot_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            recipes = Path(tmp) / "recipes"
+            missing = {
+                "schema_version": 1, "id": "missing-template", "version": "0.1.0",
+                "title": "尚未登記", "summary": "測試用", "status": "draft",
+                "inputs": {"idle": {"type": "path", "required": True}},
+                "steps": [{
+                    "id": "gen", "kind": "template", "template": "video/missing/not-registered",
+                    "executable": False, "support": "planned",
+                    "slots": {"image": "{inputs.idle}"},
+                }],
+            }
+            bad = {
+                "schema_version": 1, "id": "bad-slot", "version": "0.1.0",
+                "title": "slot 對不上", "summary": "測試用", "status": "draft",
+                "inputs": {"idle": {"type": "path", "required": True}},
+                "steps": [{
+                    "id": "gen", "kind": "template", "template": "video/h3/img2video",
+                    "executable": False, "support": "planned",
+                    "slots": {"image": "{inputs.idle}"},
+                }],
+            }
+            for recipe_id, data in (("missing-template", missing), ("bad-slot", bad)):
+                folder = recipes / recipe_id
+                folder.mkdir(parents=True)
+                (folder / "recipe.json").write_text(
+                    json.dumps(data, ensure_ascii=False, indent=2) + "\n",
+                    encoding="utf-8", newline="\n")
+            code, out, err = run_cli(
+                ["run", "missing-template", "--dry-run", "--json"],
+                recipes_root=recipes, templates_root=TEMPLATES)
+            self.assertEqual(0, code, err)
+            step = json.loads(out)["steps"][0]
+            self.assertEqual("unresolved", step["resolution"])
+            self.assertFalse(step["calls_comfyui"])
+            code, out, err = run_cli(
+                ["show", "bad-slot"], recipes_root=recipes, templates_root=TEMPLATES)
+            self.assertEqual(2, code, out)
+            self.assertIn("沒有 slot image", err)
 
 
 class ConfirmationTests(unittest.TestCase):
@@ -326,7 +373,7 @@ class ConfirmationTests(unittest.TestCase):
             self.assertTrue(state["confirmations"][0]["confirmed"])
             self.assertEqual("pending", state["confirmations"][0]["content_review"])
             described = {step["id"]: step for step in state["steps"]}
-            self.assertEqual("unresolved", described["h3_img2video"]["resolution"])
+            self.assertEqual("described", described["h3_img2video"]["resolution"])
             self.assertEqual("unsupported", described["wan_img2video"]["resolution"])
             self.assertIsNone(described["h3_img2video"]["command"])
             self.assertEqual("pending", state["content_review"])

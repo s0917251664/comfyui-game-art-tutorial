@@ -5,7 +5,7 @@
   "title": "回到 Idle 的動作（首尾同一張）",
   "summary": "依 R3（docs/knowledge/rules/idle-anchoring.md）：要回到 Idle 的動作必須鎖住首幀和尾幀，而且是同一張已驗收的 Idle。選 H3 img2video 的 last frame。Wan img2video 沒有 last frame，標 unsupported。確認點在送出生成之前。草稿。轉正要另開變更且要使用者核准。",
   "status": "draft",
-  "status_note": "草稿，放在 _drafts。轉正要另開變更且要使用者核准。H3／Wan 的影片 template 尚未落地（6.2），生成步驟只做 dry-run 描述。",
+  "status_note": "草稿，放在 _drafts。轉正要另開變更且要使用者核准。尾幀對到已登記的 video/h3/img2video-last，這一步 executable 仍是 false，dry-run 標 described，不會送出。Wan img2video 沒有尾幀，標 unsupported。",
   "inputs": {
     "idle": {
       "type": "path",
@@ -34,17 +34,17 @@
     {
       "id": "h3_img2video",
       "kind": "template",
-      "template": "video/h3/img2video",
+      "template": "video/h3/img2video-last",
       "executable": false,
       "support": "planned",
-      "text": "選 H3 img2video，把 last frame 設成和首幀同一張 Idle。builder 有 last_frame；template 尚未登記，dry-run 標 unresolved，不會執行。",
+      "text": "選已登記的 video/h3/img2video-last，首幀 start_image 與尾幀 last_image 都是同一張 Idle。這一步仍是草稿描述，不會執行。",
       "frame_anchoring": {
-        "first": "image",
-        "last": "image",
+        "first": "start_image",
+        "last": "last_image",
         "note": "首幀與 last frame 都是同一張 Idle"
       },
       "slots": {
-        "image": "{inputs.idle}",
+        "start_image": "{inputs.idle}",
         "last_image": "{inputs.idle}",
         "prompt": "{inputs.prompt}",
         "seed": "{inputs.seed}"

@@ -5,7 +5,7 @@
   "title": "換道具：母版靜幀、貼回、再套原片動作",
   "summary": "母版靜幀用既有圖片編修（不在這條 recipe 呼叫新 graph）→ gameart.py vfx prop-paste → H3 pose_drive（canny）。草稿。轉正要另開變更且要使用者核准。",
   "status": "draft",
-  "status_note": "草稿，放在 _drafts。轉正要另開變更且要使用者核准。6.2 的 H3 template 還沒落地，pose_drive 只做 dry-run 描述。",
+  "status_note": "草稿，放在 _drafts。轉正要另開變更且要使用者核准。video/h3/pose-drive-canny 已登記，slot 對到 start_image 與 motion_video。這一步 executable 仍是 false，dry-run 標 described，不會執行。",
   "inputs": {
     "source_still": {
       "type": "path",
@@ -65,10 +65,10 @@
       "template": "video/h3/pose-drive-canny",
       "executable": false,
       "support": "planned",
-      "text": "預計用 H3 pose_drive、control 為 canny，把母版套上原片動作。template 尚未登記，dry-run 標 unresolved，不會執行。",
+      "text": "預計用已登記的 video/h3/pose-drive-canny（control 為 canny），把母版套上原片動作。slot 是 start_image、motion_video、prompt。這一步仍是草稿描述，不會執行。",
       "slots": {
-        "image": "{steps.prop_paste.outputs.composited}",
-        "motion_ref": "{inputs.motion_ref}",
+        "start_image": "{steps.prop_paste.outputs.composited}",
+        "motion_video": "{inputs.motion_ref}",
         "prompt": "{inputs.prompt}"
       }
     }
