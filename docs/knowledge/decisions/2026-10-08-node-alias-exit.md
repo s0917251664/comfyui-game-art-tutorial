@@ -19,7 +19,7 @@ PR 2.5（[D9](2026-10-07-phase2-template-runner.md)）把 repo 自己的 custom 
 
 1. 本機有 1 份 UI workflow 仍用舊名稱：`<ComfyUI>/user/default/workflows/Ch8_影片換臉_Server.json`（2 個節點、1 條連線）。agent 不改這份檔。使用者在 UI 換成新節點後另存。
 2. Mac 的 `<ComfyUI>/user/**/workflows/` 還沒掃。有用到舊名稱時，同樣由使用者在 UI 遷移。
-3. 本機 `output/` 有 21 份改名前的 API prompt（都沒有 `_meta`）。它們只當紀錄，不能直接重送。重送預期是 HTTP 400（缺少節點）。
+3. 本機 `output/` 有 21 份改名前的 API prompt（都沒有 `_meta`）。它們只當紀錄，不能直接重送。第 8.4 部署並重啟之後，重送預期是 HTTP 400（缺少節點）。
 4. 隔離實例上的 L6（確認 400 而不是 500）尚未執行。離線讀過程式：別名移除後，缺節點走 `validate_prompt` 的 missing node，不會進到會對缺 `_meta` 丟 `KeyError` 的 replacement。部署與重啟留到第 8.4，且 queue 必須為空。
 
 ## 為什麼不採用 Node Replacement

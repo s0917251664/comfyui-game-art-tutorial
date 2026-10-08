@@ -24,8 +24,8 @@ status: current
 - `NODE_CLASS_MAPPINGS` 只登記新名稱。舊名稱不再是子類別，也沒有 `DEPRECATED` 別名。
 - repo 的 client 本來就只送新名稱：`face_swap.py` 的 API graph 與輸出的 UI workflow、`video_layers.py` 的 graph 都用新名稱。
 - preflight 只接受新名稱。live `/object_info` 沒有新名稱時，就是缺少節點（部署或重啟後才會出現），不會再把「只有舊名稱」解讀成要重啟。
-- 已存、仍使用舊 class 名稱的 UI workflow 開啟時會顯示缺少節點。ComfyUI 不會自動換成新節點。要繼續用，請在 UI 裡把節點換成上表的新節點後另存。
-- 沒有 `_meta` 的舊 API prompt 重送時，預期得到 HTTP 400（缺少節點），而不是 HTTP 500。這些 prompt 從此只當紀錄，不能直接重送。
+- 已存、仍使用舊 class 名稱的 UI workflow，要等下面「部署後要做的事」做完（第 8.4、queue 為空、重啟）之後，開啟時才會顯示缺少節點。在那之前，正在跑的 ComfyUI 仍是舊程式，不會因為 repo 已刪別名就顯示缺少節點。ComfyUI 不會自動換成新節點。要繼續用，請在 UI 裡把節點換成上表的新節點後另存。
+- 沒有 `_meta` 的舊 API prompt 只當紀錄，不能直接重送。第 8.4 部署並重啟之後，重送預期得到 HTTP 400（缺少節點），而不是 HTTP 500。
 
 ## 這台 Windows 機器上還沒遷移的檔
 
@@ -37,7 +37,7 @@ status: current
 ## 部署後要做的事
 
 1. `gameart.py deploy --yes`（會提示 custom_nodes 有變更、要重啟），再跑 `gameart.py verify-install`。部署排在第 8.4 階段，而且要等 queue 為空。
-2. 在 queue 為空時重啟 ComfyUI，新名稱才會出現在 `/object_info`，舊名稱會從 schema 消失。
+2. 在 queue 為空時重啟 ComfyUI。重啟之後 schema 只剩新名稱，舊名稱從 schema 消失，已存的舊 workflow 開啟時才顯示缺少節點。
 3. 依上一節遷移 `Ch8_影片換臉_Server.json`。
 
 ## 不受影響的部分
