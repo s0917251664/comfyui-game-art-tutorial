@@ -318,7 +318,8 @@ def build_parser():
     p.add_argument("--softness", type=float, default=40.0)
     p.add_argument("--despill", action="store_true")
     p.add_argument("--unmix", action="store_true", help="Remove key colour from semi-transparent pixels")
-    p = sub.add_parser("birefnet-alpha", help="Per-frame BiRefNet matte (CUDA, local weights only)")
+    birefnet_help = "Per-frame BiRefNet matte (CUDA, local weights only)。只能從 repo 的 tools_src 執行，不會被 deploy 帶出去"
+    p = sub.add_parser("birefnet-alpha", help=birefnet_help, description=birefnet_help)
     alpha_common(p)
     p.add_argument("--model-root", required=True, type=Path)
     p.add_argument("--variant", default="general")

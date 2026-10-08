@@ -1,21 +1,18 @@
-"""Fixed ComfyUI Core graphs for object scenes, motif patterns and proof sheets.
+"""本機 Pillow 合成：物件場景、圖樣重複、檢視表。
 
-Generation uses existing generate.py tasks. This helper only composes supplied
-images through Core nodes; it does not infer masks, lighting or art acceptance.
+不組 ComfyUI graph，不上傳，不排隊。生成仍走既有 generate.py task。
+這裡只擺已提供的圖，不推論遮罩、打光或美術驗收。輸出是不透明 RGB。
 """
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import math
-from pathlib import Path
 import sys
-import uuid
 
-from PIL import Image
+import numpy as np
+from PIL import Image, ImageDraw
 from image_edit_tools import file_record, load_image, new_directory, save_json
-import generate
 
 
 def positive(value, name, minimum=1, maximum=4096):
@@ -25,7 +22,7 @@ def positive(value, name, minimum=1, maximum=4096):
 
 
 def rgb_color(value):
-    if not isinstance(value, str) or len(value) != 7 or value[0] != '#':
+    if not isinstance(value, str) or len(value) != 7 or value[0] != "#":
         raise ValueError("background must be #RRGGBB")
     try:
         return int(value[1:], 16)
@@ -33,11 +30,16 @@ def rgb_color(value):
         raise ValueError("background must be #RRGGBB") from exc
 
 
+def _rgb(value):
+    packed = rgb_color(value)
+    return (packed >> 16) & 255, (packed >> 8) & 255, packed & 255
+
+
 def check_image(path, transparent=False):
     image = load_image(path)
     if image.width * image.height > 16_777_216:
         raise ValueError("Input image exceeds 16 megapixels")
-    alpha = image.getchannel('A')
+    alpha = image.getchannel("A")
     if not alpha.getbbox():
         raise ValueError("Fully transparent image cannot be placed")
     if transparent and alpha.getextrema()[0] == 255:
@@ -45,174 +47,181 @@ def check_image(path, transparent=False):
     return image
 
 
-class Graph:
-    def __init__(self):
-        self.nodes = {}
-
-    def add(self, kind, **inputs):
-        node = str(len(self.nodes) + 1)
-        self.nodes[node] = {'class_type': kind, 'inputs': inputs}
-        return [node, 0]
-
-    def canvas(self, width, height, background):
-        return self.add('EmptyImage', width=width, height=height, batch_size=1, color=rgb_color(background))
-
-    def object(self, filename, source_size, target_box, bbox):
-        loaded = self.add('LoadImage', image=filename)
-        x, y, right, bottom = bbox
-        w, h = right-x, bottom-y
-        cropped = self.add('ImageCrop', image=loaded, x=x, y=y, width=w, height=h)
-        mask = self.add('InvertMask', mask=[loaded[0], 1])
-        mask = self.add('CropMask', mask=mask, x=x, y=y, width=w, height=h)
-        scale = min(target_box[0]/w, target_box[1]/h)
-        tw, th = max(1, round(w*scale)), max(1, round(h*scale))
-        resized = self.add('ImageScale', image=cropped, upscale_method='lanczos', width=tw, height=th, crop='disabled')
-        mask = self.add('MaskToImage', mask=mask)
-        mask = self.add('ImageScale', image=mask, upscale_method='bilinear', width=tw, height=th, crop='disabled')
-        mask = self.add('ImageToMask', image=mask, channel='red')
-        return resized, mask, (tw, th)
-
-    def paste(self, destination, source, mask, x, y):
-        return self.add('ImageCompositeMasked', destination=destination, source=source, mask=mask,
-                        x=x, y=y, resize_source=False)
+def _ascii_title(text):
+    if text and (len(text) > 200 or any(ord(c) > 126 or (ord(c) < 32 and c != "\n") for c in text)):
+        raise ValueError("Printable ASCII titles only; use external typography for Chinese")
 
 
-def build_graph(mode, filenames, images, *, background_filename=None, background_size=None,
-                x=0, y=0, width=512, height=512, cell=256, columns=3, padding=24,
-                rows=3, color='#f5f0e5', title='', caption='', canvas_width=None, canvas_height=None):
-    if not filenames or len(filenames) != len(images) or len(images) > 16:
-        raise ValueError("Requires 1..16 matching images")
-    graph = Graph()
+def _center_crop_resize(image, width, height):
+    """對齊 ComfyUI ``common_upscale(..., crop='center')`` 的裁切，再 LANCZOS。"""
+    old_w, old_h = image.size
+    old_aspect = old_w / old_h
+    new_aspect = width / height
+    x = y = 0
+    if old_aspect > new_aspect:
+        x = round((old_w - old_w * (new_aspect / old_aspect)) / 2)
+    elif old_aspect < new_aspect:
+        y = round((old_h - old_h * (old_aspect / new_aspect)) / 2)
+    cropped = image.crop((x, y, old_w - x, old_h - y))
+    return cropped.resize((width, height), Image.Resampling.LANCZOS)
+
+
+def _fit_object(image, target_w, target_h):
+    """依 alpha bbox 裁切後等比縮放。RGB 用 LANCZOS，alpha 用 BILINEAR。不裁成填滿。"""
+    bbox = image.getchannel("A").getbbox()
+    if bbox is None:
+        raise ValueError("Fully transparent image cannot be placed")
+    x0, y0, x1, y1 = bbox
+    cropped = image.crop(bbox)
+    scale = min(target_w / (x1 - x0), target_h / (y1 - y0))
+    tw, th = max(1, round((x1 - x0) * scale)), max(1, round((y1 - y0) * scale))
+    rgb = cropped.convert("RGB").resize((tw, th), Image.Resampling.LANCZOS)
+    alpha = cropped.getchannel("A").resize((tw, th), Image.Resampling.BILINEAR)
+    return rgb, alpha, (tw, th)
+
+
+def _paste(dest, rgb, alpha, x, y):
+    """alpha 是來源權重：255 換成物件色，0 留下背景。"""
+    src = np.asarray(rgb)
+    weight = np.asarray(alpha).astype(np.float32)[..., None] / 255.0
+    h, w = src.shape[:2]
+    view = dest[y:y + h, x:x + w]
+    view[:] = np.round(src.astype(np.float32) * weight + view.astype(np.float32) * (1.0 - weight)).astype(np.uint8)
+
+
+def _paint_label(image, text, top):
+    if not text:
+        return
+    draw = ImageDraw.Draw(image)
+    bbox = draw.multiline_textbbox((0, 0), text)
+    tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
+    x = max(0, (image.width - tw) // 2)
+    y = 8 if top else max(0, image.height - th - 8)
+    draw.multiline_text((x, y), text, fill=(0x20, 0x3B, 0x38))
+
+
+def compose(mode, images, *, background=None, x=0, y=0, width=512, height=512,
+            cell=256, columns=3, padding=24, rows=3, color="#f5f0e5",
+            title="", caption="", canvas_width=None, canvas_height=None):
+    """合成並回傳 (RGB Image, (寬, 高), placements)。placements 的 box 是 [x, y, 寬, 高]。"""
+    if not images or len(images) > 16:
+        raise ValueError("Requires 1..16 images")
     placements = []
-    if mode == 'scene':
-        if len(images) != 1 or background_filename is None or background_size is None:
+    if mode == "scene":
+        if len(images) != 1 or background is None:
             raise ValueError("scene needs one object and one opaque background")
-        positive(width, 'width');positive(height, 'height')
-        positive(x, 'x', 0);positive(y, 'y', 0)
-        destination = graph.add('LoadImage', image=background_filename)
+        positive(width, "width")
+        positive(height, "height")
+        positive(x, "x", 0)
+        positive(y, "y", 0)
+        canvas = background.convert("RGB")
         if canvas_width is not None or canvas_height is not None:
-            if canvas_width is None or canvas_height is None:raise ValueError('Both canvas dimensions are required')
-            positive(canvas_width,'canvas_width',64);positive(canvas_height,'canvas_height',64)
-            background_size=(canvas_width,canvas_height)
-            if x+width>canvas_width or y+height>canvas_height:raise ValueError('Object box exceeds output canvas')
-            destination=graph.add('ImageScale',image=destination,upscale_method='lanczos',width=canvas_width,height=canvas_height,crop='center')
-        if x+width > background_size[0] or y+height > background_size[1]:
+            if canvas_width is None or canvas_height is None:
+                raise ValueError("Both canvas dimensions are required")
+            positive(canvas_width, "canvas_width", 64)
+            positive(canvas_height, "canvas_height", 64)
+            if x + width > canvas_width or y + height > canvas_height:
+                raise ValueError("Object box exceeds output canvas")
+            canvas = _center_crop_resize(canvas, canvas_width, canvas_height)
+        elif x + width > canvas.width or y + height > canvas.height:
             raise ValueError("Object box exceeds background; no implicit cropping")
-        source, mask, fitted = graph.object(filenames[0], images[0].size, (width,height), images[0].getchannel('A').getbbox())
-        px, py = x+(width-fitted[0])//2, y+(height-fitted[1])//2
-        destination = graph.paste(destination, source, mask, px, py)
-        placements.append({'input': 0, 'box': [px,py,*fitted]})
-        output_size = background_size
-    elif mode in {'sheet','pattern'}:
-        positive(cell,'cell',64,512);positive(columns,'columns',1,8);positive(padding,'padding',0,cell//3)
-        if mode=='pattern':
-            if len(images)!=1:raise ValueError("pattern repeats one approved motif only")
-            positive(rows,'rows',1,8)
-            sequence=[0]*(rows*columns)
+        rgb, alpha, fitted = _fit_object(images[0], width, height)
+        px, py = x + (width - fitted[0]) // 2, y + (height - fitted[1]) // 2
+        dest = np.array(canvas)
+        _paste(dest, rgb, alpha, px, py)
+        placements.append({"input": 0, "box": [px, py, *fitted]})
+    elif mode in {"sheet", "pattern"}:
+        positive(cell, "cell", 64, 512)
+        positive(columns, "columns", 1, 8)
+        positive(padding, "padding", 0, cell // 3)
+        if mode == "pattern":
+            if len(images) != 1:
+                raise ValueError("pattern repeats one approved motif only")
+            positive(rows, "rows", 1, 8)
+            sequence = [0] * (rows * columns)
         else:
-            sequence=list(range(len(images)));rows=math.ceil(len(sequence)/columns)
-        output_size=(cell*columns,cell*rows)
-        destination=graph.canvas(*output_size,color)
-        objects={}
-        for index in set(sequence):
-            objects[index]=graph.object(filenames[index],images[index].size,(cell-2*padding,cell-2*padding),images[index].getchannel('A').getbbox())
-        for n,index in enumerate(sequence):
-            source,mask,fitted=objects[index]
-            px=(n%columns)*cell+(cell-fitted[0])//2
-            py=(n//columns)*cell+(cell-fitted[1])//2
-            destination=graph.paste(destination,source,mask,px,py)
-            placements.append({'input':index,'box':[px,py,*fitted]})
+            sequence = list(range(len(images)))
+            rows = math.ceil(len(sequence) / columns)
+        canvas = Image.new("RGB", (cell * columns, cell * rows), _rgb(color))
+        inner = cell - 2 * padding
+        fitted_by_index = {index: _fit_object(images[index], inner, inner) for index in set(sequence)}
+        dest = np.array(canvas)
+        for n, index in enumerate(sequence):
+            rgb, alpha, fitted = fitted_by_index[index]
+            px = (n % columns) * cell + (cell - fitted[0]) // 2
+            py = (n // columns) * cell + (cell - fitted[1]) // 2
+            _paste(dest, rgb, alpha, px, py)
+            placements.append({"input": index, "box": [px, py, *fitted]})
     else:
-        raise ValueError("Unknown fixed graph mode")
-    for text, position, font_size in [(title,'top',5.0),(caption,'bottom',2.8)]:
-        if text:
-            if len(text)>200 or any(ord(c)>126 or (ord(c)<32 and c!='\n') for c in text):
-                raise ValueError("Core TextOverlay currently supports printable ASCII titles only; use external typography for Chinese")
-            destination=graph.add('TextOverlay',images=destination,text=text,font_size=font_size,color='#203b38',
-                                  position=position,align='center',outline=False)
-    output = graph.add('SaveImage',images=destination,filename_prefix='design_'+mode)
-    return graph.nodes, output[0], output_size, placements
+        raise ValueError("Unknown design mode")
+    _ascii_title(title)
+    _ascii_title(caption)
+    image = Image.fromarray(dest, "RGB")
+    _paint_label(image, title, top=True)
+    _paint_label(image, caption, top=False)
+    return image, image.size, placements
 
 
 def run(args):
-    url=generate.resolve_comfy_url(args.comfy_url, args.config)
-    generate.validate_timeout(args.timeout)
-    records=[file_record(p) for p in args.images]
-    images=[check_image(p, True) for p in args.images]
-    bg=None
-    if args.command=='scene':
+    records = [file_record(p) for p in args.images]
+    images = [check_image(p, True) for p in args.images]
+    background = None
+    if args.command == "scene":
         records.append(file_record(args.background))
-        bg=check_image(args.background)
-        if bg.getchannel('A').getextrema()!=(255,255):
+        background = check_image(args.background)
+        if background.getchannel("A").getextrema() != (255, 255):
             raise ValueError("Background must be opaque; helper output is opaque RGB")
-    if any(file_record(r['path'])!=r for r in records):raise ValueError('Input changed during validation')
-    # Validate all plan values and required Core schemas BEFORE any upload/queue.
-    placeholders=[f'input-{n}.png' for n in range(len(images))]
-    options=dict(background_filename='background.png' if bg else None,background_size=bg.size if bg else None,
-                 x=args.x,y=args.y,width=args.width,height=args.height,cell=args.cell,columns=args.columns,
-                 padding=args.padding,rows=args.rows,color=args.color,title=args.title,caption=args.caption,
-                 canvas_width=args.canvas_width,canvas_height=args.canvas_height)
-    graph,output_id,size,placements=build_graph(args.command,placeholders,images,**options)
-    info=generate._fetch_comfy_object_info(url)
-    # LoadImage enum reflects current uploads, so check its schema existence but not placeholder filenames.
-    missing, _ = generate.check_image_graph_against_object_info(graph,info)
-    if missing:raise RuntimeError('Missing ComfyUI Core nodes: '+', '.join(missing))
-    for node in graph.values():
-        required=info[node['class_type']].get('input',{}).get('required',{})
-        if not isinstance(required,dict) or set(required)-set(node['inputs']):
-            raise RuntimeError('Incompatible Core schema: '+node['class_type'])
-    out=new_directory(args.output_dir)
-    save_json(out/'request.json',{'mode':args.command,'inputs':records,'parameters':options,'output_dimensions':list(size),
-                                 'limitations':['Opaque RGB output','No automatic relighting or contact shadow','ASCII Core titles only',
-                                                'Patterns repeat one motif; not seamless texture generation']})
-    try:
-        names=[]
-        for index,path in enumerate(args.images+([args.background] if bg else [])):
-            # Unique upload names prevent another request overwriting a registered input.
-            copy=out/f'input-{index}-{uuid.uuid4().hex}.png'
-            load_image(path).save(copy)
-            names.append(generate.upload_image(str(copy),comfy_url=url))
-        if any(file_record(r['path'])!=r for r in records):raise ValueError('Input changed before queue')
-        options['background_filename']=names[-1] if bg else None
-        graph,output_id,size,placements=build_graph(args.command,names[:len(images)],images,**options)
-        save_json(out/'graph.json',graph)
-        history=generate.submit_and_wait(graph,timeout=args.timeout,comfy_url=url)
-        save_json(out/'history.json',history)
-        paths=generate.download_outputs(history,str(out),node_ids=[output_id],comfy_url=url,allow_overwrite=False)
-        if len(paths)!=1:raise RuntimeError('Expected exactly one scene/proof output')
-        with Image.open(paths[0]) as output:
-            if output.size!=tuple(size):raise RuntimeError('Comfy output dimensions differ from fixed graph')
-        report={'schema_version':1,'kind':'comfyui_core_design','mode':args.command,'status':'candidate',
-                'inputs':records,'output':file_record(paths[0]),'dimensions':list(size),'placements':placements,
-                'graph_sha256':hashlib.sha256(json.dumps(graph,sort_keys=True).encode()).hexdigest(),
-                'acceptance':'pending human review','model_generation':False}
-        save_json(out/'manifest.json',report)
-        return report
-    except Exception as exc:
-        save_json(out/'failure.json',{'error':str(exc),'automatic_retry':False,'queue_may_still_run':True})
-        raise
+    if any(file_record(r["path"]) != r for r in records):
+        raise ValueError("Input changed during validation")
+    image, size, placements = compose(
+        args.command, images, background=background, x=args.x, y=args.y, width=args.width, height=args.height,
+        cell=args.cell, columns=args.columns, padding=args.padding, rows=args.rows, color=args.color,
+        title=args.title, caption=args.caption, canvas_width=args.canvas_width, canvas_height=args.canvas_height)
+    out = new_directory(args.output_dir)
+    target = out / f"design_{args.command}.png"
+    image.save(target, format="PNG")
+    report = {
+        "schema_version": 1, "kind": "pillow_design", "mode": args.command, "status": "candidate",
+        "inputs": records, "output": file_record(target), "dimensions": list(size), "placements": placements,
+        "acceptance": "pending human review", "model_generation": False,
+    }
+    save_json(out / "manifest.json", report)
+    return report
 
 
 def main(argv=None):
-    parser=argparse.ArgumentParser(description=__doc__)
-    sub=parser.add_subparsers(dest='command',required=True)
-    for mode in ('scene','sheet','pattern'):
-        p=sub.add_parser(mode)
-        p.add_argument('--images',nargs='+',required=True)
-        p.add_argument('--background',required=mode=='scene')
-        p.add_argument('--output-dir',required=True)
-        p.add_argument('--comfy-url');p.add_argument('--config');p.add_argument('--timeout',type=float,default=180)
-        p.add_argument('--x',type=int,default=0);p.add_argument('--y',type=int,default=0)
-        p.add_argument('--width',type=int,default=512);p.add_argument('--height',type=int,default=512)
-        p.add_argument('--canvas-width',type=int);p.add_argument('--canvas-height',type=int)
-        p.add_argument('--cell',type=int,default=256);p.add_argument('--columns',type=int,default=3)
-        p.add_argument('--rows',type=int,default=3);p.add_argument('--padding',type=int,default=24)
-        p.add_argument('--color',default='#f5f0e5');p.add_argument('--title',default='');p.add_argument('--caption',default='')
-    args=parser.parse_args(argv)
-    try:report=run(args)
-    except (ValueError,OSError,RuntimeError) as exc:
-        print(f'Error: {exc}',file=sys.stderr);return 2
-    print(json.dumps(report,ensure_ascii=False));return 0
+    parser = argparse.ArgumentParser(description=__doc__)
+    sub = parser.add_subparsers(dest="command", required=True)
+    for mode in ("scene", "sheet", "pattern"):
+        command = sub.add_parser(mode)
+        command.add_argument("--images", nargs="+", required=True)
+        command.add_argument("--background", required=mode == "scene")
+        command.add_argument("--output-dir", required=True)
+        command.add_argument("--comfy-url")
+        command.add_argument("--config")
+        command.add_argument("--timeout", type=float, default=180)
+        command.add_argument("--x", type=int, default=0)
+        command.add_argument("--y", type=int, default=0)
+        command.add_argument("--width", type=int, default=512)
+        command.add_argument("--height", type=int, default=512)
+        command.add_argument("--canvas-width", type=int)
+        command.add_argument("--canvas-height", type=int)
+        command.add_argument("--cell", type=int, default=256)
+        command.add_argument("--columns", type=int, default=3)
+        command.add_argument("--rows", type=int, default=3)
+        command.add_argument("--padding", type=int, default=24)
+        command.add_argument("--color", default="#f5f0e5")
+        command.add_argument("--title", default="")
+        command.add_argument("--caption", default="")
+    args = parser.parse_args(argv)
+    try:
+        report = run(args)
+    except (ValueError, OSError, RuntimeError) as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 2
+    print(json.dumps(report, ensure_ascii=False))
+    return 0
 
 
-if __name__=='__main__':raise SystemExit(main())
+if __name__ == "__main__":
+    raise SystemExit(main())

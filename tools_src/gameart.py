@@ -13,7 +13,7 @@ HERE = Path(__file__).resolve().parent
 # 工具名 -> (腳本檔, 一行說明)
 TOOLS = {
     "gen": ("generate.py", "圖片/影片生成 pipeline(concept、inpaint、video 等任務)"),
-    "design": ("comfyui_design.py", "ComfyUI 設計稿/版面相關工具"),
+    "design": ("comfyui_design.py", "本機 Pillow 物件場景、檢視表與圖樣重複"),
     "edit": ("image_edit_tools.py", "本地圖片編輯工具(遮罩、裁切、合成等)"),
     "face-swap": ("face_swap.py", "影片換臉 preflight / swap"),
     "video-layers": ("video_layers.py", "影片分層 preflight / run"),
