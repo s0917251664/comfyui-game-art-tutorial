@@ -38,7 +38,7 @@ status: current
 
 1. **R2／D8：固定 graph 一律走 runner。** 新的固定 graph 先做成 template，再用 `gameart.py run` 執行（[R2](../rules/fixed-graphs.md)）。手動打 HTTP 只能用來除錯 runner，結果不能當證據。
 2. **技術通過不等於美術接受。** `content_review` 永遠是 `pending`，由使用者用 `review accept|reject` 決定（[R1](../rules/candidate-review.md)）。agent 不 accept、不 reject，也不 approve validation。
-3. **不寫特定人名。** 審核者寫「美術審核者」，使用者的決定寫「使用者確認」。[`test_neutral_wording`](../../../tests/test_neutral_wording.py) 會擋；舊 custom node 名稱只留在 `contracts.py` 的 `LEGACY_*` 常數與改名頁。
+3. **不寫特定人名。** 審核者寫「美術審核者」，使用者的決定寫「使用者確認」。[`test_neutral_wording`](../../../tests/test_neutral_wording.py) 會擋。舊 class 名稱的拼法只留在[改名紀錄](custom-node-renames.md)。PR 8.2 已刪掉 `contracts.py` 的 `LEGACY_*` 常數，其他檔案不要再寫那些拼法。
 4. **位元組與 hash：**
    - 有 hash 紀錄的檔案（`templates/**`、validation、smoke suites 等）在 [`.gitattributes`](../../../.gitattributes) 設 `-text`。新增這類檔案時，要同一個 PR 補上規則，並用 `git check-attr text <檔案>` 確認。
    - `graph.api.json` 的位元組 sha256 和 canonical sha256 都要和 `template.json` 一致。
@@ -135,7 +135,7 @@ status: current
 | PR | 範圍 | 驗收 | 實機驗證 |
 |---|---|---|---|
 | **8.1** `docs/phase8.1-node-alias-exit` | 唯讀掃描各機器 `user/default/workflows/` 裡的舊節點名稱。評估三個方案：ComfyUI core 的 Node Replacement API、直接移除別名、繼續保留。要回答四件事：① 套件是 V1 寫法（有 `NODE_CLASS_MAPPINGS` 時，core 不會用 `comfy_entrypoint`），要怎麼註冊；② face-swap 舊 socket 型別能不能用 input/output mapping 表達；③ 舊名稱還在 `NODE_CLASS_MAPPINGS` 時，replacement 不會觸發；④ 沒有 `_meta` 的 API prompt 會不會出錯。寫成 ADR 草稿，**需要使用者決定** | 評估附上實測（Windows，用暫存的測試 workflow，不改使用者的檔案） | 掃描結果與測試紀錄 |
-| **8.2** `refactor/phase8.2-remove-aliases` | 依 8.1 的決定處理舊名稱：刪 `LEGACY_*`；同步 `test_neutral_wording` 的例外清單和改名頁 | 完整測試；部署 dry run | 部署並重啟後，新節點正常；用舊名稱的測試 workflow，行為符合 8.1 的方案 |
+| **8.2** `refactor/phase8.2-remove-aliases` | 依 8.1 的決定處理舊名稱：刪 `LEGACY_*`；同步 `test_neutral_wording` 的例外清單和改名頁 | 完整測試。本階段不部署、不重啟 | 部署與重啟留到 8.4，且 queue 必須為空。舊名稱 workflow 的行為見[退場決定](../decisions/2026-10-08-node-alias-exit.md) |
 | **8.3** `refactor/phase8.3-remove-builders` | 刪掉已被 template 取代的 builder、`VideoPlan.finalize` 專用路徑，以及還被程式引用的 5 個 stub（先改引用處） | 完整測試；golden 改由 template 維護 | smoke 一輪 |
 | **8.4** `feat/phase8.4-deploy-templates` | `deploy_manifest`、`verify_portable_install` 納入 `templates/`；決定 `run` 是否仍然只能從 repo 執行；把第三方 custom node 的 commit 記錄到 `docs/tested-versions.md` | 部署測試；verify-install 數字更新 | 部署 dry run → `deploy --yes` → 另外跑 `verify-install` |
 
