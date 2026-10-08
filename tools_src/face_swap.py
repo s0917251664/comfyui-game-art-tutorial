@@ -15,7 +15,7 @@ from urllib.parse import urlparse
 # 只拿 HTTP client:import generate 會連帶載入 image_graphs,從 repo 執行時印出誤導的 device_config 提醒。
 from comfyui_pipeline import client as comfy_client
 from comfyui_face_swap_video.contracts import (SOURCE_COMMIT, CORE_HASHES, MODEL_HASHES, record, checked,
-                                              LOAD_NODE, REACTOR_NODE, SOURCE_TYPE, LEGACY_NODE_NAMES)
+                                              LOAD_NODE, REACTOR_NODE, SOURCE_TYPE)
 REQUIRED_NODES=(LOAD_NODE,REACTOR_NODE,'ReActorFaceSwap')
 
 def parse_range(value):
@@ -55,13 +55,11 @@ def build_ui_workflow(graph):
             'links':[[1,1,0,2,0,SOURCE_TYPE]], 'groups':[], 'config':{}, 'extra':{}}
 
 def check_live_nodes(schema):
-    """Require the current node names in the live schema."""
-    stale=[n for n in (LOAD_NODE,REACTOR_NODE) if n not in schema and LEGACY_NODE_NAMES[n] in schema]
-    if stale:
-        # The deployed package (hash-checked first) defines the new names, so a schema with
-        # only the legacy ones means ComfyUI is still running the code loaded before deploy.
-        raise ValueError('ComfyUI still has the pre-deploy face-swap nodes loaded (legacy names only); '
-                         'restart ComfyUI before preflight: '+','.join(stale))
+    """Require the current node names in the live schema.
+
+    Old class names are no longer registered. A schema that only has those names
+    is a missing-node error, the same as any other absent required node.
+    """
     if any(n not in schema for n in REQUIRED_NODES):
         raise ValueError('Missing ComfyUI nodes: '+','.join(n for n in REQUIRED_NODES if n not in schema))
 

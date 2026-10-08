@@ -172,14 +172,14 @@ class VideoLayersTests(unittest.TestCase):
                     submit.assert_not_called()
 
     def test_preflight_uses_new_node_name(self):
-        from comfyui_video_layers.contracts import LEGACY_NODE_NAMES, NODE_NAME
+        from comfyui_video_layers.contracts import NODE_NAME
         spec = {'input': {'required': {k: ['STRING', {}] for k in ('plan_path', 'package_hashes', 'output_prefix')}}}
-        url, provenance = self.preflight_with_schema({NODE_NAME: spec, LEGACY_NODE_NAMES[NODE_NAME]: spec})
+        url, provenance = self.preflight_with_schema({NODE_NAME: spec})
         self.assertEqual(url, 'http://127.0.0.1:8188')
         self.assertEqual(provenance['processing_location'], 'ComfyUI server')
-        # 只有舊名稱:已部署但 ComfyUI 還沒重啟,要明確要求重啟,不退回舊名稱
-        with self.assertRaisesRegex(ValueError, 'restart ComfyUI'):
-            self.preflight_with_schema({LEGACY_NODE_NAMES[NODE_NAME]: spec})
+        # 缺少新名稱就是不相容,不再把舊名稱解讀成要重啟
+        with self.assertRaisesRegex(ValueError, 'absent or incompatible'):
+            self.preflight_with_schema({})
 
     def test_sam_keyframe_injected_when_reached_and_all_ids_retained(self):
         # Pinned processor replaces obj_with_new_inputs on every add call.
@@ -256,38 +256,16 @@ class VideoLayerNodeTests(unittest.TestCase):
         self.assertEqual({x['filename'] for x in result['ui']['files']}, {'manifest.json', 'layers.zip', 'source.jpg', 'comparison.jpg'})
 
 
-    # --- 改名(D9):新名稱與隱藏的舊名稱別名 ---
-    def test_new_name_and_hidden_legacy_alias(self):
-        from comfyui_video_layers.contracts import LEGACY_NODE_NAMES, NODE_NAME
+    # --- 改名(D9):只登記新名稱;舊名稱已在 8.2 移除 ---
+    def test_new_name_only(self):
+        from comfyui_video_layers.contracts import NODE_NAME
         classes, names = self.module.NODE_CLASS_MAPPINGS, self.module.NODE_DISPLAY_NAME_MAPPINGS
         self.assertEqual(NODE_NAME, 'GameArtVideoLayers')
         new = classes[NODE_NAME]
         self.assertEqual(new.CATEGORY, 'GameArt/Video')
         self.assertFalse(getattr(new, 'DEPRECATED', False))
-        self.assertEqual(set(classes), {NODE_NAME, LEGACY_NODE_NAMES[NODE_NAME]})
+        self.assertEqual(set(classes), {NODE_NAME})
         self.assertEqual(set(names), set(classes))
-        alias = classes[LEGACY_NODE_NAMES[NODE_NAME]]
-        self.assertTrue(issubclass(alias, new))
-        self.assertIs(alias.DEPRECATED, True)  # ComfyUI node_info → deprecated: true,前端搜尋預設隱藏
-        self.assertEqual(alias.INPUT_TYPES(), new.INPUT_TYPES())
-        for attr in ('RETURN_TYPES', 'OUTPUT_NODE', 'FUNCTION', 'CATEGORY'):
-            self.assertEqual(getattr(alias, attr), getattr(new, attr), attr)
-        self.assertIn('legacy', names[LEGACY_NODE_NAMES[NODE_NAME]])
-
-    def test_legacy_alias_executes_like_new_node(self):
-        from comfyui_video_layers.contracts import LEGACY_NODE_NAMES, NODE_NAME
-        alias = self.module.NODE_CLASS_MAPPINGS[LEGACY_NODE_NAMES[NODE_NAME]]
-        with patch.object(self.module.media, 'execute') as execute:
-            with self.assertRaisesRegex(ValueError, 'differs'):
-                alias().execute('plan.json', '{}', 'video_layers/test')
-            execute.assert_not_called()
-        manifest = {'actual': {'frames': 10}, 'technical_status': 'warning'}
-        hashes = json.dumps(self.module.LOADED_HASHES)
-        results = []
-        for cls in (self.module.GameArtVideoLayers, alias):
-            with patch.object(self.module.media, 'execute', return_value=manifest):
-                results.append(cls().execute('plan.json', hashes, 'video_layers/test'))
-        self.assertEqual(results[0], results[1])
 
 
 if __name__ == '__main__':

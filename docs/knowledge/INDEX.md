@@ -78,6 +78,6 @@ repo 附最小 `.obsidian/app.json` 和 `core-plugins.json`，使用檔案瀏覽
 
 - [重構交接：第 3–8 階段](maintenance/restructure-handoff.md)：Windows 本機 agent 的必守規則、PR 流程、各階段 PR 計畫與回報格式。
 - [技能庫現況與路線界線](maintenance/skill-library.md)：17 個美術技能現行實作、直接 API 與後續候選。
-- [custom node 改名與舊名稱別名](maintenance/custom-node-renames.md)：`GameArt*` 新名稱、隱藏的舊名稱別名與移除條件。
+- [custom node 改名紀錄](maintenance/custom-node-renames.md)：`GameArt*` 新名稱；舊名稱已在 PR 8.2 移除，拼法只留在這一頁。
 - [平台驗證流程（smoke suite）](maintenance/validation-workflow.md)：`deploy --yes` → `smoke` → `--record`，技術紀錄不等於美術接受（[R1](rules/candidate-review.md)）。
 - [路線化新增能力清單](maintenance/new-capability-checklist.md)與[技能／產線審視流程](maintenance/pipeline-review.md)：依任務選驗證與研究範圍。

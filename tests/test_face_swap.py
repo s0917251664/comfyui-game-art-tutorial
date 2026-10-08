@@ -102,15 +102,12 @@ class FaceSwapTests(unittest.TestCase):
         self.assertFalse((self.root/'result').exists())
 
     def test_live_schema_requires_new_node_names(self):
-        from comfyui_face_swap_video.contracts import LEGACY_NODE_NAMES
         current={'GameArtLoadFaceSwapVideo':{},'GameArtReActorVideo':{},'ReActorFaceSwap':{}}
         client.check_live_nodes(current)
-        client.check_live_nodes({**current,**{old:{} for old in LEGACY_NODE_NAMES.values()}})
-        # 只有舊名稱:已部署但 ComfyUI 還沒重啟,要明確要求重啟,不退回舊名稱
-        legacy_only={old:{} for old in LEGACY_NODE_NAMES.values()}
-        legacy_only['ReActorFaceSwap']={}
-        with self.assertRaisesRegex(ValueError,'restart ComfyUI'):
-            client.check_live_nodes(legacy_only)
+        client.check_live_nodes({**current,'UnrelatedNode':{}})
+        # 缺少新名稱就是缺少節點,不再把「只有舊名稱」解讀成要重啟
+        with self.assertRaisesRegex(ValueError,'Missing ComfyUI nodes: GameArtLoadFaceSwapVideo,GameArtReActorVideo'):
+            client.check_live_nodes({'ReActorFaceSwap':{}})
         with self.assertRaisesRegex(ValueError,'Missing ComfyUI nodes: ReActorFaceSwap'):
             client.check_live_nodes({'GameArtLoadFaceSwapVideo':{},'GameArtReActorVideo':{}})
 
