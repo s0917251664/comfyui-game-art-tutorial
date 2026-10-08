@@ -76,5 +76,6 @@ repo 附最小 `.obsidian/app.json` 和 `core-plugins.json`，使用檔案瀏覽
 ## 技能庫與執行路線維護
 
 - [技能庫現況與路線界線](maintenance/skill-library.md)：17 個美術技能現行實作、直接 API 與後續候選。
+- [custom node 改名與舊名稱別名](maintenance/custom-node-renames.md)：`GameArt*` 新名稱、隱藏的舊名稱別名與移除條件。
 - [平台驗證流程（smoke suite）](maintenance/validation-workflow.md)：`deploy --yes` → `smoke` → `--record`，技術紀錄不等於美術接受（[R1](rules/candidate-review.md)）。
 - [路線化新增能力清單](maintenance/new-capability-checklist.md)與[技能／產線審視流程](maintenance/pipeline-review.md)：依任務選驗證與研究範圍。

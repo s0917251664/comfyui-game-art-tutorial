@@ -16,9 +16,9 @@
 
 固定 API graph 只有兩個 server nodes：
 
-`SteveLoadFaceSwapVideo` → `SteveReActorVideo`
+`GameArtLoadFaceSwapVideo` → `GameArtReActorVideo`
 
-前者要求影片與 donor 參考圖為 server 可讀的絕對 local path，驗證影片 metadata 和參考圖。後者在 ComfyUI server stream-decode 來源、依 edit ranges 分批（最多 8 幀），直接呼叫官方註冊 `ReActorFaceSwap` node 的 `.execute()`。保留官方 NSFW filter；若 ReActor 回傳 partial batch、黑畫面 fallback 或畫布/幀數不符，拒絕輸出。server 完成 H.264/AAC、comparison、frames/manifest、完整解碼檢查與 atomic publish。UI 對應工作流 `workflow_ui.json` 一併輸出；本機可直接開啟版本已存至 `<ComfyUI>/user/default/workflows/Ch8_影片換臉_Server.json`，另存 repo `workflows/`（依專案規則忽略版控）。兩個節點在 `Steve/Video` 分類；output prefix 指向新目錄，不覆寫舊結果，重跑前換成新的 prefix。原生預覽只把 MP4 列為 animated image；比較圖與 JSON 以 files sidecars 傳回，client 只下載。
+前者要求影片與 donor 參考圖為 server 可讀的絕對 local path，驗證影片 metadata 和參考圖。後者在 ComfyUI server stream-decode 來源、依 edit ranges 分批（最多 8 幀），直接呼叫官方註冊 `ReActorFaceSwap` node 的 `.execute()`。保留官方 NSFW filter；若 ReActor 回傳 partial batch、黑畫面 fallback 或畫布/幀數不符，拒絕輸出。server 完成 H.264/AAC、comparison、frames/manifest、完整解碼檢查與 atomic publish。UI 對應工作流 `workflow_ui.json` 一併輸出；本機可直接開啟版本已存至 `<ComfyUI>/user/default/workflows/Ch8_影片換臉_Server.json`（改名前存的，用的是舊名稱，靠隱藏別名照常載入，見[改名與別名](../../../docs/knowledge/maintenance/custom-node-renames.md)），另存 repo `workflows/`（依專案規則忽略版控）。兩個節點在 `GameArt/Video` 分類；output prefix 指向新目錄，不覆寫舊結果，重跑前換成新的 prefix。原生預覽只把 MP4 列為 animated image；比較圖與 JSON 以 files sidecars 傳回，client 只下載。
 
 server 最終輸出位於 `<ComfyUI>/output/face_swap/<uuid>/`。Client queue 後只下載四個結果：`candidate.mp4`、`candidate.mp4.json`、`frames.json`、`comparison.jpg`；並在 client 新 output directory 保存 API graph、UI graph、Comfy history、receipt。`receipt.json` 記錄 prompt id、preflight provenance、client source hash 及輸出位置。server manifest 追溯 `server_pid`、processing location、ReActor/core/model/package hashes、幀狀態與實際媒體資訊。
 
@@ -53,7 +53,7 @@ $ComfyTool = Join-Path $Config.comfyui_path 'tools/face_swap.py'
 
 `server-full-v2`（原生影片預覽與 sidecar 契約修正版）已完成 exit 0：45.2 秒、2712 幀、1920×1080、60 FPS、AAC；一個 ComfyUI queue job，內含 32 個 ReActor batch（每批最多 8 幀），server PID 37080，耗時 175.58 秒。Counts 為 `changed=179`、`unchanged=75`、`outside_edit_ranges=2458`；75 個 unchanged 表示像素差異檢查沒有發現變化，不代表 ReActor 偵測失敗。完整解碼通過，technical warning，content candidate，尚未由使用者美術驗收。Server 與先前 client-side media wrapper 的 `comfy-full-v1` 候選 MP4 SHA-256 相同（`05c05be2a9e4059065be8141dc0f8be3d9fc183bb0e3ac24715766df54a654a1`），`comparison.jpg` 亦相同，確認搬移處理架構後這次輸出畫面與音訊一致。
 
-Server 影片位於 `C:/Users/XU/ComfyUI/output/face_swap/30624cd513c9471599a31b4c2f8073d5/candidate.mp4`；此次 repo/client 交付目錄為 `output/steve-kabuto-face-swap/server-full-v2/`，含 `candidate.mp4`、manifest、frames、comparison、API/UI graphs、history、receipt。Smokes 與 full candidate 都不是內容接受狀態；人工驗收完成前不可標記 accepted。
+Server 影片位於 `C:/Users/XU/ComfyUI/output/face_swap/30624cd513c9471599a31b4c2f8073d5/candidate.mp4`；此次 repo/client 交付目錄為 `output/*-kabuto-face-swap/server-full-v2/`，含 `candidate.mp4`、manifest、frames、comparison、API/UI graphs、history、receipt。Smokes 與 full candidate 都不是內容接受狀態；人工驗收完成前不可標記 accepted。
 
 ## 固定來源、pins 與可重建安裝
 
