@@ -1,0 +1,220 @@
+{
+  "args": {
+    "height": 512,
+    "negative": "text",
+    "prompt": "water ripples",
+    "width": 512
+  },
+  "backend": "h3",
+  "builder": {
+    "args": [
+      "water ripples, seamless looping animation, cyclical motion that returns to the first frame, camera locked, subject stays in place",
+      "golden/still.png"
+    ],
+    "kwargs": {
+      "duration": 2.0,
+      "filename_prefix": "fx_loop",
+      "height": 512,
+      "last_image_filename": "golden/still.png",
+      "seed": 20261008,
+      "width": 512
+    },
+    "name": "build_img2video_h3"
+  },
+  "case": "negative_ignored_512",
+  "graph": {
+    "10": {
+      "class_type": "VAEDecode",
+      "inputs": {
+        "samples": [
+          "14",
+          0
+        ],
+        "vae": [
+          "11",
+          0
+        ]
+      }
+    },
+    "104": {
+      "class_type": "MiniMaxH3ImageToVideo",
+      "inputs": {
+        "clip": [
+          "13",
+          0
+        ],
+        "first_frame": [
+          "56",
+          0
+        ],
+        "height": 512,
+        "last_frame": [
+          "56b",
+          0
+        ],
+        "length": 56,
+        "prompt": "water ripples, seamless looping animation, cyclical motion that returns to the first frame, camera locked, subject stays in place",
+        "vae": [
+          "11",
+          0
+        ],
+        "width": 512
+      }
+    },
+    "11": {
+      "class_type": "VAELoader",
+      "inputs": {
+        "vae_name": "minimax_h3_video_vae_fp16.safetensors"
+      }
+    },
+    "13": {
+      "class_type": "CLIPLoader",
+      "inputs": {
+        "clip_name": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+        "device": "default",
+        "type": "minimax"
+      }
+    },
+    "14": {
+      "class_type": "SamplerCustomAdvanced",
+      "inputs": {
+        "guider": [
+          "16",
+          0
+        ],
+        "latent_image": [
+          "104",
+          1
+        ],
+        "noise": [
+          "15",
+          0
+        ],
+        "sampler": [
+          "17",
+          0
+        ],
+        "sigmas": [
+          "9",
+          0
+        ]
+      }
+    },
+    "15": {
+      "class_type": "RandomNoise",
+      "inputs": {
+        "noise_seed": 20261008
+      }
+    },
+    "16": {
+      "class_type": "BasicGuider",
+      "inputs": {
+        "conditioning": [
+          "104",
+          0
+        ],
+        "model": [
+          "shift",
+          0
+        ]
+      }
+    },
+    "17": {
+      "class_type": "KSamplerSelect",
+      "inputs": {
+        "sampler_name": "res_multistep"
+      }
+    },
+    "23": {
+      "class_type": "VAEDecodeAudio",
+      "inputs": {
+        "samples": [
+          "14",
+          0
+        ],
+        "vae": [
+          "24",
+          0
+        ]
+      }
+    },
+    "24": {
+      "class_type": "VAELoader",
+      "inputs": {
+        "vae_name": "minimax_h3_audio_vae_fp32.safetensors"
+      }
+    },
+    "56": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "golden/still.png"
+      }
+    },
+    "56b": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "golden/still.png"
+      }
+    },
+    "6": {
+      "class_type": "UNETLoader",
+      "inputs": {
+        "unet_name": "minimax_h3_fl2va_pruned_int8_convrot.safetensors",
+        "weight_dtype": "default"
+      }
+    },
+    "9": {
+      "class_type": "BasicScheduler",
+      "inputs": {
+        "denoise": 1.0,
+        "model": [
+          "shift",
+          0
+        ],
+        "scheduler": "simple",
+        "steps": 20
+      }
+    },
+    "91": {
+      "class_type": "CreateVideo",
+      "inputs": {
+        "audio": [
+          "23",
+          0
+        ],
+        "bit_depth": 8,
+        "fps": 24.0,
+        "images": [
+          "10",
+          0
+        ]
+      }
+    },
+    "92": {
+      "class_type": "SaveVideo",
+      "inputs": {
+        "codec": "h264",
+        "filename_prefix": "fx_loop",
+        "format": "mp4",
+        "video": [
+          "91",
+          0
+        ]
+      }
+    },
+    "shift": {
+      "class_type": "MiniMaxH3SigmaShift",
+      "inputs": {
+        "model": [
+          "6",
+          0
+        ],
+        "shift_audio": 3.0,
+        "shift_video": 12.0
+      }
+    }
+  },
+  "graph_sha256": "b652184453f33570cee9c88fbd6cb121f0e54188fdda0ce837468bc26646d0f6",
+  "output_node": "92",
+  "task": "fx_loop"
+}

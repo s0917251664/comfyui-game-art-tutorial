@@ -1,0 +1,166 @@
+{
+  "args": {
+    "image": null,
+    "negative": "blurry",
+    "prompt": "the character keeps walking",
+    "video": "prev.mp4"
+  },
+  "backend": "wan",
+  "builder": {
+    "args": [
+      "the character keeps walking",
+      "golden/_clip_extend_last_golden.png"
+    ],
+    "kwargs": {
+      "duration": 2.0,
+      "filename_prefix": "clip_extend",
+      "height": 448,
+      "negative": "blurry",
+      "seed": 20261008,
+      "width": 768
+    },
+    "name": "build_img2video_wan"
+  },
+  "case": "from_video_negative",
+  "graph": {
+    "3": {
+      "class_type": "KSampler",
+      "inputs": {
+        "cfg": 5.0,
+        "denoise": 1.0,
+        "latent_image": [
+          "55",
+          0
+        ],
+        "model": [
+          "48",
+          0
+        ],
+        "negative": [
+          "7",
+          0
+        ],
+        "positive": [
+          "6",
+          0
+        ],
+        "sampler_name": "uni_pc",
+        "scheduler": "simple",
+        "seed": 20261008,
+        "steps": 20
+      }
+    },
+    "37": {
+      "class_type": "UNETLoader",
+      "inputs": {
+        "unet_name": "wan2.2_ti2v_5B_fp16.safetensors",
+        "weight_dtype": "default"
+      }
+    },
+    "38": {
+      "class_type": "CLIPLoader",
+      "inputs": {
+        "clip_name": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+        "device": "default",
+        "type": "wan"
+      }
+    },
+    "39": {
+      "class_type": "VAELoader",
+      "inputs": {
+        "vae_name": "wan2.2_vae.safetensors"
+      }
+    },
+    "48": {
+      "class_type": "ModelSamplingSD3",
+      "inputs": {
+        "model": [
+          "37",
+          0
+        ],
+        "shift": 8.0
+      }
+    },
+    "55": {
+      "class_type": "Wan22ImageToVideoLatent",
+      "inputs": {
+        "batch_size": 1,
+        "height": 448,
+        "length": 49,
+        "start_image": [
+          "56",
+          0
+        ],
+        "vae": [
+          "39",
+          0
+        ],
+        "width": 768
+      }
+    },
+    "56": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "golden/_clip_extend_last_golden.png"
+      }
+    },
+    "57": {
+      "class_type": "CreateVideo",
+      "inputs": {
+        "fps": 24.0,
+        "images": [
+          "8",
+          0
+        ]
+      }
+    },
+    "58": {
+      "class_type": "SaveVideo",
+      "inputs": {
+        "codec": "h264",
+        "filename_prefix": "clip_extend",
+        "format": "mp4",
+        "video": [
+          "57",
+          0
+        ]
+      }
+    },
+    "6": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "clip": [
+          "38",
+          0
+        ],
+        "text": "the character keeps walking"
+      }
+    },
+    "7": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "clip": [
+          "38",
+          0
+        ],
+        "text": "blurry"
+      }
+    },
+    "8": {
+      "class_type": "VAEDecode",
+      "inputs": {
+        "samples": [
+          "3",
+          0
+        ],
+        "vae": [
+          "39",
+          0
+        ]
+      }
+    }
+  },
+  "graph_sha256": "0c6db566218421f2f644c349490c0555d9b9e076b7a46045134a9d0ce7b5bf3e",
+  "output_node": "58",
+  "task": "clip_extend"
+}
