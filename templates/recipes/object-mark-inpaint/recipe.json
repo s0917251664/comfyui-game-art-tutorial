@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "id": "object-mark-inpaint",
+  "version": "0.1.0",
+  "title": "物件標記後局部重繪",
+  "summary": "SAM3 以第 0 幀遮罩追蹤物件，使用者看過遮罩預覽後，才用 Wan VACE 只重畫遮罩內。",
+  "status": "draft",
+  "status_note": "正式 recipe，但不在 _drafts。實機跑過確認點之前維持 draft。內容審查一律 pending。",
+  "inputs": {
+    "source_video": {
+      "type": "path",
+      "required": true,
+      "help": "來源影片，對應 video/sam3/track-mask 與 video/wan-vace/inpaint 的 source_video"
+    },
+    "seed_mask": {
+      "type": "path",
+      "required": true,
+      "help": "第 0 幀遮罩 PNG（白色＝物件），對應 track-mask 的 seed_mask"
+    },
+    "prompt": {
+      "type": "text",
+      "required": true,
+      "help": "VACE prompt：描述整個畫面，特別是遮罩內要變成什麼"
+    },
+    "mode": {
+      "type": "string",
+      "required": false,
+      "default": "keep",
+      "enum": [
+        "keep",
+        "replace"
+      ],
+      "help": "對應 inpaint 的 mode。keep＝保留遮罩內原內容當引導；replace＝遮罩內清空重畫"
+    },
+    "seed": {
+      "type": "seed",
+      "required": false,
+      "default": "auto",
+      "help": "對應 inpaint 的 seed"
+    }
+  },
+  "steps": [
+    {
+      "id": "track",
+      "kind": "template",
+      "template": "video/sam3/track-mask",
+      "slots": {
+        "source_video": "{inputs.source_video}",
+        "seed_mask": "{inputs.seed_mask}"
+      }
+    },
+    {
+      "id": "review_masks",
+      "kind": "confirm",
+      "message": "請看步驟 track 產物裡的 keyframes/mask_preview.png，確認遮罩有跟上要改的物件、沒有吃到不該改的地方。沒有確認就不會做下一步的局部重繪。",
+      "look_at": "{steps.track.dir}/keyframes/mask_preview.png"
+    },
+    {
+      "id": "inpaint",
+      "kind": "template",
+      "template": "video/wan-vace/inpaint",
+      "slots": {
+        "source_video": "{inputs.source_video}",
+        "masks": "{steps.track.outputs.masks}",
+        "prompt": "{inputs.prompt}",
+        "mode": "{inputs.mode}",
+        "seed": "{inputs.seed}"
+      }
+    }
+  ]
+}

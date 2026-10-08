@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "id": "fx-alpha-export",
+  "version": "0.1.0",
+  "title": "特效去背後打包",
+  "summary": "本機 vfx luma-alpha（黑底）或 chroma-alpha（綠幕），打包前看預覽，然後 vfx pack。不呼叫 ComfyUI。草稿。轉正要另開變更且要使用者核准。",
+  "status": "draft",
+  "status_note": "草稿，放在 _drafts。轉正要另開變更且要使用者核准。全程本機，不呼叫 ComfyUI。",
+  "inputs": {
+    "video": {
+      "type": "path",
+      "required": true,
+      "help": "黑底或綠幕的特效影片"
+    },
+    "method": {
+      "type": "string",
+      "required": true,
+      "enum": [
+        "luma-alpha",
+        "chroma-alpha"
+      ],
+      "help": "黑底用 luma-alpha，綠幕用 chroma-alpha"
+    }
+  },
+  "steps": [
+    {
+      "id": "alpha",
+      "kind": "local",
+      "command": "gameart.py vfx {inputs.method}",
+      "args": {
+        "--input": "{inputs.video}"
+      },
+      "outputs": [
+        "frames"
+      ],
+      "text": "本機去背（luma-alpha 或 chroma-alpha），不呼叫 ComfyUI。"
+    },
+    {
+      "id": "review_preview",
+      "kind": "confirm",
+      "message": "打包前請看 alpha 預覽（步驟 alpha 的產物），確認邊緣與透明範圍。沒有確認就不會 pack。",
+      "look_at": "{steps.alpha.outputs.frames}"
+    },
+    {
+      "id": "pack",
+      "kind": "local",
+      "command": "gameart.py vfx pack",
+      "args": {
+        "--input": "{steps.alpha.outputs.frames}"
+      },
+      "outputs": [
+        "sheet"
+      ],
+      "text": "本機打包 sprite sheet／APNG／WebM，不呼叫 ComfyUI。"
+    }
+  ]
+}

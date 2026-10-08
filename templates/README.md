@@ -102,3 +102,36 @@ runner 不會刪除上傳的檔案：每次執行的輸入留在 `<comfyui_path>
 ## 修改
 
 改 graph 或 template.json 都要升版本（graph 改動升 major），更新兩個 sha256，並重跑 `python tests/golden_template_graphs.py --write` 後檢查 golden diff。`template.json` 是這些 graph 唯一的權威來源；舊的 `skills/comfyui-wan-animate/assets/template-manifest.json` 已在 PR 2.4 刪除（見[轉址檔索引](../docs/knowledge/archive/redirect-stubs.md)）。
+
+## recipe：多步驟流程
+
+recipe 不是 template。檔名是 `recipe.json`，放在 `templates/recipes/<id>/`，**不要**寫成 `template.json`。`gameart.py run` 的 discover 只掃 `template.json`，所以 recipe 不會被當成 template，template 數量也不會因此變多。以 `_` 開頭的資料夾仍然不是 template。
+
+一份 recipe 把已登記的 template、本機步驟，或確認點串起來。跑到確認點就停，狀態寫在該次 `--output-dir` 的 `recipe.state.json`：`schema_version`、recipe id、version、下一步 index、已完成步驟的證據（指令、template id、注入的時間）、確認紀錄。`content_review` 一律是 `pending`，不會寫 accept。確認點沒有使用者確認，就不能做它後面的步驟。
+
+`templates/recipes/_drafts/` 是草稿目錄。`recipe list` 和 `recipe run` 預設看不到、也不會跑，要加 `--draft`。草稿轉正要另開變更且要使用者核准，不能在原檔把草稿直接改成正式。
+
+目前正式收錄、但不在 `_drafts` 的是 `object-mark-inpaint`（`status` 仍是 `draft`，實機跑完確認點之前不升格）：`video/sam3/track-mask` → 看該步產物的 `keyframes/mask_preview.png` → 確認後才跑 `video/wan-vace/inpaint`。recipe 只填它寫到的 slot，其餘（含 `output_prefix`、`generated`、`from_pre`）仍由 template runner 處理。`_drafts/` 裡有三條，都維持草稿：
+
+- `prop-swap`：母版靜幀用既有圖片編修（這條 recipe 不呼叫新 graph）→ `gameart.py vfx prop-paste` → 預計的 `video/h3/pose-drive-canny`。template 還沒登記時，`show` 仍可看，dry-run 標 `unresolved`。
+- `idle-anchored-action`：依 [R3](../docs/knowledge/rules/idle-anchoring.md)，要回到 Idle 就鎖同一張已驗收 Idle 的首尾。選 H3 img2video 的 last frame；Wan img2video 沒有 last frame，recipe 裡標 `unsupported`。確認點在送出生成之前。
+- `fx-alpha-export`：本機 `vfx luma-alpha` 或 `chroma-alpha`，打包前看預覽，然後 `vfx pack`。不呼叫 ComfyUI。
+
+`gameart.py recipe` 有四個子命令：`list`、`show`、`run`、`resume`。
+
+```text
+python tools_src/gameart.py recipe list [--draft]
+python tools_src/gameart.py recipe show <id> [--draft]
+python tools_src/gameart.py recipe run <id> [--draft] --dry-run [--set KEY=VALUE ...]
+python tools_src/gameart.py recipe run <id> [--draft] --set KEY=VALUE --output-dir DIR
+python tools_src/gameart.py recipe resume DIR
+python tools_src/gameart.py recipe resume DIR --confirm
+```
+
+- `list`：列出一般指令會跑到的 recipe。`--draft` 才連 `_drafts/` 一起列。
+- `show <id>`：顯示輸入與每一步。引用的 template 還沒登記也不會失敗。
+- `run <id> --dry-run`：展開每一步用哪個 template、確認點在哪。不連線、不 queue。還沒登記的 template 標 `unresolved`。
+- `run <id> --set KEY=VALUE --output-dir DIR`：寫入 state，跑到下一個確認點就停。若這一步需要 ComfyUI 但沒有接上執行器，不送出、停在確認點之前（`status` 為 `blocked`）。若第一步就是確認點，寫 state、結束碼 0，並印出「等待確認」。
+- `resume DIR`：沒有 `--confirm` 時，不得執行確認點之後的步驟。`resume DIR --confirm` 才把目前這個確認點記下來並繼續。這不是美術接受；內容審查仍是 pending（見 [R1](../docs/knowledge/rules/candidate-review.md)）。
+
+`recipe` 和 `run` 一樣只能從 repo 的 `tools_src/gameart.py` 執行，`templates/` 不部署。
