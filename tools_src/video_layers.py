@@ -9,7 +9,7 @@ import sys
 import uuid
 from urllib.parse import urlparse
 import generate
-from comfyui_video_layers.contracts import PACKAGE_FILES, model_path, record, runtime
+from comfyui_video_layers.contracts import LEGACY_NODE_NAMES, NODE_NAME, PACKAGE_FILES, model_path, record, runtime
 
 
 def preflight(config_path, operation):
@@ -39,10 +39,15 @@ def preflight(config_path, operation):
         model = model_path()
         models = [record(model / n) for n in ('config.json', 'model.safetensors', 'preprocessor_config.json')]
     schema = generate._fetch_comfy_object_info(url)
-    spec = schema.get('SteveVideoLayers', {})
+    if NODE_NAME not in schema and LEGACY_NODE_NAMES[NODE_NAME] in schema:
+        # Package files above already match the repo, so legacy-only means ComfyUI has not
+        # been restarted since deploy; the server would reject the stale package anyway.
+        raise ValueError(f'ComfyUI still has the pre-deploy video layers node loaded (legacy name only); '
+                         f'restart ComfyUI before queue: {NODE_NAME}')
+    spec = schema.get(NODE_NAME, {})
     fields = spec.get('input', {}).get('required', {})
     if set(fields) != {'plan_path', 'package_hashes', 'output_prefix'} or any(fields[k][0] != 'STRING' for k in fields):
-        raise ValueError('Live SteveVideoLayers node absent or incompatible; deploy/restart before queue')
+        raise ValueError(f'Live {NODE_NAME} node absent or incompatible; deploy/restart before queue')
     return url, {'runtime': versions, 'package_hashes': hashes, 'shared_media': dependencies,
                  'models': models, 'processing_location': 'ComfyUI server',
                  'schema_fingerprint': hashlib.sha256(json.dumps(spec, sort_keys=True).encode()).hexdigest()}
@@ -71,7 +76,7 @@ def run(args):
     dest = Path(args.output_dir).resolve()
     if dest.exists():
         raise FileExistsError('Use a new output directory')
-    graph = {'1': {'class_type': 'SteveVideoLayers', 'inputs': {
+    graph = {'1': {'class_type': NODE_NAME, 'inputs': {
         'plan_path': str(plan_path), 'package_hashes': json.dumps(provenance['package_hashes']),
         'output_prefix': 'video_layers/' + uuid.uuid4().hex}}}
     dest.parent.mkdir(parents=True, exist_ok=True)

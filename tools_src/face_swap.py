@@ -13,8 +13,9 @@ import tempfile
 import uuid
 from urllib.parse import urlparse
 import generate
-from comfyui_face_swap_video.contracts import SOURCE_COMMIT, CORE_HASHES, MODEL_HASHES, record, checked
-REQUIRED_NODES=('SteveLoadFaceSwapVideo','SteveReActorVideo','ReActorFaceSwap')
+from comfyui_face_swap_video.contracts import (SOURCE_COMMIT, CORE_HASHES, MODEL_HASHES, record, checked,
+                                              LOAD_NODE, REACTOR_NODE, SOURCE_TYPE, LEGACY_NODE_NAMES)
+REQUIRED_NODES=(LOAD_NODE,REACTOR_NODE,'ReActorFaceSwap')
 
 def parse_range(value):
     try:
@@ -27,8 +28,8 @@ def parse_range(value):
 
 def build_graph(video,source,start,end,ranges,face_index,batch_size,on_unchanged,audio,prefix):
     return {
-        '1':{'class_type':'SteveLoadFaceSwapVideo','inputs':{'video_path':str(video),'reference_path':str(source)}},
-        '2':{'class_type':'SteveReActorVideo','inputs':{'source':['1',0],
+        '1':{'class_type':LOAD_NODE,'inputs':{'video_path':str(video),'reference_path':str(source)}},
+        '2':{'class_type':REACTOR_NODE,'inputs':{'source':['1',0],
              'start':start,'end':end,'edit_ranges':json.dumps(ranges),'face_index':face_index,
              'batch_size':batch_size,'on_unchanged':on_unchanged,'audio':audio,'output_prefix':prefix}}
     }
@@ -40,17 +41,28 @@ def build_ui_workflow(graph):
                                  'on_unchanged','audio','output_prefix')]
     return {'last_node_id':2,'last_link_id':1,'version':0.4,
             'nodes':[
-                {'id':1,'type':'SteveLoadFaceSwapVideo','pos':[80,100],'size':[420,160],
+                {'id':1,'type':LOAD_NODE,'pos':[80,100],'size':[420,160],
                  'flags':{},'order':0,'mode':0,'inputs':[],
-                 'outputs':[{'name':'source','type':'STEVE_FACE_SWAP_SOURCE','links':[1],'slot_index':0}],
-                 'properties':{'Node name for S&R':'SteveLoadFaceSwapVideo'},
+                 'outputs':[{'name':'source','type':SOURCE_TYPE,'links':[1],'slot_index':0}],
+                 'properties':{'Node name for S&R':LOAD_NODE},
                  'widgets_values':[first['video_path'],first['reference_path']]},
-                {'id':2,'type':'SteveReActorVideo','pos':[580,100],'size':[440,430],
+                {'id':2,'type':REACTOR_NODE,'pos':[580,100],'size':[440,430],
                  'flags':{},'order':1,'mode':0,
-                 'inputs':[{'name':'source','type':'STEVE_FACE_SWAP_SOURCE','link':1}],
-                 'outputs':[],'properties':{'Node name for S&R':'SteveReActorVideo'},
+                 'inputs':[{'name':'source','type':SOURCE_TYPE,'link':1}],
+                 'outputs':[],'properties':{'Node name for S&R':REACTOR_NODE},
                  'widgets_values':widgets}],
-            'links':[[1,1,0,2,0,'STEVE_FACE_SWAP_SOURCE']], 'groups':[], 'config':{}, 'extra':{}}
+            'links':[[1,1,0,2,0,SOURCE_TYPE]], 'groups':[], 'config':{}, 'extra':{}}
+
+def check_live_nodes(schema):
+    """Require the current node names in the live schema."""
+    stale=[n for n in (LOAD_NODE,REACTOR_NODE) if n not in schema and LEGACY_NODE_NAMES[n] in schema]
+    if stale:
+        # The deployed package (hash-checked first) defines the new names, so a schema with
+        # only the legacy ones means ComfyUI is still running the code loaded before deploy.
+        raise ValueError('ComfyUI still has the pre-deploy face-swap nodes loaded (legacy names only); '
+                         'restart ComfyUI before preflight: '+','.join(stale))
+    if any(n not in schema for n in REQUIRED_NODES):
+        raise ValueError('Missing ComfyUI nodes: '+','.join(n for n in REQUIRED_NODES if n not in schema))
 
 def preflight(config_path):
     path=Path(config_path).resolve(strict=True)
@@ -82,8 +94,7 @@ def preflight(config_path):
         expected=record(Path(__file__).parent/'comfyui_face_swap_video'/name)['sha256']
         package_files.append(checked(root/'custom_nodes/comfyui-face-swap-video',name,expected))
     schema=generate._fetch_comfy_object_info(url)
-    if any(n not in schema for n in REQUIRED_NODES):
-        raise ValueError('Missing ComfyUI nodes: '+','.join(n for n in REQUIRED_NODES if n not in schema))
+    check_live_nodes(schema)
     fields=schema['ReActorFaceSwap']['input']['required']
     if 'inswapper_128.onnx' not in fields['swap_model'][0] or 'none' not in fields['face_restore_model'][0]:
         raise ValueError('Required ReActor model/options unavailable')

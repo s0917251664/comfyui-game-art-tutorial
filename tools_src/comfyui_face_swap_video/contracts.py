@@ -3,6 +3,14 @@ import hashlib
 from pathlib import Path
 
 SOURCE_COMMIT = 'a12c5b19dcac9ae8b47e592da39c9711c8f8c756'
+# ComfyUI class names and socket type (D9). The legacy names stay registered as
+# hidden, deprecated aliases (with the legacy socket type, so old links still
+# connect); removal is phase 8.
+LOAD_NODE = 'GameArtLoadFaceSwapVideo'
+REACTOR_NODE = 'GameArtReActorVideo'
+SOURCE_TYPE = 'GAMEART_FACE_SWAP_SOURCE'
+LEGACY_NODE_NAMES = {LOAD_NODE: 'SteveLoadFaceSwapVideo', REACTOR_NODE: 'SteveReActorVideo'}
+LEGACY_SOURCE_TYPE = 'STEVE_FACE_SWAP_SOURCE'
 # Checked on disk for provenance; the client never imports this model code.
 CORE_HASHES = {
     'inswap.py': '9f5457b96ce0863b24cdfd818807c7178b9ca2eebc520872d001e2ca105eabe3',

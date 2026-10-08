@@ -417,7 +417,7 @@ def build_run_parser():
     p.add_argument("--option", action="append", metavar="NAME", help="啟用 option(例如 keep_audio)")
     p.add_argument("--no-option", action="append", metavar="NAME", help="停用 option")
     p.add_argument("--output-dir", help="dry-run／preflight 寫入 workflow_api.dryrun.json 與 dryrun.json／preflight.json;"
-                                        "實際執行寫入所有紀錄與輸出(預設 <repo>/output/runs/<日期>-<template>-<run_id>)。"
+                                        "實際執行寫入所有紀錄與輸出(預設 <repo>/output/runs/<日期>-<template id 的 / 換成 ->-<run_id 前 8 碼>)。"
                                         "必須不存在或是空資料夾")
     p.add_argument("--config", help="local_config.json(相對路徑以 repo 根目錄解析;從 repo 執行時預設用 <repo>/local_config.json)")
     p.add_argument("--comfy-url", help="覆寫 ComfyUI URL(優先順序:--comfy-url > COMFY_URL/COMFYUI_URL > 設定檔)")
