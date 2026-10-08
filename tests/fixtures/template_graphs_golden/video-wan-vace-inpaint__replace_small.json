@@ -1,7 +1,7 @@
 {
   "template": "video/wan-vace/inpaint",
   "case": "replace_small",
-  "template_version": "0.1.0",
+  "template_version": "0.1.1",
   "graph_canonical_sha256": "eca4a6b9cb0f446c4d6e4bf4535434559d9453e34db42c7d4b493d8aee236649",
   "values": {
     "prompt": "a glowing blue crystal hammer, game art, clean edges",

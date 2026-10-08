@@ -1,7 +1,7 @@
 {
   "template": "video/sam3/track-text",
   "case": "mallet",
-  "template_version": "1.0.1",
+  "template_version": "1.0.2",
   "graph_canonical_sha256": "2c7f2364b4fd82c166c4c4b8b75e2781e42d0de6d3ae8211b253949f7e0898bd",
   "values": {
     "track_text": "mallet"

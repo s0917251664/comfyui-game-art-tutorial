@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": "video/wan-animate/mix",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "title": "Wan Animate Mix（單段 17／33 幀）",
   "summary": "把參考角色置入來源影片（保留來源背景），以 SAM2 點位決定替換範圍",
   "status": "technical_pass",
@@ -38,7 +38,7 @@
     "tested_source_sha256": "305251fbde9f9703c94eef9158119e84f3fa3415dfded27057ab800a440da1e5",
     "evidence": [
       {
-        "path": "skills/comfyui-wan-animate/references/comfyui-api.md",
+        "path": "skills/comfyui-run/references/comfyui-wan-animate/references/comfyui-api.md",
         "note": "2026-10-06 Mix17（直接 HTTP，384×384／17 幀）"
       },
       {

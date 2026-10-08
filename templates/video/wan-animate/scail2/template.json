@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": "video/wan-animate/scail2",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "title": "SCAIL-2 角色替換／動畫（單段 33 幀）",
   "summary": "用參考圖驅動角色跟著來源影片動，或把來源影片裡的人換成參考角色；SAM3 依文字追蹤人物並以彩色遮罩綁定身份",
   "status": "technical_pass",
@@ -25,7 +25,7 @@
     "tested_source_sha256": "d22dd4fcc487379c8340efeb24ca0ab1fdbc534f1d909d34dcf7a762a3785a72",
     "evidence": [
       {
-        "path": "skills/comfyui-wan-animate/references/scail2.md",
+        "path": "skills/comfyui-run/references/comfyui-wan-animate/references/scail2.md",
         "note": "2026-10-06 replace33（624c9e12…）、animate33（b7e59189…）"
       },
       {

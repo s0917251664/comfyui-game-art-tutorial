@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": "video/wan-animate/move-extend",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "title": "Wan Animate Move（兩段串接 61 幀）",
   "summary": "參考角色跟著來源影片的動作動起來（背景由參考圖與 prompt 決定）；兩段 33＋28＝61 幀",
   "status": "technical_pass",
@@ -30,7 +30,7 @@
     "tested_source_sha256": "781809176fc7ec4b313bdf3808731043c46ab30e7462b8534fdececfd33856f0",
     "evidence": [
       {
-        "path": "skills/comfyui-wan-animate/references/comfyui-api.md",
+        "path": "skills/comfyui-run/references/comfyui-wan-animate/references/comfyui-api.md",
         "note": "2026-10-06 Move61（prompt aa2550ec…）"
       },
       {

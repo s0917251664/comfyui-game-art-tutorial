@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": "video/wan-animate/mix-extend",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "title": "Wan Animate Mix（兩段串接 61 幀）",
   "summary": "把參考角色置入來源影片（保留來源背景），以 SAM2 點位決定替換範圍；兩段 33＋28＝61 幀",
   "status": "technical_pass",
@@ -38,7 +38,7 @@
     "tested_source_sha256": "748d184588a83996d3bbad8e0aaaee2e449957fcbbc26b5fd9fdbb2a33bc3061",
     "evidence": [
       {
-        "path": "skills/comfyui-wan-animate/references/comfyui-api.md",
+        "path": "skills/comfyui-run/references/comfyui-wan-animate/references/comfyui-api.md",
         "note": "2026-10-06 Mix61＋音訊（prompt f15941e6…）"
       },
       {

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": "video/sam3/track-mask",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "title": "SAM3 影片物件追蹤（第 0 幀手繪遮罩起手）",
   "summary": "以第 0 幀遮罩指定一個物件，SAM3 追蹤整支影片，輸出逐幀灰階遮罩（白色＝選取）",
   "status": "technical_pass",
@@ -25,7 +25,7 @@
     "tested_source_sha256": null,
     "evidence": [
       {
-        "path": "skills/comfyui-video-layers/references/sam3-track.md",
+        "path": "skills/comfyui-run/references/comfyui-video-layers/references/sam3-track.md",
         "note": "2026-10-07 實測"
       },
       {

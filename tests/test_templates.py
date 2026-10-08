@@ -413,10 +413,11 @@ class VideoTemplatePlatformTests(unittest.TestCase):
 class RealTemplateOfficialFieldsTests(unittest.TestCase):
     """8 份 template 的 3.2 欄位值(graph hash 不變由 LoadTemplatesTests 確認)。"""
 
-    EXPECTED_VERSION = {"video/sam3/track-mask": "1.0.1", "video/sam3/track-text": "1.0.1",
-                        "video/wan-animate/mix": "1.1.1", "video/wan-animate/mix-extend": "1.1.1",
-                        "video/wan-animate/move": "1.1.1", "video/wan-animate/move-extend": "1.1.1",
-                        "video/wan-animate/scail2": "1.0.1", "video/wan-animate/scail2-extend": "1.0.1"}
+    # PR 3.2 各升 patch；PR 7.3 evidence 路徑跟著技能搬家，再升一次 patch
+    EXPECTED_VERSION = {"video/sam3/track-mask": "1.0.2", "video/sam3/track-text": "1.0.2",
+                        "video/wan-animate/mix": "1.1.2", "video/wan-animate/mix-extend": "1.1.2",
+                        "video/wan-animate/move": "1.1.2", "video/wan-animate/move-extend": "1.1.2",
+                        "video/wan-animate/scail2": "1.0.2", "video/wan-animate/scail2-extend": "1.0.2"}
     CUSTOM = {"mix": {"comfyui_controlnet_aux", "comfyui-kjnodes", "comfyui-segment-anything-2"},
               "move": {"comfyui_controlnet_aux"}}
 
