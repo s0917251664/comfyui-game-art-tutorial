@@ -66,7 +66,7 @@ gameart.py vfx unpack-masks --segment-dir <dir>/segment --video <src.mp4> --outp
 - Gate：`video_capabilities.json` 的 wan backend 必須有 `masked_edit`，需要 `wan2.1_vace_1.3B_fp16.safetensors`、`wan_2.1_vae.safetensors`、`umt5_xxl_fp8_e4m3fn_scaled.safetensors`，以及核心節點 `WanVaceToVideo`、`TrimVideoLatent`、`LoadVideo`、`ImageToMask` 等。H3 沒有這個能力。
 - 輸入：來源片必須是 24 FPS、5–81 幀；遮罩是白色＝重畫的 L PNG（幀數和尺寸要和來源一致），或 video_layers 的 `layers.zip`。圖片 inpaint 的 alpha 遮罩方向相反，會被拒絕。
 - 模式：`keep` 會保留遮罩內的原內容當引導，適合改光效、材質或顏色，造型比較保得住；`replace` 會清空遮罩內再重畫（官方模板做法），適合換成新物件，每個 seed 的設計都不同。
-- 處理流程：遮罩先擴張 `--grow`，依遮罩自動算工作區（再加 `--pad`，對齊 16），超過 832×480 像素時縮小處理；控制片段和遮罩編成無損 FFV1 mkv 上傳。取樣參數照官方模板 `video_wan_vace_inpainting.json` 的非 turbo 分支（shift 5、20 步、cfg 6、uni_pc/simple）。
+- 處理流程：遮罩先擴張 `--grow`，依遮罩自動算工作區（再加 `--pad`，對齊 16），超過 832×480 像素時縮小處理；控制片段和遮罩編成無損 FFV1 mkv 上傳。送出的 graph 由 runner 填固定 template `video/wan-vace/inpaint`（和 `gameart.py run` 同一份）。取樣參數照官方模板 `video_wan_vace_inpainting.json` 的非 turbo 分支（shift 5、20 步、cfg 6、uni_pc/simple）。模型檔名用 template 的 pin，不跟 `video_capabilities.json` 的檔名走。
 - 輸出：
   - `<name>_00001_.mp4`：工作區原始結果，走一般影片契約和 sidecar，`fps`／`frames`（4k+1）都會驗證。
   - `<name>_00001_composited/`：

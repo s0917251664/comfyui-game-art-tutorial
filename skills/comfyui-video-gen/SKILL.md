@@ -7,7 +7,7 @@ description: 將短片、循環特效與鏡頭需求路由到已接入的影片 
 
 ## 職責與交接
 
-短動態特效的需求、時間階段、交付與內容驗收方法由[共用製作流程](../game-art-workflow/references/production.md)維護。本技能負責 ComfyUI 八個影片生成 task（含 `video_inpaint`）的 backend/capability gate、執行及影片技術契約；本機 `video_concat`、`video_composite` 與抽幀亦沿用既有入口。
+短動態特效的需求、時間階段、交付與內容驗收方法由[共用製作流程](../game-art-workflow/references/production.md)維護。本技能負責 ComfyUI 八個影片生成 task（含 `video_inpaint`）的 backend/capability gate、執行及影片技術契約；本機 `video_concat`、`video_composite` 與抽幀亦沿用既有入口。`video_inpaint` 的指令與旗標不變，graph 由 runner 填 `templates/video/wan-vace/inpaint`。
 
 上述本機處理不需 ComfyUI server，但仍依賴 `generate.py` facade、整個 `comfyui_pipeline/` 及相關 PyAV/Pillow/NumPy runtime，不是任意平台可執行的獨立單檔。平台圖片工具只能生成靜態素材；目前沒有平台影片執行技能或已接入 provider，不能把共用 VFX 計畫當成影片執行能力。
 

@@ -7,14 +7,17 @@ finalize 把結果縮回、只在擴張+羽化遮罩內貼回原片,驗證遮罩
 import json
 import os
 import tempfile
+from pathlib import Path
 
 from ..client import OUTPUT_DIR
-from ..video_builders import build_video_inpaint_wan
+from ..runner import template as runner_template
 from ..video_catalog import VIDEO_FPS
 from ..video_config import require_video_backend
 from ..video_contract import _safe_identifier, _sha256_file, make_video_contract, video_filename_prefix
 from .. import video_edit_media as media
 from ._common import VideoPlan
+
+VACE_TEMPLATE_ID = "video/wan-vace/inpaint"
 
 TASKS = ("video_inpaint",)
 
@@ -73,6 +76,57 @@ def _mask_input_paths(masks):
     return [masks]
 
 
+def _repo_with_vace_template():
+    """從這個檔案往上找含 VACE template 的 repo 根目錄。部署到 ComfyUI/tools 時還沒有 templates/。"""
+    for parent in Path(__file__).resolve().parents:
+        marker = parent / "templates" / "video" / "wan-vace" / "inpaint" / "template.json"
+        if marker.is_file():
+            return parent
+    raise SystemExit(
+        "video_inpaint 的 graph 在 templates/video/wan-vace/inpaint（固定 template，由 runner 填值）。"
+        "請從 repo 執行 python tools_src/generate.py video_inpaint。"
+        "部署到 ComfyUI/tools 的複本要等 templates 納入部署後才找得到這份 template。"
+    )
+
+
+def graph_from_vace_template(args, control_name, mask_name, size, length, prefix):
+    """用 runner 載入 VACE template、填入和這次執行相同的值，回傳要送出的 graph。
+
+    上傳檔名由呼叫端的 upload 回傳（和舊路徑一樣）。``output_prefix`` slot 不接受呼叫端指定，
+    送出前把已宣告的 filename_prefix 改成 CLI 的 ``video_filename_prefix``，resume 與舊輸出名稱才對得上。
+    模型檔名用 template 裡 pin 的檔名，不再跟 video_capabilities.json 的檔名走。
+    """
+    root = _repo_with_vace_template()
+    template = runner_template.load_template(
+        runner_template.templates_root(root), VACE_TEMPLATE_ID, repo_root=root)
+    values = {
+        "source_video": os.path.abspath(args.video),
+        "masks": os.path.abspath(args.masks),
+        "prompt": args.prompt,
+        "mode": args.mode,
+        "grow": args.grow,
+        "pad": args.pad,
+        "feather": args.feather,
+        "mask_object": args.mask_object,
+        "strength": args.strength,
+    }
+    if args.crop:
+        values["crop"] = args.crop
+    if args.negative:
+        values["negative"] = args.negative
+    if args.seed is not None:
+        values["seed"] = args.seed
+    resolution = runner_template.resolve(template, values, run_id="video-inpaint-cli")
+    runner_template.fill_from_pre(
+        template, resolution,
+        {"vace_work_area": {"width": size[0], "height": size[1], "length": length, "frames": length}},
+    )
+    graph, _changes = runner_template.patch(
+        template, resolution, {"control_video": control_name, "mask_video": mask_name})
+    graph["58"]["inputs"]["filename_prefix"] = prefix
+    return graph, "58"
+
+
 def prepare(ctx, args, upload):
     backend = require_video_backend(args.task, args.backend, ctx.active_video_config)
     try:
@@ -104,11 +158,7 @@ def prepare(ctx, args, upload):
             except FileNotFoundError:
                 pass
     prefix = video_filename_prefix(args.task, args.shot_id, args.name)
-    graph, out_id = build_video_inpaint_wan(
-        args.prompt, control_fn, mask_fn, size[0], size[1], length, seed=args.seed,
-        negative=args.negative, strength=args.strength, filename_prefix=prefix,
-        video_config=ctx.active_video_config,
-    )
+    graph, out_id = graph_from_vace_template(args, control_fn, mask_fn, size, length, prefix)
     contract = make_video_contract(args.task, backend, size[0], size[1], audio_expected=False,
                                    expected_frames=length)
     print(f"[工作區] crop={list(crop)} 處理尺寸={size[0]}x{size[1]} 幀={len(frames)}→length {length} mode={args.mode}")

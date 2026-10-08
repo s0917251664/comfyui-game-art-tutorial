@@ -61,7 +61,7 @@ status: active
 <python_exe> <generate_script> video_inpaint --config <local_config.json> [--video-config <video_capabilities.json>] --backend wan --timeout 1800 --video <src.mp4> --masks <masks_dir|layers.zip> [--mask-object 1] --mode keep|replace --prompt "..." [--seed N] [--grow 8] [--feather 4] [--pad 48] [--crop x0,y0,x1,y1] [--name <name>] --output-dir <output_dir>
 ```
 
-遮罩為白色＝重畫的灰階 PNG（L，或 R=G=B 的 RGB）。預設由 SAM3 固定 graph（[sam3-track](../../../skills/comfyui-video-layers/references/sam3-track.md)）產生；SAM3 不可用時，才用 SAM2 備援路線 `gameart.py vfx segment-plan` → `video_layers.py run` → `vfx unpack-masks`（`--masks` 也可直接給 `layers.zip`）。輸出原始工作區 MP4＋sidecar，以及 `<stem>_composited/`（無損 PNG 主檔、H.264 預覽、`result.json`）。完整流程與限制見 [`vfx-tools.md`](vfx-tools.md)。
+遮罩為白色＝重畫的灰階 PNG（L，或 R=G=B 的 RGB）。預設由 SAM3 固定 graph（[sam3-track](../../../skills/comfyui-video-layers/references/sam3-track.md)）產生；SAM3 不可用時，才用 SAM2 備援路線 `gameart.py vfx segment-plan` → `video_layers.py run` → `vfx unpack-masks`（`--masks` 也可直接給 `layers.zip`）。指令與旗標不變。送出的 graph 由 runner 填 `video/wan-vace/inpaint`（[R2](../rules/fixed-graphs.md)），檔名前綴仍是 `--name`／`--shot-id`。請從 repo 執行；部署到 ComfyUI/tools 的複本要等 `templates/` 納入部署後才找得到這份 template。輸出原始工作區 MP4＋sidecar，以及 `<stem>_composited/`（無損 PNG 主檔、H.264 預覽、`result.json`）。完整流程與限制見 [`vfx-tools.md`](vfx-tools.md)。
 
 ## `video_concat`（本機）
 
