@@ -42,4 +42,6 @@ status: current
 
 ## 移除舊名稱（第 8 階段）
 
+退場方式的評估與待決事項見 [ADR 草稿（PR 8.1）](../decisions/2026-10-08-node-alias-exit.md)。
+
 移除前要先在 Windows 與 Mac 唯讀掃描 `<ComfyUI>/user/default/workflows/**/*.json`，確認沒有 workflow 還在用舊 class 名稱；有的話先在 UI 開啟、換成新節點後另存。確認後刪掉 `LEGACY_*` 常數與別名登記，並從 `tests/test_neutral_wording.py` 的允許清單移除。
