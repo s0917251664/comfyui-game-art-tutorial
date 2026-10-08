@@ -29,7 +29,7 @@
 
 ## 工作路由
 
-- 接手第 3–8 階段重構時，先讀 [`docs/knowledge/maintenance/restructure-progress-2026-10-08.md`](docs/knowledge/maintenance/restructure-progress-2026-10-08.md)，再讀 [`docs/knowledge/maintenance/restructure-handoff.md`](docs/knowledge/maintenance/restructure-handoff.md)。進度頁記做到哪裡；交接頁記規則和原始計畫。
+- 接手第 3–8 階段重構時，先讀 [`docs/knowledge/maintenance/restructure-progress-2026-10-08.md`](docs/knowledge/maintenance/restructure-progress-2026-10-08.md)，再讀 [`docs/knowledge/maintenance/restructure-handoff.md`](docs/knowledge/maintenance/restructure-handoff.md)。進度頁記做到哪裡；交接頁記規則和原始計畫。給人讀的交付脈絡在 [`docs/knowledge/maintenance/restructure-delivery-2026-10-08.md`](docs/knowledge/maintenance/restructure-delivery-2026-10-08.md)。
 - 共用 brief、參考用途、修改／保留項、版本與美術驗收：[`skills/game-art-workflow/SKILL.md`](skills/game-art-workflow/SKILL.md)。物件系列、VFX、角色動作方法按需讀 `references/production.md`；完整職責盤點只在維護／移植時讀 `references/responsibilities.md`。
 - 新使用者初始化或尚未選路線：[`skills/game-art-initialize/SKILL.md`](skills/game-art-initialize/SKILL.md)，先整理需求與能力，不預設安裝。已配置 ComfyUI 專案的日常工作沿用所選引擎。選平台圖片工具讀 [`skills/platform-image-gen/SKILL.md`](skills/platform-image-gen/SKILL.md)；平台圖片、ComfyUI、外部付費 API／CLI 是不同路線，不能推定模型或參數可用。
 - ComfyUI 圖片生成與編修：[`skills/comfyui-art-gen/SKILL.md`](skills/comfyui-art-gen/SKILL.md)；編修 brief 相容入口 [`skills/game-art-edit-brief/SKILL.md`](skills/game-art-edit-brief/SKILL.md)。依 task 選 executor 與自身 gate；不可一律要求本機 Python/config，也不臨場改 API 或組 graph（[R2](docs/knowledge/rules/fixed-graphs.md)；新的固定 graph 走[擴充協議](docs/knowledge/maintenance/extension-protocol.md)）。缺能力不自動換引擎；只整理需求不啟動生成。

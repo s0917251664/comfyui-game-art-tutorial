@@ -4,7 +4,7 @@ status: current
 ---
 # 重構進度中斷點（2026-10-08）
 
-下一個 agent **先讀這一頁**，再讀 [重構交接](restructure-handoff.md) 的規則和原始計畫。規則以交接頁為準；做到哪裡以這一頁為準。兩者都讓路給已經生效的[決策](../DECISIONS.md)。
+下一個 agent **先讀這一頁**，再讀 [重構交接](restructure-handoff.md) 的規則和原始計畫。給人讀的完整交付脈絡在[重構交付脈絡 2026-10-08](restructure-delivery-2026-10-08.md)。規則以交接頁為準；做到哪裡以這一頁為準。兩者都讓路給已經生效的[決策](../DECISIONS.md)。
 
 5.1、5.2、7.2 的審查都是可以合併，而且三條分支都已 push。沒有開 PR，沒有 merge 到 `develop`。
 
@@ -47,7 +47,7 @@ status: current
 - `templates/README.md`：`132201f` 和 6.3／6′／7.2 都會碰到。
 - `tools_src/comfyui_pipeline/image_from_template.py` 的 seed：5.2 疊上 `1dd86fa` 時會衝突。兩邊都要留下「省略 `--seed` 只抽一次，而且用 builder 的 48-bit；明確傳入的 0 保持 0」。不要把 seed 留成 template 的 `"auto"`，否則 `resolve` 會再抽一次 32-bit。
 
-主 repo 裡同名分支 `refactor/phase5.1-image-tasks-runner-a` 仍指著 **沒有 seed 修復的** `b35d3e3`。修復在另一個 clone。push 5.1 時要從那個 clone 推 `1dd86fa`，不要推主 repo 這根舊指標。
+主 repo 的本地 `refactor/phase5.1-image-tasks-runner-a` 已快轉到 `1dd86fa`，與 origin 相同。
 
 ## 已 push 的 origin 分支
 
