@@ -23,7 +23,10 @@ from comfyui_pipeline.runner import template as T  # noqa: E402
 RUN_ID = "golden"
 SEED = 20261006
 UPLOADS = {"reference_image": "run/reference.png", "source_video": "run/source.mp4", "seed_mask": "run/seed_mask.png",
-           "control_video": "run/control.mkv", "mask_video": "run/mask.mkv"}
+           "control_video": "run/control.mkv", "mask_video": "run/mask.mkv",
+           "image": "run/image.png", "mask": "run/mask.png", "pose_ref": "run/pose_ref.png",
+           "character_ref": "run/character_ref.png", "structure_ref": "run/structure_ref.png",
+           "appearance_ref": "run/appearance_ref.png", "control_ref": "run/control_ref.png"}
 PROMPT = "the robot from the reference image dances, same pose as the source video"
 POINTS = [{"x": 192, "y": 192}]
 WAN_BASE = {"prompt": PROMPT, "seed": SEED}
@@ -36,7 +39,7 @@ VACE_SMALL = {"vace_work_area": {"frames": 9, "width": 192, "height": 128, "leng
 VACE_WIDE = {"vace_work_area": {"frames": 81, "width": 832, "height": 480, "length": 81}}
 
 # (template id, case 名稱, slot 值, options)
-CASES = [
+VIDEO_CASES = [
     ("video/wan-animate/mix", "default17", dict(WAN_BASE, positive_points=POINTS), {}),
     ("video/wan-animate/mix", "frames33", dict(WAN_BASE, positive_points=POINTS, frames=33), {}),
     ("video/wan-animate/mix", "audio", dict(WAN_BASE, positive_points=POINTS), {"keep_audio": True}),
@@ -64,6 +67,32 @@ CASES = [
     ("video/wan-vace/inpaint", "strength_negative", dict(VACE_BASE, strength=0.6, negative="blurry, flicker"), {}),
     ("video/wan-vace/inpaint", "wide81_crop", dict(VACE_BASE, crop="0,0,832,480", pad=0), {}),
 ]
+
+
+def _image_case_values(template):
+    values = {}
+    if "prompt" in template.slots:
+        values["prompt"] = "p"
+    if "seed" in template.slots:
+        values["seed"] = SEED
+    if "lora_name" in template.slots:
+        values["lora_name"] = "test_lora.safetensors"
+        values["lora_strength"] = 0.6
+    return values
+
+
+def _image_cases():
+    """每個已落地的圖片 template 一個案例。sd15 目錄不在時就不列入。"""
+    cases = []
+    for template_id in T.discover(TEMPLATES):
+        if not template_id.startswith("image/"):
+            continue
+        template = T.load_template(TEMPLATES, template_id, repo_root=ROOT)
+        cases.append((template_id, "defaults", _image_case_values(template), {}))
+    return cases
+
+
+CASES = VIDEO_CASES + _image_cases()
 PRE_RESULTS = {("video/wan-vace/inpaint", "keep_1024"): VACE_1024, ("video/wan-vace/inpaint", "replace_small"): VACE_SMALL,
                ("video/wan-vace/inpaint", "strength_negative"): VACE_1024,
                ("video/wan-vace/inpaint", "wide81_crop"): VACE_WIDE}

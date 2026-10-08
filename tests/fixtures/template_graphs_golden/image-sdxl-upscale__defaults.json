@@ -1,0 +1,147 @@
+{
+  "template": "image/sdxl/upscale",
+  "case": "defaults",
+  "template_version": "0.1.0",
+  "graph_canonical_sha256": "43662e78d3c9cbcf12e3ba89940c92498527508e8ab05d70c784287d9f23d353",
+  "values": {
+    "prompt": "p",
+    "seed": 20261006
+  },
+  "options": {},
+  "uploads": {
+    "image": "run/image.png"
+  },
+  "changed": {
+    "2.text": "p",
+    "4.image": "run/image.png",
+    "9.seed": 20261006
+  },
+  "patched_graph_sha256": "8b5750f88951ce2c5431b2b1abd3b443cb741f89f5144ae4968024382fdf2260",
+  "graph": {
+    "1": {
+      "class_type": "CheckpointLoaderSimple",
+      "inputs": {
+        "ckpt_name": "sd_xl_base_1.0.safetensors"
+      }
+    },
+    "2": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "text": "p",
+        "clip": [
+          "1",
+          1
+        ]
+      }
+    },
+    "3": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "text": "blurry, low quality, extra fingers, deformed, watermark",
+        "clip": [
+          "1",
+          1
+        ]
+      }
+    },
+    "4": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "run/image.png"
+      }
+    },
+    "5": {
+      "class_type": "UpscaleModelLoader",
+      "inputs": {
+        "model_name": "4x-UltraSharp.pth"
+      }
+    },
+    "6": {
+      "class_type": "ImageUpscaleWithModel",
+      "inputs": {
+        "upscale_model": [
+          "5",
+          0
+        ],
+        "image": [
+          "4",
+          0
+        ]
+      }
+    },
+    "7": {
+      "class_type": "ImageScaleBy",
+      "inputs": {
+        "image": [
+          "6",
+          0
+        ],
+        "upscale_method": "lanczos",
+        "scale_by": 0.5
+      }
+    },
+    "8": {
+      "class_type": "VAEEncode",
+      "inputs": {
+        "pixels": [
+          "7",
+          0
+        ],
+        "vae": [
+          "1",
+          2
+        ]
+      }
+    },
+    "9": {
+      "class_type": "KSampler",
+      "inputs": {
+        "model": [
+          "1",
+          0
+        ],
+        "positive": [
+          "2",
+          0
+        ],
+        "negative": [
+          "3",
+          0
+        ],
+        "latent_image": [
+          "8",
+          0
+        ],
+        "seed": 20261006,
+        "steps": 25,
+        "cfg": 7.0,
+        "sampler_name": "euler",
+        "scheduler": "normal",
+        "denoise": 0.4
+      }
+    },
+    "10": {
+      "class_type": "VAEDecode",
+      "inputs": {
+        "samples": [
+          "9",
+          0
+        ],
+        "vae": [
+          "1",
+          2
+        ]
+      }
+    },
+    "11": {
+      "class_type": "SaveImage",
+      "inputs": {
+        "images": [
+          "10",
+          0
+        ],
+        "filename_prefix": "upscale"
+      }
+    }
+  }
+}

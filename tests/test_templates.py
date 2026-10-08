@@ -24,7 +24,14 @@ MOVED_IDS = [
     "video/wan-animate/mix", "video/wan-animate/mix-extend", "video/wan-animate/move",
     "video/wan-animate/move-extend", "video/wan-animate/scail2", "video/wan-animate/scail2-extend",
 ]
-ALL_IDS = sorted(MOVED_IDS + ["video/wan-vace/inpaint"])  # PR 3.4 新增 VACE
+VIDEO_IDS = sorted(MOVED_IDS + ["video/wan-vace/inpaint"])  # PR 3.4 新增 VACE
+
+
+def image_template_ids():
+    return [template_id for template_id in T.discover(TEMPLATES) if template_id.startswith("image/")]
+
+
+ALL_IDS = sorted(VIDEO_IDS + image_template_ids())
 # 舊位置 → 新位置與位元組 sha256(PR 2.1 搬移前後必須一致)
 MOVED_GRAPH_SHA256 = {
     "video/wan-animate/mix": "5ba22f287ef8f9cb9cb926c249724ae050a0b3bd3076863cdd25f4b6b64c6d6c",
@@ -90,8 +97,9 @@ class TemplateFixture:
 
 
 class LoadTemplatesTests(unittest.TestCase):
-    def test_discovers_exactly_the_eight_templates(self):
+    def test_discovers_exactly_listed_templates(self):
         self.assertEqual(ALL_IDS, T.discover(TEMPLATES))
+        self.assertEqual(VIDEO_IDS, [template_id for template_id in ALL_IDS if template_id.startswith("video/")])
 
     def test_all_templates_load_and_hashes_match_moved_bytes(self):
         for template_id in MOVED_IDS:
@@ -474,7 +482,11 @@ class DiffWhitelistTests(unittest.TestCase):
 
 class GoldenGraphTests(unittest.TestCase):
     def test_golden_cases_cover_all_templates(self):
-        self.assertEqual(24, len(golden.CASES))  # PR 3.4 加 4 個 VACE 案例
+        video_cases = [case for case in golden.CASES if case[0].startswith("video/")]
+        image_cases = [case for case in golden.CASES if case[0].startswith("image/")]
+        self.assertEqual(24, len(video_cases))  # 影片案例維持 24；每個圖片 template 再加一個
+        self.assertEqual(len(image_cases), len({case[0] for case in image_cases}))
+        self.assertEqual(24 + len(image_cases), len(golden.CASES))
         self.assertEqual(set(ALL_IDS), {case[0] for case in golden.CASES})
         names = sorted(os.listdir(golden.FIXTURE_DIR))
         self.assertEqual(sorted(golden.fixture_name(c[0], c[1]) for c in golden.CASES), names)

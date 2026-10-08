@@ -1,0 +1,151 @@
+{
+  "template": "image/sdxl/style-lock",
+  "case": "defaults",
+  "template_version": "0.1.0",
+  "graph_canonical_sha256": "dcef6974dbbabbcfd32de276d4d27d66d2a5f6228f135d377df55fce8dece1c2",
+  "values": {
+    "prompt": "p",
+    "seed": 20261006
+  },
+  "options": {},
+  "uploads": {
+    "character_ref": "run/character_ref.png"
+  },
+  "changed": {
+    "2.text": "p",
+    "4.image": "run/character_ref.png",
+    "9.seed": 20261006
+  },
+  "patched_graph_sha256": "998727296db65f03a3595fb053e2bc41df29656feb661929a728eeca81ec5b56",
+  "graph": {
+    "1": {
+      "class_type": "CheckpointLoaderSimple",
+      "inputs": {
+        "ckpt_name": "sd_xl_base_1.0.safetensors"
+      }
+    },
+    "2": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "text": "p",
+        "clip": [
+          "1",
+          1
+        ]
+      }
+    },
+    "3": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "text": "blurry, low quality, extra fingers, deformed, watermark",
+        "clip": [
+          "1",
+          1
+        ]
+      }
+    },
+    "4": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "run/character_ref.png"
+      }
+    },
+    "5": {
+      "class_type": "CLIPVisionLoader",
+      "inputs": {
+        "clip_name": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors"
+      }
+    },
+    "6": {
+      "class_type": "IPAdapterModelLoader",
+      "inputs": {
+        "ipadapter_file": "ip-adapter-plus_sdxl_vit-h.safetensors"
+      }
+    },
+    "7": {
+      "class_type": "IPAdapterAdvanced",
+      "inputs": {
+        "model": [
+          "1",
+          0
+        ],
+        "ipadapter": [
+          "6",
+          0
+        ],
+        "image": [
+          "4",
+          0
+        ],
+        "clip_vision": [
+          "5",
+          0
+        ],
+        "weight": 0.8,
+        "weight_type": "linear",
+        "combine_embeds": "concat",
+        "start_at": 0.0,
+        "end_at": 1.0,
+        "embeds_scaling": "V only"
+      }
+    },
+    "8": {
+      "class_type": "EmptyLatentImage",
+      "inputs": {
+        "width": 1024,
+        "height": 1024,
+        "batch_size": 1
+      }
+    },
+    "9": {
+      "class_type": "KSampler",
+      "inputs": {
+        "model": [
+          "7",
+          0
+        ],
+        "positive": [
+          "2",
+          0
+        ],
+        "negative": [
+          "3",
+          0
+        ],
+        "latent_image": [
+          "8",
+          0
+        ],
+        "seed": 20261006,
+        "steps": 25,
+        "cfg": 7.0,
+        "sampler_name": "euler",
+        "scheduler": "normal",
+        "denoise": 1.0
+      }
+    },
+    "10": {
+      "class_type": "VAEDecode",
+      "inputs": {
+        "samples": [
+          "9",
+          0
+        ],
+        "vae": [
+          "1",
+          2
+        ]
+      }
+    },
+    "11": {
+      "class_type": "SaveImage",
+      "inputs": {
+        "images": [
+          "10",
+          0
+        ],
+        "filename_prefix": "style_lock"
+      }
+    }
+  }
+}

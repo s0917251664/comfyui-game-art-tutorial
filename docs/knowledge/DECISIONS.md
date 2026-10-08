@@ -8,6 +8,7 @@ status: current
 
 | 日期 | 決策 | ADR |
 |---|---|---|
+| 2026-10-08 | 圖片 D13 採方案 A：每種會增刪或更換節點的組合各一份固定 template，runner 只填值。`image/sdxl/*` 對應 `sdxl_standard`，`image/sd15/*` 對應 `sd15_light`；tier 只改呼叫端寬高。`filename_prefix` 維持 builder 前綴。checkpoint 是 slot，LoRA 不 pin。圖片 `time_alignment` 允許 null。 | [圖片 template 的結構組合](decisions/2026-10-08-image-template-variants.md) |
 | 2026-10-08 | custom node 舊名稱直接移除，不再保留別名，也不採用 Node Replacement。缺少新名稱就是缺少節點。這一階段不部署、不重啟；部署與重啟留到第 8.4，且 queue 必須為空。 | [custom node 舊名稱直接移除](decisions/2026-10-08-node-alias-exit.md) |
 | 2026-10-08 | 不採用、不安裝 comfy-cli／comfy-mcp，也不用 Comfy Cloud；只參考官方 workflow_templates 的範本欄位與 ComfyUI core subgraph blueprints。`template.json` 補 `min_comfyui_version`、`requires_custom_nodes`、模型 `url`／`directory`、`provenance.upstream`。第 8 階段已評估 core 的 Node Replacement API，結論見[退場決定](decisions/2026-10-08-node-alias-exit.md)。 | [不採用官方 CLI／MCP，只對齊範本欄位與 blueprints](decisions/2026-10-08-official-comfy-tooling.md) |
 | 2026-10-07 | 第二階段：固定 API JSON 改用頂層 `templates/`＋`gameart.py run` 執行（先接 Wan Animate 6 份、SAM3 2 份）；runner 完成後 R2 改成「固定 API JSON 一律透過 template＋runner」；custom node 改用 `GameArt` 名稱，舊名別名已在 PR 8.2 移除（見[退場決定](decisions/2026-10-08-node-alias-exit.md)）；`output/` 證據寫成純文字標註；有 hash 紀錄的檔案設 `-text`。共 14 項（D1–D14）。 | [第二階段 template 與 runner](decisions/2026-10-07-phase2-template-runner.md) |

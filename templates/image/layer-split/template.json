@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "id": "image/layer-split",
+  "version": "0.1.0",
+  "title": "遮罩拆層",
+  "summary": "遮罩拆層。固定 API graph，runner 只填 slot。",
+  "status": "draft",
+  "status_note": "尚未實機執行。windows-cuda 與 macos-mps 都是 untested。",
+  "min_comfyui_version": "0.34.0",
+  "requires_custom_nodes": [],
+  "graph": {
+    "file": "graph.api.json",
+    "format": "comfyui-api",
+    "sha256": "e5158dc3bd961e37d856a78975c49534b470798a234261da9e3723aff9c7dc1e",
+    "canonical_sha256": "86c8c0240aac0a9a0eaadb990db0ad4d0f3f20ebbdabb18727fa86264fb05557"
+  },
+  "provenance": {
+    "derived_from": "comfyui_pipeline.image_graphs.build_layer_split；離線產生器 tools_src/maintenance/build_image_templates.py",
+    "upstream": {
+      "kind": "none",
+      "name": null,
+      "blob": null,
+      "comfyui_version": null,
+      "note": "graph 由 image_graphs builder 產生，不是從官方 workflow template 派生。ComfyUI 0.34.0 內建的官方範本是 UI workflow，對不上這份 API graph，所以 kind 是 none。"
+    },
+    "tested_source_sha256": null,
+    "evidence": [
+      {
+        "path": "tools_src/comfyui_pipeline/image_graphs.py",
+        "note": "graph 的 builder"
+      },
+      {
+        "path": "tests/fixtures/image_graphs_golden/sdxl.json",
+        "note": "圖片 golden graph"
+      },
+      {
+        "path": "docs/knowledge/decisions/2026-10-08-image-template-variants.md",
+        "note": "方案 A 與家族對應的決定"
+      }
+    ]
+  },
+  "slots": {
+    "image": {
+      "type": "image",
+      "targets": [
+        {
+          "node": "1",
+          "input": "image",
+          "placeholder": "__IMAGE__"
+        }
+      ],
+      "upload": true,
+      "required": true,
+      "help": "來源圖"
+    },
+    "mask": {
+      "type": "mask_image",
+      "targets": [
+        {
+          "node": "2",
+          "input": "image",
+          "placeholder": "__MASK__"
+        }
+      ],
+      "upload": true,
+      "required": true,
+      "help": "遮罩（alpha=0 的區域要重畫或保留進圖層）"
+    },
+    "filename_prefix": {
+      "type": "string",
+      "targets": [
+        {
+          "node": "5",
+          "input": "filename_prefix"
+        }
+      ],
+      "default": "layer_frame",
+      "help": "存檔前綴，預設沿用 builder。不用 output_prefix，避免被改成 gameart/..."
+    }
+  },
+  "options": {},
+  "fixed_notes": "filename_prefix 維持 builder 的前綴，不用 output_prefix。filename_prefix 預設是 layer_frame。",
+  "pre": [
+    {
+      "step": "upload",
+      "slots": [
+        "image",
+        "mask"
+      ]
+    }
+  ],
+  "post": [],
+  "frame_anchoring": {
+    "first": "none",
+    "last": "none",
+    "reference_role": "none",
+    "time_alignment": null,
+    "continuity": null
+  },
+  "models": [],
+  "capability_gate": {
+    "nodes": "from_graph",
+    "selectors": "from_models",
+    "files": "from_models",
+    "extra_nodes": [],
+    "platforms": {
+      "windows-cuda": {
+        "status": "untested"
+      },
+      "macos-mps": {
+        "status": "untested"
+      }
+    },
+    "min_memory_mb": null,
+    "capability": "image_generation"
+  },
+  "outputs": [
+    {
+      "id": "image",
+      "node": "5",
+      "kind": "image",
+      "role": "candidate"
+    }
+  ]
+}

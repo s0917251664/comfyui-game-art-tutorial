@@ -1,0 +1,130 @@
+{
+  "template": "image/sdxl/inpaint",
+  "case": "defaults",
+  "template_version": "0.1.0",
+  "graph_canonical_sha256": "edc0f8b676b23e7664267b0f37a36587ff2aa75ed5c632df0e2458f020b2c190",
+  "values": {
+    "prompt": "p",
+    "seed": 20261006
+  },
+  "options": {},
+  "uploads": {
+    "image": "run/image.png",
+    "mask": "run/mask.png"
+  },
+  "changed": {
+    "2.text": "p",
+    "4.image": "run/image.png",
+    "5.image": "run/mask.png",
+    "7.seed": 20261006
+  },
+  "patched_graph_sha256": "1d1fa76f3f2797b68a90a60e5e2271d43e258ebfa2fe614155008a60c76c665f",
+  "graph": {
+    "1": {
+      "class_type": "CheckpointLoaderSimple",
+      "inputs": {
+        "ckpt_name": "sd_xl_base_1.0.safetensors"
+      }
+    },
+    "2": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "text": "p",
+        "clip": [
+          "1",
+          1
+        ]
+      }
+    },
+    "3": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "text": "blurry, low quality, extra fingers, deformed, watermark",
+        "clip": [
+          "1",
+          1
+        ]
+      }
+    },
+    "4": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "run/image.png"
+      }
+    },
+    "5": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "run/mask.png"
+      }
+    },
+    "6": {
+      "class_type": "VAEEncodeForInpaint",
+      "inputs": {
+        "pixels": [
+          "4",
+          0
+        ],
+        "vae": [
+          "1",
+          2
+        ],
+        "mask": [
+          "5",
+          1
+        ],
+        "grow_mask_by": 6
+      }
+    },
+    "7": {
+      "class_type": "KSampler",
+      "inputs": {
+        "model": [
+          "1",
+          0
+        ],
+        "positive": [
+          "2",
+          0
+        ],
+        "negative": [
+          "3",
+          0
+        ],
+        "latent_image": [
+          "6",
+          0
+        ],
+        "seed": 20261006,
+        "steps": 25,
+        "cfg": 7.0,
+        "sampler_name": "euler",
+        "scheduler": "normal",
+        "denoise": 1.0
+      }
+    },
+    "8": {
+      "class_type": "VAEDecode",
+      "inputs": {
+        "samples": [
+          "7",
+          0
+        ],
+        "vae": [
+          "1",
+          2
+        ]
+      }
+    },
+    "9": {
+      "class_type": "SaveImage",
+      "inputs": {
+        "images": [
+          "8",
+          0
+        ],
+        "filename_prefix": "inpaint"
+      }
+    }
+  }
+}

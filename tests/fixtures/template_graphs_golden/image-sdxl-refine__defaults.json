@@ -1,0 +1,117 @@
+{
+  "template": "image/sdxl/refine",
+  "case": "defaults",
+  "template_version": "0.1.0",
+  "graph_canonical_sha256": "cbd040548ff7d056e298bbc9b098998d56fd2488d266a9100cf17635f0087329",
+  "values": {
+    "prompt": "p",
+    "seed": 20261006
+  },
+  "options": {},
+  "uploads": {
+    "image": "run/image.png"
+  },
+  "changed": {
+    "2.text": "p",
+    "4.image": "run/image.png",
+    "6.seed": 20261006
+  },
+  "patched_graph_sha256": "c7c4ac11d276b4023fafb7aa55e92ea65c37b847feead4747098419954fb6805",
+  "graph": {
+    "1": {
+      "class_type": "CheckpointLoaderSimple",
+      "inputs": {
+        "ckpt_name": "sd_xl_base_1.0.safetensors"
+      }
+    },
+    "2": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "text": "p",
+        "clip": [
+          "1",
+          1
+        ]
+      }
+    },
+    "3": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "text": "blurry, low quality, extra fingers, deformed, watermark",
+        "clip": [
+          "1",
+          1
+        ]
+      }
+    },
+    "4": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "run/image.png"
+      }
+    },
+    "5": {
+      "class_type": "VAEEncode",
+      "inputs": {
+        "pixels": [
+          "4",
+          0
+        ],
+        "vae": [
+          "1",
+          2
+        ]
+      }
+    },
+    "6": {
+      "class_type": "KSampler",
+      "inputs": {
+        "model": [
+          "1",
+          0
+        ],
+        "positive": [
+          "2",
+          0
+        ],
+        "negative": [
+          "3",
+          0
+        ],
+        "latent_image": [
+          "5",
+          0
+        ],
+        "seed": 20261006,
+        "steps": 25,
+        "cfg": 7.0,
+        "sampler_name": "euler",
+        "scheduler": "normal",
+        "denoise": 0.6
+      }
+    },
+    "7": {
+      "class_type": "VAEDecode",
+      "inputs": {
+        "samples": [
+          "6",
+          0
+        ],
+        "vae": [
+          "1",
+          2
+        ]
+      }
+    },
+    "8": {
+      "class_type": "SaveImage",
+      "inputs": {
+        "images": [
+          "7",
+          0
+        ],
+        "filename_prefix": "refine"
+      }
+    }
+  }
+}

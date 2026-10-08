@@ -290,9 +290,16 @@
           ]
         },
         "time_alignment": {
-          "enum": [
-            "source_from_frame_0",
-            "per_source_frame"
+          "anyOf": [
+            {
+              "enum": [
+                "source_from_frame_0",
+                "per_source_frame"
+              ]
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "continuity": {

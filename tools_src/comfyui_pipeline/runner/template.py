@@ -54,7 +54,7 @@ OPTION_OPS = ("set_link", "set_value")
 CONSTRAINT_RULES = ("points_within",)
 ANCHOR_VALUES = ("image", "conditioning", "same_as_first", "none")
 REFERENCE_ROLES = ("identity", "selection", "none")
-TIME_ALIGNMENTS = ("source_from_frame_0", "per_source_frame")
+TIME_ALIGNMENTS = ("source_from_frame_0", "per_source_frame", None)
 OUTPUT_KINDS = ("video", "image", "image_sequence")
 OUTPUT_ROLES = ("candidate", "mask", "preview")
 MODEL_KEYS = {"role", "node", "input", "filename", "path", "directory", "url", "size_bytes", "sha256", "source",
@@ -532,7 +532,8 @@ def _validate_anchoring(anchor):
     if anchor["reference_role"] not in REFERENCE_ROLES:
         problems.append(f"frame_anchoring.reference_role 必須是 {', '.join(REFERENCE_ROLES)} 之一")
     if anchor["time_alignment"] not in TIME_ALIGNMENTS:
-        problems.append(f"frame_anchoring.time_alignment 必須是 {', '.join(TIME_ALIGNMENTS)} 之一")
+        names = ", ".join("null" if item is None else item for item in TIME_ALIGNMENTS)
+        problems.append(f"frame_anchoring.time_alignment 必須是 {names} 之一")
     cont = anchor["continuity"]
     if cont is not None:
         if not isinstance(cont, dict) or set(cont) != {"segments", "overlap_frames", "seam_frames", "manual_check"} \

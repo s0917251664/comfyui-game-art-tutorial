@@ -1,0 +1,168 @@
+{
+  "template": "image/sdxl/refine-transparent",
+  "case": "defaults",
+  "template_version": "0.1.0",
+  "graph_canonical_sha256": "f66429244eb3ab85eaa226330b1ae5a262fd230a7a8b51e8b24641d36f3253b7",
+  "values": {
+    "prompt": "p",
+    "seed": 20261006
+  },
+  "options": {},
+  "uploads": {
+    "image": "run/image.png"
+  },
+  "changed": {
+    "2.text": "p",
+    "4.image": "run/image.png",
+    "6.seed": 20261006
+  },
+  "patched_graph_sha256": "4cad063d6528a0087b5b5496a676d606b060f5c75d4958ae42cfc3e255b07841",
+  "graph": {
+    "1": {
+      "class_type": "CheckpointLoaderSimple",
+      "inputs": {
+        "ckpt_name": "sd_xl_base_1.0.safetensors"
+      }
+    },
+    "2": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "text": "p",
+        "clip": [
+          "1",
+          1
+        ]
+      }
+    },
+    "3": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "text": "blurry, low quality, extra fingers, deformed, watermark",
+        "clip": [
+          "1",
+          1
+        ]
+      }
+    },
+    "4": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "run/image.png"
+      }
+    },
+    "5": {
+      "class_type": "VAEEncode",
+      "inputs": {
+        "pixels": [
+          "4",
+          0
+        ],
+        "vae": [
+          "1",
+          2
+        ]
+      }
+    },
+    "6": {
+      "class_type": "KSampler",
+      "inputs": {
+        "model": [
+          "1",
+          0
+        ],
+        "positive": [
+          "2",
+          0
+        ],
+        "negative": [
+          "3",
+          0
+        ],
+        "latent_image": [
+          "5",
+          0
+        ],
+        "seed": 20261006,
+        "steps": 25,
+        "cfg": 7.0,
+        "sampler_name": "euler",
+        "scheduler": "normal",
+        "denoise": 0.6
+      }
+    },
+    "7": {
+      "class_type": "VAEDecode",
+      "inputs": {
+        "samples": [
+          "6",
+          0
+        ],
+        "vae": [
+          "1",
+          2
+        ]
+      }
+    },
+    "8": {
+      "class_type": "SaveImage",
+      "inputs": {
+        "images": [
+          "7",
+          0
+        ],
+        "filename_prefix": "refine"
+      }
+    },
+    "9": {
+      "class_type": "LoadBackgroundRemovalModel",
+      "inputs": {
+        "bg_removal_name": "birefnet.safetensors"
+      }
+    },
+    "10": {
+      "class_type": "RemoveBackground",
+      "inputs": {
+        "bg_removal_model": [
+          "9",
+          0
+        ],
+        "image": [
+          "7",
+          0
+        ]
+      }
+    },
+    "11": {
+      "class_type": "InvertMask",
+      "inputs": {
+        "mask": [
+          "10",
+          0
+        ]
+      }
+    },
+    "12": {
+      "class_type": "JoinImageWithAlpha",
+      "inputs": {
+        "image": [
+          "7",
+          0
+        ],
+        "alpha": [
+          "11",
+          0
+        ]
+      }
+    },
+    "13": {
+      "class_type": "SaveImage",
+      "inputs": {
+        "images": [
+          "12",
+          0
+        ],
+        "filename_prefix": "transparent"
+      }
+    }
+  }
+}

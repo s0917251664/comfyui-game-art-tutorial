@@ -1,0 +1,200 @@
+{
+  "template": "image/sdxl/character-action-canny",
+  "case": "defaults",
+  "template_version": "0.1.0",
+  "graph_canonical_sha256": "59c8c67cb7d6a99784a24849594f929f113d0e25de5fc6ac8ec10ca525d8f4b0",
+  "values": {
+    "prompt": "p",
+    "seed": 20261006
+  },
+  "options": {},
+  "uploads": {
+    "pose_ref": "run/pose_ref.png",
+    "character_ref": "run/character_ref.png"
+  },
+  "changed": {
+    "12.seed": 20261006,
+    "2.text": "p",
+    "4.image": "run/character_ref.png",
+    "5.image": "run/pose_ref.png"
+  },
+  "patched_graph_sha256": "715a03dad19c6704453b7486bc27cf5e192a0b71adc8c7b306f857ceded5d234",
+  "graph": {
+    "1": {
+      "class_type": "CheckpointLoaderSimple",
+      "inputs": {
+        "ckpt_name": "sd_xl_base_1.0.safetensors"
+      }
+    },
+    "2": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "text": "p",
+        "clip": [
+          "1",
+          1
+        ]
+      }
+    },
+    "3": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "text": "blurry, low quality, extra fingers, deformed, watermark",
+        "clip": [
+          "1",
+          1
+        ]
+      }
+    },
+    "4": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "run/character_ref.png"
+      }
+    },
+    "5": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "run/pose_ref.png"
+      }
+    },
+    "6a": {
+      "class_type": "CLIPVisionLoader",
+      "inputs": {
+        "clip_name": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors"
+      }
+    },
+    "6b": {
+      "class_type": "IPAdapterModelLoader",
+      "inputs": {
+        "ipadapter_file": "ip-adapter-plus_sdxl_vit-h.safetensors"
+      }
+    },
+    "7": {
+      "class_type": "IPAdapterAdvanced",
+      "inputs": {
+        "model": [
+          "1",
+          0
+        ],
+        "ipadapter": [
+          "6b",
+          0
+        ],
+        "image": [
+          "4",
+          0
+        ],
+        "clip_vision": [
+          "6a",
+          0
+        ],
+        "weight": 0.8,
+        "weight_type": "linear",
+        "combine_embeds": "concat",
+        "start_at": 0.0,
+        "end_at": 1.0,
+        "embeds_scaling": "V only"
+      }
+    },
+    "8": {
+      "class_type": "Canny",
+      "inputs": {
+        "image": [
+          "5",
+          0
+        ],
+        "low_threshold": 0.4,
+        "high_threshold": 0.8
+      }
+    },
+    "9": {
+      "class_type": "ControlNetLoader",
+      "inputs": {
+        "control_net_name": "controlnet-canny-sdxl-1.0.safetensors"
+      }
+    },
+    "10": {
+      "class_type": "ControlNetApplyAdvanced",
+      "inputs": {
+        "positive": [
+          "2",
+          0
+        ],
+        "negative": [
+          "3",
+          0
+        ],
+        "control_net": [
+          "9",
+          0
+        ],
+        "image": [
+          "8",
+          0
+        ],
+        "strength": 1.0,
+        "start_percent": 0.0,
+        "end_percent": 1.0
+      }
+    },
+    "11": {
+      "class_type": "EmptyLatentImage",
+      "inputs": {
+        "width": 1024,
+        "height": 1024,
+        "batch_size": 1
+      }
+    },
+    "12": {
+      "class_type": "KSampler",
+      "inputs": {
+        "model": [
+          "7",
+          0
+        ],
+        "positive": [
+          "10",
+          0
+        ],
+        "negative": [
+          "10",
+          1
+        ],
+        "latent_image": [
+          "11",
+          0
+        ],
+        "seed": 20261006,
+        "steps": 25,
+        "cfg": 7.0,
+        "sampler_name": "euler",
+        "scheduler": "normal",
+        "denoise": 1.0
+      }
+    },
+    "13": {
+      "class_type": "VAEDecode",
+      "inputs": {
+        "samples": [
+          "12",
+          0
+        ],
+        "vae": [
+          "1",
+          2
+        ]
+      }
+    },
+    "14": {
+      "class_type": "SaveImage",
+      "inputs": {
+        "images": [
+          "13",
+          0
+        ],
+        "filename_prefix": "character_action"
+      }
+    }
+  }
+}
