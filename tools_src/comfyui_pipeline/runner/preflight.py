@@ -16,7 +16,7 @@
    所以一定要先確認檔案已在本機。
 
 結果的 ``status`` 是 ``pass`` 或 ``blocked``;``problems`` 是擋下的原因(每條都寫檢查了哪個路徑、怎麼修),
-``warnings`` 不擋。PR 2.3 的實際執行會先呼叫 :func:`run_preflight`,通過才上傳。
+``warnings`` 不擋。實際執行(run.py)會先呼叫 :func:`run_preflight`,通過才上傳。
 """
 import json
 import os
@@ -64,7 +64,7 @@ def resolve_settings(config=None, comfy_url=None, snapshot_dir=None, platform_ke
         "repo_root": repo_root, "config_path": config_path, "config_source": config_source,
         "comfy_url": url, "comfy_url_source": url_source, "comfyui_path": comfyui_path,
         "snapshot_dir": None, "platform_key": None, "platform_source": None, "device": {},
-        "platform_problem": None,
+        "platform_problem": None, "device_platform_key": None, "platform_mismatch": None,
     }
     try:
         found, source = rc.find_snapshot_dir(script_dir, snapshot_dir, repo_root, comfyui_path, cwd,
@@ -76,8 +76,14 @@ def resolve_settings(config=None, comfy_url=None, snapshot_dir=None, platform_ke
         if not platform_key:
             settings["platform_problem"] = (f"無法判斷平台:{exc}\n也可以用 --platform-key 明確指定"
                                             "(例如 windows-cuda、macos-mps)")
+    settings["device_platform_key"] = settings["device"].get("platform_key")
     if platform_key:
         settings["platform_key"], settings["platform_source"] = platform_key, "--platform-key"
+        if settings["device_platform_key"] and settings["device_platform_key"] != platform_key:
+            settings["platform_mismatch"] = (
+                f"--platform-key {platform_key} 與這台機器快照 "
+                f"{pathmod.join(settings['snapshot_dir'], rc.DEVICE_CONFIG_NAME)} 的 platform_key "
+                f"{settings['device_platform_key']} 不同;本次以 --platform-key 為準")
     elif settings["device"].get("platform_key"):
         settings["platform_key"] = settings["device"]["platform_key"]
         settings["platform_source"] = pathmod.join(settings["snapshot_dir"], rc.DEVICE_CONFIG_NAME)
@@ -108,13 +114,15 @@ def check_platform(template, settings, allow_unverified=False):
     key = settings.get("platform_key")
     platforms = template.data["capability_gate"]["platforms"]
     info = {"platform_key": key, "source": settings.get("platform_source"), "status": None,
-            "allowed_by_flag": False}
+            "device_platform_key": settings.get("device_platform_key"), "allowed_by_flag": False}
     status = template.data["status"]
     if status == "retired":
         problems.append(f"template {template.id} 已 retired,不能再執行")
     elif status == "draft":
         warnings.append(f"template {template.id} 是 draft" + (
             f":{template.data['status_note']}" if template.data.get("status_note") else ""))
+    if settings.get("platform_mismatch"):
+        warnings.append(settings["platform_mismatch"])
     if not key:
         problems.append(settings.get("platform_problem") or "無法判斷平台")
         return problems, warnings, info
@@ -384,7 +392,8 @@ def run_preflight(template, settings, *, verify_hashes=False, allow_unverified=F
                      "graph_canonical_sha256": template.graph_canonical_sha256,
                      "template_json_sha256": template.template_json_sha256},
         "settings": {k: settings.get(k) for k in ("config_path", "config_source", "comfy_url", "comfy_url_source",
-                                                  "comfyui_path", "snapshot_dir", "platform_key", "platform_source")},
+                                                  "comfyui_path", "snapshot_dir", "platform_key", "platform_source",
+                                                  "device_platform_key")},
         "verify_hashes": bool(verify_hashes), "allow_unverified_platform": bool(allow_unverified),
         "checks": checks, "problems": problems, "warnings": warnings,
         "note": "preflight 只讀:沒有上傳、沒有 queue",
@@ -399,6 +408,8 @@ def summary_lines(report):
              f"[preflight] ComfyUI: {s['comfy_url']}({s['comfy_url_source']})  comfyui_path: {s['comfyui_path'] or '(沒有)'}",
              f"[preflight] 平台: {s['platform_key'] or '(未知)'}({s['platform_source'] or '-'})"
              f" → template 狀態 {c['platform'].get('status') or '-'}"]
+    if s.get("device_platform_key") and s["device_platform_key"] != s["platform_key"]:
+        lines[-1] += f"  [機器快照記錄的是 {s['device_platform_key']}]"
     if "object_info" in c:
         info = c["object_info"]
         ok = sum(1 for row in info["selectors"] if row["result"] in ("ok", "not_a_list"))
@@ -407,7 +418,11 @@ def summary_lines(report):
     files = c.get("models") or []
     if files:
         found = sum(1 for row in files if row["actual_size"] is not None)
-        line = f"[preflight] 模型檔: {found}/{len(files)} 存在"
+        sized = sum(1 for row in files if row["actual_size"] is not None
+                    and row["expected_size"] in (None, row["actual_size"]))
+        line = f"[preflight] 模型檔: 存在 {found}/{len(files)},大小相符 {sized}/{len(files)}"
+        if found - sized:
+            line += f"({found - sized} 個檔案存在但大小不符,見下方問題)"
         if report["verify_hashes"]:
             line += f",sha256 相符 {sum(1 for row in files if row['sha256'] == 'match')}/{len(files)}"
         lines.append(line)

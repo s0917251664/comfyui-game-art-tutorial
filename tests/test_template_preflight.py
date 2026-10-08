@@ -207,6 +207,10 @@ class PreflightChecksTests(PreflightFixture, unittest.TestCase):
         target.write_bytes(target.read_bytes() + b"x")
         report = self.preflight(template, self.server(template).url)
         self.assertTrue(any("大小不符" in p and str(target) in p for p in report["problems"]), report["problems"])
+        # 摘要要分開「存在」與「大小相符」,不能只寫 1/1 存在
+        line = next(l for l in P.summary_lines(report) if "模型檔" in l)
+        self.assertIn("存在 1/1,大小相符 0/1", line)
+        self.assertIn("1 個檔案存在但大小不符", line)
 
     def test_unreachable_url_still_checks_files(self):
         template = self.install("video/sam3/track-mask")
@@ -364,6 +368,24 @@ class SettingsTests(unittest.TestCase):
         self.assertIn("--platform-key", settings["platform_problem"])
         forced = P.resolve_settings(None, "http://x:1", platform_key="macos-mps", **kwargs)
         self.assertEqual(("macos-mps", "--platform-key"), (forced["platform_key"], forced["platform_source"]))
+        self.assertIsNone(forced["platform_mismatch"])
+
+    def test_platform_key_differs_from_snapshot_warns_and_records_both(self):
+        files = [r"C:\repo\AGENTS.md", r"C:\repo\tools_src\gameart.py", r"C:\repo\local_config.json",
+                 r"C:\ComfyUI\tools\device_config.json"]
+        data = {r"C:\repo\local_config.json": {"comfyui_path": r"C:\ComfyUI"},
+                r"C:\ComfyUI\tools\device_config.json": {"platform_key": "windows-cuda"}}
+        kwargs = dict(script_dir=r"C:\repo\tools_src", cwd=r"C:\repo", isfile=self.fake_isfile(files), pathmod=ntpath,
+                      read_json=lambda p: data.get(ntpath.normpath(p)))
+        same = P.resolve_settings(None, "http://x:1", platform_key="windows-cuda", **kwargs)
+        self.assertIsNone(same["platform_mismatch"])
+        forced = P.resolve_settings(None, "http://x:1", platform_key="macos-mps", **kwargs)
+        self.assertEqual(("macos-mps", "windows-cuda"), (forced["platform_key"], forced["device_platform_key"]))
+        self.assertIn(r"C:\ComfyUI\tools\device_config.json", forced["platform_mismatch"])
+        template = T.load_template(TEMPLATES, "video/sam3/track-text", repo_root=ROOT)
+        problems, warnings, info = P.check_platform(template, forced, allow_unverified=True)
+        self.assertTrue(any("--platform-key macos-mps" in w and "windows-cuda" in w for w in warnings), warnings)
+        self.assertEqual("windows-cuda", info["device_platform_key"])
 
     def test_url_from_config_when_no_flag(self):
         with tempfile.TemporaryDirectory() as tmp, mock.patch.dict(os.environ, {}, clear=False):
