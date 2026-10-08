@@ -52,6 +52,7 @@ status: current
 
 - [生效中決策](DECISIONS.md)
 - [日期化決策紀錄](decisions/)
+- [ADR 2026-10-08：不採用 comfy-cli／comfy-mcp，只對齊官方範本欄位與 core blueprints](decisions/2026-10-08-official-comfy-tooling.md)
 - [依任務、工具與執行路線查經驗](experiences/)
 - [已移除轉址檔的舊路徑對照](archive/redirect-stubs.md)：舊連結打不開時，從這裡找 canonical 位置。
 - [資產紀錄實測](experiences/asset-records-2026-10-01.md)
@@ -75,6 +76,7 @@ repo 附最小 `.obsidian/app.json` 和 `core-plugins.json`，使用檔案瀏覽
 
 ## 技能庫與執行路線維護
 
+- [重構交接：第 3–8 階段](maintenance/restructure-handoff.md)：Windows 本機 agent 的必守規則、PR 流程、各階段 PR 計畫與回報格式。
 - [技能庫現況與路線界線](maintenance/skill-library.md)：17 個美術技能現行實作、直接 API 與後續候選。
 - [custom node 改名與舊名稱別名](maintenance/custom-node-renames.md)：`GameArt*` 新名稱、隱藏的舊名稱別名與移除條件。
 - [平台驗證流程（smoke suite）](maintenance/validation-workflow.md)：`deploy --yes` → `smoke` → `--record`，技術紀錄不等於美術接受（[R1](rules/candidate-review.md)）。
