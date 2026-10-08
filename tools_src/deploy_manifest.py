@@ -36,6 +36,9 @@ _NODE_PACKAGES = (
 )
 SIMPLE_MASK_REPO_DIR = Path("tools_src/simple_mask_tool")
 SIMPLE_MASK_LOCATIONS = ("tools/simple_mask_tool", "custom_nodes/comfyui-simple-mask-tool")
+# vfx 實作套件只進 tools/，不進 custom_nodes。門面 vfx_alpha_tools.py 仍在 _TOOL_FILES。
+VFX_ALPHA_REPO_DIR = Path("tools_src/vfx_alpha")
+VFX_ALPHA_DEPLOYED_DIR = Path("tools/vfx_alpha")
 
 
 @dataclass(frozen=True)
@@ -59,7 +62,7 @@ def _package_files(repo_root, repo_dir, suffixes):
 
 
 def deploy_manifest(repo_root):
-    """回傳完整的 Entry 清單(依 repo 實際檔案動態展開 comfyui_pipeline/ 與 simple_mask_tool/)。"""
+    """回傳完整的 Entry 清單(依 repo 實際檔案動態展開 pipeline、simple_mask_tool 與 vfx_alpha)。"""
     entries = [Entry(name, Path("tools_src") / name, Path("tools") / name) for name in _TOOL_FILES]
     for prefix, package, locations in _NODE_PACKAGES:
         for location in locations:
@@ -68,6 +71,8 @@ def deploy_manifest(repo_root):
     for location in SIMPLE_MASK_LOCATIONS:
         for rel in _package_files(repo_root, SIMPLE_MASK_REPO_DIR, {".py", ".html", ".js", ".css", ".json"}):
             entries.append(Entry(f"simple-mask-tool/{location}/{rel.as_posix()}", SIMPLE_MASK_REPO_DIR / rel, Path(location) / rel))
+    for rel in _package_files(repo_root, VFX_ALPHA_REPO_DIR, {".py"}):
+        entries.append(Entry(f"vfx_alpha/{rel.as_posix()}", VFX_ALPHA_REPO_DIR / rel, VFX_ALPHA_DEPLOYED_DIR / rel))
     for rel in _package_files(repo_root, PIPELINE_REPO_DIR, {".py", ".json"}):
         entries.append(Entry(f"comfyui_pipeline/{rel.as_posix()}", PIPELINE_REPO_DIR / rel, PIPELINE_DEPLOYED_DIR / rel,
                              profile=rel.parts[0] == "profiles"))
