@@ -8,11 +8,11 @@ import comfy.model_management as management
 # Reuse the deployed, already tested CFR/audio primitives, not ReActor itself.
 sys.path.insert(0, str(Path(folder_paths.base_path) / 'tools'))
 from . import media
-from .contracts import PACKAGE_FILES, record
+from .contracts import LEGACY_NODE_NAMES, NODE_NAME, PACKAGE_FILES, record
 LOADED_HASHES = {n: record(Path(__file__).parent / n)['sha256'] for n in PACKAGE_FILES}
 
 
-class SteveVideoLayers:
+class GameArtVideoLayers:
     @classmethod
     def INPUT_TYPES(cls):
         return {'required': {'plan_path': ('STRING', {'default': ''}),
@@ -21,7 +21,7 @@ class SteveVideoLayers:
     RETURN_TYPES = ()
     OUTPUT_NODE = True
     FUNCTION = 'execute'
-    CATEGORY = 'Steve/Video'
+    CATEGORY = 'GameArt/Video'
 
     @classmethod
     def IS_CHANGED(cls, **kwargs):
@@ -46,5 +46,14 @@ class SteveVideoLayers:
                        'text': [json.dumps({'actual': manifest['actual'], 'technical_status': manifest['technical_status'], 'server_manifest': str(dest / 'manifest.json')})]}}
 
 
-NODE_CLASS_MAPPINGS = {'SteveVideoLayers': SteveVideoLayers}
-NODE_DISPLAY_NAME_MAPPINGS = {'SteveVideoLayers': 'Steve · SAM Video Masks / Ordered Layers'}
+def legacy_alias(cls, name):
+    """Same node under its old class name. DEPRECATED hides it from the node
+    search/library (ComfyUI reports `deprecated: true`); old workflows still run."""
+    return type(name, (cls,), {'DEPRECATED': True, '__module__': cls.__module__})
+
+
+NODE_CLASS_MAPPINGS = {NODE_NAME: GameArtVideoLayers}
+NODE_DISPLAY_NAME_MAPPINGS = {NODE_NAME: 'GameArt · SAM Video Masks / Ordered Layers'}
+for _new, _old in LEGACY_NODE_NAMES.items():
+    NODE_CLASS_MAPPINGS[_old] = legacy_alias(NODE_CLASS_MAPPINGS[_new], _old)
+    NODE_DISPLAY_NAME_MAPPINGS[_old] = 'SAM Video Masks / Ordered Layers (legacy node name)'

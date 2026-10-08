@@ -14,7 +14,8 @@ import torch
 from PIL import Image
 
 from . import media
-from .contracts import SOURCE_COMMIT, CORE_HASHES, MODEL_HASHES, checked, record
+from .contracts import (SOURCE_COMMIT, CORE_HASHES, MODEL_HASHES, checked, record, LOAD_NODE, REACTOR_NODE,
+                        SOURCE_TYPE, LEGACY_NODE_NAMES, LEGACY_SOURCE_TYPE)
 
 
 def installation_provenance():
@@ -77,15 +78,15 @@ class ReActorEngine:
         return outputs
 
 
-class SteveLoadFaceSwapVideo:
+class GameArtLoadFaceSwapVideo:
     @classmethod
     def INPUT_TYPES(cls):
         return {'required':{'video_path':('STRING',{'default':''}),
                             'reference_path':('STRING',{'default':''})}}
-    RETURN_TYPES=('STEVE_FACE_SWAP_SOURCE',)
+    RETURN_TYPES=(SOURCE_TYPE,)
     RETURN_NAMES=('source',)
     FUNCTION='load'
-    CATEGORY='Steve/Video'
+    CATEGORY='GameArt/Video'
 
     @classmethod
     def IS_CHANGED(cls,video_path,reference_path):
@@ -107,11 +108,11 @@ class SteveLoadFaceSwapVideo:
         return ({'video':str(paths[0]),'reference':str(paths[1]),'metadata':meta},)
 
 
-class SteveReActorVideo:
+class GameArtReActorVideo:
     @classmethod
     def INPUT_TYPES(cls):
         return {'required':{
-            'source':('STEVE_FACE_SWAP_SOURCE',),
+            'source':(SOURCE_TYPE,),
             'start':('FLOAT',{'default':0.,'min':0.,'max':60.}),
             'end':('FLOAT',{'default':-1.,'min':-1.,'max':60.}),
             'edit_ranges':('STRING',{'default':'[[0, 1]]','multiline':True}),
@@ -123,7 +124,7 @@ class SteveReActorVideo:
     RETURN_TYPES=()
     FUNCTION='execute'
     OUTPUT_NODE=True
-    CATEGORY='Steve/Video'
+    CATEGORY='GameArt/Video'
 
     @classmethod
     def IS_CHANGED(cls,**kwargs):
@@ -165,6 +166,24 @@ class SteveReActorVideo:
                                         'warnings':manifest['warnings'],'server_pid':os.getpid()})]}}
 
 
-NODE_CLASS_MAPPINGS={'SteveLoadFaceSwapVideo':SteveLoadFaceSwapVideo,'SteveReActorVideo':SteveReActorVideo}
-NODE_DISPLAY_NAME_MAPPINGS={'SteveLoadFaceSwapVideo':'Steve · Read Video and Face Reference',
-                           'SteveReActorVideo':'Steve · ReActor Video + Audio Output'}
+def _legacy_reactor_inputs(cls):
+    spec=GameArtReActorVideo.INPUT_TYPES()
+    spec['required']['source']=(LEGACY_SOURCE_TYPE,)
+    return spec
+
+
+def legacy_alias(cls,name,**overrides):
+    """Same node under its old class name. DEPRECATED hides it from the node
+    search/library (ComfyUI reports `deprecated: true`); old workflows still run."""
+    return type(name,(cls,),{'DEPRECATED':True,'__module__':cls.__module__,**overrides})
+
+
+NODE_CLASS_MAPPINGS={LOAD_NODE:GameArtLoadFaceSwapVideo,REACTOR_NODE:GameArtReActorVideo}
+NODE_DISPLAY_NAME_MAPPINGS={LOAD_NODE:'GameArt · Read Video and Face Reference',
+                           REACTOR_NODE:'GameArt · ReActor Video + Audio Output'}
+# Legacy pair keeps the legacy socket type end to end, so saved links still connect.
+_LEGACY_OVERRIDES={LOAD_NODE:{'RETURN_TYPES':(LEGACY_SOURCE_TYPE,)},
+                   REACTOR_NODE:{'INPUT_TYPES':classmethod(_legacy_reactor_inputs)}}
+for _new,_old in LEGACY_NODE_NAMES.items():
+    NODE_CLASS_MAPPINGS[_old]=legacy_alias(NODE_CLASS_MAPPINGS[_new],_old,**_LEGACY_OVERRIDES[_new])
+    NODE_DISPLAY_NAME_MAPPINGS[_old]=NODE_DISPLAY_NAME_MAPPINGS[_new].replace('GameArt · ','')+' (legacy node name)'

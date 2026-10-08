@@ -8,6 +8,10 @@ MODEL_REVISION = 'ee5bba1d82bb8749febdf90f45e84b687142ba03'
 PINS = {'av': '18.1.0', 'opencv-python': '5.0.0.93',
         'torch': '2.13.0+cu130', 'transformers': '5.15.0'}
 PACKAGE_FILES = ('__init__.py', 'contracts.py', 'media.py', 'nodes.py')
+# ComfyUI class name (D9). The legacy name stays registered as a hidden,
+# deprecated alias so saved workflows keep loading; removal is phase 8.
+NODE_NAME = 'GameArtVideoLayers'
+LEGACY_NODE_NAMES = {NODE_NAME: 'SteveVideoLayers'}
 MODEL_HASHES = {
     'config.json': '97ff9f65b76d107acda4247885f0a5555d0048850ae3c5f97183df289aaecde9',
     'model.safetensors': '0a4067b11ce1e23d5229203f11c718a823060d15a4b23fa2372a7d4b77cbbc60',

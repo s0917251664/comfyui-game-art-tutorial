@@ -101,10 +101,23 @@ class FaceSwapTests(unittest.TestCase):
             tool.render(self.args(),FakeClient(truncated=True),{})
         self.assertFalse((self.root/'result').exists())
 
+    def test_live_schema_requires_new_node_names(self):
+        from comfyui_face_swap_video.contracts import LEGACY_NODE_NAMES
+        current={'GameArtLoadFaceSwapVideo':{},'GameArtReActorVideo':{},'ReActorFaceSwap':{}}
+        client.check_live_nodes(current)
+        client.check_live_nodes({**current,**{old:{} for old in LEGACY_NODE_NAMES.values()}})
+        # 只有舊名稱:已部署但 ComfyUI 還沒重啟,要明確要求重啟,不退回舊名稱
+        legacy_only={old:{} for old in LEGACY_NODE_NAMES.values()}
+        legacy_only['ReActorFaceSwap']={}
+        with self.assertRaisesRegex(ValueError,'restart ComfyUI'):
+            client.check_live_nodes(legacy_only)
+        with self.assertRaisesRegex(ValueError,'Missing ComfyUI nodes: ReActorFaceSwap'):
+            client.check_live_nodes({'GameArtLoadFaceSwapVideo':{},'GameArtReActorVideo':{}})
+
     def test_fixed_graph_routes_entire_video_processing_to_comfy(self):
         graph=client.build_graph('input.mkv','reference.png',0,-1,[(0,1)],1,8,'preserve','preserve','test')
-        self.assertEqual(graph['1']['class_type'],'SteveLoadFaceSwapVideo')
-        self.assertEqual(graph['2']['class_type'],'SteveReActorVideo')
+        self.assertEqual(graph['1']['class_type'],'GameArtLoadFaceSwapVideo')
+        self.assertEqual(graph['2']['class_type'],'GameArtReActorVideo')
         self.assertEqual(graph['2']['inputs']['source'],['1',0])
         self.assertEqual(graph['2']['inputs']['face_index'],1)
         self.assertEqual(graph['2']['inputs']['audio'],'preserve')
@@ -113,6 +126,8 @@ class FaceSwapTests(unittest.TestCase):
                 if isinstance(value,list): self.assertIn(value[0],graph)
         ui=client.build_ui_workflow(graph)
         ids={n['id'] for n in ui['nodes']}
+        self.assertEqual([n['type'] for n in ui['nodes']],['GameArtLoadFaceSwapVideo','GameArtReActorVideo'])
+        self.assertEqual({link[5] for link in ui['links']},{'GAMEART_FACE_SWAP_SOURCE'})
         self.assertEqual(ui['last_link_id'],max(link[0] for link in ui['links']))
         for node in ui['nodes']: self.assertEqual(len(node['pos']),2)
         for link in ui['links']:
