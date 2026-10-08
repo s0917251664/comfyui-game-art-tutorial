@@ -1262,7 +1262,7 @@ generated: true
 - 摘要：以第 0 幀遮罩指定一個物件，SAM3 追蹤整支影片，輸出逐幀灰階遮罩（白色＝選取）
 - 媒體：video
 - 能力：object_track
-- 狀態：technical_pass（v1.0.1）
+- 狀態：technical_pass（v1.0.2）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda technical_pass、macos-mps untested
@@ -1276,7 +1276,7 @@ generated: true
 - 摘要：以英文名詞指定物件，SAM3 追蹤整支影片，輸出逐幀灰階遮罩（白色＝選取）
 - 媒體：video
 - 能力：object_track
-- 狀態：technical_pass（v1.0.1）
+- 狀態：technical_pass（v1.0.2）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda technical_pass、macos-mps untested
@@ -1290,7 +1290,7 @@ generated: true
 - 摘要：把參考角色置入來源影片（保留來源背景），以 SAM2 點位決定替換範圍
 - 媒體：video
 - 能力：wan_animate_mix
-- 狀態：technical_pass（v1.1.1）
+- 狀態：technical_pass（v1.1.2）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_controlnet_aux [registry]、comfyui-kjnodes [registry]、comfyui-segment-anything-2 [registry]
 - 平台：windows-cuda technical_pass、macos-mps untested
@@ -1304,7 +1304,7 @@ generated: true
 - 摘要：把參考角色置入來源影片（保留來源背景），以 SAM2 點位決定替換範圍；兩段 33＋28＝61 幀
 - 媒體：video
 - 能力：wan_animate_mix
-- 狀態：technical_pass（v1.1.1）
+- 狀態：technical_pass（v1.1.2）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_controlnet_aux [registry]、comfyui-kjnodes [registry]、comfyui-segment-anything-2 [registry]
 - 平台：windows-cuda technical_pass、macos-mps untested
@@ -1318,7 +1318,7 @@ generated: true
 - 摘要：參考角色跟著來源影片的動作動起來（背景由參考圖與 prompt 決定）
 - 媒體：video
 - 能力：wan_animate_move
-- 狀態：technical_pass（v1.1.1）
+- 狀態：technical_pass（v1.1.2）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_controlnet_aux [registry]
 - 平台：windows-cuda technical_pass、macos-mps untested
@@ -1332,7 +1332,7 @@ generated: true
 - 摘要：參考角色跟著來源影片的動作動起來（背景由參考圖與 prompt 決定）；兩段 33＋28＝61 幀
 - 媒體：video
 - 能力：wan_animate_move
-- 狀態：technical_pass（v1.1.1）
+- 狀態：technical_pass（v1.1.2）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_controlnet_aux [registry]
 - 平台：windows-cuda technical_pass、macos-mps untested
@@ -1346,7 +1346,7 @@ generated: true
 - 摘要：用參考圖驅動角色跟著來源影片動，或把來源影片裡的人換成參考角色；SAM3 依文字追蹤人物並以彩色遮罩綁定身份
 - 媒體：video
 - 能力：scail2
-- 狀態：technical_pass（v1.0.1）
+- 狀態：technical_pass（v1.0.2）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda technical_pass、macos-mps untested
@@ -1360,7 +1360,7 @@ generated: true
 - 摘要：用參考圖驅動角色跟著來源影片動，或把來源影片裡的人換成參考角色；SAM3 依文字追蹤人物並以彩色遮罩綁定身份
 - 媒體：video
 - 能力：scail2
-- 狀態：technical_pass（v1.0.1）
+- 狀態：technical_pass（v1.0.2）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda technical_pass、macos-mps untested
