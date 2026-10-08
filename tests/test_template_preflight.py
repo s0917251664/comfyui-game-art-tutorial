@@ -1,4 +1,4 @@
-"""PR 2.2:template preflight(平台閘門、/object_info、模型檔、sha256 快取、cuda 節點)。
+"""PR 2.2:template preflight(平台閘門、/object_info、模型檔、sha256 快取、cuda 節點);PR 2.3 的修正也在這裡。
 
 用假的 ComfyUI(本機 HTTP server 只回 /object_info)和暫存的小模型檔;Windows 路徑用 ntpath 模擬。
 """
@@ -455,23 +455,79 @@ class PreflightCliTests(PreflightFixture, unittest.TestCase):
         with self.assertRaises(SystemExit):
             self.run_cli("video/sam3/track-mask", "--dry-run", "--preflight")
 
-    def test_real_run_runs_preflight_then_stops(self):
+    def test_real_run_runs_preflight_then_checks_inputs(self):
         template = self.install("video/sam3/track-text")
         server = self.server(template)
         config = self.write_config()
         clip = Path(self.tmp) / "clip.mp4"
         clip.write_bytes(b"not really a video")
+        out_dir = Path(self.tmp) / "run"
         code, out, err = self.run_cli("video/sam3/track-text", "--config", str(config), "--comfy-url", server.url,
-                                      "--set", "track_text=mallet", "--set", f"source_video={clip}")
-        self.assertEqual(2, code)
+                                      "--set", "track_text=mallet", "--set", f"source_video={clip}",
+                                      "--output-dir", str(out_dir))
+        # preflight 通過 → pre 檢查讀不了假影片(或缺 PyAV)→ 結束碼 1,沒有上傳或 queue
+        self.assertEqual(1, code, out + err)
         self.assertIn("結果: 通過", out)
-        self.assertIn("PR 2.3", err)
-        self.assertEqual([("GET", "/object_info")], server.requests)
+        self.assertEqual("pre", json.loads((out_dir / "run.result.json").read_text(encoding="utf-8"))["failure"]["step"])
+        self.assertEqual([], [r for r in server.requests if r[0] == "POST"])
         # 實際執行時缺上傳檔案 → 參數錯誤(2),不會連線
         code, _, err = self.run_cli("video/sam3/track-text", "--config", str(config), "--comfy-url", server.url,
                                     "--set", "track_text=mallet")
         self.assertEqual(2, code)
         self.assertIn("source_video", err)
+
+    def test_preflight_platform_mismatch_recorded_in_report(self):
+        template = self.install("video/sam3/track-text")
+        server = self.server(template)
+        config = self.write_config(server.url)
+        out_dir = Path(self.tmp) / "pf"
+        code, out, err = self.run_cli("video/sam3/track-text", "--preflight", "--config", str(config),
+                                      "--platform-key", "macos-mps", "--allow-unverified-platform",
+                                      "--output-dir", str(out_dir))
+        self.assertEqual(0, code, out + err)
+        report = json.loads((out_dir / "preflight.json").read_text(encoding="utf-8"))
+        self.assertEqual(("macos-mps", "windows-cuda"),
+                         (report["settings"]["platform_key"], report["settings"]["device_platform_key"]))
+        self.assertIn("機器快照記錄的是 windows-cuda", out)
+        self.assertTrue(any("--platform-key macos-mps" in w for w in report["warnings"]))
+
+    def test_stdout_is_flushed_before_stderr(self):
+        """stdout 有緩衝時,stderr 的訊息不能跑到 stdout 已印的內容前面。"""
+        events = []
+
+        class Buffered(io.StringIO):
+            def __init__(self, name):
+                super().__init__()
+                self.name, self.pending = name, ""
+
+            def write(self, text):
+                self.pending += text
+                return len(text)
+
+            def flush(self):
+                if self.pending:
+                    events.append((self.name, self.pending))
+                    self.pending = ""
+
+        class Unbuffered(io.StringIO):
+            def write(self, text):
+                events.append(("err", text))
+                return len(text)
+
+        template = self.install("video/sam3/track-text")
+        config = self.write_config()
+        out = Buffered("out")
+        # dry-run:graph 印到 stdout,摘要到 stderr
+        cli.main(["video/sam3/track-text", "--dry-run", "--set", "track_text=x"], root=self.root, out=out,
+                 err=Unbuffered(), rng=random.Random(5))
+        self.assertEqual("out", events[0][0], events[:2])
+        # preflight 後的錯誤訊息(結束碼 2)也要在 stdout 之後
+        events.clear()
+        out = Buffered("out")
+        out.write("[preflight] 前面的輸出\n")
+        cli.main(["video/sam3/track-text", "--preflight", "--config", str(config), "--timeout", "5"], root=self.root,
+                 out=out, err=Unbuffered(), rng=random.Random(5))
+        self.assertEqual(["out", "err"], [e[0] for e in events[:2]], events)
 
 
 class RealTemplatePinsTests(unittest.TestCase):

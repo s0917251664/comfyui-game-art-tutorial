@@ -1,4 +1,4 @@
-"""`gameart.py run`:固定 API graph template 的 list／show／--dry-run／--preflight。
+"""`gameart.py run`:固定 API graph template 的 list／show／--dry-run／--preflight／實際執行。
 
     python tools_src/gameart.py run list [--json]
     python tools_src/gameart.py run show <template> [--json]
@@ -6,10 +6,11 @@
         [--option NAME] [--no-option NAME] [--output-dir DIR] [--json]
     python tools_src/gameart.py run <template> --preflight [--config local_config.json] [--comfy-url URL]
         [--verify-hashes] [--allow-unverified-platform] [--platform-key KEY] [--set ...] [--output-dir DIR] [--json]
+    python tools_src/gameart.py run <template> --set ... [--config ...] [--timeout 秒] [--output-dir DIR] [--json]
 
 --dry-run 不連 ComfyUI;上傳欄位在 graph 裡顯示為 ``<upload:slot>``。--preflight 只讀(GET /object_info、
-讀模型檔),不上傳、不 queue,檢查內容見 preflight.py。不加這兩個旗標(實際執行)時會先跑同樣的 preflight;
-上傳、queue、下載與 result manifest 在 PR 2.3 加入,目前 preflight 通過後以結束碼 2 停止。
+讀模型檔),不上傳、不 queue,檢查內容見 preflight.py。不加這兩個旗標(實際執行)時先跑同樣的 preflight,
+通過才上傳、queue、下載並寫 run.result.json(見 run.py);preflight 擋下時也會寫 status=failed 的 manifest。
 """
 import argparse
 import json
@@ -20,6 +21,7 @@ from pathlib import Path
 
 from .. import runtime_config as rc
 from . import preflight as P
+from . import run as R
 from . import template as T
 
 TOOLS_SRC = Path(__file__).resolve().parents[2]
@@ -230,7 +232,15 @@ def _input_file_warnings(resolution, mode):
     return warnings, problems
 
 
-def _hash_cache_path(args, settings):
+def _eprint(message, out, err):
+    # stdout 可能有緩衝:先 flush,stderr 的訊息才不會跑到前面的輸出之前
+    out.flush()
+    print(message, file=err, flush=True)
+
+
+def _hash_cache_path(args, settings, folder=None):
+    if folder:
+        return os.path.join(os.path.dirname(os.fspath(folder)), P.HASH_CACHE_NAME)
     if args.output_dir:
         return os.path.join(os.path.dirname(os.path.abspath(os.path.expanduser(args.output_dir))), P.HASH_CACHE_NAME)
     if settings.get("repo_root"):
@@ -240,13 +250,19 @@ def _hash_cache_path(args, settings):
 
 def cmd_run(args, root, out, err, rng=None, fetch_object_info=None):
     """``--dry-run``:只產生 graph。``--preflight``:加上平台、ComfyUI 與模型檔檢查。
-    兩者都沒有(實際執行):先做和 --preflight 相同的檢查,通過後才會上傳與 queue(PR 2.3)。"""
+    兩者都沒有(實際執行):先做和 --preflight 相同的檢查,通過後才上傳、queue、下載(見 run.py)。"""
     mode = "dry-run" if args.dry_run else "preflight" if args.preflight else "run"
     if mode == "dry-run" and (args.verify_hashes or args.allow_unverified_platform):
         raise CliError("--verify-hashes／--allow-unverified-platform 要搭配 --preflight(dry-run 不連線)")
+    if args.timeout is not None and mode != "run":
+        raise CliError("--timeout 只用在實際執行(--dry-run／--preflight 不會 queue)")
+    if args.timeout is not None and not args.timeout > 0:
+        raise CliError(f"--timeout 必須大於 0,收到 {args.timeout:g}")
+    if args.run_id and not R.RUN_ID_RE.match(args.run_id):
+        raise CliError(f"--run-id 只能用英數字、- 和 _(最多 64 字):{args.run_id!r}")
     template = _load(root, args.template)
     values, options = _collect_values(args)
-    run_id = args.run_id or uuid.uuid4().hex[:12]
+    run_id = args.run_id or (uuid.uuid4().hex if mode == "run" else uuid.uuid4().hex[:12])
     resolution = T.resolve(template, values, options, run_id=run_id, dry_run=(mode != "run"), rng=rng,
                            allow_missing=(mode == "preflight"))
     graph, changes = None, []
@@ -255,6 +271,9 @@ def cmd_run(args, root, out, err, rng=None, fetch_object_info=None):
     file_warnings, file_problems = _input_file_warnings(resolution, mode)
     warnings = list(resolution["warnings"]) + file_warnings
     summary = _dry_run_summary(template, resolution, run_id, graph, changes, warnings)
+    if mode == "run":
+        return _cmd_execute(args, template, resolution, run_id, warnings, file_problems, summary, out, err,
+                            fetch_object_info)
     folder = _prepare_output_dir(args.output_dir) if args.output_dir else None
 
     if mode == "dry-run":
@@ -267,23 +286,14 @@ def cmd_run(args, root, out, err, rng=None, fetch_object_info=None):
         else:
             if not folder:
                 print(_dump(graph), file=out)
+            out.flush()
             for line in _summary_lines(summary):
                 print(line, file=err)
         return 0
 
-    try:
-        settings = P.resolve_settings(args.config, args.comfy_url, args.snapshot_dir, args.platform_key,
-                                      script_dir=TOOLS_SRC)
-    except P.PreflightConfigError as exc:
-        raise CliError(str(exc)) from exc
-    report = P.run_preflight(template, settings, verify_hashes=args.verify_hashes,
-                             allow_unverified=args.allow_unverified_platform,
-                             hash_cache_path=_hash_cache_path(args, settings) if args.verify_hashes else None,
-                             fetch_object_info=fetch_object_info, progress=lambda line: print(f"[preflight] {line}", file=err))
-    report["problems"] = file_problems + report["problems"]
-    report["warnings"] = warnings + report["warnings"]
-    if report["problems"]:
-        report["status"] = P.BLOCKED
+    settings = _resolve_settings(args)
+    report = _preflight(args, template, settings, warnings, file_problems, fetch_object_info, err,
+                        _hash_cache_path(args, settings))
     report["run_id"] = run_id
     report["slot_values"] = resolution["slot_values"]
     report["options"] = resolution["options"]
@@ -303,12 +313,57 @@ def cmd_run(args, root, out, err, rng=None, fetch_object_info=None):
         for name in ("preflight", "graph"):
             if name in report.get("files", {}):
                 print(f"[preflight] 已寫入 {report['files'][name]}", file=out)
-    if report["status"] != P.PASS:
-        return 1
-    if mode == "run":
-        print("run: preflight 通過;實際上傳與 queue 在 PR 2.3 加入,這次沒有送出任何東西", file=err)
-        return 2
-    return 0
+    out.flush()
+    return 0 if report["status"] == P.PASS else 1
+
+
+def _resolve_settings(args):
+    try:
+        return P.resolve_settings(args.config, args.comfy_url, args.snapshot_dir, args.platform_key,
+                                  script_dir=TOOLS_SRC)
+    except P.PreflightConfigError as exc:
+        raise CliError(str(exc)) from exc
+
+
+def _preflight(args, template, settings, warnings, file_problems, fetch_object_info, err, hash_cache_path):
+    report = P.run_preflight(template, settings, verify_hashes=args.verify_hashes,
+                             allow_unverified=args.allow_unverified_platform,
+                             hash_cache_path=hash_cache_path if args.verify_hashes else None,
+                             fetch_object_info=fetch_object_info,
+                             progress=lambda line: print(f"[preflight] {line}", file=err, flush=True))
+    report["problems"] = file_problems + report["problems"]
+    report["warnings"] = warnings + report["warnings"]
+    if report["problems"]:
+        report["status"] = P.BLOCKED
+    return report
+
+
+def _cmd_execute(args, template, resolution, run_id, warnings, file_problems, summary, out, err, fetch_object_info):
+    """實際執行:preflight → run.execute。preflight 擋下也寫 failed manifest(結束碼 1)。"""
+    settings = _resolve_settings(args)
+    if args.output_dir:
+        folder = _prepare_output_dir(args.output_dir)
+    else:
+        if not settings.get("repo_root"):
+            raise CliError("找不到 repo 根目錄,請用 --output-dir 指定輸出資料夾")
+        folder = _prepare_output_dir(R.default_output_dir(settings["repo_root"], template.id, run_id))
+    progress = err if args.json else out
+    report = _preflight(args, template, settings, warnings, file_problems, fetch_object_info, err,
+                        _hash_cache_path(args, settings, folder))
+    report.update(run_id=run_id, slot_values=resolution["slot_values"], options=resolution["options"],
+                  patched_graph_sha256=summary["patched_graph_sha256"], note="實際執行前的 preflight(只讀)")
+    (folder / PREFLIGHT_FILE).write_text(_dump(report) + "\n", encoding="utf-8")
+    for line in P.summary_lines(report):
+        print(line, file=progress)
+    progress.flush()
+    code, manifest, path = R.execute(template, resolution, settings, report, folder, run_id=run_id,
+                                     timeout=args.timeout or R.DEFAULT_TIMEOUT, out=progress)
+    if args.json:
+        print(_dump({"status": manifest["status"], "exit_code": code, "result": path,
+                     "prompt_id": manifest["prompt_id"], "failure": manifest["failure"],
+                     "outputs": [o["path"] for o in manifest["outputs"]]}), file=out)
+    out.flush()
+    return code
 
 
 def _summary_lines(summary):
@@ -346,9 +401,11 @@ def build_show_parser():
 def build_run_parser():
     p = argparse.ArgumentParser(
         prog="gameart.py run",
-        description="依 template 產生要送出的 graph。--dry-run 不連線;--preflight 檢查平台、ComfyUI 與模型檔;"
-                    "實際上傳與 queue 在 PR 2.3。子命令: run list、run show <template>",
-        epilog="結束碼:0 通過;1 preflight 擋下;2 參數、設定或 template 錯誤(以及目前還不能實際送出)")
+        description="依 template 執行固定 graph。--dry-run 不連線;--preflight 檢查平台、ComfyUI 與模型檔;"
+                    "不加這兩個旗標時先 preflight,通過才上傳、queue、下載並寫 run.result.json。"
+                    "子命令: run list、run show <template>",
+        epilog="結束碼:0 通過(實際執行時=完成且技術檢查通過,美術接受仍待人工);1 preflight 擋下或執行失敗"
+               "(仍會寫 status=failed 的 run.result.json);2 參數、設定或 template 錯誤")
     p.add_argument("template", help="template id,例如 video/wan-animate/mix")
     mode = p.add_mutually_exclusive_group()
     mode.add_argument("--dry-run", action="store_true", help="只驗證並輸出 patched graph,不連線")
@@ -359,7 +416,9 @@ def build_run_parser():
     p.add_argument("--values", metavar="FILE.json", help="一次給多個 slot 的 JSON 檔;--set 優先")
     p.add_argument("--option", action="append", metavar="NAME", help="啟用 option(例如 keep_audio)")
     p.add_argument("--no-option", action="append", metavar="NAME", help="停用 option")
-    p.add_argument("--output-dir", help="寫入 workflow_api.dryrun.json 與 dryrun.json／preflight.json(必須不存在或是空資料夾)")
+    p.add_argument("--output-dir", help="dry-run／preflight 寫入 workflow_api.dryrun.json 與 dryrun.json／preflight.json;"
+                                        "實際執行寫入所有紀錄與輸出(預設 <repo>/output/runs/<日期>-<template>-<run_id>)。"
+                                        "必須不存在或是空資料夾")
     p.add_argument("--config", help="local_config.json(相對路徑以 repo 根目錄解析;從 repo 執行時預設用 <repo>/local_config.json)")
     p.add_argument("--comfy-url", help="覆寫 ComfyUI URL(優先順序:--comfy-url > COMFY_URL/COMFYUI_URL > 設定檔)")
     p.add_argument("--snapshot-dir", help="機器快照資料夾(device_config.json);預設 <comfyui_path>/tools")
@@ -367,8 +426,11 @@ def build_run_parser():
     p.add_argument("--verify-hashes", action="store_true", help="完整計算模型檔 sha256(有快取;預設只核對大小)")
     p.add_argument("--allow-unverified-platform", action="store_true",
                    help="平台狀態不是 technical_pass(或 graph 寫死 cuda)時仍放行;結果只能當技術試驗")
+    p.add_argument("--timeout", type=float, help=f"實際執行時等待 ComfyUI 完成的秒數(預設 {R.DEFAULT_TIMEOUT});"
+                                                 "逾時不重送,只會刪除自己還在 pending 的 prompt")
     p.add_argument("--run-id", help=argparse.SUPPRESS)  # 測試與比對用:固定 output prefix
-    p.add_argument("--json", action="store_true", help="stdout 只輸出一個 JSON(摘要＋graph)")
+    p.add_argument("--json", action="store_true",
+                   help="stdout 只輸出一個 JSON(dry-run:摘要＋graph;preflight:報告;實際執行:狀態與 manifest 路徑)")
     return p
 
 
@@ -385,5 +447,5 @@ def main(argv=None, *, root=None, out=None, err=None, rng=None, fetch_object_inf
         return cmd_run(build_run_parser().parse_args(argv), root, out, err, rng=rng,
                        fetch_object_info=fetch_object_info)
     except (CliError, T.TemplateError) as exc:
-        print(f"run: {exc}", file=err)
+        _eprint(f"run: {exc}", out, err)
         return 2
