@@ -35,7 +35,7 @@
 3. 先不連線檢查填值：`<py> tools_src/gameart.py run video/wan-animate/mix --values values.json --dry-run`。會列出改到的欄位，slot 值不合規則（幀數、寬高倍數、點位超出範圍等）在這一步就會擋下。
 4. live preflight：同一行改成 `--preflight`。檢查平台狀態、ComfyUI 節點、模型檔大小（加 `--verify-hashes` 完整核對 sha256，有快取）。結束碼 1 就停，照訊息回報；不要自行下載模型、換相似名稱的模型，或加 `--allow-unverified-platform`（要使用者確認，結果只能當技術試驗）。
 5. 實際執行：拿掉 `--preflight`，需要時加 `--option keep_audio`。runner 依序：重跑 preflight → 檢查輸入（FPS、CFR、幀數範圍）→ 上傳到 ComfyUI 的 `input/<run_id>/` → 送出 → 只以該 prompt 的 history `success` 且 `completed` 判定完成 → 下載 → 檢查輸出（寬高、幀數、16 FPS、pts 等間隔、音軌是否符合 option）→ 抽 first／middle／last 關鍵幀 → 寫 `run.result.json`。`--timeout` 預設 1800 秒。
-6. 看結果：輸出資料夾預設 `output/runs/<日期>-<template>-<run_id 前 8 碼>/`，影片在 `outputs/video/`，關鍵幀在 `keyframes/`，`run.result.json` 記錄 prompt_id、seed、slot 值、輸入／輸出 sha256、量測值與每一項檢查。
+6. 看結果：輸出資料夾預設 `output/runs/<日期>-<template id>-<run_id 前 8 碼>/`（template id 的 `/` 換成 `-`，例如 `20261008-video-wan-animate-move-1a2b3c4d/`），影片在 `outputs/video/`，關鍵幀在 `keyframes/`，`run.result.json` 記錄 prompt_id、seed、slot 值、輸入／輸出 sha256、量測值與每一項檢查。
 7. 人工檢視與審核：見下方「驗收」。
 
 ### 結束碼與失敗

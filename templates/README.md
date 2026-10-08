@@ -47,7 +47,7 @@ python tools_src/gameart.py run video/sam3/track-mask --set source_video=clip.mp
 4. `POST /prompt`（帶 `client_id`），輪詢 history；只有 `status_str == "success"` 且 `completed` 才算完成。逾時（`--timeout`，預設 1800 秒）不重送、不呼叫全域 `/interrupt`，只刪除確認是自己送出、還在 pending 的 prompt；已經在跑的 job 會繼續跑完。按 Ctrl+C 也一樣。
 5. 下載 template `outputs` 宣告的 node，再跑 post 步驟：影片輸出核對寬高、幀數、FPS、pts 是否等間隔、音軌，抽 first／middle／last 關鍵幀；PNG 序列核對張數、尺寸、灰階；SAM3 另外產生遮罩疊圖預覽（選用，失敗只提醒）。
 
-輸出資料夾預設是 `<repo>/output/runs/<日期>-<template>-<run_id 前 8 碼>/`（`--output-dir` 可改，必須不存在或是空的），內含 `preflight.json`、`uploads.json`、`workflow_api.json`（實際送出的 graph）、`queue.json`、`history.json`、`outputs/<output id>/`、`keyframes/`、`run.log`、`run.result.json`。
+輸出資料夾預設是 `<repo>/output/runs/<日期>-<template id>-<run_id 前 8 碼>/`，template id 裡的 `/` 換成 `-`，例如 `20261008-video-sam3-track-mask-1a2b3c4d/`（`--output-dir` 可改，必須不存在或是空的），內含 `preflight.json`、`uploads.json`、`workflow_api.json`（實際送出的 graph）、`queue.json`、`history.json`、`outputs/<output id>/`、`keyframes/`、`run.log`、`run.result.json`。
 
 `run.result.json` 的 kind 是 `template_run_result`：記錄 template 版本與 hash、prompt_id、client_id、run_id、seed、送出 graph 的 sha256、模型、slot 值、輸入檔與上傳位置、輸出檔 sha256 與量測值、平台、ComfyUI 版本、時間（`timing.execution_seconds` 是 ComfyUI history 記錄的執行時間）、每一項檢查結果。影片的 `fps` 是數字（整數幀率記成 `16`，非整數記成小數），分數形式另外記在 `fps_rational`（例如 `"16/1"`、`"30000/1001"`）。任何一步失敗都會寫 `status: failed` 和 `failure`（步驟、prompt_id、錯誤），已下載的檔案保留。技術檢查通過不等於美術接受：`content_review` 一律是 `pending`，接受與否由使用者決定後用 `gameart.py review list|accept|reject` 記錄（failed 的結果不能 accept）。延伸段 template 會提醒「延伸段接縫（第 32/33 幀前後）需要人工檢查」，也寫進 manifest 的 warnings。
 

@@ -17,7 +17,7 @@
 | 靜幀轉短片、循環特效、接片、運鏡 | `comfyui-video-gen` | `generate.py img2video` / `fx_loop` / `video_concat` / `camera_move` / `character_video` |
 | 劇情多鏡、配音 | `comfyui-film-workflow` | `film_audio.py voices` / `tts` / `dub` |
 | 影片換臉 | `comfyui-face-swap-workflow` | `face_swap.py preflight` / `swap` |
-| 影片遮罩分層 | `comfyui-video-layers` | `video_layers.py preflight` / `run` |
+| 影片物件遮罩追蹤、遮罩分層 | `comfyui-video-layers` | 遮罩追蹤預設：SAM3 固定 template `gameart.py run video/sam3/track-mask`（第 0 幀手繪起手）或 `video/sam3/track-text`（英文名詞起手），先 `--preflight` 再實際執行；SAM3 不可用時才用 SAM2 備援 `video_layers.py preflight` / `run`。2D 層合成（compose）一律用 `video_layers.py` |
 | 影片局部重繪（美術標記物件，只改遮罩內） | `comfyui-video-gen` | 預設：SAM3 固定 template（`gameart.py run video/sam3/track-mask` 或 `track-text`，先 `--preflight`）→ 看 `keyframes/mask_preview.png` → `generate.py video_inpaint --masks <run>/outputs/masks`；SAM3 不可用時才改用 SAM2：`gameart.py vfx keyframes` / `segment-plan` → `video_layers.py run` → `vfx unpack-masks` |
 | 特效去背輸出、sprite sheet／WebM 打包、Idle 首尾量測 | `comfyui-video-gen` | `gameart.py vfx luma-alpha` / `chroma-alpha` / `pack` / `loop-metrics` |
 | 執行固定 API graph template（Wan Animate、SCAIL-2、SAM3；固定 graph 一律走這裡） | `comfyui-wan-animate`、`comfyui-video-layers` | `<python_exe> tools_src/gameart.py run list` ／ `run show <id>` ／ `run <id> --dry-run --set NAME=VALUE ...` ／ `run <id> --preflight [--verify-hashes]`（只讀檢查）／`run <id> --set ...`（實際執行，寫 `run.result.json`；見 `templates/README.md`）→ `gameart.py review list <run 資料夾>`（accept／reject 要使用者決定） |
