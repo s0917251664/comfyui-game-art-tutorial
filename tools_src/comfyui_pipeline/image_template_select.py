@@ -1,8 +1,10 @@
 """圖片 task 的結構旗標 → template id。
 
-第 5.1 階段的 concept、icon_asset、refine、character_action、pose_only、style_lock
+concept、icon_asset、refine、character_action、pose_only、style_lock、
+inpaint、guided_inpaint、upscale、layer_split、flux2_concept、flux2_edit
 用這支選 template，再由 ``image_from_template`` 填 slot。
-sd15 那 13 份目錄還沒落地時，concept／icon_asset／refine 仍走 builder。
+sd15 目錄還沒落地時，concept／icon_asset／refine／inpaint／guided_inpaint／upscale
+仍走 builder。layer_split 與 FLUX.2 不分家族，找不到 template 就停止。
 
 id 規則（方案 A，每種會增刪或更換節點的組合各一份）:
 ``image/<family>/<task 詞幹>[-union-<type>|-<type>][-structure][-appearance][-lora][-transparent]``。
