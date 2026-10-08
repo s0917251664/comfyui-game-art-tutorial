@@ -175,8 +175,8 @@ class FaceSwapTests(unittest.TestCase):
                 path=Path(output_dir)/desc['filename']; path.write_bytes(files[path.name]); paths.append(str(path))
             return paths
         args=self.args(); args.timeout=60
-        with patch.object(client.generate,'submit_and_wait',return_value=history), \
-             patch.object(client.generate,'download_outputs',side_effect=download):
+        with patch.object(client.comfy_client,'submit_and_wait',return_value=history), \
+             patch.object(client.comfy_client,'download_outputs',side_effect=download):
             result=client.run(args,'http://127.0.0.1:8188',{})
         self.assertEqual(result['prompt_id'],'test-server-job')
         self.assertEqual((self.root/'result/candidate.mp4').read_bytes(),video_bytes)

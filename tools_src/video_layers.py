@@ -8,7 +8,8 @@ import shutil
 import sys
 import uuid
 from urllib.parse import urlparse
-import generate
+# 只拿 HTTP client:import generate 會連帶載入 image_graphs,從 repo 執行時印出誤導的 device_config 提醒。
+from comfyui_pipeline import client as comfy_client
 from comfyui_video_layers.contracts import LEGACY_NODE_NAMES, NODE_NAME, PACKAGE_FILES, model_path, record, runtime
 
 
@@ -38,7 +39,7 @@ def preflight(config_path, operation):
     if operation == 'segment':
         model = model_path()
         models = [record(model / n) for n in ('config.json', 'model.safetensors', 'preprocessor_config.json')]
-    schema = generate._fetch_comfy_object_info(url)
+    schema = comfy_client._fetch_comfy_object_info(url)
     if NODE_NAME not in schema and LEGACY_NODE_NAMES[NODE_NAME] in schema:
         # Package files above already match the repo, so legacy-only means ComfyUI has not
         # been restarted since deploy; the server would reject the stale package anyway.
@@ -87,14 +88,14 @@ def run(args):
     stage.mkdir()
     try:
         (stage / 'workflow_api.json').write_text(json.dumps(graph, indent=2), encoding='utf-8')
-        history = generate.submit_and_wait(graph, comfy_url=url, timeout=args.timeout)
+        history = comfy_client.submit_and_wait(graph, comfy_url=url, timeout=args.timeout)
         (stage / 'history.json').write_text(json.dumps(history, indent=2), encoding='utf-8')
         downloadable = dict(history)
         downloadable['outputs'] = dict(history['outputs'])
         output = dict(history['outputs']['1'])
         output['images'] = output.get('images', []) + output.get('files', [])
         downloadable['outputs']['1'] = output
-        paths = generate.download_outputs(downloadable, output_dir=str(stage), node_ids=['1'], comfy_url=url, allow_overwrite=False)
+        paths = comfy_client.download_outputs(downloadable, output_dir=str(stage), node_ids=['1'], comfy_url=url, allow_overwrite=False)
         required = {'candidate.mp4', 'manifest.json', 'layers.zip', 'source.jpg', 'comparison.jpg'}
         if {Path(p).name for p in paths} != required:
             raise ValueError('Server artifact contract failed')

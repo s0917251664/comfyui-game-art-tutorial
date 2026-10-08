@@ -141,7 +141,7 @@ class VideoLayersTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / 'config.json'
             p.write_text(json.dumps({'comfyui_path': str(ROOT), 'comfyui_url': 'https://example.com'}))
-            with patch.object(video_layers.generate, 'submit_and_wait') as submit:
+            with patch.object(video_layers.comfy_client, 'submit_and_wait') as submit:
                 with self.assertRaisesRegex(ValueError, 'loopback'):
                     video_layers.preflight(p, 'compose')
                 submit.assert_not_called()
@@ -152,8 +152,8 @@ class VideoLayersTests(unittest.TestCase):
             p.write_text(json.dumps({'comfyui_path': d, 'comfyui_url': 'http://127.0.0.1:8188'}))
             with patch.object(video_layers, 'runtime', return_value={}), \
                  patch.object(video_layers, 'record', return_value={'sha256': 'same'}), \
-                 patch.object(video_layers.generate, '_fetch_comfy_object_info', return_value={}), \
-                 patch.object(video_layers.generate, 'submit_and_wait') as submit:
+                 patch.object(video_layers.comfy_client, '_fetch_comfy_object_info', return_value={}), \
+                 patch.object(video_layers.comfy_client, 'submit_and_wait') as submit:
                 with self.assertRaisesRegex(ValueError, 'absent or incompatible'):
                     video_layers.preflight(p, 'compose')
                 submit.assert_not_called()
@@ -164,8 +164,8 @@ class VideoLayersTests(unittest.TestCase):
             p.write_text(json.dumps({'comfyui_path': d, 'comfyui_url': 'http://127.0.0.1:8188'}))
             with patch.object(video_layers, 'runtime', return_value={}), \
                  patch.object(video_layers, 'record', return_value={'sha256': 'same'}), \
-                 patch.object(video_layers.generate, '_fetch_comfy_object_info', return_value=schema), \
-                 patch.object(video_layers.generate, 'submit_and_wait') as submit:
+                 patch.object(video_layers.comfy_client, '_fetch_comfy_object_info', return_value=schema), \
+                 patch.object(video_layers.comfy_client, 'submit_and_wait') as submit:
                 try:
                     return video_layers.preflight(p, 'compose')
                 finally:

@@ -12,7 +12,8 @@ import sys
 import tempfile
 import uuid
 from urllib.parse import urlparse
-import generate
+# 只拿 HTTP client:import generate 會連帶載入 image_graphs,從 repo 執行時印出誤導的 device_config 提醒。
+from comfyui_pipeline import client as comfy_client
 from comfyui_face_swap_video.contracts import (SOURCE_COMMIT, CORE_HASHES, MODEL_HASHES, record, checked,
                                               LOAD_NODE, REACTOR_NODE, SOURCE_TYPE, LEGACY_NODE_NAMES)
 REQUIRED_NODES=(LOAD_NODE,REACTOR_NODE,'ReActorFaceSwap')
@@ -93,7 +94,7 @@ def preflight(config_path):
     for name in ('__init__.py','contracts.py','media.py','nodes.py'):
         expected=record(Path(__file__).parent/'comfyui_face_swap_video'/name)['sha256']
         package_files.append(checked(root/'custom_nodes/comfyui-face-swap-video',name,expected))
-    schema=generate._fetch_comfy_object_info(url)
+    schema=comfy_client._fetch_comfy_object_info(url)
     check_live_nodes(schema)
     fields=schema['ReActorFaceSwap']['input']['required']
     if 'inswapper_128.onnx' not in fields['swap_model'][0] or 'none' not in fields['face_restore_model'][0]:
@@ -138,7 +139,7 @@ def run(args,url,provenance):
     try:
         (stage/'workflow_api.json').write_text(json.dumps(graph,indent=2),encoding='utf-8')
         (stage/'workflow_ui.json').write_text(json.dumps(build_ui_workflow(graph),indent=2),encoding='utf-8')
-        history=generate.submit_and_wait(graph,comfy_url=url,timeout=args.timeout)
+        history=comfy_client.submit_and_wait(graph,comfy_url=url,timeout=args.timeout)
         (stage/'history.json').write_text(json.dumps(history,ensure_ascii=False,indent=2),encoding='utf-8')
         # The UI previews only the video. Treat server sidecars as downloadable
         # file descriptors without changing the recorded native history.
@@ -147,7 +148,7 @@ def run(args,url,provenance):
         node_output=dict(history['outputs']['2'])
         node_output['images']=list(node_output.get('images',[]))+list(node_output.get('files',[]))
         downloadable['outputs']['2']=node_output
-        paths=generate.download_outputs(downloadable,output_dir=str(stage),node_ids=['2'],comfy_url=url,allow_overwrite=False)
+        paths=comfy_client.download_outputs(downloadable,output_dir=str(stage),node_ids=['2'],comfy_url=url,allow_overwrite=False)
         required={'candidate.mp4','candidate.mp4.json','frames.json','comparison.jpg'}
         if {Path(p).name for p in paths}!=required:
             raise ValueError('Server output contract failed')
