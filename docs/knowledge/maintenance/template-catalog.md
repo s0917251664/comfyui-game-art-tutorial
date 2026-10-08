@@ -1060,6 +1060,202 @@ generated: true
 - 模型：sd_xl_base_1.0.safetensors（checkpoints，checkpoint）、4x-UltraSharp.pth（upscale_models，upscale）
 - 上游：none
 
+## `video/h3/character-video-1`
+
+- 用途：MiniMax H3 角色參考影片（1 張）
+- 摘要：MiniMax H3 Ref2VA，1 張參考圖各一個 LoadImage。上限讀 CHARACTER_REF_MAX（9）。變數是 placeholder，seed 是 -1。status draft，平台未實測。
+- 媒體：video
+- 能力：character_ref
+- 狀態：draft（v0.1.0）
+- 最低 ComfyUI：0.34.0
+- 第三方節點：（只用 core）
+- 平台：windows-cuda untested、macos-mps untested
+- 首尾幀：first=none、last=none、reference_role=identity、time_alignment=source_from_frame_0、continuity=null
+- 模型：minimax_h3_ref2va_pruned_int8_convrot.safetensors（diffusion_models，diffusion）、qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors（text_encoders，text_encoder）、minimax_h3_video_vae_fp16.safetensors（vae，vae）、minimax_h3_audio_vae_fp32.safetensors（vae，audio_vae）
+- 上游：none
+
+## `video/h3/character-video-2`
+
+- 用途：MiniMax H3 角色參考影片（2 張）
+- 摘要：MiniMax H3 Ref2VA，2 張參考圖各一個 LoadImage。上限讀 CHARACTER_REF_MAX（9）。變數是 placeholder，seed 是 -1。status draft，平台未實測。
+- 媒體：video
+- 能力：character_ref
+- 狀態：draft（v0.1.0）
+- 最低 ComfyUI：0.34.0
+- 第三方節點：（只用 core）
+- 平台：windows-cuda untested、macos-mps untested
+- 首尾幀：first=none、last=none、reference_role=identity、time_alignment=source_from_frame_0、continuity=null
+- 模型：minimax_h3_ref2va_pruned_int8_convrot.safetensors（diffusion_models，diffusion）、qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors（text_encoders，text_encoder）、minimax_h3_video_vae_fp16.safetensors（vae，vae）、minimax_h3_audio_vae_fp32.safetensors（vae，audio_vae）
+- 上游：none
+
+## `video/h3/character-video-3`
+
+- 用途：MiniMax H3 角色參考影片（3 張）
+- 摘要：MiniMax H3 Ref2VA，3 張參考圖各一個 LoadImage。上限讀 CHARACTER_REF_MAX（9）。變數是 placeholder，seed 是 -1。status draft，平台未實測。
+- 媒體：video
+- 能力：character_ref
+- 狀態：draft（v0.1.0）
+- 最低 ComfyUI：0.34.0
+- 第三方節點：（只用 core）
+- 平台：windows-cuda untested、macos-mps untested
+- 首尾幀：first=none、last=none、reference_role=identity、time_alignment=source_from_frame_0、continuity=null
+- 模型：minimax_h3_ref2va_pruned_int8_convrot.safetensors（diffusion_models，diffusion）、qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors（text_encoders，text_encoder）、minimax_h3_video_vae_fp16.safetensors（vae，vae）、minimax_h3_audio_vae_fp32.safetensors（vae，audio_vae）
+- 上游：none
+
+## `video/h3/character-video-4`
+
+- 用途：MiniMax H3 角色參考影片（4 張）
+- 摘要：MiniMax H3 Ref2VA，4 張參考圖各一個 LoadImage。上限讀 CHARACTER_REF_MAX（9）。變數是 placeholder，seed 是 -1。status draft，平台未實測。
+- 媒體：video
+- 能力：character_ref
+- 狀態：draft（v0.1.0）
+- 最低 ComfyUI：0.34.0
+- 第三方節點：（只用 core）
+- 平台：windows-cuda untested、macos-mps untested
+- 首尾幀：first=none、last=none、reference_role=identity、time_alignment=source_from_frame_0、continuity=null
+- 模型：minimax_h3_ref2va_pruned_int8_convrot.safetensors（diffusion_models，diffusion）、qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors（text_encoders，text_encoder）、minimax_h3_video_vae_fp16.safetensors（vae，vae）、minimax_h3_audio_vae_fp32.safetensors（vae，audio_vae）
+- 上游：none
+
+## `video/h3/character-video-5`
+
+- 用途：MiniMax H3 角色參考影片（5 張）
+- 摘要：MiniMax H3 Ref2VA，5 張參考圖各一個 LoadImage。上限讀 CHARACTER_REF_MAX（9）。變數是 placeholder，seed 是 -1。status draft，平台未實測。
+- 媒體：video
+- 能力：character_ref
+- 狀態：draft（v0.1.0）
+- 最低 ComfyUI：0.34.0
+- 第三方節點：（只用 core）
+- 平台：windows-cuda untested、macos-mps untested
+- 首尾幀：first=none、last=none、reference_role=identity、time_alignment=source_from_frame_0、continuity=null
+- 模型：minimax_h3_ref2va_pruned_int8_convrot.safetensors（diffusion_models，diffusion）、qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors（text_encoders，text_encoder）、minimax_h3_video_vae_fp16.safetensors（vae，vae）、minimax_h3_audio_vae_fp32.safetensors（vae，audio_vae）
+- 上游：none
+
+## `video/h3/character-video-6`
+
+- 用途：MiniMax H3 角色參考影片（6 張）
+- 摘要：MiniMax H3 Ref2VA，6 張參考圖各一個 LoadImage。上限讀 CHARACTER_REF_MAX（9）。變數是 placeholder，seed 是 -1。status draft，平台未實測。
+- 媒體：video
+- 能力：character_ref
+- 狀態：draft（v0.1.0）
+- 最低 ComfyUI：0.34.0
+- 第三方節點：（只用 core）
+- 平台：windows-cuda untested、macos-mps untested
+- 首尾幀：first=none、last=none、reference_role=identity、time_alignment=source_from_frame_0、continuity=null
+- 模型：minimax_h3_ref2va_pruned_int8_convrot.safetensors（diffusion_models，diffusion）、qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors（text_encoders，text_encoder）、minimax_h3_video_vae_fp16.safetensors（vae，vae）、minimax_h3_audio_vae_fp32.safetensors（vae，audio_vae）
+- 上游：none
+
+## `video/h3/character-video-7`
+
+- 用途：MiniMax H3 角色參考影片（7 張）
+- 摘要：MiniMax H3 Ref2VA，7 張參考圖各一個 LoadImage。上限讀 CHARACTER_REF_MAX（9）。變數是 placeholder，seed 是 -1。status draft，平台未實測。
+- 媒體：video
+- 能力：character_ref
+- 狀態：draft（v0.1.0）
+- 最低 ComfyUI：0.34.0
+- 第三方節點：（只用 core）
+- 平台：windows-cuda untested、macos-mps untested
+- 首尾幀：first=none、last=none、reference_role=identity、time_alignment=source_from_frame_0、continuity=null
+- 模型：minimax_h3_ref2va_pruned_int8_convrot.safetensors（diffusion_models，diffusion）、qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors（text_encoders，text_encoder）、minimax_h3_video_vae_fp16.safetensors（vae，vae）、minimax_h3_audio_vae_fp32.safetensors（vae，audio_vae）
+- 上游：none
+
+## `video/h3/character-video-8`
+
+- 用途：MiniMax H3 角色參考影片（8 張）
+- 摘要：MiniMax H3 Ref2VA，8 張參考圖各一個 LoadImage。上限讀 CHARACTER_REF_MAX（9）。變數是 placeholder，seed 是 -1。status draft，平台未實測。
+- 媒體：video
+- 能力：character_ref
+- 狀態：draft（v0.1.0）
+- 最低 ComfyUI：0.34.0
+- 第三方節點：（只用 core）
+- 平台：windows-cuda untested、macos-mps untested
+- 首尾幀：first=none、last=none、reference_role=identity、time_alignment=source_from_frame_0、continuity=null
+- 模型：minimax_h3_ref2va_pruned_int8_convrot.safetensors（diffusion_models，diffusion）、qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors（text_encoders，text_encoder）、minimax_h3_video_vae_fp16.safetensors（vae，vae）、minimax_h3_audio_vae_fp32.safetensors（vae，audio_vae）
+- 上游：none
+
+## `video/h3/character-video-9`
+
+- 用途：MiniMax H3 角色參考影片（9 張）
+- 摘要：MiniMax H3 Ref2VA，9 張參考圖各一個 LoadImage。上限讀 CHARACTER_REF_MAX（9）。變數是 placeholder，seed 是 -1。status draft，平台未實測。
+- 媒體：video
+- 能力：character_ref
+- 狀態：draft（v0.1.0）
+- 最低 ComfyUI：0.34.0
+- 第三方節點：（只用 core）
+- 平台：windows-cuda untested、macos-mps untested
+- 首尾幀：first=none、last=none、reference_role=identity、time_alignment=source_from_frame_0、continuity=null
+- 模型：minimax_h3_ref2va_pruned_int8_convrot.safetensors（diffusion_models，diffusion）、qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors（text_encoders，text_encoder）、minimax_h3_video_vae_fp16.safetensors（vae，vae）、minimax_h3_audio_vae_fp32.safetensors（vae，audio_vae）
+- 上游：none
+
+## `video/h3/img2video`
+
+- 用途：MiniMax H3 圖生影片
+- 摘要：MiniMax H3 圖生影片，沒有尾幀。graph 由 build_img2video_h3（video_config=None）產生。變數是 placeholder，seed 是 -1。status draft，平台未實測。
+- 媒體：video
+- 能力：i2v
+- 狀態：draft（v0.1.0）
+- 最低 ComfyUI：0.34.0
+- 第三方節點：（只用 core）
+- 平台：windows-cuda untested、macos-mps untested
+- 首尾幀：first=image、last=none、reference_role=none、time_alignment=source_from_frame_0、continuity=null
+- 模型：minimax_h3_fl2va_pruned_int8_convrot.safetensors（diffusion_models，diffusion）、qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors（text_encoders，text_encoder）、minimax_h3_video_vae_fp16.safetensors（vae，vae）、minimax_h3_audio_vae_fp32.safetensors（vae，audio_vae）
+- 上游：none
+
+## `video/h3/img2video-last`
+
+- 用途：MiniMax H3 圖生影片（含尾幀）
+- 摘要：MiniMax H3 圖生影片，含尾幀 LoadImage。fx_loop、transition、有終點靜幀的 camera_move 用這份。變數是 placeholder，seed 是 -1。status draft，平台未實測。
+- 媒體：video
+- 能力：i2v
+- 狀態：draft（v0.1.0）
+- 最低 ComfyUI：0.34.0
+- 第三方節點：（只用 core）
+- 平台：windows-cuda untested、macos-mps untested
+- 首尾幀：first=image、last=image、reference_role=none、time_alignment=source_from_frame_0、continuity=null
+- 模型：minimax_h3_fl2va_pruned_int8_convrot.safetensors（diffusion_models，diffusion）、qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors（text_encoders，text_encoder）、minimax_h3_video_vae_fp16.safetensors（vae，vae）、minimax_h3_audio_vae_fp32.safetensors（vae，audio_vae）
+- 上游：none
+
+## `video/h3/pose-drive-canny`
+
+- 用途：MiniMax H3 動作驅動（canny）
+- 摘要：MiniMax H3 Ref2VA，靜幀加 canny 前處理後的動作片。graph 由 build_pose_drive_h3（video_config=None）產生。變數是 placeholder，seed 是 -1。status draft，平台未實測。
+- 媒體：video
+- 能力：control_video
+- 狀態：draft（v0.1.0）
+- 最低 ComfyUI：0.34.0
+- 第三方節點：（只用 core）
+- 平台：windows-cuda untested、macos-mps untested
+- 首尾幀：first=none、last=none、reference_role=identity、time_alignment=per_source_frame、continuity=null
+- 模型：minimax_h3_ref2va_pruned_int8_convrot.safetensors（diffusion_models，diffusion）、qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors（text_encoders，text_encoder）、minimax_h3_video_vae_fp16.safetensors（vae，vae）、minimax_h3_audio_vae_fp32.safetensors（vae，audio_vae）
+- 上游：none
+
+## `video/h3/pose-drive-depth`
+
+- 用途：MiniMax H3 動作驅動（depth）
+- 摘要：MiniMax H3 Ref2VA，靜幀加 depth 前處理後的動作片。graph 由 build_pose_drive_h3（video_config=None）產生。變數是 placeholder，seed 是 -1。status draft，平台未實測。
+- 媒體：video
+- 能力：control_video
+- 狀態：draft（v0.1.0）
+- 最低 ComfyUI：0.34.0
+- 第三方節點：comfyui_controlnet_aux [registry]
+- 平台：windows-cuda untested、macos-mps untested
+- 首尾幀：first=none、last=none、reference_role=identity、time_alignment=per_source_frame、continuity=null
+- 模型：minimax_h3_ref2va_pruned_int8_convrot.safetensors（diffusion_models，diffusion）、qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors（text_encoders，text_encoder）、minimax_h3_video_vae_fp16.safetensors（vae，vae）、minimax_h3_audio_vae_fp32.safetensors（vae，audio_vae）
+- 上游：none
+
+## `video/h3/pose-drive-pose`
+
+- 用途：MiniMax H3 動作驅動（pose）
+- 摘要：MiniMax H3 Ref2VA，靜幀加 pose 前處理後的動作片。graph 由 build_pose_drive_h3（video_config=None）產生。變數是 placeholder，seed 是 -1。status draft，平台未實測。
+- 媒體：video
+- 能力：control_video
+- 狀態：draft（v0.1.0）
+- 最低 ComfyUI：0.34.0
+- 第三方節點：comfyui_controlnet_aux [registry]
+- 平台：windows-cuda untested、macos-mps untested
+- 首尾幀：first=none、last=none、reference_role=identity、time_alignment=per_source_frame、continuity=null
+- 模型：minimax_h3_ref2va_pruned_int8_convrot.safetensors（diffusion_models，diffusion）、qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors（text_encoders，text_encoder）、minimax_h3_video_vae_fp16.safetensors（vae，vae）、minimax_h3_audio_vae_fp32.safetensors（vae，audio_vae）
+- 上游：none
+
 ## `video/sam3/track-mask`
 
 - 用途：SAM3 影片物件追蹤（第 0 幀手繪遮罩起手）
@@ -1185,3 +1381,59 @@ generated: true
 - 首尾幀：first=none、last=none、reference_role=none、time_alignment=per_source_frame、continuity=null
 - 模型：wan2.1_vace_1.3B_fp16.safetensors（diffusion_models，vace_unet）、umt5_xxl_fp8_e4m3fn_scaled.safetensors（text_encoders，text_encoder）、wan_2.1_vae.safetensors（vae，vae）
 - 上游：workflow_templates `video_wan_vace_inpainting`
+
+## `video/wan/img2video`
+
+- 用途：Wan 2.2 5B 圖生影片
+- 摘要：Wan 2.2 5B 圖生影片，沒有尾幀。graph 由 build_img2video_wan（video_config=None）產生。變數是 placeholder，seed 是 -1。status draft，平台未實測。
+- 媒體：video
+- 能力：i2v
+- 狀態：draft（v0.1.0）
+- 最低 ComfyUI：0.34.0
+- 第三方節點：（只用 core）
+- 平台：windows-cuda untested、macos-mps untested
+- 首尾幀：first=image、last=none、reference_role=none、time_alignment=source_from_frame_0、continuity=null
+- 模型：wan2.2_ti2v_5B_fp16.safetensors（diffusion_models，diffusion）、umt5_xxl_fp8_e4m3fn_scaled.safetensors（text_encoders，text_encoder）、wan2.2_vae.safetensors（vae，vae）
+- 上游：workflow_templates `video_wan2_2_5B_ti2v`
+
+## `video/wan/pose-drive-canny`
+
+- 用途：Wan Fun Control 動作驅動（canny）
+- 摘要：Wan Fun Control 5B，動作片前處理是 canny。graph 由 build_pose_drive_wan（video_config=None）產生。變數是 placeholder，seed 是 -1。status draft，平台未實測。
+- 媒體：video
+- 能力：control_video
+- 狀態：draft（v0.1.0）
+- 最低 ComfyUI：0.34.0
+- 第三方節點：（只用 core）
+- 平台：windows-cuda untested、macos-mps untested
+- 首尾幀：first=none、last=none、reference_role=identity、time_alignment=per_source_frame、continuity=null
+- 模型：wan2.2_fun_control_5B_bf16.safetensors（diffusion_models，diffusion）、umt5_xxl_fp8_e4m3fn_scaled.safetensors（text_encoders，text_encoder）、wan2.2_vae.safetensors（vae，vae）
+- 上游：workflow_templates `video_wan2_2_5B_fun_control`
+
+## `video/wan/pose-drive-depth`
+
+- 用途：Wan Fun Control 動作驅動（depth）
+- 摘要：Wan Fun Control 5B，動作片前處理是 depth。graph 由 build_pose_drive_wan（video_config=None）產生。變數是 placeholder，seed 是 -1。status draft，平台未實測。
+- 媒體：video
+- 能力：control_video
+- 狀態：draft（v0.1.0）
+- 最低 ComfyUI：0.34.0
+- 第三方節點：comfyui_controlnet_aux [registry]
+- 平台：windows-cuda untested、macos-mps untested
+- 首尾幀：first=none、last=none、reference_role=identity、time_alignment=per_source_frame、continuity=null
+- 模型：wan2.2_fun_control_5B_bf16.safetensors（diffusion_models，diffusion）、umt5_xxl_fp8_e4m3fn_scaled.safetensors（text_encoders，text_encoder）、wan2.2_vae.safetensors（vae，vae）
+- 上游：none
+
+## `video/wan/pose-drive-pose`
+
+- 用途：Wan Fun Control 動作驅動（pose）
+- 摘要：Wan Fun Control 5B，動作片前處理是 pose。graph 由 build_pose_drive_wan（video_config=None）產生。變數是 placeholder，seed 是 -1。status draft，平台未實測。
+- 媒體：video
+- 能力：control_video
+- 狀態：draft（v0.1.0）
+- 最低 ComfyUI：0.34.0
+- 第三方節點：comfyui_controlnet_aux [registry]
+- 平台：windows-cuda untested、macos-mps untested
+- 首尾幀：first=none、last=none、reference_role=identity、time_alignment=per_source_frame、continuity=null
+- 模型：wan2.2_fun_control_5B_bf16.safetensors（diffusion_models，diffusion）、umt5_xxl_fp8_e4m3fn_scaled.safetensors（text_encoders，text_encoder）、wan2.2_vae.safetensors（vae，vae）
+- 上游：none
