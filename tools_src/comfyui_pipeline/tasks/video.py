@@ -1,20 +1,24 @@
 """ComfyUI 影片 task:img2video、fx_loop、transition、clip_extend、camera_move、character_video、pose_drive。
 
-每個 task 的 prepare() 只負責驗證輸入、上傳參考檔、組 graph 與輸出契約;排隊、輪詢、下載與
-輸出驗證由 cli.py 的共用流程處理。
+每個 task 的 prepare() 只負責驗證輸入、上傳參考檔、用固定 template 填 graph 與輸出契約;排隊、輪詢、下載與
+輸出驗證由 cli.py 的共用流程處理。模型檔名用 template pin，不跟 video_capabilities.json。
 """
 import os
 import sys
+from pathlib import Path
 
 from ..client import OUTPUT_DIR
-from ..image_graphs import validate_dimensions
-from ..video_builders import run_character_video, run_i2v, run_pose_drive
+from ..image_graphs import seed_or_random, validate_dimensions
+from ..runner import template as runner_template
 from ..video_catalog import (
     CAMERA_MOVES, CHARACTER_REF_MAX, VIDEO_FPS, VIDEO_INPUT_MIN_DURATION, VIDEO_LOOP_SUFFIX,
 )
 from ..video_config import backend_has, require_video_backend
 from ..video_contract import _safe_identifier, make_video_contract, video_filename_prefix
-from ..video_graphs import build_camera_end_still, camera_move_prompt
+from ..video_graphs import (
+    build_camera_end_still, camera_move_prompt, h3_frame_count, h3_pose_drive_prompt,
+    h3_ref_prompt, wan_frame_count,
+)
 from ..video_media import (
     _make_temp_image_path, _remove_temp_file, _require_video_duration, _require_wh_pair,
     extract_last_frame, validate_motion_reference_fps, validate_transition_images,
@@ -180,8 +184,121 @@ def validate(args):
         raise ValueError("--resume 需要 --name 或 --shot-id 才能精確定位輸出")
 
 
+def _repo_with_video_templates():
+    """從這個檔案往上找含影片 template 的 repo 根目錄。部署到 ComfyUI/tools 時還沒有 templates/。"""
+    for parent in Path(__file__).resolve().parents:
+        marker = parent / "templates" / "video" / "wan" / "img2video" / "template.json"
+        if marker.is_file():
+            return parent
+    raise SystemExit(
+        "影片 task 的 graph 在 templates/video（固定 template，由 runner 填值）。"
+        "請從 repo 執行 python tools_src/generate.py <task>。"
+        "部署到 ComfyUI/tools 的複本要等 templates 納入部署後才找得到這些 template。"
+    )
+
+
+def _load_video_template(template_id):
+    root = _repo_with_video_templates()
+    return runner_template.load_template(
+        runner_template.templates_root(root), template_id, repo_root=root)
+
+
+def _frame_count(backend, duration):
+    if backend == "wan":
+        return wan_frame_count(duration)
+    if backend == "h3":
+        return h3_frame_count(duration)
+    raise SystemExit(f"未知 --backend {backend!r}")
+
+
+def _patch_loaded(template, values, uploads):
+    """本機路徑給 resolve；已上傳檔名只放 upload_paths。不跑 template 的 pre，也不 queue。"""
+    filled = dict(values)
+    if "negative" in filled and (not filled["negative"] or "negative" not in template.slots):
+        del filled["negative"]
+    resolution = runner_template.resolve(template, filled, run_id="video-task")
+    graph, _changes = runner_template.patch(template, resolution, uploads)
+    return graph, template.data["outputs"][0]["node"]
+
+
+def _graph_from_template(template_id, values, uploads):
+    return _patch_loaded(_load_video_template(template_id), values, uploads)
+
+
+def _common_slots(backend, prompt, width, height, seed, duration, filename_prefix):
+    return {
+        "prompt": prompt,
+        "width": width,
+        "height": height,
+        "length": _frame_count(backend, duration),
+        "seed": seed_or_random(seed),
+        "filename_prefix": filename_prefix,
+    }
+
+
+def _i2v_graph(backend, prompt, image_path, image_upload, width, height, seed, duration,
+               filename_prefix, negative=None, last_path=None, last_upload=None):
+    """Wan 一律 video/wan/img2video（忽略尾幀）。H3 有尾幀才用 video/h3/img2video-last。"""
+    if backend == "wan":
+        template_id = "video/wan/img2video"
+        use_last = False
+    elif backend == "h3":
+        use_last = bool(last_upload)
+        template_id = "video/h3/img2video-last" if use_last else "video/h3/img2video"
+    else:
+        raise SystemExit(f"未知 --backend {backend!r}")
+    values = _common_slots(backend, prompt, width, height, seed, duration, filename_prefix)
+    values["start_image"] = image_path
+    uploads = {"start_image": image_upload}
+    if use_last:
+        if not last_path:
+            raise SystemExit("有尾幀時必須有本機尾幀路徑")
+        values["last_image"] = last_path
+        uploads["last_image"] = last_upload
+    if negative:
+        values["negative"] = negative
+    return _graph_from_template(template_id, values, uploads)
+
+
+def _character_graph(backend, prompt, ref_paths, ref_uploads, width, height, seed, duration,
+                     filename_prefix):
+    if backend != "h3":
+        raise SystemExit(f"character_video 目前沒有 {backend} 實作")
+    template_id = f"video/h3/character-video-{len(ref_paths)}"
+    template = _load_video_template(template_id)
+    image_slots = [
+        name for name, slot in template.slots.items()
+        if slot.get("upload") and slot.get("type") == "image"
+    ]
+    if len(image_slots) != len(ref_paths):
+        raise SystemExit(
+            f"{template_id} 圖片 slot 是 {', '.join(image_slots) or '無'}，參考圖有 {len(ref_paths)} 張"
+        )
+    values = _common_slots(
+        backend, h3_ref_prompt(prompt, len(ref_paths)), width, height, seed, duration, filename_prefix)
+    uploads = {}
+    for name, path, uploaded in zip(image_slots, ref_paths, ref_uploads):
+        values[name] = path
+        uploads[name] = uploaded
+    return _patch_loaded(template, values, uploads)
+
+
+def _pose_graph(backend, prompt, image_path, image_upload, motion_path, motion_upload,
+                width, height, seed, duration, control_type, filename_prefix, negative=None):
+    if backend not in ("wan", "h3"):
+        raise SystemExit(f"pose_drive 目前沒有 {backend} 實作")
+    text = h3_pose_drive_prompt(prompt) if backend == "h3" else prompt
+    values = _common_slots(backend, text, width, height, seed, duration, filename_prefix)
+    values["start_image"] = image_path
+    values["motion_video"] = motion_path
+    if negative:
+        values["negative"] = negative
+    uploads = {"start_image": image_upload, "motion_video": motion_upload}
+    return _graph_from_template(f"video/{backend}/pose-drive-{control_type}", values, uploads)
+
+
 def prepare(ctx, args, upload):
-    """驗證輸入、上傳參考檔並組好影片 graph,回傳 VideoPlan。"""
+    """驗證輸入、上傳參考檔並用 template 填好影片 graph,回傳 VideoPlan。"""
     continuity_refs = {}
     video_prompt = None
     if args.task == "img2video":
@@ -193,10 +310,9 @@ def prepare(ctx, args, upload):
         video_inputs = [args.image]
         continuity_refs = {"source": args.image}
         video_prefix = video_filename_prefix(args.task, args.shot_id, args.name)
-        prompt, out_id = run_i2v(
-            backend, args.prompt, img_fn, width, height, args.seed, duration,
-            filename_prefix=video_prefix, negative=args.negative,
-            video_config=ctx.active_video_config,
+        graph, out_id = _i2v_graph(
+            backend, args.prompt, args.image, img_fn, width, height, args.seed, duration,
+            video_prefix, negative=args.negative,
         )
         video_contract = make_video_contract(args.task, backend, width, height, duration,
                                              audio_expected=(backend == "h3"))
@@ -211,10 +327,9 @@ def prepare(ctx, args, upload):
         video_inputs = [args.image]
         continuity_refs = {"source": args.image}
         video_prefix = video_filename_prefix(args.task, args.shot_id, args.name)
-        prompt, out_id = run_i2v(
-            backend, loop_prompt, img_fn, width, height, args.seed, duration,
-            last_image_filename=img_fn, filename_prefix=video_prefix, negative=args.negative,
-            video_config=ctx.active_video_config,
+        graph, out_id = _i2v_graph(
+            backend, loop_prompt, args.image, img_fn, width, height, args.seed, duration,
+            video_prefix, negative=args.negative, last_path=args.image, last_upload=img_fn,
         )
         video_contract = make_video_contract(args.task, backend, width, height, duration,
                                              audio_expected=(backend == "h3"))
@@ -233,10 +348,9 @@ def prepare(ctx, args, upload):
         video_inputs = [args.start, args.end]
         continuity_refs = {"start": args.start, "end": args.end}
         video_prefix = video_filename_prefix(args.task, args.shot_id, args.name)
-        prompt, out_id = run_i2v(
-            backend, args.prompt, start_fn, width, height, args.seed, duration,
-            last_image_filename=end_fn, filename_prefix=video_prefix,
-            video_config=ctx.active_video_config,
+        graph, out_id = _i2v_graph(
+            backend, args.prompt, args.start, start_fn, width, height, args.seed, duration,
+            video_prefix, last_path=args.end, last_upload=end_fn,
         )
         video_contract = make_video_contract(args.task, backend, width, height, duration,
                                              audio_expected=(backend == "h3"))
@@ -270,10 +384,9 @@ def prepare(ctx, args, upload):
         video_inputs = [args.video] if args.video else [args.image]
         continuity_refs = {"source": still} if args.image else {}
         video_prefix = video_filename_prefix(args.task, args.shot_id, args.name)
-        prompt, out_id = run_i2v(
-            backend, args.prompt, img_fn, width, height, args.seed, duration,
-            filename_prefix=video_prefix, negative=args.negative,
-            video_config=ctx.active_video_config,
+        graph, out_id = _i2v_graph(
+            backend, args.prompt, still, img_fn, width, height, args.seed, duration,
+            video_prefix, negative=args.negative,
         )
         video_contract = make_video_contract(args.task, backend, width, height, duration,
                                              audio_expected=(backend == "h3"))
@@ -288,23 +401,24 @@ def prepare(ctx, args, upload):
         video_prefix = video_filename_prefix(args.task, args.shot_id, args.name)
         cam_prompt = camera_move_prompt(args.camera, args.prompt)
         last_fn = None
+        last_path = None
         end_path = None
         try:
             if backend_has(backend, "last_frame", ctx.active_video_config):
                 if args.camera == "static":
                     last_fn = img_fn
+                    last_path = args.image
                 elif args.camera not in ("orbit_cw", "orbit_ccw"):
                     out_dir = getattr(args, "output_dir", None) or OUTPUT_DIR
                     end_path = _make_temp_image_path(out_dir, "_camera_end_")
                     build_camera_end_still(args.image, args.camera, width, height, end_path)
                     print(f"[運鏡] 終點靜幀 -> {end_path}")
                     last_fn = upload(end_path)
-            prompt, out_id = run_i2v(
-                backend, cam_prompt, img_fn, width, height, args.seed, duration,
-                last_image_filename=last_fn, filename_prefix=video_prefix,
-                negative=args.negative,
-            video_config=ctx.active_video_config,
-        )
+                    last_path = end_path
+            graph, out_id = _i2v_graph(
+                backend, cam_prompt, args.image, img_fn, width, height, args.seed, duration,
+                video_prefix, negative=args.negative, last_path=last_path, last_upload=last_fn,
+            )
         finally:
             _remove_temp_file(end_path)
         video_contract = make_video_contract(args.task, backend, width, height, duration,
@@ -322,10 +436,8 @@ def prepare(ctx, args, upload):
         ref_fns = [upload(p) for p in refs]
         video_inputs = list(refs)
         video_prefix = video_filename_prefix(args.task, args.shot_id, args.name)
-        prompt, out_id = run_character_video(
-            backend, args.prompt, ref_fns, width, height, args.seed, duration,
-            filename_prefix=video_prefix,
-            video_config=ctx.active_video_config,
+        graph, out_id = _character_graph(
+            backend, args.prompt, refs, ref_fns, width, height, args.seed, duration, video_prefix,
         )
         video_contract = make_video_contract(args.task, backend, width, height, duration,
                                              audio_expected=(backend == "h3"))
@@ -353,18 +465,17 @@ def prepare(ctx, args, upload):
         motion_fn = upload(args.motion_ref)
         video_inputs = [args.image, args.motion_ref]
         video_prefix = video_filename_prefix(args.task, args.shot_id, args.name)
-        prompt, out_id = run_pose_drive(
-            backend, args.prompt, img_fn, motion_fn, width, height, args.seed, duration,
-            control_type=args.control_type, filename_prefix=video_prefix,
+        graph, out_id = _pose_graph(
+            backend, args.prompt, args.image, img_fn, args.motion_ref, motion_fn,
+            width, height, args.seed, duration, args.control_type, video_prefix,
             negative=args.negative,
-            video_config=ctx.active_video_config,
         )
         video_contract = make_video_contract(args.task, backend, width, height, duration,
                                              audio_expected=(backend == "h3"))
     else:
         raise ValueError(f"不是這個模組的影片 task: {args.task}")
     return VideoPlan(
-        graph=prompt, out_id=out_id, backend=backend, inputs=video_inputs,
+        graph=graph, out_id=out_id, backend=backend, inputs=video_inputs,
         continuity_refs=continuity_refs, prefix=video_prefix, contract=video_contract,
         prompt=video_prompt,
     )

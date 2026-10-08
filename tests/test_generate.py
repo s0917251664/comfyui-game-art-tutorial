@@ -640,7 +640,6 @@ class GenerateTests(unittest.TestCase):
             ),
             "video_canvas": mock.patch.object(task_video, "video_canvas", return_value=(64, 64)),
             "upload_image": mock.patch.object(cli, "upload_image", return_value="still.png"),
-            "run_i2v": mock.patch.object(task_video, "run_i2v", return_value=({}, "1")),
             "download_outputs": mock.patch.object(cli, "download_outputs", return_value=["out.mp4"]),
             "submit_and_wait": mock.patch.object(cli, "submit_and_wait", return_value={"outputs": {}}),
             "report_video_output": patch_all(
@@ -649,7 +648,7 @@ class GenerateTests(unittest.TestCase):
             "write_video_sidecar": patch_all("write_video_sidecar", (cli, task_video_local,)),
         }
         with common_patches["configure_video_capability"], common_patches["video_canvas"], common_patches["upload_image"], \
-                common_patches["run_i2v"], common_patches["download_outputs"], \
+                common_patches["download_outputs"], \
                 common_patches["submit_and_wait"] as submit, common_patches["report_video_output"], \
                 common_patches["write_video_sidecar"]:
             self.main([
@@ -738,7 +737,6 @@ class GenerateTests(unittest.TestCase):
                     mock.patch.object(cli, "configure_video_capability", return_value="h3"), \
                     mock.patch.object(task_video, "video_canvas", return_value=(64, 64)), \
                     mock.patch.object(cli, "upload_image", return_value="last.png") as upload, \
-                    mock.patch.object(task_video, "run_i2v", return_value=({}, "1")), \
                     mock.patch.object(cli, "submit_and_wait", return_value={"outputs": {}}), \
                     mock.patch.object(cli, "download_outputs", return_value=["out.mp4"]), \
                     patch_all("report_video_output", (cli, task_video_local, video_contract,), return_value={"frames": 49}), \

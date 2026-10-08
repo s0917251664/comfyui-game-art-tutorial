@@ -2,13 +2,17 @@
 
 fixture 由 ``tests/golden_video_graphs.py --write`` 產生。這裡分兩層比對:
 - builder 層:用 fixture 記錄的參數直接呼叫 builder,graph 逐節點、逐欄位等於 golden(6.2 的 template 對照這層)。
-- task 層:``tasks.video.prepare`` 用假的上傳與媒體函式組出的 graph 與 builder 參數都等於 golden(6.3 對照這層)。
+- task 層:``tasks.video.prepare`` 用假的上傳與媒體函式組出的 graph 等於 golden。第 6.3 階段改由 template 填值,不再呼叫 builder。
 """
 
+import contextlib
+import io
 import json
 import os
 import sys
 import unittest
+from types import SimpleNamespace
+from unittest import mock
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -91,14 +95,35 @@ class VideoGraphGoldenTests(unittest.TestCase):
                 self.assertGraphEqual(data["graph"], _jsonable(graph), name)
                 self.assertEqual(data["graph_sha256"], self.image_results.graph_sha256(graph))
 
-    def test_video_tasks_reproduce_golden_graphs_and_builder_calls(self):
+    def _prepare_task(self, task, backend, overrides):
+        """跟 golden 的假上傳／假媒體相同,但不要求 prepare 再呼叫 builder。"""
+        task_video = self.task_video
+        args = G.task_args(task, backend, overrides)
+        ctx = SimpleNamespace(active_video_config=G.VIDEO_CONFIG)
+        patches = [
+            mock.patch.object(task_video, "video_canvas", G._fake_canvas),
+            mock.patch.object(task_video, "validate_transition_images", lambda *a, **k: None),
+            mock.patch.object(task_video, "validate_motion_reference_fps", lambda *a, **k: None),
+            mock.patch.object(task_video, "validate_video_input", lambda *a, **k: None),
+            mock.patch.object(task_video, "extract_last_frame", lambda *a, **k: None),
+            mock.patch.object(task_video, "build_camera_end_still", lambda *a, **k: None),
+            mock.patch.object(task_video, "_make_temp_image_path", G._fake_temp_image_path),
+            mock.patch.object(task_video, "_remove_temp_file", lambda *a, **k: None),
+        ]
+        with contextlib.ExitStack() as stack:
+            for patcher in patches:
+                stack.enter_context(patcher)
+            stack.enter_context(contextlib.redirect_stdout(io.StringIO()))
+            stack.enter_context(contextlib.redirect_stderr(io.StringIO()))
+            return task_video.prepare(ctx, args, G._fake_upload)
+
+    def test_video_tasks_reproduce_golden_graphs(self):
         for task, backend, case, overrides in G.CASES:
             name = G.fixture_name(task, backend, case)
             with self.subTest(case=name):
                 data = self.expected[name]
                 self.assertEqual(data["args"], _jsonable(overrides))
-                plan, builder = G.run_task(task, backend, overrides, self.modules)
-                self.assertEqual(data["builder"], _jsonable(builder))
+                plan = self._prepare_task(task, backend, overrides)
                 self.assertEqual(data["output_node"], plan.out_id)
                 self.assertEqual(backend, plan.backend)
                 self.assertGraphEqual(data["graph"], _jsonable(plan.graph), name)
