@@ -1,6 +1,6 @@
 """素材候選 → 人工決定紀錄工具(stdlib only,可直接部署)。
 
-技術 manifest(`*.result.json`,由 generate.py 產生)永不被修改;人工決定另存於同資料夾的
+技術 manifest(`*.result.json`,由 generate.py 或 `gameart.py run <template>` 產生)永不被修改;人工決定另存於同資料夾的
 `<manifest 檔名去掉 .result.json>.decisions.json`,以 append-only 方式記錄。決定綁定輸出檔的
 SHA-256:同名檔被重新生成(內容變了)就不會繼承舊決定,會顯示為 mismatch(視同 pending)。
 
@@ -17,6 +17,10 @@ import sys
 MANIFEST_SUFFIX = ".result.json"
 DECISIONS_SUFFIX = ".decisions.json"
 SCHEMA_VERSION = 1
+# generate.py 的圖片結果,以及 `gameart.py run <template>` 的 run.result.json
+RESULT_KINDS = ("image_generation_result", "template_run_result")
+# template run 的輸出放在 manifest 所在資料夾底下的 outputs/<id>/,往上找幾層
+OUTPUT_SEARCH_DEPTH = 3
 
 
 def _sha256(path):
@@ -35,7 +39,7 @@ def _decisions_path(manifest_path):
 
 def _is_result_manifest(path):
     try:
-        return _load_json(path).get("kind") == "image_generation_result"
+        return _load_json(path).get("kind") in RESULT_KINDS
     except (OSError, ValueError, AttributeError):
         return False
 
@@ -55,12 +59,28 @@ def _find_manifests(target):
     if target.lower().endswith(".json") and os.path.isfile(target):
         # 預設 *.result.json,或 --result-json 指定的任意檔名
         return [target] if _is_result_manifest(target) else []
-    if os.path.isfile(target):  # 輸出檔:找同資料夾中記錄了它的 manifest
-        return [m for m in _find_manifests(os.path.dirname(target))
-                if os.path.dirname(m) == os.path.dirname(target)
-                and any(os.path.abspath(o.get("path", "")) == target
-                        for o in _read_manifest(m).get("outputs", []))]
+    if os.path.isfile(target):  # 輸出檔:找同資料夾(或往上幾層)中記錄了它的 manifest
+        folder = os.path.dirname(target)
+        for _ in range(OUTPUT_SEARCH_DEPTH + 1):
+            found = [m for m in _manifests_in(folder)
+                     if any(os.path.abspath(o.get("path", "")) == target
+                            for o in _read_manifest(m).get("outputs", []))]
+            if found:
+                return found
+            parent = os.path.dirname(folder)
+            if parent == folder:
+                break
+            folder = parent
     return []
+
+
+def _manifests_in(folder):
+    try:
+        names = os.listdir(folder)
+    except OSError:
+        return []
+    return sorted(os.path.join(folder, n) for n in names
+                  if n.endswith(MANIFEST_SUFFIX) and os.path.isfile(os.path.join(folder, n)))
 
 
 def _read_manifest(path):
@@ -68,7 +88,7 @@ def _read_manifest(path):
         data = _load_json(path)
     except (OSError, ValueError):
         return {}
-    return data if isinstance(data, dict) and data.get("kind") == "image_generation_result" else {}
+    return data if isinstance(data, dict) and data.get("kind") in RESULT_KINDS else {}
 
 
 def _read_decisions(manifest_path):
@@ -161,6 +181,8 @@ def _decide(args, decision):
         raise SystemExit("需指定單一 manifest 或其輸出檔(目前找到 %d 個)" % len(manifests))
     manifest_path = manifests[0]
     manifest = _read_manifest(manifest_path)
+    if decision == "accepted" and manifest.get("status") == "failed":
+        raise SystemExit("這次執行的技術檢查沒有通過(status=failed),不能 accept;要記錄可以用 reject")
     outputs = manifest.get("outputs", [])
     target = os.path.abspath(args.target)
     chosen = [o for o in outputs if os.path.abspath(o.get("path", "")) == target]

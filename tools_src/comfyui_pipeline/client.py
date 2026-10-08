@@ -104,6 +104,15 @@ class VideoTimeoutError(TimeoutError):
         self.queue_status = queue_status or {"status": "unknown"}
 
 
+class PromptExecutionError(RuntimeError):
+    """ComfyUI 回報這個 prompt 執行失敗（含被中斷）；帶著 prompt_id 與 history entry。"""
+
+    def __init__(self, message, prompt_id, history_entry=None):
+        super().__init__(message)
+        self.prompt_id = str(prompt_id)
+        self.history_entry = history_entry
+
+
 def _runtime_config_path_from_env(explicit_path=None):
     if explicit_path:
         return os.fspath(explicit_path)
@@ -134,8 +143,13 @@ def _fetch_comfy_object_info(comfy_url, request_timeout=DEFAULT_HTTP_TIMEOUT):
     return payload
 
 
-def upload_image(path, comfy_url=None, request_timeout=DEFAULT_HTTP_TIMEOUT):
-    """上傳本機圖片或影片到 ComfyUI input，回傳 LoadImage/LoadVideo 使用的檔名。"""
+def upload_image(path, comfy_url=None, request_timeout=DEFAULT_HTTP_TIMEOUT, *, subfolder=None,
+                 overwrite=None, return_response=False):
+    """上傳本機圖片或影片到 ComfyUI input，回傳 LoadImage/LoadVideo 使用的檔名。
+
+    ``subfolder``／``overwrite`` 有給才會送出對應欄位（預設行為不變）。``return_response=True`` 時回傳
+    ComfyUI 的完整回應 dict（name、subfolder、type），graph 要填 ``subfolder/name``。
+    """
     validate_timeout(request_timeout)
     filename = os.path.basename(path)
     mime = mimetypes.guess_type(path)[0] or "application/octet-stream"
@@ -143,7 +157,12 @@ def upload_image(path, comfy_url=None, request_timeout=DEFAULT_HTTP_TIMEOUT):
     with open(path, "rb") as f:
         file_data = f.read()
 
-    body = (
+    fields = b""
+    if subfolder is not None:
+        fields += _form_field(boundary, "subfolder", str(subfolder))
+    if overwrite is not None:
+        fields += _form_field(boundary, "overwrite", "true" if overwrite else "false")
+    body = fields + (
         f"--{boundary}\r\n"
         f'Content-Disposition: form-data; name="image"; filename="{filename}"\r\n'
         f"Content-Type: {mime}\r\n\r\n"
@@ -157,9 +176,18 @@ def upload_image(path, comfy_url=None, request_timeout=DEFAULT_HTTP_TIMEOUT):
     resp = urllib.request.urlopen(req, timeout=request_timeout)
     result = json.loads(resp.read().decode())
     try:
-        return result["name"]
+        name = result["name"]
     except (KeyError, TypeError) as exc:
         raise RuntimeError("ComfyUI upload 回應缺少 name") from exc
+    return result if return_response else name
+
+
+def _form_field(boundary, name, value):
+    return (
+        f"--{boundary}\r\n"
+        f'Content-Disposition: form-data; name="{name}"\r\n\r\n'
+        f"{value}\r\n"
+    ).encode("utf-8")
 
 
 def _is_transient_poll_error(exc):
@@ -220,14 +248,23 @@ def _cancel_exact_pending_prompt(prompt_id, comfy_url, request_timeout, queue_st
 
 
 def submit_and_wait(prompt, timeout=DEFAULT_TIMEOUT, comfy_url=None,
-                    poll_interval=DEFAULT_POLL_INTERVAL, max_poll_retries=DEFAULT_POLL_RETRIES):
-    """Queue a prompt and poll history, retaining prompt_id in every terminal error."""
+                    poll_interval=DEFAULT_POLL_INTERVAL, max_poll_retries=DEFAULT_POLL_RETRIES, *,
+                    client_id=None, require_success=False, on_queued=None):
+    """Queue a prompt and poll history, retaining prompt_id in every terminal error.
+
+    選用參數（預設行為不變）：``client_id`` 會一起送進 /prompt；``require_success=True`` 時只有
+    ``status_str == "success"`` 且 ``completed`` 才算完成；``on_queued(prompt_id, response)`` 在拿到
+    prompt_id 後立刻呼叫，讓呼叫端先記下 prompt_id（之後逾時或中斷也查得到）。
+    """
     validate_timeout(timeout)
     validate_timeout(poll_interval if poll_interval else 0.000001)
     if isinstance(max_poll_retries, bool) or not isinstance(max_poll_retries, int) or max_poll_retries < 0:
         raise ValueError(f"max_poll_retries 必須是 0 以上的整數，目前是 {max_poll_retries!r}")
 
-    payload = json.dumps({"prompt": prompt}).encode("utf-8")
+    body = {"prompt": prompt}
+    if client_id is not None:
+        body["client_id"] = str(client_id)
+    payload = json.dumps(body).encode("utf-8")
     req = urllib.request.Request(
         _comfy_endpoint("prompt", comfy_url), data=payload, headers={"Content-Type": "application/json"}
     )
@@ -247,6 +284,8 @@ def submit_and_wait(prompt, timeout=DEFAULT_TIMEOUT, comfy_url=None,
     prompt_id = result.get("prompt_id")
     if not prompt_id:
         raise RuntimeError("ComfyUI 回應缺少 prompt_id")
+    if on_queued is not None:
+        on_queued(str(prompt_id), result)
 
     start = time.monotonic()
     transient_failures = 0
@@ -286,7 +325,16 @@ def submit_and_wait(prompt, timeout=DEFAULT_TIMEOUT, comfy_url=None,
             if not isinstance(status, dict):
                 raise RuntimeError(f"ComfyUI history status 回應格式錯誤, prompt_id={prompt_id}")
             if status.get("status_str") == "error":
-                raise RuntimeError(f"生成失敗: {json.dumps(status, ensure_ascii=False)}, prompt_id={prompt_id}")
+                raise PromptExecutionError(
+                    f"生成失敗: {json.dumps(status, ensure_ascii=False)}, prompt_id={prompt_id}",
+                    prompt_id, entry,
+                )
+            if status.get("completed") and require_success and status.get("status_str") != "success":
+                raise PromptExecutionError(
+                    f"ComfyUI 回報 completed 但 status_str={status.get('status_str')!r}（不是 success）: "
+                    f"{json.dumps(status, ensure_ascii=False)}, prompt_id={prompt_id}",
+                    prompt_id, entry,
+                )
             if status.get("completed"):
                 returned = dict(entry)
                 returned["_prompt_id"] = str(prompt_id)
