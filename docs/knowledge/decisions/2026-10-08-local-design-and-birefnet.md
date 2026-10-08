@@ -16,4 +16,4 @@ date: 2026-10-08
 
 ## 後果
 
-技能、教學與工具總表仍把 scene、sheet、pattern 寫成 Core graph。那些頁還沒改；以這份決定為準。
+技能、教學、工具總表與相關頁已改成純 Pillow 現況：不組 graph、不 upload、不 queue。`vfx birefnet-alpha` 仍只在 repo 執行，benchmark 不進部署。`gameart.py vfx` 的子命令不變。2026-10-03 的 Core graph 實測留在流程評估頁，只當當時紀錄。

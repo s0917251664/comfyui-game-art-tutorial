@@ -14,7 +14,7 @@ description: 在新機器上依硬體與既有狀態安裝、部署 ComfyUI 遊�
 - [LoRA 訓練工具（僅使用者要訓練時）](../../docs/knowledge/installation/lora-training.md)
 - [`docs/tested-versions.md`](../../docs/tested-versions.md) 的實際版本／hash 捕捉狀態
 - 本機圖片合成／診斷／參數 sweep 的部署契約：按需讀取[edit-tools.md](../../docs/knowledge/art/edit-tools.md)
-- 物件／平面素材固定 Core 組裝 helper 的部署契約：按需讀取[object-design-workflows.md](../../docs/knowledge/art/object-design-workflows.md)
+- 物件／平面素材 Pillow 組裝 helper 的部署契約：按需讀取[object-design-workflows.md](../../docs/knowledge/art/object-design-workflows.md)
 - ComfyUI server-side ReActor face-swap nodes/client package 的 pins、依賴、部署與 live schema preflight：按需讀取[local-tool.md](../../skills/comfyui-face-swap-workflow/references/local-tool.md)；部署 shared package 至 `tools/` 及 `custom_nodes/comfyui-face-swap-video/`，client 沿用 `generate.py` facade/package；路徑讀 `local_config.json`，不建新的影片 backend/task。Smoke-v1/full-v2 技術候選完整解碼但含 warning，內容仍待人工驗收。
 - ComfyUI server-side Video Layers SAM／layer 工具的可重建檔案、固定 revision、runtime pins 與 preflight：只有使用者要在另一台機器部署／修復時，按需讀取[技能 reference](../../skills/comfyui-video-layers/references/local-tool.md)；先檢查既有 ComfyUI runtime 和 SAM cache，再依 client/package 雙部署契約同步檔案。這次本機已有 cache，無套件或模型下載；不要把本機 gate pins 當成所有平台安裝要求，也不要自動安裝套件。缺 cache 時須先說明容量／平台條件，依使用者授權的安裝範圍處理。
 

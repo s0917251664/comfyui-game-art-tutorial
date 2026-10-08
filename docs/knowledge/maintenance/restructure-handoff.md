@@ -119,7 +119,7 @@ status: current
 |---|---|---|---|
 | **6′.1** `refactor/phase6p.1-dedupe` | 重複實作各留一份：色相旋轉（`vfx_alpha_tools.masked_hue_rotate` 和 `image_edit_tools.recolor`）、`read_masks`（vfx 和 `runner/vace_media`，PR 3.3 前在 `video_edit_media`）、遮罩貼回、影片讀寫 | `test_vfx_alpha_tools`、`test_image_edit_tools`、`test_video_inpaint` 全過；`prop-paste` 輸出和研究 master 逐 byte 相同 | 實跑一次 `vfx prop-paste`，和舊輸出比對 hash |
 | **6′.2** `refactor/phase6p.2-split-vfx` | `vfx_alpha_tools.py`（1,020 行）拆成 pixel／mask／media／qa 模組，`gameart.py vfx` 的介面不變；`deploy_manifest` 同步 | 同上；部署 dry run 清單正確 | `deploy --yes` 後另外跑 `verify-install`，回報通過數 |
-| **6′.3**（待決） | `comfyui_design.py` 改寫成純 Pillow；`vfx birefnet-alpha` 的部署處理 | 等使用者決定後才開 | — |
+| **6′.3** | `comfyui_design.py` 已改純 Pillow；`vfx birefnet-alpha` 維持 repo 內 `benchmark_birefnet`，不進部署 | 見 [ADR](../decisions/2026-10-08-local-design-and-birefnet.md) | 不部署 |
 
 ### 第 7 階段：catalog、技能收斂、擴充協議
 
@@ -144,7 +144,7 @@ status: current
 | 項目 | 狀態 |
 |---|---|
 | `face_swap.py`、`video_layers.py` 印出誤導的 device_config 提醒 | PR 3.1 修正：兩支工具改從 `comfyui_pipeline.client` 取 HTTP client，不再載入 `image_graphs` |
-| `comfyui_design.py` 改寫成純 Pillow | 建議改寫；**等使用者決定**（6′.3） |
+| `comfyui_design.py` 改寫成純 Pillow | 已落地（6′.3）；BiRefNet benchmark 仍不部署 |
 | Mix node 108 寫死 `device=cuda` | 非 CUDA 平台由 preflight 擋下；等 Mac 實測後才決定要不要宣告平台覆寫（D6） |
 | `extra_model_paths.yaml` | 不支援，模型只在 `<comfyui_path>/<path>` 找。要支援必須另外提案 |
 | 上傳到 `input/<run_id>/` 的檔案不會自動清理 | 目前要手動清理（[templates/README](../../../templates/README.md)）；要不要自動清理，**等使用者決定** |
