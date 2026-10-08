@@ -1,0 +1,238 @@
+{
+  "template": "video/wan-vace/inpaint",
+  "case": "strength_negative",
+  "template_version": "0.1.0",
+  "graph_canonical_sha256": "eca4a6b9cb0f446c4d6e4bf4535434559d9453e34db42c7d4b493d8aee236649",
+  "values": {
+    "prompt": "a glowing blue crystal hammer, game art, clean edges",
+    "seed": 20261006,
+    "source_video": "local/source.mp4",
+    "masks": "local/masks",
+    "strength": 0.6,
+    "negative": "blurry, flicker"
+  },
+  "options": {},
+  "uploads": {
+    "control_video": "run/control.mkv",
+    "mask_video": "run/mask.mkv"
+  },
+  "pre_results": {
+    "vace_work_area": {
+      "frames": 56,
+      "width": 544,
+      "height": 560,
+      "length": 57
+    }
+  },
+  "changed": {
+    "3.seed": 20261006,
+    "55.height": 560,
+    "55.length": 57,
+    "55.strength": 0.6,
+    "55.width": 544,
+    "58.filename_prefix": "gameart/video-wan-vace-inpaint/golden",
+    "6.text": "a glowing blue crystal hammer, game art, clean edges",
+    "7.text": "blurry, flicker",
+    "80.file": "run/control.mkv",
+    "82.file": "run/mask.mkv"
+  },
+  "patched_graph_sha256": "ec2828b2527eb6820ed297d9cf8d182cc21b3de1c6ce72a095ed726617e5a228",
+  "graph": {
+    "37": {
+      "class_type": "UNETLoader",
+      "inputs": {
+        "unet_name": "wan2.1_vace_1.3B_fp16.safetensors",
+        "weight_dtype": "default"
+      }
+    },
+    "38": {
+      "class_type": "CLIPLoader",
+      "inputs": {
+        "clip_name": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+        "type": "wan",
+        "device": "default"
+      }
+    },
+    "39": {
+      "class_type": "VAELoader",
+      "inputs": {
+        "vae_name": "wan_2.1_vae.safetensors"
+      }
+    },
+    "48": {
+      "class_type": "ModelSamplingSD3",
+      "inputs": {
+        "model": [
+          "37",
+          0
+        ],
+        "shift": 5.0
+      }
+    },
+    "6": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "text": "a glowing blue crystal hammer, game art, clean edges",
+        "clip": [
+          "38",
+          0
+        ]
+      }
+    },
+    "7": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "text": "blurry, flicker",
+        "clip": [
+          "38",
+          0
+        ]
+      }
+    },
+    "80": {
+      "class_type": "LoadVideo",
+      "inputs": {
+        "file": "run/control.mkv"
+      }
+    },
+    "81": {
+      "class_type": "GetVideoComponents",
+      "inputs": {
+        "video": [
+          "80",
+          0
+        ]
+      }
+    },
+    "82": {
+      "class_type": "LoadVideo",
+      "inputs": {
+        "file": "run/mask.mkv"
+      }
+    },
+    "83": {
+      "class_type": "GetVideoComponents",
+      "inputs": {
+        "video": [
+          "82",
+          0
+        ]
+      }
+    },
+    "84": {
+      "class_type": "ImageToMask",
+      "inputs": {
+        "image": [
+          "83",
+          0
+        ],
+        "channel": "red"
+      }
+    },
+    "55": {
+      "class_type": "WanVaceToVideo",
+      "inputs": {
+        "positive": [
+          "6",
+          0
+        ],
+        "negative": [
+          "7",
+          0
+        ],
+        "vae": [
+          "39",
+          0
+        ],
+        "width": 544,
+        "height": 560,
+        "length": 57,
+        "batch_size": 1,
+        "strength": 0.6,
+        "control_video": [
+          "81",
+          0
+        ],
+        "control_masks": [
+          "84",
+          0
+        ]
+      }
+    },
+    "3": {
+      "class_type": "KSampler",
+      "inputs": {
+        "model": [
+          "48",
+          0
+        ],
+        "positive": [
+          "55",
+          0
+        ],
+        "negative": [
+          "55",
+          1
+        ],
+        "latent_image": [
+          "55",
+          2
+        ],
+        "seed": 20261006,
+        "steps": 20,
+        "cfg": 6.0,
+        "sampler_name": "uni_pc",
+        "scheduler": "simple",
+        "denoise": 1.0
+      }
+    },
+    "56": {
+      "class_type": "TrimVideoLatent",
+      "inputs": {
+        "samples": [
+          "3",
+          0
+        ],
+        "trim_amount": [
+          "55",
+          3
+        ]
+      }
+    },
+    "8": {
+      "class_type": "VAEDecode",
+      "inputs": {
+        "samples": [
+          "56",
+          0
+        ],
+        "vae": [
+          "39",
+          0
+        ]
+      }
+    },
+    "57": {
+      "class_type": "CreateVideo",
+      "inputs": {
+        "images": [
+          "8",
+          0
+        ],
+        "fps": 24.0
+      }
+    },
+    "58": {
+      "class_type": "SaveVideo",
+      "inputs": {
+        "video": [
+          "57",
+          0
+        ],
+        "filename_prefix": "gameart/video-wan-vace-inpaint/golden",
+        "format": "mp4",
+        "codec": "h264"
+      }
+    }
+  }
+}

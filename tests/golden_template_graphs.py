@@ -22,11 +22,18 @@ from comfyui_pipeline.runner import template as T  # noqa: E402
 
 RUN_ID = "golden"
 SEED = 20261006
-UPLOADS = {"reference_image": "run/reference.png", "source_video": "run/source.mp4", "seed_mask": "run/seed_mask.png"}
+UPLOADS = {"reference_image": "run/reference.png", "source_video": "run/source.mp4", "seed_mask": "run/seed_mask.png",
+           "control_video": "run/control.mkv", "mask_video": "run/mask.mkv"}
 PROMPT = "the robot from the reference image dances, same pose as the source video"
 POINTS = [{"x": 192, "y": 192}]
 WAN_BASE = {"prompt": PROMPT, "seed": SEED}
 SCAIL_BASE = {"prompt": PROMPT, "seed": SEED, "sam3_video_object": "person", "sam3_image_object": "robot"}
+VACE_PROMPT = "a glowing blue crystal hammer, game art, clean edges"
+VACE_BASE = {"prompt": VACE_PROMPT, "seed": SEED, "source_video": "local/source.mp4", "masks": "local/masks"}
+# 有 from_pre slot 的 template:pre 步驟的結果(實際執行時由 vace_work_area 量出)
+VACE_1024 = {"vace_work_area": {"frames": 56, "width": 544, "height": 560, "length": 57}}
+VACE_SMALL = {"vace_work_area": {"frames": 9, "width": 192, "height": 128, "length": 9}}
+VACE_WIDE = {"vace_work_area": {"frames": 81, "width": 832, "height": 480, "length": 81}}
 
 # (template id, case 名稱, slot 值, options)
 CASES = [
@@ -52,7 +59,14 @@ CASES = [
     ("video/wan-animate/scail2-extend", "animate_mode", dict(SCAIL_BASE, replacement_mode=False), {}),
     ("video/sam3/track-mask", "default", {}, {}),
     ("video/sam3/track-text", "mallet", {"track_text": "mallet"}, {}),
+    ("video/wan-vace/inpaint", "keep_1024", dict(VACE_BASE), {}),
+    ("video/wan-vace/inpaint", "replace_small", dict(VACE_BASE, mode="replace", grow=4, feather=0), {}),
+    ("video/wan-vace/inpaint", "strength_negative", dict(VACE_BASE, strength=0.6, negative="blurry, flicker"), {}),
+    ("video/wan-vace/inpaint", "wide81_crop", dict(VACE_BASE, crop="0,0,832,480", pad=0), {}),
 ]
+PRE_RESULTS = {("video/wan-vace/inpaint", "keep_1024"): VACE_1024, ("video/wan-vace/inpaint", "replace_small"): VACE_SMALL,
+               ("video/wan-vace/inpaint", "strength_negative"): VACE_1024,
+               ("video/wan-vace/inpaint", "wide81_crop"): VACE_WIDE}
 
 
 def fixture_name(template_id, case):
@@ -62,14 +76,19 @@ def fixture_name(template_id, case):
 def build_case(template_id, case, values, options, root=TEMPLATES):
     template = T.load_template(root, template_id, repo_root=ROOT)
     uploads = {name: path for name, path in UPLOADS.items() if name in template.upload_slots()}
-    local = {name: f"local/{os.path.basename(path)}" for name, path in uploads.items()}  # resolve 只記錄本機路徑
+    local = {name: f"local/{os.path.basename(path)}" for name, path in uploads.items()  # resolve 只記錄本機路徑
+             if not template.slots[name].get("generated")}  # generated 由 pre 步驟產生,不能指定
     resolution = T.resolve(template, dict(local, **values), options, run_id=RUN_ID)
+    pre = PRE_RESULTS.get((template_id, case))
+    if pre:
+        T.fill_from_pre(template, resolution, pre)
     graph, changes = T.patch(template, resolution, uploads)
     changed = {key: graph[key.split(".", 1)[0]]["inputs"][key.split(".", 1)[1]] for key in changes}
     return {
         "template": template_id, "case": case, "template_version": template.version,
         "graph_canonical_sha256": template.graph_canonical_sha256,
         "values": values, "options": resolution["options"], "uploads": uploads,
+        **({"pre_results": pre} if pre else {}),
         "changed": changed, "patched_graph_sha256": T.canonical_sha256(graph), "graph": graph,
     }
 

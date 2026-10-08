@@ -18,11 +18,13 @@ from comfyui_pipeline.runner import template as T  # noqa: E402
 
 ROOT = Path(golden.ROOT)
 TEMPLATES = Path(golden.TEMPLATES)
-ALL_IDS = [
+# PR 2.1 從舊位置搬過來的 8 份(graph 位元組不能變)
+MOVED_IDS = [
     "video/sam3/track-mask", "video/sam3/track-text",
     "video/wan-animate/mix", "video/wan-animate/mix-extend", "video/wan-animate/move",
     "video/wan-animate/move-extend", "video/wan-animate/scail2", "video/wan-animate/scail2-extend",
 ]
+ALL_IDS = sorted(MOVED_IDS + ["video/wan-vace/inpaint"])  # PR 3.4 新增 VACE
 # 舊位置 → 新位置與位元組 sha256(PR 2.1 搬移前後必須一致)
 MOVED_GRAPH_SHA256 = {
     "video/wan-animate/mix": "5ba22f287ef8f9cb9cb926c249724ae050a0b3bd3076863cdd25f4b6b64c6d6c",
@@ -92,7 +94,7 @@ class LoadTemplatesTests(unittest.TestCase):
         self.assertEqual(ALL_IDS, T.discover(TEMPLATES))
 
     def test_all_templates_load_and_hashes_match_moved_bytes(self):
-        for template_id in ALL_IDS:
+        for template_id in MOVED_IDS:
             with self.subTest(template_id):
                 template = T.load_template(TEMPLATES, template_id, repo_root=ROOT)
                 self.assertEqual(MOVED_GRAPH_SHA256[template_id], template.graph_sha256)
@@ -344,7 +346,7 @@ class RealTemplateOfficialFieldsTests(unittest.TestCase):
               "move": {"comfyui_controlnet_aux"}}
 
     def test_fields(self):
-        for template_id in ALL_IDS:
+        for template_id in MOVED_IDS:
             data = T.load_template(TEMPLATES, template_id, repo_root=ROOT).data
             with self.subTest(template_id):
                 self.assertEqual(self.EXPECTED_VERSION[template_id], data["version"])
@@ -471,8 +473,8 @@ class DiffWhitelistTests(unittest.TestCase):
 
 
 class GoldenGraphTests(unittest.TestCase):
-    def test_twenty_cases_cover_all_templates(self):
-        self.assertEqual(20, len(golden.CASES))
+    def test_golden_cases_cover_all_templates(self):
+        self.assertEqual(24, len(golden.CASES))  # PR 3.4 加 4 個 VACE 案例
         self.assertEqual(set(ALL_IDS), {case[0] for case in golden.CASES})
         names = sorted(os.listdir(golden.FIXTURE_DIR))
         self.assertEqual(sorted(golden.fixture_name(c[0], c[1]) for c in golden.CASES), names)

@@ -1,0 +1,373 @@
+{
+  "schema_version": 1,
+  "id": "video/wan-vace/inpaint",
+  "version": "0.1.0",
+  "title": "Wan2.1 VACE 影片局部重繪（遮罩內重畫、貼回原片）",
+  "summary": "只重畫遮罩內（白色＝重畫），遮罩外貼回原片並逐 byte 檢查不變；和 generate.py video_inpaint 同一個 graph 與前後處理",
+  "status": "draft",
+  "status_note": "新 template；windows-cuda 實機執行與比對完成前維持 draft",
+  "min_comfyui_version": "0.34.0",
+  "requires_custom_nodes": [],
+  "graph": {
+    "file": "graph.api.json",
+    "format": "comfyui-api",
+    "sha256": "fd9a75dac3b3742316d06be169d7925707dca84256882b561c0fe646df773f75",
+    "canonical_sha256": "eca4a6b9cb0f446c4d6e4bf4535434559d9453e34db42c7d4b493d8aee236649"
+  },
+  "provenance": {
+    "derived_from": "build_video_inpaint_wan（tools_src/comfyui_pipeline/video_builders.py）產出；取樣參數照官方 video_wan_vace_inpainting 範本的非 turbo 分支",
+    "upstream": {
+      "kind": "workflow_templates",
+      "name": "video_wan_vace_inpainting",
+      "blob": "4af6c58919482553498d0e9f5bc7b5985030b914",
+      "comfyui_version": "0.34.0",
+      "note": "comfyui_workflow_templates_json 0.1.57（2026-08-26 安裝，早於 2026-10-07 的研究）裡的版本。和範本的差異：主模型用 1.3B（範本是 14B）、不接 CausVid LoRA（非 turbo 分支）、遮罩與工作區在本機先處理成無損片段（範本在 graph 裡用 SAM3_Detect 與縮放節點）。另有 core blueprint「Video Inpainting (Wan2.1 VACE).json」blob 3eb700cb9478e00a3b8d8a7c415a36609193ac5e，取樣參數相同，沒有從它派生"
+    },
+    "tested_source_sha256": null,
+    "evidence": [
+      {
+        "path": "docs/knowledge/experiences/2026-10-07-vfx-research/results.md",
+        "note": "2026-10-07 VACE 研究（官方範本對照）"
+      },
+      {
+        "path": "docs/knowledge/video/vfx-tools.md",
+        "note": "generate.py video_inpaint 的流程與參數"
+      }
+    ]
+  },
+  "slots": {
+    "source_video": {
+      "type": "video",
+      "targets": [],
+      "required": true,
+      "help": "來源影片：24 FPS、5～81 幀；不上傳，只在本機裁出工作區"
+    },
+    "masks": {
+      "type": "path",
+      "targets": [],
+      "required": true,
+      "help": "逐幀遮罩：白色＝重畫的 PNG 資料夾（SAM3 template 下載的遮罩可直接用），或 video_layers segment 的 layers.zip"
+    },
+    "mask_object": {
+      "type": "int",
+      "targets": [],
+      "default": 1,
+      "validate": {
+        "min": 1,
+        "max": 999
+      },
+      "help": "masks 是 layers.zip 時取哪個物件 id"
+    },
+    "mode": {
+      "type": "string",
+      "targets": [],
+      "default": "keep",
+      "validate": {
+        "enum": [
+          "keep",
+          "replace"
+        ]
+      },
+      "help": "keep＝保留遮罩內原內容當引導（改顏色、光效、材質）；replace＝遮罩內清空重畫（換成新物件，官方範本做法）"
+    },
+    "grow": {
+      "type": "int",
+      "targets": [],
+      "default": 8,
+      "validate": {
+        "min": 0,
+        "max": 64
+      },
+      "help": "遮罩向外擴張像素"
+    },
+    "pad": {
+      "type": "int",
+      "targets": [],
+      "default": 48,
+      "validate": {
+        "min": 0,
+        "max": 512
+      },
+      "help": "自動工作區在遮罩外留的邊"
+    },
+    "crop": {
+      "type": "string",
+      "targets": [],
+      "default": "",
+      "validate": {
+        "pattern": "^$|^\\d+,\\d+,\\d+,\\d+$"
+      },
+      "help": "手動工作區 x0,y0,x1,y1（來源像素座標）；空字串＝依遮罩自動計算"
+    },
+    "feather": {
+      "type": "int",
+      "targets": [],
+      "default": 4,
+      "validate": {
+        "min": 0,
+        "max": 32
+      },
+      "help": "貼回時邊緣羽化像素；0＝硬邊"
+    },
+    "control_video": {
+      "type": "video",
+      "upload": true,
+      "generated": true,
+      "targets": [
+        {
+          "node": "80",
+          "input": "file",
+          "placeholder": "__CONTROL_VIDEO__"
+        }
+      ],
+      "help": "vace_work_area 產生的控制片段（FFV1 無損）"
+    },
+    "mask_video": {
+      "type": "video",
+      "upload": true,
+      "generated": true,
+      "targets": [
+        {
+          "node": "82",
+          "input": "file",
+          "placeholder": "__MASK_VIDEO__"
+        }
+      ],
+      "help": "vace_work_area 產生的遮罩片段（FFV1 無損）"
+    },
+    "work_width": {
+      "type": "int",
+      "from_pre": "{pre.vace_work_area.width}",
+      "targets": [
+        {
+          "node": "55",
+          "input": "width",
+          "placeholder": "__WORK_WIDTH__"
+        }
+      ]
+    },
+    "work_height": {
+      "type": "int",
+      "from_pre": "{pre.vace_work_area.height}",
+      "targets": [
+        {
+          "node": "55",
+          "input": "height",
+          "placeholder": "__WORK_HEIGHT__"
+        }
+      ]
+    },
+    "vace_length": {
+      "type": "int",
+      "from_pre": "{pre.vace_work_area.length}",
+      "targets": [
+        {
+          "node": "55",
+          "input": "length",
+          "placeholder": "__VACE_LENGTH__"
+        }
+      ]
+    },
+    "prompt": {
+      "type": "text",
+      "required": true,
+      "validate": {
+        "min_length": 1
+      },
+      "targets": [
+        {
+          "node": "6",
+          "input": "text",
+          "placeholder": "__PROMPT__"
+        }
+      ],
+      "help": "描述整個畫面、特別是遮罩內要變成什麼（英文較穩）"
+    },
+    "negative": {
+      "type": "text",
+      "default": "过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走,过曝，",
+      "targets": [
+        {
+          "node": "7",
+          "input": "text"
+        }
+      ],
+      "help": "負向詞；預設是官方範本的負向詞"
+    },
+    "strength": {
+      "type": "float",
+      "default": 1.0,
+      "validate": {
+        "min": 0.001,
+        "max": 10.0
+      },
+      "targets": [
+        {
+          "node": "55",
+          "input": "strength"
+        }
+      ],
+      "help": "VACE 控制強度"
+    },
+    "seed": {
+      "type": "seed",
+      "default": "auto",
+      "targets": [
+        {
+          "node": "3",
+          "input": "seed"
+        }
+      ]
+    },
+    "output_prefix": {
+      "type": "output_prefix",
+      "targets": [
+        {
+          "node": "58",
+          "input": "filename_prefix",
+          "placeholder": "__OUTPUT_PREFIX__"
+        }
+      ]
+    }
+  },
+  "constraints": [],
+  "options": {},
+  "fixed_notes": "Wan2.1 VACE 1.3B、ModelSamplingSD3 shift 5、KSampler 20 步／cfg 6／uni_pc／simple、24 FPS、mp4 h264；工作區最多 832×480 像素",
+  "pre": [
+    {
+      "step": "check_video",
+      "slot": "source_video",
+      "frames_min": 5,
+      "frames_max": 81
+    },
+    {
+      "step": "vace_work_area",
+      "video": "source_video",
+      "masks": "masks",
+      "mask_object": "{mask_object}",
+      "grow": "{grow}",
+      "pad": "{pad}",
+      "crop": "{crop}",
+      "mode": "{mode}",
+      "control": "control_video",
+      "mask": "mask_video"
+    },
+    {
+      "step": "upload",
+      "slots": [
+        "control_video",
+        "mask_video"
+      ]
+    }
+  ],
+  "post": [
+    {
+      "step": "check_video_output",
+      "output": "raw",
+      "width": "{pre.vace_work_area.width}",
+      "height": "{pre.vace_work_area.height}",
+      "frames": "{pre.vace_work_area.length}",
+      "fps": 24,
+      "audio": false
+    },
+    {
+      "step": "extract_keyframes",
+      "output": "raw",
+      "which": [
+        "first",
+        "middle",
+        "last"
+      ]
+    },
+    {
+      "step": "paste_back",
+      "output": "raw",
+      "feather": "{feather}"
+    },
+    {
+      "step": "qa_outside_mask_unchanged"
+    }
+  ],
+  "frame_anchoring": {
+    "first": "none",
+    "last": "none",
+    "reference_role": "none",
+    "time_alignment": "per_source_frame",
+    "continuity": null
+  },
+  "models": [
+    {
+      "role": "vace_unet",
+      "node": "37",
+      "input": "unet_name",
+      "filename": "wan2.1_vace_1.3B_fp16.safetensors",
+      "path": "models/diffusion_models/wan2.1_vace_1.3B_fp16.safetensors",
+      "directory": "diffusion_models",
+      "size_bytes": 4309519800,
+      "sha256": "640ccc0577e6a5d4bb15cd91b11b699ef914fc55f126c5a1c544e152130784f2",
+      "source": {
+        "repo": "Comfy-Org/Wan_2.1_ComfyUI_repackaged",
+        "revision": "123acf1cc74bccbb9bfff8ac1ee72edc08c2341d",
+        "file": "split_files/diffusion_models/wan2.1_vace_1.3B_fp16.safetensors"
+      },
+      "url": "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/123acf1cc74bccbb9bfff8ac1ee72edc08c2341d/split_files/diffusion_models/wan2.1_vace_1.3B_fp16.safetensors"
+    },
+    {
+      "role": "text_encoder",
+      "node": "38",
+      "input": "clip_name",
+      "filename": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      "path": "models/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      "directory": "text_encoders",
+      "size_bytes": 6735906897,
+      "sha256": "c3355d30191f1f066b26d93fba017ae9809dce6c627dda5f6a66eaa651204f68",
+      "source": {
+        "repo": "Comfy-Org/Wan_2.1_ComfyUI_repackaged",
+        "revision": "123acf1cc74bccbb9bfff8ac1ee72edc08c2341d",
+        "file": "split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors"
+      },
+      "url": "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/123acf1cc74bccbb9bfff8ac1ee72edc08c2341d/split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors"
+    },
+    {
+      "role": "vae",
+      "node": "39",
+      "input": "vae_name",
+      "filename": "wan_2.1_vae.safetensors",
+      "path": "models/vae/wan_2.1_vae.safetensors",
+      "directory": "vae",
+      "size_bytes": 253815318,
+      "sha256": "2fc39d31359a4b0a64f55876d8ff7fa8d780956ae2cb13463b0223e15148976b",
+      "source": {
+        "repo": "Comfy-Org/Wan_2.1_ComfyUI_repackaged",
+        "revision": "123acf1cc74bccbb9bfff8ac1ee72edc08c2341d",
+        "file": "split_files/vae/wan_2.1_vae.safetensors"
+      },
+      "url": "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/123acf1cc74bccbb9bfff8ac1ee72edc08c2341d/split_files/vae/wan_2.1_vae.safetensors"
+    }
+  ],
+  "capability_gate": {
+    "nodes": "from_graph",
+    "selectors": "from_models",
+    "files": "from_models",
+    "platforms": {
+      "windows-cuda": {
+        "status": "untested",
+        "notes": "等實機執行與舊 generate.py video_inpaint 輸出比對"
+      },
+      "macos-mps": {
+        "status": "untested",
+        "notes": "VACE 在 MPS 上未驗證"
+      }
+    },
+    "min_memory_mb": null,
+    "capability": "masked_edit"
+  },
+  "outputs": [
+    {
+      "id": "raw",
+      "node": "58",
+      "kind": "video",
+      "role": "candidate"
+    }
+  ]
+}

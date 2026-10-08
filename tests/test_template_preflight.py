@@ -592,6 +592,10 @@ class PreflightCliTests(PreflightFixture, unittest.TestCase):
         self.assertEqual(["out", "err"], [e[0] for e in events[:2]], events)
 
 
+# 新增後還沒有實機證據的 template(PR 3.4 的 VACE;統一實機執行後改成 technical_pass 並從這裡移除)
+DRAFT_UNTIL_LIVE_RUN = {"video/wan-vace/inpaint"}
+
+
 class RealTemplatePinsTests(unittest.TestCase):
     def test_every_model_is_pinned_and_wan_templates_promoted(self):
         for template_id in T.discover(TEMPLATES):
@@ -600,6 +604,9 @@ class RealTemplatePinsTests(unittest.TestCase):
                 for model in template.data["models"]:
                     self.assertRegex(model["sha256"] or "", r"^[0-9a-f]{64}$", model["filename"])
                     self.assertIsInstance(model["size_bytes"], int)
+                if template_id in DRAFT_UNTIL_LIVE_RUN:
+                    self.assertEqual("draft", template.data["status"])
+                    continue
                 self.assertEqual("technical_pass", template.data["status"])
                 self.assertNotIn("status_note", template.data)
 
