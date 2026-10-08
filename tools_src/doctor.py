@@ -105,7 +105,38 @@ def summarize_video(snap):
             "capabilities": backend.get("capabilities") or [],
             "unavailable": backend.get("reasons") or {},
         }
-    return {"default_backend": snap.get("default_backend"), "backends": backends}
+    result = {"default_backend": snap.get("default_backend"), "backends": backends}
+    # 舊的 video_capabilities.json 沒有這個欄位時不要當成錯誤。
+    raw = snap.get("template_capabilities") if isinstance(snap, dict) else None
+    if isinstance(snap, dict) and "template_capabilities" in snap and isinstance(raw, list):
+        result["template_capabilities"] = [item for item in raw if isinstance(item, dict)]
+    return result
+
+
+def _template_capability_line(entries):
+    available, missing = [], []
+    unchecked = False
+    for item in entries:
+        if not isinstance(item, dict):
+            continue
+        name = item.get("capability")
+        if not isinstance(name, str) or not name:
+            continue
+        (available if item.get("available") else missing).append(name)
+        reasons = item.get("reasons")
+        if isinstance(reasons, dict) and reasons.get("note") == "節點未檢查":
+            unchecked = True
+    if available and missing:
+        text = "可用 " + ",".join(available) + "; 未安裝 " + ",".join(missing)
+    elif available:
+        text = "可用 " + ",".join(available)
+    elif missing:
+        text = "未安裝 " + ",".join(missing)
+    else:
+        text = "沒有宣告的影片能力"
+    if unchecked:
+        text += " (節點未檢查)"
+    return "  template: " + text
 
 
 def collect_status(args):
@@ -207,6 +238,8 @@ def format_status(status):
             lines.append(f"  {name}: {'可用 ' + ','.join(b['capabilities']) if b['available'] else '未安裝(未選用)'}")
             for cap, reason in b["unavailable"].items():
                 lines.append(f"    {cap} 未安裝: {json.dumps(reason, ensure_ascii=False)}")
+        if isinstance(video.get("template_capabilities"), list):
+            lines.append(_template_capability_line(video["template_capabilities"]))
     if status["notes"]:
         lines.append("")
         lines += [f"[提醒] {note}" for note in status["notes"]]
