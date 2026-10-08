@@ -61,6 +61,7 @@ def validate_spec(base, spec):
     base_targets = base.declared_targets()
     owner = {}  # (node, input) 或 (node, "*") → option 名稱
     added_ids = {}
+    output_owner, role_owner = None, {}  # outputs 與 models[].role 也只能由一個 option 改
     for option, entry in spec["options"].items():
         choices = entry.get("choices")
         if not isinstance(choices, dict) or entry.get("default") not in choices:
@@ -92,9 +93,11 @@ def validate_spec(base, spec):
                     problems.append(f"{where}: {kind} 指向不存在的節點 {node_id}")
                     continue
                 key = (node_id, "*") if kind == "replace_node" else (node_id, op["input"])
-                for other in ((node_id, "*"), key):
+                # replace_node 會整顆蓋掉節點,所以這個節點上任何別的 option 登記過的 input 都算衝突(不看書寫順序)
+                others = [k for k in owner if k[0] == node_id] if kind == "replace_node" else [(node_id, "*"), key]
+                for other in others:
                     if owner.get(other, option) != option:
-                        problems.append(f"{where}: {key} 已經被 option {owner[other]} 改動")
+                        problems.append(f"{where}: {key} 和 option {owner[other]} 改動的 {other} 衝突")
                 owner[key] = option
                 if key in base_targets or any(n == node_id for n, _ in base_targets) and kind == "replace_node":
                     problems.append(f"{where}: {kind} 不能改 base slot 的目標 {key}")
@@ -107,11 +110,26 @@ def validate_spec(base, spec):
             # 插入節點的連線只能指向 base 或同一個 choice 插入的節點
             known = set(graph) | set(local_added)
             for op in effect.get("ops", []):
-                node = op.get("node") if op.get("op") in ("add_node", "replace_node") else None
-                refs = _links(node) if isinstance(node, dict) else ([op["from"]] if op.get("op") == "relink" else [])
+                kind = op.get("op")
+                if kind in ("add_node", "replace_node") and isinstance(op.get("node"), dict):
+                    refs = _links(op["node"])
+                elif kind == "relink":
+                    refs = [op["from"]]
+                elif kind == "set_value" and T._is_link(op.get("value")):  # 值也可能是連線,一樣不能指向別的 option 的節點
+                    refs = [op["value"]]
+                else:
+                    refs = []
                 for ref in refs:
                     if ref[0] not in known:
                         problems.append(f"{where}: 連線指向不存在的節點 {ref[0]}")
+            if "outputs" in effect:
+                if output_owner not in (None, option):
+                    problems.append(f"{where}: outputs 已經被 option {output_owner} 改動")
+                output_owner = option
+            for model in effect.get("models", []):
+                if role_owner.get(model["role"], option) != option:
+                    problems.append(f"{where}: model role {model['role']} 已經被 option {role_owner[model['role']]} 改動")
+                role_owner[model["role"]] = option
             # choice 的 slot:名稱不能和 base 重複,目標必須在這個 choice 插入的節點上,占位都要有人認領
             slots = effect.get("slots", {})
             claimed = set()

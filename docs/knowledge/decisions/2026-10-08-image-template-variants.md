@@ -43,7 +43,7 @@ date: 2026-10-08
 | golden 子集：concept、concept_lora_style_size、concept_remove_bg（4 個 tier），pose_only_canny／pose／depth／union_depth（3 個 SDXL tier） | 24／99 | 24 相同 | 24 相同 |
 | 全部組合直接和 builder 比（含 golden 沒有的 LoRA＋去背、Union＋LoRA） | 52 | 52 相同 | 52 相同（模型清單也和方案 A 一致） |
 | Q2 另一案：sd15 用 sdxl template 加 checkpoint、解析度的值 | 3 | graph 相同，但模型 pin 仍是 SDXL 底模 | — |
-| 方案 B 的防呆：未知 choice、沒選到時不需要的 slot、兩個 option 改到同一個 input、片段占位沒人認領、沒宣告的節點 | 5 | — | 都會拒絕 |
+| 方案 B 的防呆：未知 choice、沒選到時不需要的 slot、兩個 option 改到同一個 input、`replace_node` 和別的 option 改同一個節點（不論書寫順序）、`set_value` 的連線指向別的 option 插入的節點、兩個 option 都改 outputs、片段占位沒人認領、沒宣告的節點 | 8 | — | 都會拒絕 |
 
 （本機證據：`output/verify-20261008-4.1/`，內含測試前後的完整測試紀錄與案例數報告。）
 
@@ -53,7 +53,7 @@ date: 2026-10-08
 
 全面推行時的 graph 數量，依現在各 task 的旗標推算：
 - 方案 A 的軸：LoRA、`--remove-bg`、`--control-type`、`--control-backend`、icon_asset 的兩種參考圖、guided_inpaint 的 control／appearance。
-- 方案 B：每個 task、每個家族各一份 base。
+- 方案 B：每個 task 一份 base；用到底模的 task 依家族分開（sd15 不支援的 task 沒有 sd15 版），layer_split 與 FLUX.2 不分家族。
 
 | task | 方案 A（sdxl） | 方案 A（sd15） | 方案 B base |
 |---|---|---|---|
@@ -85,22 +85,22 @@ date: 2026-10-08
 ### 兩案都要處理的共同缺口
 
 這些不影響二選一，但 4.2 開始前要先定：
-1. **可替換的底模。** `--style` 會換成同家族的社群底模，golden `concept_lora_style_size` 也換了 checkpoint，所以 checkpoint 必須是 slot。現在 models pin 只核對 graph 裡的預設檔名。換成別的檔名時，preflight 會檢查到錯的檔案，`run.result.json` 也會記錄錯的 pin。runner 要能分辨：slot 值等於 pin 的檔名時照常檢查大小與 sha256；不同時只用 `/object_info` 確認檔案存在，並在 manifest 標成「未 pin」。LoRA 檔是使用者自己準備的，一律算未 pin。
+1. **可替換的底模。** `--style` 會換成同家族的社群底模，golden `concept_lora_style_size` 也換了 checkpoint，所以 checkpoint 必須是 slot。現在 models pin 只核對 graph 裡的預設檔名。換成別的檔名時，preflight 仍然檢查 pin 的那個檔案；`run.result.json` 的 models 列 `filename` 還是 pin，只有同一列的 `graph_value` 是實際送出的檔名。runner 要能分辨：slot 值等於 pin 的檔名時照常檢查大小與 sha256；不同時只用 `/object_info` 確認檔案存在，並在 manifest 標成「未 pin」。LoRA 檔是使用者自己準備的，一律算未 pin。
 2. **輸出檔名前綴。** 原型保留 builder 的 `filename_prefix`（例如 `concept`、`transparent`），因為第 5 階段的驗收要求送出的 graph sha256 和切換前相同。如果改用 runner 的 `output_prefix` slot（`gameart/<id>/<run_id>`），sha256 就會不同。
 3. **圖片的 `frame_anchoring`。** schema 的 `time_alignment` 只有影片的兩個值，原型暫時寫 `per_source_frame`。圖片 template 應該允許 `null`，或新增一個值。
-4. **tier 的預設解析度。** runner 不知道 tier，所以 slot 預設值沒辦法隨 tier 變。原型由呼叫端明確傳入 width／height（sdxl_light 傳 768）；slot 預設值只寫設定檔的原生尺寸。
+4. **tier 的預設解析度。** runner 不知道 tier，所以 slot 預設值沒辦法隨 tier 變。原型由呼叫端明確傳入 width／height（sdxl_light 傳 768）；slot 預設值只寫設定檔的原生尺寸。各 task 的規則不同，薄轉接要照 builder 的現況傳值，見下一節的 Q2 摘要；icon_asset 一律用原生尺寸，不能套用 sdxl_light 的 768。
 
 ## Q2：profile／tier 怎麼對應到 template
 
 golden 顯示：
 - sdxl_high 和 sdxl 產生的 graph 完全相同；
-- sdxl_light 只有預設寬高不同（768）；
+- sdxl_light 只在「用 tier 預設解析度」的 task 不同：concept、character_action、pose_only、style_lock 走 `_default_size()`，sdxl_light 是 768。icon_asset 用設定檔的原生尺寸，不看記憶體檔位，sdxl_light 仍是 1024（golden `sdxl_light.json` 的 `icon_asset`）。inpaint、guided_inpaint、refine、upscale、layer_split 沒有預設寬高；FLUX.2 固定 1024，四個 tier 的 graph 相同；
 - sd15 只有底模檔名和寬高不同；
 - 兩個設定檔的取樣參數相同。
 
 | 方案 | 做法 | 評估 |
 |---|---|---|
-| **每個家族（設定檔）一份**（建議） | `image/sdxl/*` 對應 `sdxl_standard`，`image/sd15/*` 對應 `sd15_light`。底模 pin、add-on 模型、`requires_custom_nodes` 都屬於該家族。同一家族內的 tier 差異只有解析度，由呼叫端依設定檔的 `resolution.by_memory` 明確傳入 | 模型 pin 正確，preflight 檢查的是這台機器真的會用的檔案。sd15 沒有 ControlNet／IPAdapter，所以根本沒有 `image/sd15/pose-only`，「不支援」直接由「沒有 template」表達，不用在執行時另外擋。代價是 sd15 有 11 份（方案 A），共用部分和 sdxl 重複 |
+| **每個家族（設定檔）一份**（建議） | `image/sdxl/*` 對應 `sdxl_standard`，`image/sd15/*` 對應 `sd15_light`。底模 pin、add-on 模型、`requires_custom_nodes` 都屬於該家族。同一家族內的 tier 差異只有解析度：用 tier 預設解析度的 task，由呼叫端依設定檔明確傳入（和 builder 的 `_default_size()` 相同：沒選設定檔時是 `device_config.json` 的預設寬高，選了 `--profile` 時是設定檔的 `resolution.by_memory`）；icon_asset 傳原生尺寸；其他 task 不傳 | 模型 pin 正確，preflight 檢查的是這台機器真的會用的檔案。sd15 沒有 ControlNet／IPAdapter，所以根本沒有 `image/sd15/pose-only`，「不支援」直接由「沒有 template」表達，不用在執行時另外擋。代價是 sd15 有 11 份（方案 A），共用部分和 sdxl 重複 |
 | 一份 template，用 slot 預設值 | 只有 sdxl template；sd15 傳 `checkpoint=dreamshaper_8.safetensors`，再加寬高 | graph 能做到相同（原型 3 組相同），但 template 的模型 pin 仍是 SDXL 底模（測試有斷言這點），preflight 會檢查錯的檔案。sd15 不支援的 task 也要靠額外的 gate。不建議 |
 | 每個 tier 一份 | sdxl_high、sdxl、sdxl_light、sd15 各一份 | sdxl_high 和 sdxl 的 graph 完全一樣，只是複製。不建議 |
 
@@ -121,6 +121,7 @@ golden 顯示：
 3. **要不要減少組合數？** 方案 A 約 78 份，其中三項可以考慮刪減：
    - pose_only 的 Union 後端（實驗性質，12 份）：刪掉，或保留但維持 `draft`；
    - character_action、pose_only、style_lock 的 `--remove-bg`（共 20 份）：保留，或之後改成「先生成、再用獨立的去背 template 處理」。後者送出的 graph 會和現在不同，第 5 階段的 graph_sha256 驗收要另外說明；
+   - 上面兩項有 6 份重疊（pose_only 的 Union × 去背），兩項都刪是減少 26 份，剩約 52 份；
    - icon_asset 兩種參考圖的組合（sdxl 8 份）。
 4. **產生器：** 要不要把 `build_drafts.py` 的做法收進 repo 當正式工具（例如 `tools_src/` 外的維護腳本）？第 8.3 階段刪 builder 之後，產生器要改成從片段檔組 graph。
 5. **輸出檔名前綴：** 圖片 template 保留 builder 的 `filename_prefix`（第 5 階段 graph_sha256 才能相同），或改用 runner 的 `output_prefix`（輸出路徑和影片 template 一致，但切換時 sha256 會不同，驗收要改寫）？

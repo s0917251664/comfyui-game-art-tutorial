@@ -273,7 +273,33 @@ class OptionOpsGuardTests(unittest.TestCase):
         spec["options"]["remove_bg"]["choices"]["on"]["ops"].append(
             {"op": "relink", "node": "5", "input": "model", "from": ["1", 0]})
         problems = option_ops.validate_spec(self.vt.base, spec)
-        self.assertTrue(any("已經被 option" in p for p in problems), problems)
+        self.assertTrue(any("衝突" in p for p in problems), problems)
+
+    def test_replace_node_conflict_found_regardless_of_order(self):
+        vt = option_ops.load(B_ROOT, "image/sdxl/pose-only", ROOT)
+        for first in ("lora", "control"):
+            spec = copy.deepcopy(vt.spec)
+            # LoRA 改 5.image(先或後於 control 的 replace_node 5)
+            spec["options"]["lora"]["choices"]["on"]["ops"].append(
+                {"op": "relink", "node": "5", "input": "image", "from": ["4", 0]})
+            order = [first] + [o for o in spec["options"] if o != first]
+            spec["options"] = {o: spec["options"][o] for o in order}
+            with self.subTest(first=first):
+                problems = option_ops.validate_spec(vt.base, spec)
+                self.assertTrue(any("衝突" in p for p in problems), problems)
+
+    def test_set_value_link_to_other_option_node_rejected(self):
+        spec = copy.deepcopy(self.vt.spec)
+        spec["options"]["remove_bg"]["choices"]["on"]["ops"].append(
+            {"op": "set_value", "node": "7", "input": "images", "value": ["1b", 0]})
+        problems = option_ops.validate_spec(self.vt.base, spec)
+        self.assertTrue(any("1b" in p for p in problems), problems)
+
+    def test_two_options_replacing_outputs_rejected(self):
+        spec = copy.deepcopy(self.vt.spec)
+        spec["options"]["lora"]["choices"]["on"]["outputs"] = self.vt.base.data["outputs"]
+        problems = option_ops.validate_spec(self.vt.base, spec)
+        self.assertTrue(any("outputs" in p for p in problems), problems)
 
     def test_fragment_placeholder_must_be_claimed(self):
         spec = copy.deepcopy(self.vt.spec)
