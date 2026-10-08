@@ -184,7 +184,7 @@ status: mixed-implemented-and-planned
 | `video_inpaint` | 清理組 | 影片 + 時間遮罩 | — | 不做第一波 |
 | `video_upscale` | 成片放大 | 已定稿短片 | — | 不做第一波 |
 
-目前 `fx_loop` 與 `img2video` 共用 I2V builder，但對外仍分成兩個 task，因為**驗收標準不同**:`img2video` 驗「還是不是這張圖、動作是不是使用者要的」;`fx_loop` 驗「最後一幀接回第一幀能不能看、進引擎抽幀後循環是否成立」。`img2video` 預設不抽幀，`fx_loop` 預設抽幀；兩者都可用旗標明確改變這個輸出包裝行為。
+目前 `fx_loop` 與 `img2video` 共用同一組 I2V template（Wan 是 `video/wan/img2video`；H3 沒有尾幀是 `video/h3/img2video`，有尾幀是 `video/h3/img2video-last`），但對外仍分成兩個 task，因為**驗收標準不同**:`img2video` 驗「還是不是這張圖、動作是不是使用者要的」;`fx_loop` 驗「最後一幀接回第一幀能不能看、進引擎抽幀後循環是否成立」。`img2video` 預設不抽幀，`fx_loop` 預設抽幀；兩者都可用旗標明確改變這個輸出包裝行為。
 
 ### 5.2 編導流程(skill 層,不是 generate.py task)
 

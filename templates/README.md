@@ -85,7 +85,7 @@ VACE 的三個步驟（實作在 `tools_src/comfyui_pipeline/runner/vace_media.p
 
 `camera_end_still`（pre）呼叫 `video_graphs.build_camera_end_still`。orbit 沒有終點靜幀，步驟失敗且不產生檔案。參數只接受字面值或 `{slot}` 引用，不能放任意程式。
 
-這兩個步驟沒有接上 `templates/video/wan/**` 與 `templates/video/h3/**` 的 `pre`：同一份 graph 也要能吃使用者自己的圖（例如 transition 的尾幀），`generated` 會擋住使用者上傳。`tasks/video.py` 的執行路徑仍直接呼叫 builder（第 6.3 階段才改接 template）。
+這兩個步驟沒有接上 `templates/video/wan/**` 與 `templates/video/h3/**` 的 `pre`：同一份 graph 也要能吃使用者自己的圖（例如 transition 的尾幀），`generated` 會擋住使用者上傳。`tasks/video.py` 用 runner 填 template、不跑這段 pre 上傳：Wan 的 img2video／fx_loop／transition／clip_extend／camera_move 是 `video/wan/img2video`；H3 沒有尾幀是 `video/h3/img2video`，有尾幀是 `video/h3/img2video-last`；pose_drive 是 `video/{backend}/pose-drive-{canny|pose|depth}`；character_video 是 `video/h3/character-video-{張數}`。
 
 模型物件可以寫選用的 `platforms`。有寫就必須含 `windows-cuda`，而且它的 `filename`、`sha256`、`size_bytes` 等於頂層 pin。預檢仍只檢查頂層 pin。不為每個平台複製一份 graph。見 [2026-10-08 影片模型 pin](../docs/knowledge/decisions/2026-10-08-video-model-pins.md)。
 
