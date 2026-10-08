@@ -4,6 +4,7 @@ import json
 import os
 import random
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -34,6 +35,19 @@ MOVED_GRAPH_SHA256 = {
     "video/sam3/track-text": "836c6ce1744a19b65cbfda6d627cd6c3891779838d801f342686cd6e665af642",
 }
 
+
+def tracked_files(*patterns):
+    """git 追蹤中、符合 patterns 的檔案(repo 相對路徑);沒有 git 時改走目錄。"""
+    skip = ("third_party/", "output/")
+    try:
+        out = subprocess.run(["git", "-c", "core.quotepath=false", "ls-files", "-z", "--", *patterns],
+                             cwd=ROOT, capture_output=True, check=True).stdout.decode("utf-8")
+        files = [f for f in out.split("\0") if f]
+    except (OSError, subprocess.CalledProcessError):
+        files = []
+        for pattern in patterns:
+            files += [p.relative_to(ROOT).as_posix() for p in ROOT.rglob(pattern) if ".git" not in p.parts]
+    return sorted({f for f in files if not f.startswith(skip) and (ROOT / f).is_file()})
 
 class TemplateFixture:
     """把一份 template 複製到暫存資料夾,方便改壞來測試驗證。"""
@@ -87,16 +101,46 @@ class LoadTemplatesTests(unittest.TestCase):
 
     def test_old_asset_locations_are_gone(self):
         for old in ("skills/comfyui-wan-animate/assets/mix-api.json",
-                    "skills/comfyui-video-layers/assets/sam3-track-mask-api.json"):
+                    "skills/comfyui-video-layers/assets/sam3-track-mask-api.json",
+                    # D12:舊 Wan manifest 在 PR 2.4 刪除,template.json 是唯一來源
+                    "skills/comfyui-wan-animate/assets/template-manifest.json"):
             self.assertFalse((ROOT / old).exists(), old)
 
-    def test_old_wan_manifest_points_at_moved_graphs(self):
-        manifest_path = ROOT / "skills/comfyui-wan-animate/assets/template-manifest.json"
-        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-        entries = manifest["templates"] if isinstance(manifest.get("templates"), list) else list(manifest["templates"].values())
-        for entry in entries:
-            target = (manifest_path.parent / entry["template"]).resolve()
-            self.assertTrue(target.is_file(), entry["template"])
+    def test_deleted_wan_manifest_is_indexed_not_linked(self):
+        old = "skills/comfyui-wan-animate/assets/template-manifest.json"
+        index = (ROOT / "docs/knowledge/archive/redirect-stubs.md").read_text(encoding="utf-8")
+        self.assertIn(f"`{old}`", index)
+        # 只有轉址索引、決策紀錄和 templates/README 可以提到舊路徑(說明它已刪除)
+        allowed = {"docs/knowledge/archive/redirect-stubs.md", "templates/README.md"}
+        for path in tracked_files("*.md", "*.py", "*.json"):
+            if path in allowed or path.startswith("docs/knowledge/decisions/") or path.startswith("tests/"):
+                continue
+            text = (ROOT / path).read_text(encoding="utf-8", errors="replace")
+            self.assertNotIn("assets/template-manifest.json", text, path)
+
+    def test_fixed_graph_docs_route_through_runner(self):
+        """D8:技能與規則不再要求手動送 JSON,也不再禁止 runner。"""
+        stale = ("沒有 Python 入口", "無 Python 入口", "runner 合併前", "不要建立 `.ps1`",
+                 "增加 Python client", "直接 HTTP 送出", "直接 HTTP 送 templates")
+        for path in tracked_files("*.md"):
+            if not (path.startswith("skills/") or path.startswith("docs/knowledge/rules/")
+                    or path.startswith("docs/knowledge/maintenance/") or path == "AGENTS.md"
+                    or path in ("docs/knowledge/TOOLS.md", "docs/knowledge/video/vfx-tools.md")):
+                continue
+            text = (ROOT / path).read_text(encoding="utf-8")
+            for phrase in stale:
+                self.assertNotIn(phrase, text, f"{path}: {phrase}")
+        for path in ("docs/knowledge/rules/fixed-graphs.md",
+                     "skills/comfyui-wan-animate/SKILL.md",
+                     "skills/comfyui-wan-animate/references/comfyui-api.md",
+                     "skills/comfyui-wan-animate/references/scail2.md",
+                     "skills/comfyui-video-layers/references/sam3-track.md"):
+            text = (ROOT / path).read_text(encoding="utf-8")
+            self.assertIn("gameart.py run", text, path)
+        for path in ("skills/comfyui-wan-animate/SKILL.md",
+                     "skills/comfyui-wan-animate/references/comfyui-api.md",
+                     "skills/comfyui-video-layers/references/sam3-track.md"):
+            self.assertIn("--preflight", (ROOT / path).read_text(encoding="utf-8"), path)
 
     def test_schema_required_matches_loader(self):
         schema = json.loads((TEMPLATES / "_schema" / "template.schema.json").read_text(encoding="utf-8"))

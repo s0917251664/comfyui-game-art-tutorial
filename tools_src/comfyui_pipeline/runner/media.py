@@ -6,7 +6,29 @@
 import os
 from fractions import Fraction
 
-from ..video_media import _fps_fraction
+# 不 import video_media:它會連帶載入 image_graphs,import 時就去讀 tools_src/device_config.json
+# 並印出「找不到 device_config.json」的提醒;template runner 的平台資訊來自 <ComfyUI>/tools 快照。
+
+
+def _fps_fraction(rate):
+    """PyAV 的 average_rate(Fraction 或數值)正規化成 Fraction;沒有或無法辨識時回傳 None。"""
+    if rate is None:
+        return None
+    try:
+        return Fraction(rate.numerator, rate.denominator)
+    except (AttributeError, TypeError, ValueError, ZeroDivisionError):
+        pass
+    try:
+        return Fraction(str(rate))
+    except (TypeError, ValueError, ZeroDivisionError):
+        return None
+
+
+def fps_number(rate):
+    """manifest 用的 FPS 數字:整數幀率回傳 int(16),其他回傳 float(29.97002997…)。"""
+    if rate is None:
+        return None
+    return int(rate) if rate.denominator == 1 else float(rate)
 
 
 class MediaDependencyError(RuntimeError):
@@ -57,7 +79,8 @@ def mask_stats(path, channel="red"):
 
 
 def probe_video(path):
-    """解碼整支影片:{width, height, frames, fps(分數字串), fps_value, pts_uniform, has_audio, duration_seconds}。"""
+    """解碼整支影片:{width, height, frames, fps(數字;整數幀率是 int), fps_rational(分數字串,例如 "30000/1001"),
+    fps_value(float), pts_uniform, has_audio, duration_seconds}。"""
     av = _import("av")
     try:
         container = av.open(os.fspath(path))
@@ -92,7 +115,8 @@ def probe_video(path):
     if (rate is None or rate <= 0) and uniform and len(pts) > 1 and time_base:
         rate = 1 / (Fraction(pts[1] - pts[0]) * Fraction(time_base))
     return {"width": width, "height": height, "frames": len(pts),
-            "fps": f"{rate.numerator}/{rate.denominator}" if rate else None,
+            "fps": fps_number(rate) if rate else None,
+            "fps_rational": f"{rate.numerator}/{rate.denominator}" if rate else None,
             "fps_value": float(rate) if rate else None, "pts_uniform": uniform, "has_audio": has_audio,
             "duration_seconds": round(len(pts) / float(rate), 6) if rate else None}
 

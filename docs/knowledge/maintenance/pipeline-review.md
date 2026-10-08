@@ -22,7 +22,7 @@ last_updated: 2026-10-06
 
 1. **界定問題：** 確認要審查的使用者流程、技能家族或具體卡點。若已有可沿用 brief 就不重做需求收集。
 2. **對照現況：** 根據 skill description/body、`AGENTS.md`、TOOLS、INDEX、reference、code source 和當前案例確認觸發條件、依賴、設定／schema gate、呼叫方式、輸出位置與內容驗收。按需核對小範圍，不載入整個 vault。
-3. **分類路線：** brief／需求規劃、平台原生、直接 ComfyUI HTTP API 固定 graph、既有 `generate.py` CLI/profile、需要本機 helper/custom node 的媒體或狀態處理。考慮操作步驟、當前工具 schema、版本／asset 重用、server support、runtime、狀態恢復、output contract 和可追溯性。
+3. **分類路線：** brief／需求規劃、平台原生、固定 graph template（`gameart.py run`）、既有 `generate.py` CLI/profile、需要本機 helper/custom node 的媒體或狀態處理。考慮操作步驟、當前工具 schema、版本／asset 重用、server support、runtime、狀態恢復、output contract 和可追溯性。
 4. **標明證據等級：** 區分程式存在、文件描述、offline structure/schema check、當前 live preflight、實際 bounded execution、技術 contract、內容人工觀察和美術審核者的接受決定。只成功 queue 不算完成；技術 pass 也不等同美術 accepted（[R1](../rules/candidate-review.md)）。
 5. **評估 API 適配時：** 逐能力說明 direct API 是否可用固定 assets 取代現有 CLI、Python 是不是必要於批次 media/state、哪些 profile/backend gate 要保留、哪些 caller 尚未改走。結論標記「已實作」、「候選可研究」、「目前不適合」或「證據不足」。不以非 Python 作為所有路線目標，也不將建議寫成已遷移。
 

@@ -33,17 +33,16 @@ last_updated: 2026-10-06
 - [ ] 建立／變更平台生成能力時，只有當下有實際工具且任務要求生成才做一個有界呼叫並檢查返回資產與基本格式；純路由或 brief 文件依來源、工具 schema、觸發情境做檢查，不強制生成。工具不存在或 schema 不支援時明確回報，不暗中改走 ComfyUI。
 - [ ] 平台原生技能的執行路線不依賴 Python；維護者選用 Python quick validator 只是維護方式，不能當成終端使用者 runtime 或安裝要求。
 
-### C. 直接 ComfyUI HTTP API 與固定 graph assets
+### C. 固定 graph template（`gameart.py run`）
 
-用於有穩定 workflow、但不需要新 Python wrapper、`generate.py` task 或 backend 的能力。agent 可直接呼叫 ComfyUI API。
+用於有穩定 workflow、但不需要新 Python wrapper、`generate.py` task 或 backend 的能力。固定 graph 一律做成 `templates/<id>/`（`graph.api.json`＋`template.json`＋`README.md`），由 `gameart.py run` 執行（[R2](../rules/fixed-graphs.md)）；不要在技能文件寫一套手動 HTTP 送出步驟。格式與修改規則見 [templates/README](../../../templates/README.md)。
 
-- [ ] 固定且版控 API-format graph JSON；記錄來源、版本/hash、所有可替換欄位和不允許變動的參數。UI-format JSON 不能未轉換就當 API-format。
-- [ ] queue 前以目前 server `GET /object_info` 核對所有 node classes、input schema、模型 selectors；另檢查本機所需模型／sidecar assets 與版本。缺失即停止，不用同類名稱猜相容。
-- [ ] 先驗證輸入，再按 API 契約 upload；保存回傳的 server path，填入固定 graph。未解析 placeholder、未知 input、檔案限制不符時不能 submit。
-- [ ] 只提交一個可控、有界 prompt，立即保存 `prompt_id`；輪詢該 ID 的 history，以服務明確的 success／completed 狀態判定完成。Queue snapshot 或成功 submit 不算完成。
-- [ ] 依 outputs descriptors 下載並核對尺寸、格式、幀數／FPS／音訊、完整解碼及 graph 約定。逾時保存 ID、history 和失敗收據；不得自動重送、全域 interrupt 或下載不存在的輸出。
-- [ ] 有界實際 smoke 至少走過 preflight、輸入上傳、API submit/history、輸出下載與契約檢查，才可標技術 verified。離線 graph parse／node-list 存在或未真正呼叫的模板保持 pending。內容另列 candidate，等待人工驗收。
-- [ ] 不因為用了 ComfyUI API 就新增 Python client、CLI、`generate.py` task/backend 或 capability catalog。只有請求本身確實需要本機大量解碼、時間軸／批次處理、狀態管理或專案既有 pipeline 暫存時，才另評估 helper/custom node 路線。
+- [ ] 固定且版控 API-format graph JSON；`template.json` 記錄來源、版本／hash、slot（可替換欄位與規則）、option、模型 pin、平台狀態與 pre／post 檢查，其餘參數不允許變動。UI-format JSON 不能未轉換就當 API-format。
+- [ ] runner 的 preflight 要能擋下：以目前 server `GET /object_info` 核對所有 node classes、input schema、模型 selectors，並檢查模型檔大小（`--verify-hashes` 核對 sha256）。缺失即停止，不用同類名稱猜相容。
+- [ ] `template.json` 的 pre 步驟先驗證輸入（FPS、幀數、尺寸等），runner 才上傳並填入固定 graph。未解析 placeholder、未知 input、檔案限制不符時 runner 會拒絕送出；要加 golden 與測試。
+- [ ] 宣告 `outputs` 與 post 步驟，讓 runner 下載後核對尺寸、格式、幀數／FPS／音訊、完整解碼及 graph 約定。送出、輪詢、逾時（不重送、不全域 interrupt）與 `run.result.json` 都由 runner 處理，不另寫。
+- [ ] 用 `gameart.py run <id>` 做有界實際 smoke，`run.result.json` 是 success 且技術檢查通過，才可透過 PR 把該平台標 `technical_pass`。dry-run、離線 graph parse 或未真正執行的平台保持 `untested`。內容另列 candidate，等待人工驗收。
+- [ ] 不為單一固定 graph 另寫 client、CLI、`generate.py` task/backend 或 capability catalog；runner 已涵蓋上傳、送出、輪詢與下載。只有請求本身確實需要本機大量解碼、時間軸／批次處理、狀態管理或專案既有 pipeline 暫存時，才另評估 helper/custom node 路線。
 
 ### D. 既有 `generate.py` CLI、profile 或 capability catalog
 
@@ -55,7 +54,7 @@ last_updated: 2026-10-06
 
 ### E. 本機 helper、server custom node、媒體／批次／狀態處理
 
-- [ ] 確認功能確實需要本機 code，例如批次媒體解碼、長時間狀態、專案資產 staging、特定演算法或既有 CLI 自動化；可由固定 API graph 直做時，不額外包 Python。
+- [ ] 確認功能確實需要本機 code，例如批次媒體解碼、長時間狀態、專案資產 staging、特定演算法或既有 CLI 自動化；可由固定 graph template 直做時，不額外包 Python。
 - [ ] 列出 client、server、依賴、模型／node pins、安裝路徑、輸入輸出契約與失敗清理；只部署受影響的程式，保留既有 source-of-truth。
 - [ ] 如果必須 custom node，說清楚 server 端處理責任與 client/API 邊界；若用既有 ComfyUI API helper，避免再實作重複 graph/transport。
 - [ ] 執行有界 smoke，驗證部署後真正執行、成功及失敗產物、完整解碼／像素契約及狀態記錄。需要 media/runtime 的測試依工具契約，不強迫跑不相干的 `generate.py` tests。

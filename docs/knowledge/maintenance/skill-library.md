@@ -16,11 +16,11 @@ last_updated: 2026-10-06
 |---|---|---|
 | Brief／需求與工作流程 | 釐清來源、reference、修改／保留項、交付及驗收；不執行生成。 | 零 ComfyUI／Python 要求。 |
 | 平台原生圖片工具 | 核對本次會話實際提供的工具及即時 schema，使用其明確支援的輸入／輸出。 | 不讀 `local_config.json`，不要求 profile、detector 或本機 Python；不推定影片、外部 API／付費權限可用。 |
-| 直接 ComfyUI API＋固定 graph assets | 對已存在的固定 API graph JSON 直接呼叫 server HTTP API。Upload、history 與 outputs 依固定契約。 | 不必新增 Python wrapper、CLI、`generate.py` task/backend 或 capability catalog；仍要依當次 ComfyUI URL 及 live schema/models preflight。 |
+| 固定 graph template＋runner | 版控的固定 API graph 放在 `templates/<id>/`，一律由 `gameart.py run` 執行（[R2](../rules/fixed-graphs.md)）：preflight、上傳、送出、輪詢、下載、輸出檢查與 `run.result.json`。 | 不另寫 wrapper、CLI、`generate.py` task/backend 或 capability catalog；每次仍要跑 live preflight。 |
 | 既有 `generate.py` CLI | 使用已接入的圖片／影片 task，沿用 image profiles、影片 backend/capability 與既有輸入／結果契約。 | 保留現有 Python facade/package；不要因單一 API graph 存在就宣稱其 task 已遷移。 |
 | 本機 helper／custom node | 執行需要 local file、批次／長片解碼、state、資料夾管理或 server-side 專用媒體演算法的工作。 | 只有為契約所需的 client/helper、套件或 custom node 才保留／新增；清楚區分 client／server 責任和部署。 |
 
-ComfyUI API 是另一種呼叫既有 graph 的方式，不等於 API client 產品或新 engine。若固定 assets 足以處理 prompt 和有限欄位，agent 可直接呼叫 ComfyUI；若任務還包含受控媒體前處理、批次、輪詢恢復或輸出整理，按實際必要性評估 helper，不以「無 Python」當普遍要求。
+ComfyUI API 是另一種呼叫既有 graph 的方式，不等於 API client 產品或新 engine。若固定 graph 足以處理 prompt 和有限欄位，就做成 template 交給 `gameart.py run`，不要讓 agent 手動呼叫 HTTP；若任務還包含受控媒體前處理、批次、輪詢恢復或輸出整理，按實際必要性評估 helper，不以「無 Python」當普遍要求。
 
 ## 新技能、能力與 discoverability
 
@@ -38,7 +38,7 @@ Repo 內新增、改名或責任變更的技能，應更新 `AGENTS.md` 核心�
 
 盤點基準：本 repository 的 `skills/*/SKILL.md`，共 **18 個技能目錄**：17 個專案自有遊戲美術技能，加 1 個 project-knowledge skill。15 個固定來源的 Obsidian 上游技能盤點時也在 `skills/`，2026-10-07 已移到 `third_party/claude-obsidian-skills/`。下表涵蓋 17 個美術技能；project-knowledge 與上游技能不屬於本次美術執行路線盤點，並未要求修改它們。
 
-「API 後續適配度」表示日後可研究是否適合，**不是已完成遷移**。只有 Wan Animate 欄明確列出目前直接 API graph；其他技能仍依其現行 implementation 運作。
+「API 後續適配度」表示日後可研究是否適合，**不是已完成遷移**。只有 Wan Animate 欄明確列出目前的固定 template 路線；其他技能仍依其現行 implementation 運作。
 
 | 技能 | 目前實作／職責 | API 後續適配度與狀態 |
 |---|---|---|
@@ -50,7 +50,7 @@ Repo 內新增、改名或責任變更的技能，應更新 `AGENTS.md` 核心�
 | `comfyui-image-sweep` | `image_edit_tools.py sweep` 包裝既有圖片 CLI task 的有限參數比較。 | 依賴既有 task 語意與 sweep orchestration；不適合把 wrapper 當單個 graph API，目前未遷移。 |
 | `comfyui-object-design` | Python helper 組合既有 ComfyUI Core graph 和圖片 task，處理 scene／sheet／pattern。 | graph 可否直接 API 呼叫需按各模式另評估；helper 現仍提供現行合成／CLI，未遷移。 |
 | `comfyui-video-gen` | `generate.py` 影片 task/backend、`video_capabilities.json`、本機 concat/composite。 | 固定已接入 backend 仍走 CLI；不可由 API node 存在取代 backend gate，目前未遷移。 |
-| `comfyui-wan-animate` | 以固定 API-format JSON 直接呼叫 ComfyUI HTTP API；Mix17／Move17、兩段延伸 Mix61／Move61、音訊保留與 384×640 直接 HTTP 技術 smoke 通過；SCAIL-2 templates 同在此技能。內容仍 candidate，未接 `generate.py`。 | 已有 API 路線；三段以上、未測尺寸與輸出品質不能由現有測試推定，依專用 skill／evidence 管理。 |
+| `comfyui-wan-animate` | 以 `gameart.py run` 執行 `templates/video/wan-animate/` 的固定 template；Mix17／Move17、兩段延伸 Mix61／Move61、音訊保留與 384×640 技術 smoke 通過（2026-10-06 直接 HTTP，2026-10-08 runner Move17）；SCAIL-2 templates 同在此技能。內容仍 candidate，未接 `generate.py`。 | 已有 template＋runner 路線；三段以上、未測尺寸與輸出品質不能由現有測試推定，依專用 skill／evidence 管理。 |
 | `comfyui-character-animation-workflow` | 編排既有圖片／影片 task、階段和人工驗收，不另加模型參數。 | 作 workflow orchestrator，可在明確支援後委派 API skill；本身沒有遷移。 |
 | `comfyui-film-workflow` | 劇情多鏡規劃與影音 helper；依實際需要用本機音訊／片段工具和既有生成 task。 | 規劃部分可跨路線；時間線、音訊／解碼狀態處理仍依各 helper，未遷移為 API-only。 |
 | `comfyui-face-swap-workflow` | 薄 client、共享 media/contracts 與 server-side ReActor custom node；完整影片處理在 ComfyUI server。 | Queue 可由 API 發起，但輸入 gate、chunked media／輸出契約依賴現有 code，非只替換請求 transport；未遷移。 |

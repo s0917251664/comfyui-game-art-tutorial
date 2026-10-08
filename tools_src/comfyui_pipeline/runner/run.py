@@ -198,7 +198,7 @@ def _output_records(template, downloaded, measured):
                       "path": path, "sha256": sha256_file(path), "size_bytes": os.path.getsize(path),
                       "comfy": {k: entry["item"].get(k) for k in ("filename", "subfolder", "type")}}
             info = measured.get(path) or {}
-            for key in ("width", "height", "frames", "fps", "pts_uniform", "has_audio", "grayscale"):
+            for key in ("width", "height", "frames", "fps", "fps_rational", "pts_uniform", "has_audio", "grayscale"):
                 if key in info:
                     record[key] = info[key]
             records.append(record)

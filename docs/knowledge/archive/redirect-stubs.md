@@ -30,6 +30,14 @@ status: current
 | `skills/comfyui-character-animation-workflow/reference/templates.md` | [`docs/knowledge/animation/workflow.md`](../animation/workflow.md) |
 | `docs/knowledge/flux2-and-structure-lock-observations.md` | [`docs/knowledge/experiences/flux2-and-structure-lock-observations.md`](../experiences/flux2-and-structure-lock-observations.md) |
 
+## 已刪除的舊資產（第二階段）
+
+不是轉址檔，但同樣是「舊路徑已不存在、內容改由別處負責」，依 [D12](../decisions/2026-10-07-phase2-template-runner.md) 記在這裡。原檔可從 git 歷史取得。
+
+| 舊路徑 | 取代位置 | 說明 |
+|---|---|---|
+| `skills/comfyui-wan-animate/assets/template-manifest.json` | `templates/video/wan-animate/<名稱>/template.json`（見 [templates/README](../../../templates/README.md)） | 2026-10-08 PR 2.4 刪除。原本記錄 Wan Animate／SCAIL-2 固定 graph 的位置、模型 pin（repo、revision、bytes、sha256）與固定參數；這些都已在各 template.json 的 `models`、`fixed_notes`、`provenance`，刪除前逐一核對過 sha256 與 bytes 一致。`assets/` 資料夾隨之移除 |
+
 ## 暫時保留（仍被程式、設定檔或測試引用）
 
 下列轉址檔還在原位，因為程式碼、profile JSON 或測試直接引用它們的路徑；第一階段只改文件，所以不動。文件內的連結已改指 canonical 頁。等之後改程式或 profile 時再一起移除。

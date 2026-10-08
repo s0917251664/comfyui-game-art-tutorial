@@ -22,4 +22,4 @@ description: 在新機器上依硬體與既有狀態安裝、部署 ComfyUI 遊�
 
 在任何模型或套件下載前，先說明所選能力需要的磁碟空間並確認可用空間足夠。模型選擇以已核准設定檔和 tested-version manifest 為準；安裝時看到較新模型，不代表要評估或替換它。不同平台的 smoke test 必須在該機器實際完成，離線部署檢查不等於生成驗證。
 
-Wan Animate 安裝與歷史測試紀錄見[知識庫頁面](../../docs/knowledge/video/wan-animate-install.md)；日常操作改依[專用技能](../comfyui-wan-animate/SKILL.md)。它是獨立原生 API 路徑，未接入 `generate.py` task/backend，也不由 H3/Wan 5B detector 判定。
+Wan Animate 安裝與歷史測試紀錄見[知識庫頁面](../../docs/knowledge/video/wan-animate-install.md)；日常操作改依[專用技能](../comfyui-wan-animate/SKILL.md)。它是獨立的固定 template 路線（`gameart.py run`），未接入 `generate.py` task/backend，也不由 H3/Wan 5B detector 判定。

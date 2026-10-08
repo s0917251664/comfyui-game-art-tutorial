@@ -18,7 +18,7 @@
 | 物件系列、展示圖、檢視表或重複圖樣 | 先驗收單件，再依規則擴展系列；`scene`、`sheet`、`pattern` 是不同展示目的 | 製作方法見[共用 production reference](skills/game-art-workflow/references/production.md)；現有 `comfyui_design.py` 是依賴 ComfyUI Core 的固定合成 helper，不生成物件，輸出為不透明 RGB。 |
 | 本機 PNG 素材處理 | 對齊尺寸和遮罩契約，保留來源並人工檢查輸出 | `image_edit_tools.py` 的 `composite`、`recolor`、`compare`、`reference-board`、`asset-audit` 五個操作使用 Pillow／NumPy，不需 GPU、ComfyUI server 或 `local_config.json`；需要可執行 Python 並取得實際圖片檔。 |
 | 固定來源的有限參數比較 | 來源、prompt、seed 和參考固定，只比較事先列明的參數 | 由[ComfyUI sweep 技能](skills/comfyui-image-sweep/SKILL.md)處理；它呼叫既有 `image_edit_tools.py sweep`，需 ComfyUI task 與本機能力 gate，不是一般重試功能。 |
-| 靜態或短動態特效、角色動作集合 | 先定效果外觀、起訖／循環條件或角色母圖與代表動作，再逐支驗收 | 共用製作方法見 [production reference](skills/game-art-workflow/references/production.md)；ComfyUI 影片技能只使用已接入 task。平台影片生成目前未整合，圖片工具不能代替影片工具。影片驅動角色或影片角色替換可用[Wan Animate／SCAIL-2 技能](skills/comfyui-wan-animate/SKILL.md)，獨立固定 API 路徑。 |
+| 靜態或短動態特效、角色動作集合 | 先定效果外觀、起訖／循環條件或角色母圖與代表動作，再逐支驗收 | 共用製作方法見 [production reference](skills/game-art-workflow/references/production.md)；ComfyUI 影片技能只使用已接入 task。平台影片生成目前未整合，圖片工具不能代替影片工具。影片驅動角色或影片角色替換可用[Wan Animate／SCAIL-2 技能](skills/comfyui-wan-animate/SKILL.md)，固定 template，以 `gameart.py run` 執行。 |
 
 平台原生圖片工具和外部付費 API／CLI 是不同路線。本專案尚未接入外部付費 API／CLI；不會因為有平台圖片工具，就假定可安裝客戶端、取得 API key 或呼叫付費服務。
 
@@ -106,7 +106,7 @@ python -m pytest
 | CLI 真正接受的參數、輸出與錯誤處理 | `tools_src/` parser 與實作；reference 應與它一致 |
 | SDXL／SD1.5 模型、預設參數與平台驗證狀態 | `tools_src/comfyui_pipeline/profiles/*.json` |
 | 當前機器的路徑與已安裝能力 | 本機 config／capability 快照及執行時 preflight |
-| 固定 ComfyUI API-format graph 的輸入契約、request／response 和輸出檢查 | 對應技能的 API reference 與固定 assets；live schema／模型依該路線 preflight 核對 |
+| 固定 ComfyUI API-format graph 的輸入契約、request／response 和輸出檢查 | `templates/<id>/template.json`、[templates/README](templates/README.md) 與對應技能的操作契約；live schema／模型由 `gameart.py run <id> --preflight` 核對 |
 | 某次實測的版本、hash 與結果 | `docs/tested-versions.md` 與已追蹤的日期化實測紀錄；`output/` 下的本機檔案不會隨 repository 發布 |
 | 架構理由與未實作構想 | 設計稿、歷史升級評估；不能據此宣稱能力已可用 |
 

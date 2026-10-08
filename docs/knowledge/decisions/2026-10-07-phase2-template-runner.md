@@ -28,6 +28,8 @@ Wan Animate（6 份）與 SAM3（2 份）的固定 API JSON，目前都靠 agent
 | D13 | 圖片的結構變化 | LoRA、去背、ControlNet 等需要插入節點的變化，第二階段不決定；第 4 階段在「variant template」與「擴充 option 操作」之間擇一，以 99 組圖片 golden 的等價測試作為判準 | 第 4 階段 |
 | D14 | Wan 單段幀數 | 只允許 17／33 幀（契約與實測範圍）；其他長度需要新的實測與 template 版本 | PR 2.1 |
 
+落實狀態：D8 與 D12 已在 PR 2.4（2026-10-08）完成，R2 第 1 點改寫、技能改用 `gameart.py run`、舊 `template-manifest.json` 刪除。
+
 ## 範圍與界線
 
 - 這些決定不改變 R1：runner 的輸出一律維持 candidate，美術驗收仍由使用者決定。

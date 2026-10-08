@@ -7,7 +7,7 @@ last_updated: 2026-10-06
 
 # Wan2.2 Animate 本機安裝與驗證
 
-目前狀態：正式 8188 已完成安裝；固定 API templates 的 Mix17／Move17、兩段延伸 Mix61（含音訊）／Move61 與直式 384×640 Move17 已直接 HTTP 實測，live node／model preflight、queue、下載與完整解碼均技術通過。輸出有肩膀、手臂與手部變形，仍為 candidate，未獲使用者美術驗收。SCAIL-2 已於同日下載 FP8 權重並完成技術實測，見下方 SCAIL-2 段。日常操作、每次執行前的 live gate 及當次證據見[專用技能](../../../skills/comfyui-wan-animate/SKILL.md)與[API reference](../../../skills/comfyui-wan-animate/references/comfyui-api.md)，採直接 HTTP，不要求瀏覽器或新增 client／CLI。本頁以下保留安裝 pins 與安裝期歷史測試。輸出證據位於本機 ignored `output/`，clean clone 不含，連結不代表目前 live gate。
+目前狀態：正式 8188 已完成安裝；固定 API templates 的 Mix17／Move17、兩段延伸 Mix61（含音訊）／Move61 與直式 384×640 Move17 已於 2026-10-06 直接 HTTP 實測（runner 出現前），live node／model preflight、queue、下載與完整解碼均技術通過。輸出有肩膀、手臂與手部變形，仍為 candidate，未獲使用者美術驗收。SCAIL-2 已於同日下載 FP8 權重並完成技術實測，見下方 SCAIL-2 段。日常操作、每次執行前的 live gate 及當次證據見[專用技能](../../../skills/comfyui-wan-animate/SKILL.md)與[操作契約](../../../skills/comfyui-wan-animate/references/comfyui-api.md)；2026-10-08 起一律用 `gameart.py run` 執行固定 template（[R2](../rules/fixed-graphs.md)），不要求瀏覽器。本頁以下保留安裝 pins 與安裝期歷史測試。輸出證據位於本機 ignored `output/`，clean clone 不含，連結不代表目前 live gate。
 
 
 ## 本機設定與使用入口
@@ -52,7 +52,7 @@ RTX 4080（16,376 MiB VRAM）、31.1 GiB RAM；ComfyUI 位於 `C:/Users/XU/Comfy
 
 ## 產線界線與安裝收尾
 
-這項能力未新增 Python client、production CLI、`generate.py` task/backend 或 capability catalog。安裝專用 `prepare_smoke.py`／`run_smoke.py` 留在 ignored output 作歷史追溯，不當成正式產線入口。可重用 API graph templates 已在 2026-10-06 以直接 HTTP 完成 Mix17／Move17 技術驗證；仍須依技能於每次工作執行前做正式 live preflight。即使通過，仍屬本機獨立 API 路徑，不會自動成為 `generate.py` backend。舊 WanVideoWrapper complex workflow 的未接入狀態另見原 integration 文件。
+這項能力未新增 Python client、production CLI、`generate.py` task/backend 或 capability catalog。安裝專用 `prepare_smoke.py`／`run_smoke.py` 留在 ignored output 作歷史追溯，不當成正式產線入口。可重用 API graph templates 已在 2026-10-06 以直接 HTTP 完成 Mix17／Move17 技術驗證；仍須依技能於每次工作執行前做正式 live preflight。即使通過，仍屬獨立的 template＋runner 路徑（2026-10-08 起取代直接 HTTP），不會自動成為 `generate.py` backend。舊 WanVideoWrapper complex workflow 的未接入狀態另見原 integration 文件。
 
 已重跑影片 detector，既有 h3／wan 仍 available，原預設 h3 保留；該 detector 不涵蓋 Animate。安裝後 portable verification：43 passed、0 failed；pip check 無依賴衝突。此回歸檢查不替代上方 Animate smoke。正式節點 preflight（本機證據：`output/wan-animate-install/production-node-preflight.json`）、portable report（本機證據：`output/wan-animate-install/portable-final.txt`）。
 

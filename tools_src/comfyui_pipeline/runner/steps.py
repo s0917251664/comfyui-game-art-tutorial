@@ -146,7 +146,7 @@ def _check_video_input(step, path, params, media):
     problems = []
     info = media.probe_video(path)
     if "fps" in params and not _fps_matches(info["fps_value"], params["fps"]):
-        problems.append(f"{path}: FPS 是 {info['fps']}({info['fps_value']}),需要 {params['fps']}")
+        problems.append(f"{path}: FPS 是 {info.get('fps_rational') or info['fps']}({info['fps_value']:g}),需要 {params['fps']}")
     if params.get("cfr") and info["pts_uniform"] is not True:
         problems.append(f"{path}: 不是固定幀率(pts 間隔不一致);請先轉成 CFR")
     if "frames_min" in params and info["frames"] < params["frames_min"]:
@@ -232,7 +232,7 @@ def run_post_checks(template, resolution, pre_results, outputs, dest_dir, media)
                 _compare(step_problems, "高度", info["height"], params.get("height"))
                 _compare(step_problems, "幀數", info["frames"], params.get("frames"))
                 if "fps" in params and not _fps_matches(info["fps_value"], params["fps"]):
-                    step_problems.append(f"FPS 是 {info['fps']},需要 {params['fps']}")
+                    step_problems.append(f"FPS 是 {info.get('fps_rational') or info['fps']},需要 {params['fps']}")
                 if info["pts_uniform"] is False:
                     step_problems.append("pts 間隔不一致(不是固定幀率)")
                 if "audio" in params:
