@@ -1,5 +1,5 @@
 """實驗性 FLUX.2 圖片 task:flux2_concept、flux2_edit。不走 SDXL 的 --style/--rating/LoRA,也不走模型設定檔。"""
-from .. import image_runtime
+from .. import image_from_template
 from ..image_capabilities import validate_flux2_capability
 from ..image_graphs import validate_flux2_dimensions
 
@@ -53,14 +53,11 @@ def preflight(args, comfy_url, request_timeout):
 
 
 def build_graph(ctx, args, style_checkpoint, upload):
-    """組圖片 task 的 graph;``upload`` 回傳 ComfyUI 端檔名。"""
-    if args.task == "flux2_concept":
-        prompt, out_id = image_runtime.build_flux2_concept(ctx,
-            args.prompt, width=args.width, height=args.height, seed=args.seed,
-        )
-    elif args.task == "flux2_edit":
-        img_fn = upload(args.image)
-        prompt, out_id = image_runtime.build_flux2_edit(ctx, args.prompt, img_fn, seed=args.seed)
-    else:
+    """組圖片 task 的 graph;``upload`` 回傳 ComfyUI 端檔名。
+
+    不分家族，一律走 template。不吃 style checkpoint、negative、LoRA；模型檔名用 template pin。
+    preflight 仍留在這個模組。找不到 template 就停止，不改走 builder。
+    """
+    if args.task not in TASKS:
         raise ValueError(f"不是這個模組的圖片 task: {args.task}")
-    return prompt, out_id
+    return image_from_template.graph_from_template(ctx, args, style_checkpoint, upload)

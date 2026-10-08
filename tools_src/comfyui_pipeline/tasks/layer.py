@@ -1,5 +1,5 @@
 """圖層拆分 task:layer_split(依遮罩從定稿圖切出單一圖層,不重新生成)。"""
-from .. import image_runtime
+from .. import image_from_template
 
 TASKS = ("layer_split",)
 
@@ -25,11 +25,10 @@ def add_parser(sub, parents, task):
 
 
 def build_graph(ctx, args, style_checkpoint, upload):
-    """組圖片 task 的 graph;``upload`` 回傳 ComfyUI 端檔名。"""
-    if args.task == "layer_split":
-        img_fn = upload(args.image)
-        mask_fn = upload(args.mask)
-        prompt, out_id = image_runtime.build_layer_split(ctx, img_fn, mask_fn, args.layer_name)
-    else:
+    """組圖片 task 的 graph;``upload`` 回傳 ComfyUI 端檔名。
+
+    不分家族，一律走 template。找不到 template 就停止，不改走 builder。
+    """
+    if args.task != "layer_split":
         raise ValueError(f"不是這個模組的圖片 task: {args.task}")
-    return prompt, out_id
+    return image_from_template.graph_from_template(ctx, args, style_checkpoint, upload)

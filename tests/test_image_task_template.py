@@ -1,9 +1,12 @@
-"""第 5.1 階段：concept 等 6 個圖片 task 送出的 graph 與 builder 逐欄相同。
+"""圖片 task 送出的 graph 與 builder 逐欄相同。
 
+第 5.1：concept、icon_asset、refine、character_action、pose_only、style_lock。
+第 5.2：inpaint、guided_inpaint、upscale、layer_split、flux2_concept、flux2_edit。
 sampler／scheduler 烤在 template 裡，目前設定檔是 euler／normal。
-checkpoint、尺寸、seed、steps、cfg、filename_prefix 都是 slot。
+checkpoint、尺寸、seed、steps、cfg、filename_prefix 都是 slot（沒有該軸的 task 除外）。
 這些案例在 patch 之後不需要再改任何欄位才對得上 builder 與 golden。
-sd15 的 template 目錄不存在時，concept／icon_asset／refine 仍走 builder。
+sd15 的 template 目錄不存在時，concept／icon_asset／refine／inpaint／
+guided_inpaint／upscale 仍走 builder。SDXL、layer_split、FLUX.2 找不到就停止。
 """
 import os
 import sys
@@ -22,9 +25,6 @@ from comfyui_pipeline.tasks import control, flux2, image_basic, inpaint, layer, 
 SEED = image_golden.SEED
 LORA = "test_lora.safetensors"
 STYLE_CKPT = "juggernautXL_ragnarok.safetensors"
-PHASE_51 = frozenset({
-    "concept", "icon_asset", "refine", "character_action", "pose_only", "style_lock",
-})
 
 
 def _ns(**kwargs):
@@ -83,6 +83,46 @@ def _style(**kwargs):
     return _ns(**values)
 
 
+def _inpaint(**kwargs):
+    values = dict(task="inpaint", prompt="p", negative=None, image="img.png", mask="mask.png",
+                  denoise=1.0, seed=SEED)
+    values.update(kwargs)
+    return _ns(**values)
+
+
+def _guided(**kwargs):
+    values = dict(task="guided_inpaint", prompt="p", negative=None, image="img.png", mask="mask.png",
+                  control_ref=None, control_type=None, control_strength=1.0, appearance_ref=None,
+                  appearance_weight=0.8, denoise=1.0, seed=SEED)
+    values.update(kwargs)
+    return _ns(**values)
+
+
+def _upscale(**kwargs):
+    values = dict(task="upscale", prompt="p", negative=None, image="img.png",
+                  scale=2.0, denoise=0.4, seed=SEED)
+    values.update(kwargs)
+    return _ns(**values)
+
+
+def _layer(**kwargs):
+    values = dict(task="layer_split", image="img.png", mask="mask.png", layer_name="frame")
+    values.update(kwargs)
+    return _ns(**values)
+
+
+def _flux_concept(**kwargs):
+    values = dict(task="flux2_concept", prompt="p", width=1024, height=1024, seed=SEED)
+    values.update(kwargs)
+    return _ns(**values)
+
+
+def _flux_edit(**kwargs):
+    values = dict(task="flux2_edit", prompt="p", image="img.png", seed=SEED)
+    values.update(kwargs)
+    return _ns(**values)
+
+
 def _builder(ig, args, style_checkpoint):
     """舊路徑：image_graphs builder。icon 與 --remove-bg 再接一次去背，跟 CLI 送出的相同。"""
     task = args.task
@@ -118,6 +158,31 @@ def _builder(ig, args, style_checkpoint):
             args.prompt, args.character_ref, args.negative, args.width, args.height, args.seed,
             ip_weight=args.ip_weight, batch_size=args.batch, lora_name=args.lora,
             lora_strength=args.lora_strength, checkpoint=style_checkpoint)
+    elif task == "inpaint":
+        graph, image_node = ig.build_inpaint(
+            args.prompt, args.image, args.mask, args.negative, denoise=args.denoise,
+            seed=args.seed, checkpoint=style_checkpoint)
+    elif task == "guided_inpaint":
+        control_fn = None
+        if args.control_type:
+            control_fn = args.control_ref or args.image
+        graph, image_node = ig.build_guided_inpaint(
+            args.prompt, args.image, args.mask, args.negative,
+            control_ref_filename=control_fn, control_type=args.control_type,
+            control_strength=args.control_strength,
+            appearance_ref_filename=args.appearance_ref, appearance_weight=args.appearance_weight,
+            denoise=args.denoise, seed=args.seed, checkpoint=style_checkpoint)
+    elif task == "upscale":
+        graph, image_node = ig.build_upscale(
+            args.prompt, args.image, args.negative, scale=args.scale, denoise=args.denoise,
+            seed=args.seed, checkpoint=style_checkpoint)
+    elif task == "layer_split":
+        graph, image_node = ig.build_layer_split(args.image, args.mask, args.layer_name)
+    elif task == "flux2_concept":
+        graph, image_node = ig.build_flux2_concept(
+            args.prompt, width=args.width, height=args.height, seed=args.seed)
+    elif task == "flux2_edit":
+        graph, image_node = ig.build_flux2_edit(args.prompt, args.image, seed=args.seed)
     else:
         raise AssertionError(task)
     return graph, image_node
@@ -188,7 +253,7 @@ class ImageTaskTemplateTests(unittest.TestCase):
             (node.get("inputs") or {}).get("filename_prefix")
             for node in graph.values() if node.get("class_type") == "SaveImage"
         ]
-        self.assertIn(image_from_template.FILENAME_PREFIX[args.task], prefixes)
+        self.assertIn(image_from_template._filename_prefix(args), prefixes)
         if fixture is not None:
             fixture_graph, fixture_out = fixture
             self.assertEqual(fixture_graph, graph)
@@ -285,54 +350,236 @@ class ImageTaskTemplateTests(unittest.TestCase):
                 with self.subTest(profile=profile, task=args.task, remove_bg=getattr(args, "remove_bg", False)):
                     self._assert_same_submission(ctx, args)
 
-    def test_missing_sdxl_template_stops_instead_of_using_builder(self):
+    def test_missing_template_stops_instead_of_using_builder(self):
         ctx = _ctx(image_golden.TIER_DEVICES["sdxl"])
         missing = Path("missing-template.json")
-        with mock.patch.object(image_from_template, "_template_json", return_value=missing):
-            with self.assertRaises(SystemExit):
-                control.build_graph(ctx, _pose(), None, lambda path: path)
-            with self.assertRaises(SystemExit):
-                image_from_template.graph_from_template(ctx, _concept(), None, lambda path: path)
-
-    def test_other_image_tasks_still_use_builders(self):
-        ctx = _ctx(image_golden.TIER_DEVICES["sdxl"])
-        spec = [
-            (_ns(task="inpaint", prompt="p", negative=None, image="img.png", mask="mask.png",
-                 denoise=1.0, seed=SEED),
-             lambda fn: image_runtime.build_inpaint(ctx, "p", fn["img.png"], fn["mask.png"], None,
-                                                     denoise=1.0, seed=SEED)),
-            (_ns(task="guided_inpaint", prompt="p", negative=None, image="img.png", mask="mask.png",
-                 control_ref=None, control_type=None, control_strength=1.0, appearance_ref=None,
-                 appearance_weight=0.8, denoise=1.0, seed=SEED),
-             lambda fn: image_runtime.build_guided_inpaint(
-                 ctx, "p", fn["img.png"], fn["mask.png"], None, denoise=1.0, seed=SEED)),
-            (_ns(task="upscale", prompt="p", negative=None, image="img.png", scale=2.0, denoise=0.4, seed=SEED),
-             lambda fn: image_runtime.build_upscale(ctx, "p", fn["img.png"], None, scale=2.0,
-                                                     denoise=0.4, seed=SEED)),
-            (_ns(task="layer_split", image="img.png", mask="mask.png", layer_name="frame"),
-             lambda fn: image_runtime.build_layer_split(ctx, fn["img.png"], fn["mask.png"], "frame")),
-            (_ns(task="flux2_concept", prompt="p", width=1024, height=1024, seed=SEED),
-             lambda fn: image_runtime.build_flux2_concept(ctx, "p", width=1024, height=1024, seed=SEED)),
-            (_ns(task="flux2_edit", prompt="p", image="img.png", seed=SEED),
-             lambda fn: image_runtime.build_flux2_edit(ctx, "p", fn["img.png"], seed=SEED)),
+        cases = [
+            (control.build_graph, _pose()),
+            (image_basic.build_graph, _concept()),
+            (inpaint.build_graph, _inpaint()),
+            (inpaint.build_graph, _guided(control_type="pose", appearance_ref="look.png")),
+            (upscale.build_graph, _upscale()),
+            (layer.build_graph, _layer(layer_name="border")),
+            (flux2.build_graph, _flux_concept()),
+            (flux2.build_graph, _flux_edit()),
         ]
-        owners = {
-            "inpaint": inpaint, "guided_inpaint": inpaint, "upscale": upscale,
-            "layer_split": layer, "flux2_concept": flux2, "flux2_edit": flux2,
-        }
-        for args, build in spec:
-            with self.subTest(task=args.task):
-                self.assertNotIn(args.task, PHASE_51)
-                seen = {}
+        with mock.patch.object(image_from_template, "_template_json", return_value=missing):
+            for build, args in cases:
+                with self.subTest(task=args.task):
+                    uploads = []
 
-                def upload(path, _seen=seen):
-                    _seen[path] = path
+                    def upload(path, _uploads=uploads):
+                        _uploads.append(path)
+                        return path
+
+                    with self.assertRaises(SystemExit):
+                        build(ctx, args, None, upload)
+                    self.assertEqual([], uploads)
+
+    def test_phase52_submissions_match_builder_and_golden(self):
+        # 第 5.2 不再斷言這六個 task 會呼叫 image_runtime builder。
+        # 送出的 graph 仍須與 builder(同等參數) 逐欄相同，所以舊斷言改成這件事。
+        ctx = _ctx(image_golden.TIER_DEVICES["sdxl"])
+        fixture = self.fixture["sdxl"]
+        cases = [
+            (_inpaint(), "inpaint"),
+            (_guided(), "guided_inpaint_plain"),
+            (_guided(appearance_ref="look.png"), "guided_inpaint_appearance"),
+            (_guided(control_type="pose", control_ref="ctl.png", appearance_ref="look.png"),
+             "guided_inpaint_full"),
+            (_upscale(), "upscale"),
+            (_layer(), "layer_split"),
+            (_flux_concept(), "flux2_concept"),
+            (_flux_edit(), "flux2_edit"),
+        ]
+        for control_type in ("canny", "pose", "depth"):
+            cases.append((_guided(control_type=control_type), f"guided_inpaint_control_{control_type}"))
+        for args, name in cases:
+            with self.subTest(case=name):
+                self._assert_same_submission(ctx, args, None, fixture[name])
+        extras = [
+            _inpaint(negative="n", denoise=0.55, seed=0),
+            _inpaint(seed=0),
+            _guided(control_type="canny", control_strength=0.4, denoise=0.7),
+            _guided(control_type="depth", control_ref="ctl.png", appearance_ref="look.png",
+                    appearance_weight=0.3, control_strength=0.6, negative="n"),
+            _upscale(scale=4.0, denoise=0.2, negative="n", seed=0),
+            _layer(layer_name="center_hub"),
+            _flux_concept(width=768, height=1280, seed=0),
+            _flux_edit(seed=0),
+        ]
+        for args in extras:
+            with self.subTest(task=args.task, layer=getattr(args, "layer_name", None),
+                              control=getattr(args, "control_type", None),
+                              width=getattr(args, "width", None)):
+                self._assert_same_submission(ctx, args, STYLE_CKPT if args.task != "layer_split" else None)
+
+    def test_phase52_does_not_call_builder_when_template_exists(self):
+        ctx = _ctx(image_golden.TIER_DEVICES["sdxl"])
+        paired = [
+            (_inpaint(), "build_inpaint"),
+            (_guided(control_type="canny"), "build_guided_inpaint"),
+            (_upscale(), "build_upscale"),
+            (_layer(layer_name="border"), "build_layer_split"),
+            (_flux_concept(), "build_flux2_concept"),
+            (_flux_edit(), "build_flux2_edit"),
+        ]
+        for args, name in paired:
+            with self.subTest(task=args.task):
+                with mock.patch.object(image_runtime, name) as spy:
+                    self._assert_same_submission(ctx, args)
+                self.assertFalse(spy.called)
+
+    def test_none_seed_is_drawn_once(self):
+        ctx = _ctx(image_golden.TIER_DEVICES["sdxl"])
+        drawn = []
+
+        def fake(seed):
+            drawn.append(seed)
+            return 424242
+
+        specs = [
+            (_inpaint(seed=None), "7", "seed"),
+            (_guided(seed=None, control_type="pose"), "12", "seed"),
+            (_upscale(seed=None), "9", "seed"),
+            (_flux_concept(seed=None), "7", "noise_seed"),
+            (_flux_edit(seed=None), "13", "noise_seed"),
+        ]
+        for args, node_id, field in specs:
+            drawn.clear()
+            with self.subTest(task=args.task):
+                with mock.patch.object(image_graphs, "seed_or_random", fake):
+                    graph, _out = tasks.build_image_task_graph(ctx, args, None, lambda path: path)
+                self.assertEqual([None], drawn)
+                self.assertEqual(424242, graph[node_id]["inputs"][field])
+                filled = args
+                filled.seed = 424242
+                self._assert_same_submission(ctx, filled)
+
+        drawn.clear()
+        with mock.patch.object(image_graphs, "seed_or_random", fake):
+            tasks.build_image_task_graph(ctx, _layer(), None, lambda path: path)
+        self.assertEqual([], drawn)
+
+    def test_uploaded_names_are_patched_and_control_reuses_source(self):
+        ctx = _ctx(image_golden.TIER_DEVICES["sdxl"])
+        seen = {}
+        real_resolve = image_from_template.runner_template.resolve
+        real_patch = image_from_template.runner_template.patch
+
+        def spy_resolve(template, values=None, **kwargs):
+            seen["resolve"] = dict(values or {})
+            return real_resolve(template, values, **kwargs)
+
+        def spy_patch(template, resolution, upload_paths=None, **kwargs):
+            seen["uploads"] = dict(upload_paths or {})
+            return real_patch(template, resolution, upload_paths, **kwargs)
+
+        calls = []
+
+        def upload(path):
+            calls.append(path)
+            return "input/" + path
+
+        args = _guided(control_type="canny", appearance_ref="look.png")
+        with mock.patch.object(image_from_template.runner_template, "resolve", spy_resolve), \
+                mock.patch.object(image_from_template.runner_template, "patch", spy_patch):
+            graph, out_id = inpaint.build_graph(ctx, args, None, upload)
+        self.assertEqual(["img.png", "mask.png", "look.png"], calls)
+        self.assertEqual("img.png", seen["resolve"]["image"])
+        self.assertEqual("img.png", seen["resolve"]["control_ref"])
+        self.assertEqual("look.png", seen["resolve"]["appearance_ref"])
+        self.assertNotIn("input/", seen["resolve"]["image"])
+        self.assertEqual({
+            "image": "input/img.png",
+            "mask": "input/mask.png",
+            "control_ref": "input/img.png",
+            "appearance_ref": "input/look.png",
+        }, seen["uploads"])
+        self.assertEqual("input/img.png", graph["4"]["inputs"]["image"])
+        self.assertEqual("input/img.png", graph["8"]["inputs"]["image"])
+        self.assertEqual("input/look.png", graph["7a"]["inputs"]["image"])
+        _sync(self.ig, ctx)
+        expected, expected_id = self.ig.build_guided_inpaint(
+            "p", "input/img.png", "input/mask.png", None,
+            control_ref_filename="input/img.png", control_type="canny", control_strength=1.0,
+            appearance_ref_filename="input/look.png", appearance_weight=0.8,
+            denoise=1.0, seed=SEED)
+        self.assertEqual(expected_id, out_id)
+        self.assertEqual(expected, graph)
+
+        calls.clear()
+        plain = _guided(control_ref="ignored.png")
+        inpaint.build_graph(ctx, plain, None, upload)
+        self.assertEqual(["img.png", "mask.png"], calls)
+
+    def test_flux2_ignores_style_checkpoint_and_keeps_pinned_models(self):
+        ctx = _ctx(image_golden.TIER_DEVICES["sdxl"])
+        self._assert_same_submission(ctx, _flux_concept(), STYLE_CKPT)
+        self._assert_same_submission(ctx, _flux_edit(), STYLE_CKPT)
+        graph, out_id = flux2.build_graph(ctx, _flux_concept(), STYLE_CKPT, lambda path: path)
+        self.assertEqual("12", out_id)
+        self.assertEqual("flux-2-klein-4b-fp8.safetensors", graph["1"]["inputs"]["unet_name"])
+        self.assertNotIn(STYLE_CKPT, str(graph))
+        edit, edit_id = flux2.build_graph(ctx, _flux_edit(), STYLE_CKPT, lambda path: path)
+        self.assertEqual("18", edit_id)
+        self.assertEqual("flux-2-klein-base-4b-fp8.safetensors", edit["1"]["inputs"]["unet_name"])
+
+    def test_layer_split_prefix_follows_layer_name_and_output_node(self):
+        ctx = _ctx(image_golden.TIER_DEVICES["sdxl"])
+        graph, out_id = layer.build_graph(ctx, _layer(layer_name="border"), None, lambda path: path)
+        self.assertEqual("4", out_id)
+        self.assertEqual("layer_border", graph["5"]["inputs"]["filename_prefix"])
+        self.assertEqual(["4", 0], graph["5"]["inputs"]["images"])
+        _sync(self.ig, ctx)
+        expected, expected_id = self.ig.build_layer_split("img.png", "mask.png", "border")
+        self.assertEqual(expected_id, out_id)
+        self.assertEqual(expected, graph)
+
+    def test_sd15_inpaint_group_falls_back_to_builder_without_uploading(self):
+        device = image_golden.TIER_DEVICES["sd15"]
+        root = Path(image_golden.ROOT)
+        for rel in (
+            ("image", "sd15", "inpaint"),
+            ("image", "sd15", "guided-inpaint"),
+            ("image", "sd15", "upscale"),
+        ):
+            self.assertFalse((root / "templates").joinpath(*rel, "template.json").is_file())
+        ctx = _ctx(device, "sd15_light")
+        probes = [
+            (_inpaint(negative="n", denoise=0.4), "build_inpaint"),
+            (_guided(), "build_guided_inpaint"),
+            (_upscale(scale=3.0, denoise=0.25, negative="n"), "build_upscale"),
+        ]
+        for args, builder_name in probes:
+            with self.subTest(task=args.task):
+                uploads = []
+
+                def upload(path, _uploads=uploads):
+                    _uploads.append(path)
                     return path
 
-                graph, out_id = owners[args.task].build_graph(ctx, args, None, upload)
-                expected, expected_id = build(seen)
-                self.assertEqual(expected_id, out_id)
-                self.assertEqual(expected, graph)
+                self.assertIsNone(image_from_template.graph_from_template(ctx, args, STYLE_CKPT, upload))
+                self.assertEqual([], uploads)
+                with mock.patch.object(image_runtime, builder_name, wraps=getattr(image_runtime, builder_name)) as spy:
+                    self._assert_same_submission(ctx, args, STYLE_CKPT)
+                self.assertEqual(1, spy.call_count)
+
+        with self.assertRaises(RuntimeError):
+            inpaint.build_graph(ctx, _guided(control_type="canny"), None, lambda path: path)
+
+    def test_layer_split_and_flux2_stay_on_template_for_sd15_device(self):
+        ctx = _ctx(image_golden.TIER_DEVICES["sd15"], "sd15_light")
+        for args, builder_name in (
+            (_layer(layer_name="frame"), "build_layer_split"),
+            (_flux_concept(), "build_flux2_concept"),
+            (_flux_edit(), "build_flux2_edit"),
+        ):
+            with self.subTest(task=args.task):
+                with mock.patch.object(image_runtime, builder_name) as spy:
+                    self._assert_same_submission(ctx, args, None, self.fixture["sdxl"][
+                        "layer_split" if args.task == "layer_split" else args.task])
+                self.assertFalse(spy.called)
 
 
 if __name__ == "__main__":

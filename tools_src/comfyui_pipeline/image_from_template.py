@@ -1,11 +1,16 @@
-"""第 5.1 階段：6 個圖片 task 改成 runner template 的薄轉接。
+"""圖片 task 改成 runner template 的薄轉接。
 
+第 5.1 階段：concept、icon_asset、refine、character_action、pose_only、style_lock。
+第 5.2 階段：inpaint、guided_inpaint、upscale、layer_split、flux2_concept、flux2_edit。
 形狀對齊 ``tasks/video_edit.py`` 的 VACE：load、resolve、有 ``from_pre`` 才 fill、patch。
-``filename_prefix`` 是一般 string slot，呼叫端填 builder 的前綴，resume／覆寫才找得到同一個名字。
+不呼叫 ``runner.run``（那會 queue）。``filename_prefix`` 是一般 string slot，呼叫端填
+builder 的前綴；layer_split 用 ``layer_<layer_name>``。
 
-sd15 的 concept／icon_asset／refine 若選到的 template 目錄不存在，回傳 None，
-呼叫端繼續用 builder（本機沒有 dreamshaper_8，那 13 份 template 沒落地）。
-sdxl 與 character_action／pose_only／style_lock 目錄不存在就停止，不改走 builder。
+sd15 的 concept／icon_asset／refine／inpaint／guided_inpaint／upscale
+若選到的 template 目錄不存在，回傳 None，呼叫端繼續用 builder
+（本機沒有 dreamshaper_8，sd15 template 沒落地）。
+sdxl、layer_split、FLUX.2，以及 character_action／pose_only／style_lock
+目錄不存在就停止，不改走 builder。
 """
 from pathlib import Path
 
@@ -16,6 +21,7 @@ from .image_template_select import variant_id
 from .runner import template as runner_template
 
 # builder 寫死的 SaveImage 前綴。template 預設相同；呼叫端仍明確填入。
+# layer_split 的前綴含 --layer-name，不在這張表。
 FILENAME_PREFIX = {
     "concept": "concept",
     "icon_asset": "icon_asset",
@@ -23,9 +29,18 @@ FILENAME_PREFIX = {
     "character_action": "character_action",
     "pose_only": "pose_only",
     "style_lock": "style_lock",
+    "inpaint": "inpaint",
+    "guided_inpaint": "guided_inpaint",
+    "upscale": "upscale",
+    "flux2_concept": "flux2_concept",
+    "flux2_edit": "flux2_edit",
 }
-# 只有這三個在 sd15 有對應 variant；目錄缺失時才允許退回 builder。
-_SD15_BUILDER_FALLBACK = frozenset({"concept", "icon_asset", "refine"})
+_FAMILY_FREE = frozenset({"layer_split", "flux2_concept", "flux2_edit"})
+_TEMPLATE_TASKS = frozenset(FILENAME_PREFIX) | _FAMILY_FREE
+# sd15 目錄缺失時才允許退回 builder。layer_split／FLUX.2 不分家族，不在這張表。
+_SD15_BUILDER_FALLBACK = frozenset({
+    "concept", "icon_asset", "refine", "inpaint", "guided_inpaint", "upscale",
+})
 
 
 def wants_background_removal(args):
@@ -67,57 +82,104 @@ def _canvas(task, args):
     return width, height
 
 
-def _uploads(args, upload):
-    """上傳檔名由呼叫端的 upload 回傳（和 builder 路徑一樣）。"""
-    found = {}
+def _filename_prefix(args):
+    """builder 的 SaveImage 前綴。layer_split 用 ``layer_<layer_name>``，不要寫死。"""
+    if args.task == "layer_split":
+        return f"layer_{args.layer_name}"
+    return FILENAME_PREFIX[args.task]
 
-    def take(slot, path):
-        if path:
-            found[slot] = upload(path)
 
+def _local_paths(args):
+    """本機路徑，只交給 resolve。沒有的參考圖不放；沒給 control-type 就不放 control。"""
     task = args.task
+    paths = {}
+
+    def keep(slot, path):
+        if path:
+            paths[slot] = path
+
     if task == "refine":
-        take("image", args.image)
+        keep("image", args.image)
     elif task == "icon_asset":
-        take("structure_ref", getattr(args, "structure_ref", None))
-        take("appearance_ref", getattr(args, "appearance_ref", None))
+        keep("structure_ref", getattr(args, "structure_ref", None))
+        keep("appearance_ref", getattr(args, "appearance_ref", None))
     elif task == "character_action":
-        take("character_ref", args.character_ref)
-        take("pose_ref", args.pose_ref)
+        keep("character_ref", args.character_ref)
+        keep("pose_ref", args.pose_ref)
     elif task == "pose_only":
-        take("pose_ref", args.pose_ref)
+        keep("pose_ref", args.pose_ref)
     elif task == "style_lock":
-        take("character_ref", args.character_ref)
-    return found
+        keep("character_ref", args.character_ref)
+    elif task in ("inpaint", "upscale", "layer_split", "flux2_edit"):
+        keep("image", args.image)
+        if task in ("inpaint", "layer_split"):
+            keep("mask", args.mask)
+    elif task == "guided_inpaint":
+        keep("image", args.image)
+        keep("mask", args.mask)
+        if getattr(args, "control_type", None):
+            keep("control_ref", args.control_ref or args.image)
+        if getattr(args, "appearance_ref", None):
+            keep("appearance_ref", args.appearance_ref)
+    return paths
+
+
+def _upload_paths(args, local_paths, upload):
+    """先 upload。有 control-type 但沒給 --control-ref 時，結構圖沿用已上傳的來源圖。"""
+    uploaded = {}
+    for slot, path in local_paths.items():
+        if slot == "control_ref" and not getattr(args, "control_ref", None):
+            uploaded[slot] = uploaded["image"]
+            continue
+        uploaded[slot] = upload(path)
+    return uploaded
 
 
 def _slot_values(args, slots, style_checkpoint):
     task = args.task
-    prompt = args.prompt
-    if task == "icon_asset":
-        prompt += ICON_ASSET_PROMPT_SUFFIX
-    values = {"prompt": prompt, "filename_prefix": FILENAME_PREFIX[task]}
+    values = {}
+    if "prompt" in slots:
+        prompt = args.prompt
+        if task == "icon_asset":
+            prompt += ICON_ASSET_PROMPT_SUFFIX
+        values["prompt"] = prompt
+    if "filename_prefix" in slots:
+        values["filename_prefix"] = _filename_prefix(args)
     if getattr(args, "negative", None):
         negative = args.negative
         if task == "icon_asset":
             negative += ICON_ASSET_NEGATIVE_SUFFIX
         _put(values, slots, "negative", negative)
-    width, height = _canvas(task, args)
-    _put(values, slots, "width", width)
-    _put(values, slots, "height", height)
+    if "width" in slots or "height" in slots:
+        if task == "flux2_concept":
+            width, height = args.width, args.height
+        else:
+            width, height = _canvas(task, args)
+        _put(values, slots, "width", width)
+        _put(values, slots, "height", height)
     _put(values, slots, "batch_size", getattr(args, "batch", None))
-    _put(values, slots, "seed", getattr(args, "seed", None))
+    if "seed" in slots:
+        # None 只抽一次。交給 resolve 的 auto 會再用另一個亂數，graph 就對不上 builder。
+        seed = getattr(args, "seed", None)
+        if seed is None:
+            seed = image_graphs.seed_or_random(None)
+        values["seed"] = seed
     sampling = image_graphs._resolve_sampling()
     _put(values, slots, "steps", sampling["steps"])
     _put(values, slots, "cfg", sampling["cfg"])
     _put(values, slots, "denoise", getattr(args, "denoise", None))
-    _put(values, slots, "checkpoint", style_checkpoint or image_graphs._default_checkpoint())
+    scale = getattr(args, "scale", None)
+    if scale is not None:
+        _put(values, slots, "scale_by", scale / 4.0)
+    if "checkpoint" in slots:
+        _put(values, slots, "checkpoint", style_checkpoint or image_graphs._default_checkpoint())
     if getattr(args, "lora", None):
         _put(values, slots, "lora_name", args.lora)
         _put(values, slots, "lora_strength", getattr(args, "lora_strength", None))
     _put(values, slots, "pose_strength", getattr(args, "pose_strength", None))
     _put(values, slots, "ip_weight", getattr(args, "ip_weight", None))
     _put(values, slots, "appearance_weight", getattr(args, "appearance_weight", None))
+    _put(values, slots, "control_strength", getattr(args, "control_strength", None))
     return values, sampling
 
 
@@ -153,14 +215,8 @@ def _image_node(graph):
     raise RuntimeError("template graph 沒有不透明的 SaveImage，無法對齊 builder 的輸出節點")
 
 
-def graph_from_template(ctx, args, style_checkpoint, upload):
-    """組好就回傳 ``(graph, image_node_id)``。sd15 目錄不存在回傳 None。"""
-    if args.task not in FILENAME_PREFIX:
-        raise ValueError(f"不是 template 轉接的圖片 task: {args.task}")
-    image_runtime.sync_image_runtime(ctx)
-    family = image_graphs._active_profile()["family"]
-    template_id = variant_id(
-        args.task, family,
+def _variant_flags(args):
+    return dict(
         lora=bool(getattr(args, "lora", None)),
         remove_bg=wants_background_removal(args),
         control_type=getattr(args, "control_type", None),
@@ -168,6 +224,26 @@ def graph_from_template(ctx, args, style_checkpoint, upload):
         structure_ref=bool(getattr(args, "structure_ref", None)),
         appearance_ref=bool(getattr(args, "appearance_ref", None)),
     )
+
+
+def graph_from_template(ctx, args, style_checkpoint, upload):
+    """組好就回傳 ``(graph, image_node_id)``。sd15 目錄不存在回傳 None，且尚未 upload。"""
+    if args.task not in _TEMPLATE_TASKS:
+        raise ValueError(f"不是 template 轉接的圖片 task: {args.task}")
+    image_runtime.sync_image_runtime(ctx)
+    flags = _variant_flags(args)
+    family = None
+    if args.task in _FAMILY_FREE:
+        template_id = variant_id(args.task, **flags)
+    else:
+        family = image_graphs._active_profile()["family"]
+        try:
+            template_id = variant_id(args.task, family, **flags)
+        except ValueError:
+            # sd15 不支援的組合（例如 guided 的 ControlNet）沒有 template，維持 builder 的錯誤。
+            if family == "sd15" and args.task in _SD15_BUILDER_FALLBACK:
+                return None
+            raise
     path = _template_json(template_id)
     if path is None or not path.is_file():
         if family == "sd15" and args.task in _SD15_BUILDER_FALLBACK:
@@ -177,14 +253,17 @@ def graph_from_template(ctx, args, style_checkpoint, upload):
             f"{args.task} 的 graph 在 {template_id}（固定 template，由 runner 填值），"
             f"但找不到 {where}。"
             "請從 repo 執行 python tools_src/generate.py。"
-            "SD1.5 的 template 尚未落地時，只有 concept／icon_asset／refine 會改走 builder。"
+            "SD1.5 的 template 尚未落地時，concept／icon_asset／refine／"
+            "inpaint／guided_inpaint／upscale 會改走 builder。"
+            "SDXL、layer_split 與 FLUX.2 不會改走 builder。"
         )
     root = _repo_root()
     template = runner_template.load_template(
         runner_template.templates_root(root), template_id, repo_root=root)
     values, sampling = _slot_values(args, template.slots, style_checkpoint)
-    uploads = _uploads(args, upload)
-    resolution = runner_template.resolve(template, {**uploads, **values}, run_id="image-task")
+    local_paths = _local_paths(args)
+    uploads = _upload_paths(args, local_paths, upload)
+    resolution = runner_template.resolve(template, {**local_paths, **values}, run_id="image-task")
     if any(slot.get("from_pre") for slot in template.slots.values()):
         runner_template.fill_from_pre(template, resolution, {})
     graph, _changes = runner_template.patch(template, resolution, uploads)

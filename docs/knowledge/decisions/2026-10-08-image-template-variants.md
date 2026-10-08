@@ -15,7 +15,7 @@ date: 2026-10-08
 
 ## 決定
 
-1. **D13 採方案 A。** 每種會增刪或更換節點的組合各一份固定 template。runner 只填值，不插入節點。離線產生器 [`build_image_templates.py`](../../../tools_src/maintenance/build_image_templates.py) 呼叫既有 builder（只讀）寫出 graph；它不在 runner 執行路徑上。第 5 階段用 [`image_template_select.py`](../../../tools_src/comfyui_pipeline/image_template_select.py) 把 task、家族與結構旗標換成 template id。現在不改 `tasks/*.py` 的 `build_graph`，生成路徑仍走 builder。
+1. **D13 採方案 A。** 每種會增刪或更換節點的組合各一份固定 template。runner 只填值，不插入節點。離線產生器 [`build_image_templates.py`](../../../tools_src/maintenance/build_image_templates.py) 呼叫既有 builder（只讀）寫出 graph；它不在 runner 執行路徑上。第 5 階段用 [`image_template_select.py`](../../../tools_src/comfyui_pipeline/image_template_select.py) 把 task、家族與結構旗標換成 template id，再由 [`image_from_template.py`](../../../tools_src/comfyui_pipeline/image_from_template.py) 填 slot。圖片 task 的 `build_graph` 已走這條路徑。sd15 目錄還沒落地的 task 仍用 builder；SDXL、layer_split、FLUX.2 找不到 template 就停止，不改走 builder。
 2. **每個模型家族一份。** `image/sdxl/*` 對應 profile `sdxl_standard`，`image/sd15/*` 對應 `sd15_light`。sdxl_high 與 sdxl 的 graph 相同，不另做。tier 只影響呼叫端傳入的寬高，不另做 template；template 預設尺寸維持該家族的原生尺寸（SDXL 1024、SD1.5 512）。icon_asset 用原生尺寸，sdxl_light 仍是 1024。inpaint、guided_inpaint、refine、upscale、layer_split 沒有預設寬高。FLUX.2 固定 1024。
 3. **保留 builder 的 `filename_prefix`。** 做成一般 string slot，預設值就是 builder 的前綴（例如 `concept`）。去背後另一個 `SaveImage` 的前綴維持字面 `transparent`，不併進同一個 slot。不用 type `output_prefix`：那個會被改成 `gameart/...`，第 5 階段的 graph sha256 會對不上。
 4. **checkpoint 是 slot**，預設是該家族的底模。`--style` 換檔時由呼叫端傳入。LoRA 檔是使用者自備，只出現在有 `LoraLoader` 的 variant 的 slot，不放進 models pin。
