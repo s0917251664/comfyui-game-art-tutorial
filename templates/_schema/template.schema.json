@@ -508,6 +508,10 @@
         "pin_status": {
           "type": "string",
           "description": "sha256 為 null 時必填"
+        },
+        "auto_download": {
+          "type": "boolean",
+          "description": "節點缺檔會自動下載；preflight 缺檔一定擋下"
         }
       }
     }

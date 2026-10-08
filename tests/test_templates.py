@@ -98,16 +98,6 @@ class LoadTemplatesTests(unittest.TestCase):
             target = (manifest_path.parent / entry["template"]).resolve()
             self.assertTrue(target.is_file(), entry["template"])
 
-    def test_dwpose_pin_is_todo_and_keeps_wan_templates_draft(self):
-        for name in ("mix", "move", "mix-extend", "move-extend"):
-            template = T.load_template(TEMPLATES, f"video/wan-animate/{name}", repo_root=ROOT)
-            dw = [m for m in template.data["models"] if m["filename"] == "dw-ll_ucoco_384.onnx"]
-            self.assertEqual(1, len(dw))
-            self.assertIsNone(dw[0]["sha256"])
-            self.assertIn("TODO(2.2)", dw[0]["pin_status"])
-            self.assertEqual("draft", template.data["status"])
-            self.assertEqual("technical_pass", template.data["capability_gate"]["platforms"]["windows-cuda"]["status"])
-
     def test_schema_required_matches_loader(self):
         schema = json.loads((TEMPLATES / "_schema" / "template.schema.json").read_text(encoding="utf-8"))
         self.assertEqual(sorted(T.REQUIRED_FIELDS), sorted(schema["required"]))
@@ -166,7 +156,9 @@ class RejectBrokenTemplatesTests(TemplateFixture, unittest.TestCase):
         self.assertRejected("video/wan-animate/move", "21.text")
 
     def test_missing_pin_forbids_technical_pass(self):
-        self.edit("video/wan-animate/move", lambda d: d.update(status="technical_pass"))
+        def unpin(d):
+            d["models"][-1].update(sha256=None, pin_status="測試:拿掉 pin")
+        self.edit("video/wan-animate/move", unpin)
         self.assertRejected("video/wan-animate/move", "technical_pass")
 
     def test_model_filename_must_match_graph(self):
@@ -353,7 +345,8 @@ class CliTests(unittest.TestCase):
     def test_show(self):
         code, out, _ = self.run_cli("show", "video/wan-animate/mix")
         self.assertEqual(0, code)
-        for fragment in ("positive_points", "keep_audio", "dw-ll_ucoco_384.onnx", "TODO(2.2)", "windows-cuda"):
+        for fragment in ("positive_points", "keep_audio", "dw-ll_ucoco_384.onnx", "724f4ff2439e", "缺檔會自動下載",
+                         "windows-cuda"):
             self.assertIn(fragment, out)
         code, out, _ = self.run_cli("show", "video/sam3/track-text", "--json")
         self.assertEqual("video/sam3/track-text", json.loads(out)["id"])

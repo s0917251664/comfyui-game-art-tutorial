@@ -50,7 +50,8 @@ REFERENCE_ROLES = ("identity", "selection", "none")
 TIME_ALIGNMENTS = ("source_from_frame_0", "per_source_frame")
 OUTPUT_KINDS = ("video", "image", "image_sequence")
 OUTPUT_ROLES = ("candidate", "mask", "preview")
-MODEL_KEYS = {"role", "node", "input", "filename", "path", "size_bytes", "sha256", "source", "notes", "pin_status"}
+MODEL_KEYS = {"role", "node", "input", "filename", "path", "size_bytes", "sha256", "source", "notes", "pin_status",
+              "auto_download"}
 
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*(/[a-z0-9][a-z0-9_-]*)+$")
 SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+$")
@@ -505,6 +506,8 @@ def _validate_models(models, graph, status):
                 problems.append(f"{where}: sha256 必須是 64 位小寫十六進位或 null")
             if not isinstance(model.get("path"), str) or not _is_int(model.get("size_bytes")):
                 problems.append(f"{where}: 有 sha256 時 path 與 size_bytes 也必填")
+        if "auto_download" in model and not isinstance(model["auto_download"], bool):
+            problems.append(f"{where}: auto_download 必須是 true/false")
         path = model.get("path")
         if isinstance(path, str) and (path.startswith(("/", "\\")) or ":" in path or ".." in path.split("/")):
             problems.append(f"{where}: path 必須是相對 comfyui_path 的路徑(正斜線,不能有 ..)")
@@ -666,12 +669,13 @@ def output_prefix(template_id, run_id):
     return f"gameart/{template_id.replace('/', '-')}/{run_id}"
 
 
-def resolve(template, values=None, options=None, *, run_id, dry_run=False, rng=None):
+def resolve(template, values=None, options=None, *, run_id, dry_run=False, rng=None, allow_missing=False):
     """解析所有 slot 與 option 的值。
 
     ``values``:{slot: 原始值}(``--set`` 的字串或 values.json 的原生值)。
     ``options``:{option: bool}。回傳 dict:slot_values、seed_sources、options、inputs(上傳 slot 的本機路徑)、
-    warnings。dry-run 時缺少的上傳 slot 只警告,graph 裡會顯示 ``<upload:slot>``。
+    warnings、missing(``allow_missing`` 時沒有值的必填 slot)。dry-run 時缺少的上傳 slot 只警告,graph 裡會顯示
+    ``<upload:slot>``。``allow_missing``(preflight 用)把缺少的必填 slot 也降為警告,只檢查環境。
     """
     values = dict(values or {})
     options = dict(options or {})
@@ -687,7 +691,7 @@ def resolve(template, values=None, options=None, *, run_id, dry_run=False, rng=N
         raise TemplateError(problems, template.id)
 
     resolved, seed_sources, inputs = {}, {}, {}
-    pending_from = []
+    pending_from, missing = [], []
     for name, slot in slots.items():
         kind = slot["type"]
         try:
@@ -705,7 +709,10 @@ def resolve(template, values=None, options=None, *, run_id, dry_run=False, rng=N
             elif "default" in slot:
                 value, source = copy.deepcopy(slot["default"]), "default"
             elif kind in UPLOAD_TYPES and dry_run:
-                warnings.append(f"slot {name} 沒有提供檔案;dry-run 以 {UPLOAD_MARK.format(name)} 代替")
+                warnings.append(f"slot {name} 沒有提供檔案;graph 以 {UPLOAD_MARK.format(name)} 代替")
+                continue
+            elif allow_missing:
+                missing.append(name)
                 continue
             else:
                 problems.append(f"slot {name} 必填" + (f"({slot['help']})" if slot.get("help") else ""))
@@ -755,8 +762,10 @@ def resolve(template, values=None, options=None, *, run_id, dry_run=False, rng=N
     if continuity and continuity.get("manual_check") == "seam":
         seam = "/".join(str(frame) for frame in continuity["seam_frames"])
         warnings.append(f"延伸段接縫(第 {seam} 幀前後)需要人工檢查")
+    if missing:
+        warnings.append(f"沒有提供必填 slot: {', '.join(missing)};只檢查環境,不產生 graph")
     return {"slot_values": resolved, "seed_sources": seed_sources, "options": chosen, "inputs": inputs,
-            "warnings": warnings}
+            "warnings": warnings, "missing": missing}
 
 
 # ---------- patch ----------
