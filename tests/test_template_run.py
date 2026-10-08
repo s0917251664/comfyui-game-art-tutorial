@@ -149,7 +149,7 @@ class FakeMedia:
     MediaDependencyError = RuntimeError
 
     def __init__(self, video=None, image=None, mask=None, png=None, output_video=None):
-        self.video = dict({"width": 64, "height": 48, "frames": 8, "fps": "16/1", "fps_value": 16.0,
+        self.video = dict({"width": 64, "height": 48, "frames": 8, "fps": 16, "fps_rational": "16/1", "fps_value": 16.0,
                            "pts_uniform": True, "has_audio": False, "duration_seconds": 0.5}, **(video or {}))
         self.image = image or {"width": 512, "height": 512, "mode": "RGB", "has_alpha": False}
         self.mask = dict({"width": 64, "height": 48, "nonzero": 120, "has_transparency": False}, **(mask or {}))
@@ -574,7 +574,7 @@ class StepLogicTests(unittest.TestCase):
             S.resolve_param("{pre.source_video.fps}", {}, {}, pre)
 
     def test_video_input_checks(self):
-        media = FakeMedia(video={"fps": "30/1", "fps_value": 30.0, "pts_uniform": False, "frames": 10})
+        media = FakeMedia(video={"fps": 30, "fps_rational": "30/1", "fps_value": 30.0, "pts_uniform": False, "frames": 10})
         _, problems, _ = S._check_video_input("check_video", "a.mp4",
                                               {"fps": 16, "cfr": True, "frames_min": 17, "frames_max": 33}, media)
         self.assertEqual(3, len(problems), problems)
@@ -588,6 +588,17 @@ class StepLogicTests(unittest.TestCase):
             {"source_video": {"has_audio": False}}, {"video": ["out.mp4"]}, "/tmp/x", media)
         self.assertEqual([], problems)
         self.assertTrue(any("沒有音軌" in w for w in warnings))
+
+    def test_fps_number(self):
+        from fractions import Fraction
+        from comfyui_pipeline.runner import media
+        self.assertEqual(16, media.fps_number(Fraction(16, 1)))
+        self.assertIsInstance(media.fps_number(Fraction(16, 1)), int)
+        self.assertAlmostEqual(29.97003, media.fps_number(Fraction(30000, 1001)), places=5)
+        self.assertIsInstance(media.fps_number(Fraction(30000, 1001)), float)
+        self.assertEqual(Fraction(30000, 1001), media._fps_fraction(Fraction(30000, 1001)))
+        self.assertEqual(Fraction(25, 1), media._fps_fraction(25))
+        self.assertIsNone(media._fps_fraction(None))
 
     def test_execution_seconds_and_default_dir(self):
         self.assertIsNone(R.execution_seconds({"status": {"messages": []}}))
@@ -632,9 +643,10 @@ class RealMediaTests(RunFixture, unittest.TestCase):
         from comfyui_pipeline.runner import media
         self.make_video(self.clip, 8)
         info = media.probe_video(self.clip)
-        self.assertEqual((64, 48, 8, "16/1", True, False),
-                         (info["width"], info["height"], info["frames"], info["fps"], info["pts_uniform"],
-                          info["has_audio"]))
+        self.assertEqual((64, 48, 8, 16, "16/1", True, False),
+                         (info["width"], info["height"], info["frames"], info["fps"], info["fps_rational"],
+                          info["pts_uniform"], info["has_audio"]))
+        self.assertIsInstance(info["fps"], int)
         frames = media.extract_keyframes(self.clip, ["first", "middle", "last"], os.path.join(self.tmp, "kf"))
         self.assertEqual(7, frames["last"]["frame_index"])
         self.assertTrue(os.path.isfile(frames["middle"]["path"]))
@@ -683,9 +695,45 @@ class RealMediaTests(RunFixture, unittest.TestCase):
                                                 "--set", "seed=1")
         self.assertEqual(0, code, out + err)
         video = manifest["outputs"][0]
-        self.assertEqual((384, 384, 17, "16/1", True), (video["width"], video["height"], video["frames"],
-                                                       video["fps"], video["pts_uniform"]))
+        self.assertEqual((384, 384, 17, 16, "16/1", True), (video["width"], video["height"], video["frames"],
+                                                           video["fps"], video["fps_rational"], video["pts_uniform"]))
+        # manifest 的 fps 是 JSON 數字,不是 "16/1" 字串
+        raw = json.loads((self.out_dir / R.RESULT_FILE).read_text(encoding="utf-8"))
+        self.assertIsInstance(raw["outputs"][0]["fps"], int)
         self.assertTrue(os.path.isfile(manifest["keyframes"]["last"]))
+
+
+class ImportSideEffectTests(unittest.TestCase):
+    """`gameart.py run` 不應該印出 image_graphs 的「找不到 device_config.json」提醒(run 讀 <ComfyUI>/tools 快照)。"""
+
+    def _python(self, code):
+        import subprocess
+        tools_src = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tools_src")
+        env = dict(os.environ, PYTHONPATH=tools_src, PYTHONIOENCODING="utf-8")
+        return subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, encoding="utf-8",
+                              env=env, timeout=120)
+
+    def test_runner_import_does_not_load_image_graphs(self):
+        result = self._python("import sys; import comfyui_pipeline.runner.cli, comfyui_pipeline.runner.run; "
+                              "print('comfyui_pipeline.image_graphs' in sys.modules)")
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual("False", result.stdout.strip())
+        self.assertNotIn("device_config.json", result.stderr)
+
+    def test_run_list_has_no_device_config_warning(self):
+        tools_src = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tools_src")
+        result = self._python(f"import runpy, sys; sys.argv=['gameart.py', 'run', 'list']; "
+                              f"runpy.run_path({os.path.join(tools_src, 'gameart.py')!r}, run_name='__main__')")
+        self.assertNotIn("device_config.json", result.stderr)
+        self.assertIn("video/sam3/track-mask", result.stdout)
+
+    def test_image_commands_still_warn(self):
+        # 圖片工具(generate.py 等)仍然要提醒;在子行程 import,避免在測試輸出裡多印一行
+        result = self._python("import os, comfyui_pipeline.image_graphs as g; print(os.path.exists(g.DEVICE_CONFIG_PATH))")
+        self.assertEqual(0, result.returncode, result.stderr)
+        if result.stdout.strip() == "True":
+            self.skipTest("這台機器有 tools_src/device_config.json,不會出現提醒")
+        self.assertIn("device_config.json", result.stderr)
 
 
 class ClientOptionalParamsTests(unittest.TestCase):

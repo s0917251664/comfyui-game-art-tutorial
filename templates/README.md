@@ -49,7 +49,15 @@ python tools_src/gameart.py run video/sam3/track-mask --set source_video=clip.mp
 
 輸出資料夾預設是 `<repo>/output/runs/<日期>-<template>-<run_id 前 8 碼>/`（`--output-dir` 可改，必須不存在或是空的），內含 `preflight.json`、`uploads.json`、`workflow_api.json`（實際送出的 graph）、`queue.json`、`history.json`、`outputs/<output id>/`、`keyframes/`、`run.log`、`run.result.json`。
 
-`run.result.json` 的 kind 是 `template_run_result`：記錄 template 版本與 hash、prompt_id、client_id、run_id、seed、送出 graph 的 sha256、模型、slot 值、輸入檔與上傳位置、輸出檔 sha256 與量測值、平台、ComfyUI 版本、時間（`timing.execution_seconds` 是 ComfyUI history 記錄的執行時間）、每一項檢查結果。任何一步失敗都會寫 `status: failed` 和 `failure`（步驟、prompt_id、錯誤），已下載的檔案保留。技術檢查通過不等於美術接受：`content_review` 一律是 `pending`，接受與否由使用者決定後用 `gameart.py review list|accept|reject` 記錄（failed 的結果不能 accept）。延伸段 template 會提醒「延伸段接縫（第 32/33 幀前後）需要人工檢查」，也寫進 manifest 的 warnings。
+`run.result.json` 的 kind 是 `template_run_result`：記錄 template 版本與 hash、prompt_id、client_id、run_id、seed、送出 graph 的 sha256、模型、slot 值、輸入檔與上傳位置、輸出檔 sha256 與量測值、平台、ComfyUI 版本、時間（`timing.execution_seconds` 是 ComfyUI history 記錄的執行時間）、每一項檢查結果。影片的 `fps` 是數字（整數幀率記成 `16`，非整數記成小數），分數形式另外記在 `fps_rational`（例如 `"16/1"`、`"30000/1001"`）。任何一步失敗都會寫 `status: failed` 和 `failure`（步驟、prompt_id、錯誤），已下載的檔案保留。技術檢查通過不等於美術接受：`content_review` 一律是 `pending`，接受與否由使用者決定後用 `gameart.py review list|accept|reject` 記錄（failed 的結果不能 accept）。延伸段 template 會提醒「延伸段接縫（第 32/33 幀前後）需要人工檢查」，也寫進 manifest 的 warnings。
+
+### 清理上傳到 ComfyUI 的輸入
+
+runner 不會刪除上傳的檔案：每次執行的輸入留在 `<comfyui_path>/input/<run_id>/`（`run_id` 記在 `run.result.json` 與 `uploads.json`）。這是目前的預設，是否改成自動清理還沒決定。要手動清理時：
+
+1. 確認這個 run 已經結束：`run.result.json` 存在，而且 ComfyUI 的 `/queue` 裡沒有這個 `prompt_id`（逾時或 Ctrl+C 的 run，job 可能還在跑，要等它結束）。
+2. 只刪那個 run 的子資料夾，例如 PowerShell：`Remove-Item -LiteralPath "<comfyui_path>\input\<run_id>" -Recurse`；macOS：`rm -r "<comfyui_path>/input/<run_id>"`。不要清空整個 `input/`，裡面可能有其他工作的檔案。
+3. 刪掉之後就不能用同一份 `workflow_api.json` 在 ComfyUI 重跑；要重跑請重新 `gameart.py run`。repo 裡的 run 資料夾（輸出與 manifest）不受影響。
 
 `--set NAME=@檔案` 從 UTF-8 檔讀值（可帶 BOM，結尾換行會去掉）；`--values FILE.json` 一次給多個值；dry-run 的 `--output-dir` 寫出 `workflow_api.dryrun.json` 與 `dryrun.json`。`run` 只能從 repo 執行，`templates/` 不部署。
 
