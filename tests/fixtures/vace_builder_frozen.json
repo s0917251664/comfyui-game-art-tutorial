@@ -1,0 +1,1496 @@
+{
+  "cases": {
+    "defaults_1024": {
+      "graph": {
+        "3": {
+          "class_type": "KSampler",
+          "inputs": {
+            "cfg": 6.0,
+            "denoise": 1.0,
+            "latent_image": [
+              "55",
+              2
+            ],
+            "model": [
+              "48",
+              0
+            ],
+            "negative": [
+              "55",
+              1
+            ],
+            "positive": [
+              "55",
+              0
+            ],
+            "sampler_name": "uni_pc",
+            "scheduler": "simple",
+            "seed": 202,
+            "steps": 20
+          }
+        },
+        "37": {
+          "class_type": "UNETLoader",
+          "inputs": {
+            "unet_name": "wan2.1_vace_1.3B_fp16.safetensors",
+            "weight_dtype": "default"
+          }
+        },
+        "38": {
+          "class_type": "CLIPLoader",
+          "inputs": {
+            "clip_name": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+            "device": "default",
+            "type": "wan"
+          }
+        },
+        "39": {
+          "class_type": "VAELoader",
+          "inputs": {
+            "vae_name": "wan_2.1_vae.safetensors"
+          }
+        },
+        "48": {
+          "class_type": "ModelSamplingSD3",
+          "inputs": {
+            "model": [
+              "37",
+              0
+            ],
+            "shift": 5.0
+          }
+        },
+        "55": {
+          "class_type": "WanVaceToVideo",
+          "inputs": {
+            "batch_size": 1,
+            "control_masks": [
+              "84",
+              0
+            ],
+            "control_video": [
+              "81",
+              0
+            ],
+            "height": 560,
+            "length": 57,
+            "negative": [
+              "7",
+              0
+            ],
+            "positive": [
+              "6",
+              0
+            ],
+            "strength": 1.0,
+            "vae": [
+              "39",
+              0
+            ],
+            "width": 544
+          }
+        },
+        "56": {
+          "class_type": "TrimVideoLatent",
+          "inputs": {
+            "samples": [
+              "3",
+              0
+            ],
+            "trim_amount": [
+              "55",
+              3
+            ]
+          }
+        },
+        "57": {
+          "class_type": "CreateVideo",
+          "inputs": {
+            "fps": 24.0,
+            "images": [
+              "8",
+              0
+            ]
+          }
+        },
+        "58": {
+          "class_type": "SaveVideo",
+          "inputs": {
+            "codec": "h264",
+            "filename_prefix": "gameart/video-wan-vace-inpaint/vaceeq01",
+            "format": "mp4",
+            "video": [
+              "57",
+              0
+            ]
+          }
+        },
+        "6": {
+          "class_type": "CLIPTextEncode",
+          "inputs": {
+            "clip": [
+              "38",
+              0
+            ],
+            "text": "a glowing blue crystal hammer"
+          }
+        },
+        "7": {
+          "class_type": "CLIPTextEncode",
+          "inputs": {
+            "clip": [
+              "38",
+              0
+            ],
+            "text": "过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走,过曝，"
+          }
+        },
+        "8": {
+          "class_type": "VAEDecode",
+          "inputs": {
+            "samples": [
+              "56",
+              0
+            ],
+            "vae": [
+              "39",
+              0
+            ]
+          }
+        },
+        "80": {
+          "class_type": "LoadVideo",
+          "inputs": {
+            "file": "vaceeq01/control.mkv"
+          }
+        },
+        "81": {
+          "class_type": "GetVideoComponents",
+          "inputs": {
+            "video": [
+              "80",
+              0
+            ]
+          }
+        },
+        "82": {
+          "class_type": "LoadVideo",
+          "inputs": {
+            "file": "vaceeq01/mask.mkv"
+          }
+        },
+        "83": {
+          "class_type": "GetVideoComponents",
+          "inputs": {
+            "video": [
+              "82",
+              0
+            ]
+          }
+        },
+        "84": {
+          "class_type": "ImageToMask",
+          "inputs": {
+            "channel": "red",
+            "image": [
+              "83",
+              0
+            ]
+          }
+        }
+      },
+      "graph_canonical_sha256": "72558df33a4fa57974624a47a0fe65ee579044f5faee1cb5c3a0c1d3be7d396e",
+      "output_node": "58",
+      "size": [
+        544,
+        560,
+        57
+      ],
+      "values": {
+        "prompt": "a glowing blue crystal hammer",
+        "seed": 202
+      }
+    },
+    "local_params_do_not_touch_graph": {
+      "graph": {
+        "3": {
+          "class_type": "KSampler",
+          "inputs": {
+            "cfg": 6.0,
+            "denoise": 1.0,
+            "latent_image": [
+              "55",
+              2
+            ],
+            "model": [
+              "48",
+              0
+            ],
+            "negative": [
+              "55",
+              1
+            ],
+            "positive": [
+              "55",
+              0
+            ],
+            "sampler_name": "uni_pc",
+            "scheduler": "simple",
+            "seed": 5,
+            "steps": 20
+          }
+        },
+        "37": {
+          "class_type": "UNETLoader",
+          "inputs": {
+            "unet_name": "wan2.1_vace_1.3B_fp16.safetensors",
+            "weight_dtype": "default"
+          }
+        },
+        "38": {
+          "class_type": "CLIPLoader",
+          "inputs": {
+            "clip_name": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+            "device": "default",
+            "type": "wan"
+          }
+        },
+        "39": {
+          "class_type": "VAELoader",
+          "inputs": {
+            "vae_name": "wan_2.1_vae.safetensors"
+          }
+        },
+        "48": {
+          "class_type": "ModelSamplingSD3",
+          "inputs": {
+            "model": [
+              "37",
+              0
+            ],
+            "shift": 5.0
+          }
+        },
+        "55": {
+          "class_type": "WanVaceToVideo",
+          "inputs": {
+            "batch_size": 1,
+            "control_masks": [
+              "84",
+              0
+            ],
+            "control_video": [
+              "81",
+              0
+            ],
+            "height": 128,
+            "length": 5,
+            "negative": [
+              "7",
+              0
+            ],
+            "positive": [
+              "6",
+              0
+            ],
+            "strength": 1.0,
+            "vae": [
+              "39",
+              0
+            ],
+            "width": 128
+          }
+        },
+        "56": {
+          "class_type": "TrimVideoLatent",
+          "inputs": {
+            "samples": [
+              "3",
+              0
+            ],
+            "trim_amount": [
+              "55",
+              3
+            ]
+          }
+        },
+        "57": {
+          "class_type": "CreateVideo",
+          "inputs": {
+            "fps": 24.0,
+            "images": [
+              "8",
+              0
+            ]
+          }
+        },
+        "58": {
+          "class_type": "SaveVideo",
+          "inputs": {
+            "codec": "h264",
+            "filename_prefix": "gameart/video-wan-vace-inpaint/vaceeq01",
+            "format": "mp4",
+            "video": [
+              "57",
+              0
+            ]
+          }
+        },
+        "6": {
+          "class_type": "CLIPTextEncode",
+          "inputs": {
+            "clip": [
+              "38",
+              0
+            ],
+            "text": "ice"
+          }
+        },
+        "7": {
+          "class_type": "CLIPTextEncode",
+          "inputs": {
+            "clip": [
+              "38",
+              0
+            ],
+            "text": "过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走,过曝，"
+          }
+        },
+        "8": {
+          "class_type": "VAEDecode",
+          "inputs": {
+            "samples": [
+              "56",
+              0
+            ],
+            "vae": [
+              "39",
+              0
+            ]
+          }
+        },
+        "80": {
+          "class_type": "LoadVideo",
+          "inputs": {
+            "file": "vaceeq01/control.mkv"
+          }
+        },
+        "81": {
+          "class_type": "GetVideoComponents",
+          "inputs": {
+            "video": [
+              "80",
+              0
+            ]
+          }
+        },
+        "82": {
+          "class_type": "LoadVideo",
+          "inputs": {
+            "file": "vaceeq01/mask.mkv"
+          }
+        },
+        "83": {
+          "class_type": "GetVideoComponents",
+          "inputs": {
+            "video": [
+              "82",
+              0
+            ]
+          }
+        },
+        "84": {
+          "class_type": "ImageToMask",
+          "inputs": {
+            "channel": "red",
+            "image": [
+              "83",
+              0
+            ]
+          }
+        }
+      },
+      "graph_canonical_sha256": "4f960c665f335d0b97923e3f756ca682373e3b7561c875c94f92c8832d93c80d",
+      "output_node": "58",
+      "size": [
+        128,
+        128,
+        5
+      ],
+      "values": {
+        "crop": "0,0,128,128",
+        "feather": 0,
+        "grow": 0,
+        "mask_object": 3,
+        "mode": "replace",
+        "pad": 0,
+        "prompt": "ice",
+        "seed": 5
+      }
+    },
+    "max_area_81": {
+      "graph": {
+        "3": {
+          "class_type": "KSampler",
+          "inputs": {
+            "cfg": 6.0,
+            "denoise": 1.0,
+            "latent_image": [
+              "55",
+              2
+            ],
+            "model": [
+              "48",
+              0
+            ],
+            "negative": [
+              "55",
+              1
+            ],
+            "positive": [
+              "55",
+              0
+            ],
+            "sampler_name": "uni_pc",
+            "scheduler": "simple",
+            "seed": 4294967295,
+            "steps": 20
+          }
+        },
+        "37": {
+          "class_type": "UNETLoader",
+          "inputs": {
+            "unet_name": "wan2.1_vace_1.3B_fp16.safetensors",
+            "weight_dtype": "default"
+          }
+        },
+        "38": {
+          "class_type": "CLIPLoader",
+          "inputs": {
+            "clip_name": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+            "device": "default",
+            "type": "wan"
+          }
+        },
+        "39": {
+          "class_type": "VAELoader",
+          "inputs": {
+            "vae_name": "wan_2.1_vae.safetensors"
+          }
+        },
+        "48": {
+          "class_type": "ModelSamplingSD3",
+          "inputs": {
+            "model": [
+              "37",
+              0
+            ],
+            "shift": 5.0
+          }
+        },
+        "55": {
+          "class_type": "WanVaceToVideo",
+          "inputs": {
+            "batch_size": 1,
+            "control_masks": [
+              "84",
+              0
+            ],
+            "control_video": [
+              "81",
+              0
+            ],
+            "height": 480,
+            "length": 81,
+            "negative": [
+              "7",
+              0
+            ],
+            "positive": [
+              "6",
+              0
+            ],
+            "strength": 1.0,
+            "vae": [
+              "39",
+              0
+            ],
+            "width": 832
+          }
+        },
+        "56": {
+          "class_type": "TrimVideoLatent",
+          "inputs": {
+            "samples": [
+              "3",
+              0
+            ],
+            "trim_amount": [
+              "55",
+              3
+            ]
+          }
+        },
+        "57": {
+          "class_type": "CreateVideo",
+          "inputs": {
+            "fps": 24.0,
+            "images": [
+              "8",
+              0
+            ]
+          }
+        },
+        "58": {
+          "class_type": "SaveVideo",
+          "inputs": {
+            "codec": "h264",
+            "filename_prefix": "gameart/video-wan-vace-inpaint/vaceeq01",
+            "format": "mp4",
+            "video": [
+              "57",
+              0
+            ]
+          }
+        },
+        "6": {
+          "class_type": "CLIPTextEncode",
+          "inputs": {
+            "clip": [
+              "38",
+              0
+            ],
+            "text": "x"
+          }
+        },
+        "7": {
+          "class_type": "CLIPTextEncode",
+          "inputs": {
+            "clip": [
+              "38",
+              0
+            ],
+            "text": "过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走,过曝，"
+          }
+        },
+        "8": {
+          "class_type": "VAEDecode",
+          "inputs": {
+            "samples": [
+              "56",
+              0
+            ],
+            "vae": [
+              "39",
+              0
+            ]
+          }
+        },
+        "80": {
+          "class_type": "LoadVideo",
+          "inputs": {
+            "file": "vaceeq01/control.mkv"
+          }
+        },
+        "81": {
+          "class_type": "GetVideoComponents",
+          "inputs": {
+            "video": [
+              "80",
+              0
+            ]
+          }
+        },
+        "82": {
+          "class_type": "LoadVideo",
+          "inputs": {
+            "file": "vaceeq01/mask.mkv"
+          }
+        },
+        "83": {
+          "class_type": "GetVideoComponents",
+          "inputs": {
+            "video": [
+              "82",
+              0
+            ]
+          }
+        },
+        "84": {
+          "class_type": "ImageToMask",
+          "inputs": {
+            "channel": "red",
+            "image": [
+              "83",
+              0
+            ]
+          }
+        }
+      },
+      "graph_canonical_sha256": "ae2e765dbbbcce891a1d0043727912933b212b20b79a3586f596964a28adc36a",
+      "output_node": "58",
+      "size": [
+        832,
+        480,
+        81
+      ],
+      "values": {
+        "prompt": "x",
+        "seed": 4294967295
+      }
+    },
+    "portrait": {
+      "graph": {
+        "3": {
+          "class_type": "KSampler",
+          "inputs": {
+            "cfg": 6.0,
+            "denoise": 1.0,
+            "latent_image": [
+              "55",
+              2
+            ],
+            "model": [
+              "48",
+              0
+            ],
+            "negative": [
+              "55",
+              1
+            ],
+            "positive": [
+              "55",
+              0
+            ],
+            "sampler_name": "uni_pc",
+            "scheduler": "simple",
+            "seed": 7,
+            "steps": 20
+          }
+        },
+        "37": {
+          "class_type": "UNETLoader",
+          "inputs": {
+            "unet_name": "wan2.1_vace_1.3B_fp16.safetensors",
+            "weight_dtype": "default"
+          }
+        },
+        "38": {
+          "class_type": "CLIPLoader",
+          "inputs": {
+            "clip_name": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+            "device": "default",
+            "type": "wan"
+          }
+        },
+        "39": {
+          "class_type": "VAELoader",
+          "inputs": {
+            "vae_name": "wan_2.1_vae.safetensors"
+          }
+        },
+        "48": {
+          "class_type": "ModelSamplingSD3",
+          "inputs": {
+            "model": [
+              "37",
+              0
+            ],
+            "shift": 5.0
+          }
+        },
+        "55": {
+          "class_type": "WanVaceToVideo",
+          "inputs": {
+            "batch_size": 1,
+            "control_masks": [
+              "84",
+              0
+            ],
+            "control_video": [
+              "81",
+              0
+            ],
+            "height": 816,
+            "length": 33,
+            "negative": [
+              "7",
+              0
+            ],
+            "positive": [
+              "6",
+              0
+            ],
+            "strength": 1.0,
+            "vae": [
+              "39",
+              0
+            ],
+            "width": 464
+          }
+        },
+        "56": {
+          "class_type": "TrimVideoLatent",
+          "inputs": {
+            "samples": [
+              "3",
+              0
+            ],
+            "trim_amount": [
+              "55",
+              3
+            ]
+          }
+        },
+        "57": {
+          "class_type": "CreateVideo",
+          "inputs": {
+            "fps": 24.0,
+            "images": [
+              "8",
+              0
+            ]
+          }
+        },
+        "58": {
+          "class_type": "SaveVideo",
+          "inputs": {
+            "codec": "h264",
+            "filename_prefix": "gameart/video-wan-vace-inpaint/vaceeq01",
+            "format": "mp4",
+            "video": [
+              "57",
+              0
+            ]
+          }
+        },
+        "6": {
+          "class_type": "CLIPTextEncode",
+          "inputs": {
+            "clip": [
+              "38",
+              0
+            ],
+            "text": "fire sword, game art"
+          }
+        },
+        "7": {
+          "class_type": "CLIPTextEncode",
+          "inputs": {
+            "clip": [
+              "38",
+              0
+            ],
+            "text": "过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走,过曝，"
+          }
+        },
+        "8": {
+          "class_type": "VAEDecode",
+          "inputs": {
+            "samples": [
+              "56",
+              0
+            ],
+            "vae": [
+              "39",
+              0
+            ]
+          }
+        },
+        "80": {
+          "class_type": "LoadVideo",
+          "inputs": {
+            "file": "vaceeq01/control.mkv"
+          }
+        },
+        "81": {
+          "class_type": "GetVideoComponents",
+          "inputs": {
+            "video": [
+              "80",
+              0
+            ]
+          }
+        },
+        "82": {
+          "class_type": "LoadVideo",
+          "inputs": {
+            "file": "vaceeq01/mask.mkv"
+          }
+        },
+        "83": {
+          "class_type": "GetVideoComponents",
+          "inputs": {
+            "video": [
+              "82",
+              0
+            ]
+          }
+        },
+        "84": {
+          "class_type": "ImageToMask",
+          "inputs": {
+            "channel": "red",
+            "image": [
+              "83",
+              0
+            ]
+          }
+        }
+      },
+      "graph_canonical_sha256": "162dfafc6ac75417c0d598887dcd4cd66e8ce1e2e0d0b10520661d6744066896",
+      "output_node": "58",
+      "size": [
+        464,
+        816,
+        33
+      ],
+      "values": {
+        "prompt": "fire sword, game art",
+        "seed": 7
+      }
+    },
+    "small_9_frames": {
+      "graph": {
+        "3": {
+          "class_type": "KSampler",
+          "inputs": {
+            "cfg": 6.0,
+            "denoise": 1.0,
+            "latent_image": [
+              "55",
+              2
+            ],
+            "model": [
+              "48",
+              0
+            ],
+            "negative": [
+              "55",
+              1
+            ],
+            "positive": [
+              "55",
+              0
+            ],
+            "sampler_name": "uni_pc",
+            "scheduler": "simple",
+            "seed": 0,
+            "steps": 20
+          }
+        },
+        "37": {
+          "class_type": "UNETLoader",
+          "inputs": {
+            "unet_name": "wan2.1_vace_1.3B_fp16.safetensors",
+            "weight_dtype": "default"
+          }
+        },
+        "38": {
+          "class_type": "CLIPLoader",
+          "inputs": {
+            "clip_name": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+            "device": "default",
+            "type": "wan"
+          }
+        },
+        "39": {
+          "class_type": "VAELoader",
+          "inputs": {
+            "vae_name": "wan_2.1_vae.safetensors"
+          }
+        },
+        "48": {
+          "class_type": "ModelSamplingSD3",
+          "inputs": {
+            "model": [
+              "37",
+              0
+            ],
+            "shift": 5.0
+          }
+        },
+        "55": {
+          "class_type": "WanVaceToVideo",
+          "inputs": {
+            "batch_size": 1,
+            "control_masks": [
+              "84",
+              0
+            ],
+            "control_video": [
+              "81",
+              0
+            ],
+            "height": 128,
+            "length": 9,
+            "negative": [
+              "7",
+              0
+            ],
+            "positive": [
+              "6",
+              0
+            ],
+            "strength": 1.0,
+            "vae": [
+              "39",
+              0
+            ],
+            "width": 192
+          }
+        },
+        "56": {
+          "class_type": "TrimVideoLatent",
+          "inputs": {
+            "samples": [
+              "3",
+              0
+            ],
+            "trim_amount": [
+              "55",
+              3
+            ]
+          }
+        },
+        "57": {
+          "class_type": "CreateVideo",
+          "inputs": {
+            "fps": 24.0,
+            "images": [
+              "8",
+              0
+            ]
+          }
+        },
+        "58": {
+          "class_type": "SaveVideo",
+          "inputs": {
+            "codec": "h264",
+            "filename_prefix": "gameart/video-wan-vace-inpaint/vaceeq01",
+            "format": "mp4",
+            "video": [
+              "57",
+              0
+            ]
+          }
+        },
+        "6": {
+          "class_type": "CLIPTextEncode",
+          "inputs": {
+            "clip": [
+              "38",
+              0
+            ],
+            "text": "red metal"
+          }
+        },
+        "7": {
+          "class_type": "CLIPTextEncode",
+          "inputs": {
+            "clip": [
+              "38",
+              0
+            ],
+            "text": "过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走,过曝，"
+          }
+        },
+        "8": {
+          "class_type": "VAEDecode",
+          "inputs": {
+            "samples": [
+              "56",
+              0
+            ],
+            "vae": [
+              "39",
+              0
+            ]
+          }
+        },
+        "80": {
+          "class_type": "LoadVideo",
+          "inputs": {
+            "file": "vaceeq01/control.mkv"
+          }
+        },
+        "81": {
+          "class_type": "GetVideoComponents",
+          "inputs": {
+            "video": [
+              "80",
+              0
+            ]
+          }
+        },
+        "82": {
+          "class_type": "LoadVideo",
+          "inputs": {
+            "file": "vaceeq01/mask.mkv"
+          }
+        },
+        "83": {
+          "class_type": "GetVideoComponents",
+          "inputs": {
+            "video": [
+              "82",
+              0
+            ]
+          }
+        },
+        "84": {
+          "class_type": "ImageToMask",
+          "inputs": {
+            "channel": "red",
+            "image": [
+              "83",
+              0
+            ]
+          }
+        }
+      },
+      "graph_canonical_sha256": "22fde3063f253803f9e7e3ef19d5b58a0ce273ecc3da0fb7be5ee6227f3c8e89",
+      "output_node": "58",
+      "size": [
+        192,
+        128,
+        9
+      ],
+      "values": {
+        "prompt": "red metal",
+        "seed": 0
+      }
+    },
+    "strength_and_negative": {
+      "graph": {
+        "3": {
+          "class_type": "KSampler",
+          "inputs": {
+            "cfg": 6.0,
+            "denoise": 1.0,
+            "latent_image": [
+              "55",
+              2
+            ],
+            "model": [
+              "48",
+              0
+            ],
+            "negative": [
+              "55",
+              1
+            ],
+            "positive": [
+              "55",
+              0
+            ],
+            "sampler_name": "uni_pc",
+            "scheduler": "simple",
+            "seed": 99,
+            "steps": 20
+          }
+        },
+        "37": {
+          "class_type": "UNETLoader",
+          "inputs": {
+            "unet_name": "wan2.1_vace_1.3B_fp16.safetensors",
+            "weight_dtype": "default"
+          }
+        },
+        "38": {
+          "class_type": "CLIPLoader",
+          "inputs": {
+            "clip_name": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+            "device": "default",
+            "type": "wan"
+          }
+        },
+        "39": {
+          "class_type": "VAELoader",
+          "inputs": {
+            "vae_name": "wan_2.1_vae.safetensors"
+          }
+        },
+        "48": {
+          "class_type": "ModelSamplingSD3",
+          "inputs": {
+            "model": [
+              "37",
+              0
+            ],
+            "shift": 5.0
+          }
+        },
+        "55": {
+          "class_type": "WanVaceToVideo",
+          "inputs": {
+            "batch_size": 1,
+            "control_masks": [
+              "84",
+              0
+            ],
+            "control_video": [
+              "81",
+              0
+            ],
+            "height": 320,
+            "length": 21,
+            "negative": [
+              "7",
+              0
+            ],
+            "positive": [
+              "6",
+              0
+            ],
+            "strength": 0.35,
+            "vae": [
+              "39",
+              0
+            ],
+            "width": 320
+          }
+        },
+        "56": {
+          "class_type": "TrimVideoLatent",
+          "inputs": {
+            "samples": [
+              "3",
+              0
+            ],
+            "trim_amount": [
+              "55",
+              3
+            ]
+          }
+        },
+        "57": {
+          "class_type": "CreateVideo",
+          "inputs": {
+            "fps": 24.0,
+            "images": [
+              "8",
+              0
+            ]
+          }
+        },
+        "58": {
+          "class_type": "SaveVideo",
+          "inputs": {
+            "codec": "h264",
+            "filename_prefix": "gameart/video-wan-vace-inpaint/vaceeq01",
+            "format": "mp4",
+            "video": [
+              "57",
+              0
+            ]
+          }
+        },
+        "6": {
+          "class_type": "CLIPTextEncode",
+          "inputs": {
+            "clip": [
+              "38",
+              0
+            ],
+            "text": "ice"
+          }
+        },
+        "7": {
+          "class_type": "CLIPTextEncode",
+          "inputs": {
+            "clip": [
+              "38",
+              0
+            ],
+            "text": "blurry"
+          }
+        },
+        "8": {
+          "class_type": "VAEDecode",
+          "inputs": {
+            "samples": [
+              "56",
+              0
+            ],
+            "vae": [
+              "39",
+              0
+            ]
+          }
+        },
+        "80": {
+          "class_type": "LoadVideo",
+          "inputs": {
+            "file": "vaceeq01/control.mkv"
+          }
+        },
+        "81": {
+          "class_type": "GetVideoComponents",
+          "inputs": {
+            "video": [
+              "80",
+              0
+            ]
+          }
+        },
+        "82": {
+          "class_type": "LoadVideo",
+          "inputs": {
+            "file": "vaceeq01/mask.mkv"
+          }
+        },
+        "83": {
+          "class_type": "GetVideoComponents",
+          "inputs": {
+            "video": [
+              "82",
+              0
+            ]
+          }
+        },
+        "84": {
+          "class_type": "ImageToMask",
+          "inputs": {
+            "channel": "red",
+            "image": [
+              "83",
+              0
+            ]
+          }
+        }
+      },
+      "graph_canonical_sha256": "8f635cdb855f218ccb5adaed71392ee2b1602a2ff6ba660e1d6b16d248edf412",
+      "output_node": "58",
+      "size": [
+        320,
+        320,
+        21
+      ],
+      "values": {
+        "negative": "blurry",
+        "prompt": "ice",
+        "seed": 99,
+        "strength": 0.35
+      }
+    },
+    "strength_max": {
+      "graph": {
+        "3": {
+          "class_type": "KSampler",
+          "inputs": {
+            "cfg": 6.0,
+            "denoise": 1.0,
+            "latent_image": [
+              "55",
+              2
+            ],
+            "model": [
+              "48",
+              0
+            ],
+            "negative": [
+              "55",
+              1
+            ],
+            "positive": [
+              "55",
+              0
+            ],
+            "sampler_name": "uni_pc",
+            "scheduler": "simple",
+            "seed": 5,
+            "steps": 20
+          }
+        },
+        "37": {
+          "class_type": "UNETLoader",
+          "inputs": {
+            "unet_name": "wan2.1_vace_1.3B_fp16.safetensors",
+            "weight_dtype": "default"
+          }
+        },
+        "38": {
+          "class_type": "CLIPLoader",
+          "inputs": {
+            "clip_name": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+            "device": "default",
+            "type": "wan"
+          }
+        },
+        "39": {
+          "class_type": "VAELoader",
+          "inputs": {
+            "vae_name": "wan_2.1_vae.safetensors"
+          }
+        },
+        "48": {
+          "class_type": "ModelSamplingSD3",
+          "inputs": {
+            "model": [
+              "37",
+              0
+            ],
+            "shift": 5.0
+          }
+        },
+        "55": {
+          "class_type": "WanVaceToVideo",
+          "inputs": {
+            "batch_size": 1,
+            "control_masks": [
+              "84",
+              0
+            ],
+            "control_video": [
+              "81",
+              0
+            ],
+            "height": 128,
+            "length": 5,
+            "negative": [
+              "7",
+              0
+            ],
+            "positive": [
+              "6",
+              0
+            ],
+            "strength": 10.0,
+            "vae": [
+              "39",
+              0
+            ],
+            "width": 128
+          }
+        },
+        "56": {
+          "class_type": "TrimVideoLatent",
+          "inputs": {
+            "samples": [
+              "3",
+              0
+            ],
+            "trim_amount": [
+              "55",
+              3
+            ]
+          }
+        },
+        "57": {
+          "class_type": "CreateVideo",
+          "inputs": {
+            "fps": 24.0,
+            "images": [
+              "8",
+              0
+            ]
+          }
+        },
+        "58": {
+          "class_type": "SaveVideo",
+          "inputs": {
+            "codec": "h264",
+            "filename_prefix": "gameart/video-wan-vace-inpaint/vaceeq01",
+            "format": "mp4",
+            "video": [
+              "57",
+              0
+            ]
+          }
+        },
+        "6": {
+          "class_type": "CLIPTextEncode",
+          "inputs": {
+            "clip": [
+              "38",
+              0
+            ],
+            "text": "ice"
+          }
+        },
+        "7": {
+          "class_type": "CLIPTextEncode",
+          "inputs": {
+            "clip": [
+              "38",
+              0
+            ],
+            "text": "过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走,过曝，"
+          }
+        },
+        "8": {
+          "class_type": "VAEDecode",
+          "inputs": {
+            "samples": [
+              "56",
+              0
+            ],
+            "vae": [
+              "39",
+              0
+            ]
+          }
+        },
+        "80": {
+          "class_type": "LoadVideo",
+          "inputs": {
+            "file": "vaceeq01/control.mkv"
+          }
+        },
+        "81": {
+          "class_type": "GetVideoComponents",
+          "inputs": {
+            "video": [
+              "80",
+              0
+            ]
+          }
+        },
+        "82": {
+          "class_type": "LoadVideo",
+          "inputs": {
+            "file": "vaceeq01/mask.mkv"
+          }
+        },
+        "83": {
+          "class_type": "GetVideoComponents",
+          "inputs": {
+            "video": [
+              "82",
+              0
+            ]
+          }
+        },
+        "84": {
+          "class_type": "ImageToMask",
+          "inputs": {
+            "channel": "red",
+            "image": [
+              "83",
+              0
+            ]
+          }
+        }
+      },
+      "graph_canonical_sha256": "d04b4369afcba652e46a9d33b9d1a17d8dc20c06eb3edf79c92bc77326b5dad9",
+      "output_node": "58",
+      "size": [
+        128,
+        128,
+        5
+      ],
+      "values": {
+        "prompt": "ice",
+        "seed": 5,
+        "strength": 10.0
+      }
+    }
+  },
+  "note": "PR 8.3 刪除 build_video_inpaint_wan 前凍結的 builder 輸出;test_template_wan_vace 用它做逐欄位等價比對",
+  "run_id": "vaceeq01",
+  "uploads": {
+    "control_video": "vaceeq01/control.mkv",
+    "mask_video": "vaceeq01/mask.mkv"
+  }
+}

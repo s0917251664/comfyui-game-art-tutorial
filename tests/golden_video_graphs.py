@@ -7,11 +7,14 @@ pose_drive)的 golden graph 案例,給 ``test_video_graph_golden`` 用。
 
 每個案例寫一份 ``tests/fixtures/video_graphs_golden/<task>__<backend>__<case>.json``,內容有:
 - ``args``:task 的 CLI 參數(只列和預設不同的)。
-- ``builder``:task 實際呼叫的 5 個 graph builder 之一,以及它收到的參數(``video_config`` 省略,
-  固定是 ``VIDEO_CONFIG``)。第 6.2 階段的 template 可以直接拿這組參數做逐欄位等價比對。
+- ``builder``:第 6.1 階段 task 呼叫的 5 個 graph builder 之一,以及它收到的參數(``video_config`` 省略,
+  固定是 ``VIDEO_CONFIG``)。PR 8.3 刪掉了 builder,這一欄是當時凍結的紀錄:``--write`` 會原樣保留,
+  ``test_video_template_equiv`` 用它選 template。
 - ``graph``、``output_node``、``graph_sha256``(和 result manifest 的 ``graph_sha256`` 同一個算法)。
 
-只有在影片 graph 是刻意修改時才執行 ``python tests/golden_video_graphs.py --write``。
+graph 從第 6.3 階段起由 task 層填 template 產生,PR 8.3 起 golden 改由 template 維護(``graph`` 是 builder
+時代凍結的值,template 變了才需要重寫)。只有在影片 template 是刻意修改時才執行
+``python tests/golden_video_graphs.py --write``,並確認 graph 的 diff。
 """
 
 import contextlib
@@ -143,11 +146,11 @@ def fixture_name(task, backend, case):
 
 
 def load_modules():
-    """載入 task 與 builder 模組。image_graphs 找不到 device_config 時會提醒,這裡吞掉。"""
+    """載入 task 模組。image_graphs 找不到 device_config 時會提醒,這裡吞掉。回傳 (task_video, image_results)。"""
     with contextlib.redirect_stderr(io.StringIO()):
-        from comfyui_pipeline import image_results, video_builders
+        from comfyui_pipeline import image_results
         from comfyui_pipeline.tasks import video as task_video
-    return task_video, video_builders, image_results
+    return task_video, image_results
 
 
 def _fake_canvas(_path, width=None, height=None):
@@ -162,19 +165,6 @@ def _fake_temp_image_path(_out_dir, prefix):
     return f"{prefix}golden.png"
 
 
-def _builder_spy(video_builders, calls):
-    """把 5 個 builder 換成記錄參數後呼叫原函式的版本(run_* 透過模組全域名稱呼叫它們)。"""
-    patches = []
-    for name in BUILDERS:
-        original = getattr(video_builders, name)
-
-        def spy(*args, _name=name, _original=original, **kwargs):
-            calls.append((_name, args, kwargs))
-            return _original(*args, **kwargs)
-        patches.append(mock.patch.object(video_builders, name, spy))
-    return patches
-
-
 def task_args(task, backend, overrides):
     values = dict(DEFAULT_ARGS, task=task, backend=backend)
     values.setdefault("camera", None)
@@ -185,12 +175,11 @@ def task_args(task, backend, overrides):
 
 
 def run_task(task, backend, overrides, modules=None):
-    """用 task 層組一次 graph,回傳 (plan, builder 呼叫)。只呼叫一次 builder。"""
-    task_video, video_builders, _ = modules or load_modules()
+    """用 task 層組一次 graph(task 填 template),回傳 plan。"""
+    task_video, _ = modules or load_modules()
     args = task_args(task, backend, overrides)
     ctx = SimpleNamespace(active_video_config=VIDEO_CONFIG)
-    calls = []
-    patches = _builder_spy(video_builders, calls) + [
+    patches = [
         mock.patch.object(task_video, "video_canvas", _fake_canvas),
         mock.patch.object(task_video, "validate_transition_images", lambda *a, **k: None),
         mock.patch.object(task_video, "validate_motion_reference_fps", lambda *a, **k: None),
@@ -205,24 +194,19 @@ def run_task(task, backend, overrides, modules=None):
             stack.enter_context(patcher)
         stack.enter_context(contextlib.redirect_stdout(io.StringIO()))
         stack.enter_context(contextlib.redirect_stderr(io.StringIO()))
-        plan = task_video.prepare(ctx, args, _fake_upload)
-    if len(calls) != 1:
-        raise AssertionError(f"{task}/{backend} 應該只呼叫一次 graph builder,實際 {[c[0] for c in calls]}")
-    name, call_args, call_kwargs = calls[0]
-    if call_kwargs.get("video_config") is not VIDEO_CONFIG:
-        raise AssertionError(f"{task}/{backend} 沒有把明確的 video_config 傳給 {name}")
-    kwargs = {key: value for key, value in call_kwargs.items() if key != "video_config"}
-    return plan, {"name": name, "args": list(call_args), "kwargs": kwargs}
+        return task_video.prepare(ctx, args, _fake_upload)
 
 
 def build_case(task, backend, case, overrides, modules=None):
     modules = modules or load_modules()
-    plan, builder = run_task(task, backend, overrides, modules)
+    plan = run_task(task, backend, overrides, modules)
     graph = json.loads(json.dumps(plan.graph))
+    name = fixture_name(task, backend, case)
+    builder = load_fixture(name)["builder"] if os.path.exists(os.path.join(FIXTURE_DIR, name)) else None
     return {
         "task": task, "backend": backend, "case": case, "args": overrides,
-        "builder": json.loads(json.dumps(builder)),
-        "output_node": plan.out_id, "graph_sha256": modules[2].graph_sha256(graph), "graph": graph,
+        "builder": builder,
+        "output_node": plan.out_id, "graph_sha256": modules[1].graph_sha256(graph), "graph": graph,
     }
 
 

@@ -1,7 +1,9 @@
-"""PR 3.4:``video/wan-vace/inpaint`` template 和 ``build_video_inpaint_wan``(generate.py video_inpaint 的 builder)等價。
+"""PR 3.4:``video/wan-vace/inpaint`` template 和 ``build_video_inpaint_wan``(generate.py video_inpaint 原本的 builder)等價。
 
 多組參數下,runner 的 resolve → fill_from_pre → patch 產生的 graph,和 builder 用同樣的值產生的 graph 逐欄位相同。
+PR 8.3 刪掉了 builder;它對這 7 組參數的輸出在刪除前凍結在 ``tests/fixtures/vace_builder_frozen.json``。
 """
+import json
 import os
 import sys
 import unittest
@@ -10,7 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import golden_template_graphs as golden  # noqa: E402
 
 from comfyui_pipeline.runner import template as T  # noqa: E402
-from comfyui_pipeline.video_builders import build_video_inpaint_wan  # noqa: E402
+FROZEN = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures", "vace_builder_frozen.json")
 from comfyui_pipeline.video_catalog import VACE_NEGATIVE_DEFAULT  # noqa: E402
 
 TEMPLATE_ID = "video/wan-vace/inpaint"
@@ -44,18 +46,23 @@ class WanVaceEquivalenceTests(unittest.TestCase):
         graph, _ = T.patch(self.template, resolution, UPLOADS)
         return graph
 
-    def builder_graph(self, values, size):
-        graph, out_id = build_video_inpaint_wan(
-            values["prompt"], UPLOADS["control_video"], UPLOADS["mask_video"], size[0], size[1], size[2],
-            seed=values["seed"], negative=values.get("negative"), strength=values.get("strength", 1.0),
-            filename_prefix=T.output_prefix(TEMPLATE_ID, RUN_ID), video_config=None)
-        self.assertEqual("58", out_id)
-        return graph
+    def builder_graph(self, name, values, size):
+        """刪除前凍結的 builder 輸出(參數必須和這裡的案例完全相同)。"""
+        with open(FROZEN, encoding="utf-8") as handle:
+            frozen = json.load(handle)
+        self.assertEqual((RUN_ID, UPLOADS), (frozen["run_id"], frozen["uploads"]))
+        case = frozen["cases"][name]
+        self.assertEqual((values, list(size)), (case["values"], case["size"]), name)
+        self.assertEqual("58", case["output_node"])
+        self.assertEqual(case["graph_canonical_sha256"], T.canonical_sha256(case["graph"]))
+        return case["graph"]
 
     def test_runner_graph_equals_builder_field_by_field(self):
+        with open(FROZEN, encoding="utf-8") as handle:
+            self.assertEqual(sorted(name for name, _v, _s in CASES), sorted(json.load(handle)["cases"]))
         for name, values, size in CASES:
             with self.subTest(name):
-                runner, builder = self.runner_graph(values, size), self.builder_graph(values, size)
+                runner, builder = self.runner_graph(values, size), self.builder_graph(name, values, size)
                 self.assertEqual(sorted(builder), sorted(runner))
                 for node_id in builder:
                     self.assertEqual(builder[node_id]["class_type"], runner[node_id]["class_type"], node_id)

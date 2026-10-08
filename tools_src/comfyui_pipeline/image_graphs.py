@@ -97,7 +97,7 @@ CONTROLNET_MODELS = {
 # --style 選填參數的白名單(選配,不裝也完全不影響預設行為)。都是 SDXL 架構的社群微調底模,
 # 換掉 CKPT 不用連帶換 ControlNet/IPAdapter/CLIP Vision。只在 SDXL 家族 tier 生效,見 main() 裡的
 # tier 檢查——sd15 機器上這幾顆會跟 ControlNet/IPAdapter shape mismatch。
-# 各風格的授權/檔案來源見 skills/comfyui-install/reference/models.md,商用前務必自行覆核授權條款
+# 各風格的授權/檔案來源見 docs/knowledge/installation/models-and-sources.md,商用前務必自行覆核授權條款
 # ——這三顆各自授權都不一樣(Juggernaut/Pony 都有針對「做成付費服務」的限制;Illustrious 依版本
 # 不同差很多,2026-08-19 曾經記錯成 MIT,見 models.md 更正說明),不要憑這裡的常數名稱就假設能商用。
 STYLE_CHECKPOINTS = {
@@ -402,7 +402,7 @@ def build_wheel_segment_template(n_segments, width=1024, height=1024,
     """畫一張『交錯色塊扇形 + 金色分隔線/外框/中心軸』的範本圖,是 icon_asset 的 --structure-ref
     的其中一種產生方式(輪盤/放射狀等分圖示適用)——不是獨立的 CLI task,是給呼叫端(agent 或
     人類)在需要「放射狀精準等分」這種結構時自己呼叫來產生範本檔案用,範例見
-    skills/comfyui-run/references/comfyui-art-gen/reference/structure-ref.md。
+    docs/knowledge/art/structure-ref.md。
 
     frame_ratio(選用,0~1):給了就額外畫一圈獨立的外框環帶(獎區扇形只填到 frame_ratio 對應
     的內側半徑,環帶本身填 gold 顏色),不給就跟原本一樣只在最外緣畫一條細外框線。
@@ -676,7 +676,7 @@ def build_inpaint(prompt, image_filename, mask_filename, negative=None, denoise=
 #     部位」這類需求——純文字描述紋理細節通常描述不清楚,需要圖片級別的參考)。跟
 #     style_lock/character_action 用同一顆 IPAdapter 模型,參考圖建議是乾淨的材質特寫
 #     (不要整張場景圖),不然背景/光影會一起被帶進來污染結果,原則同 IPAdapter 角色參考
-#     圖裁緊一點的教訓(見 skills/comfyui-run/references/comfyui-art-gen/reference/ 內對應說明)。
+#     圖裁緊一點的教訓(見 docs/knowledge/art/ 內對應說明)。
 # 兩層都可選、可以同時用、也可以都不用(退化成一般 inpaint 只是多繞一層)。
 def build_guided_inpaint(prompt, image_filename, mask_filename, negative=None,
                           control_ref_filename=None, control_type=None, control_strength=1.0,
@@ -901,7 +901,7 @@ def build_layer_split(image_filename, mask_filename, layer_name):
 
     不重新生成畫面內容,純粹是既有圖片的透明度裁切——用於複合式 UI 元件(例如轉盤的外框/
     中心鈕)已經有一張定稿合成圖,想事後切出幾個大塊區域各自疊放/調色的情境。遮罩 alpha
-    慣例沿用既有 inpaint/guided_inpaint 那一套(見 skills/comfyui-run/references/comfyui-art-gen/reference/masking.md):
+    慣例沿用既有 inpaint/guided_inpaint 那一套(見 docs/knowledge/art/masking.md):
     alpha=0 的區域 = 要保留進這一層,alpha=255 = 不屬於這一層。
 
     節點邏輯跟 attach_bg_removal() 是同一招:LoadImage 的 MASK 輸出是「1 − alpha」,也就是

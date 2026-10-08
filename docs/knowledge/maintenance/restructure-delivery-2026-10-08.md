@@ -279,8 +279,8 @@ Python 是 `C:\Users\XU\ComfyUI\.venv\Scripts\python.exe`。完整測試先設 `
 ## 還沒交的，以及建議順序
 
 1. ~~整合分支~~：已完成。**整合線已完成（2026-10-08 17:20 台北）：** `integrate/phase3-8`。從 `132201f` 切出，依序 cherry-pick 6.3、6′、7.2、5.1、5.2（`-x`，新 commit，沒有 rebase），再收進本頁所在的文件 commit。8 個 commit 的 `git patch-id` 和原 commit 相同；5.2 只有 `image_from_template.py` 的 seed 衝突，另加 `1d65de7`：有 seed slot 才抽、省略時只抽一次 48-bit、明確的 0 保持 0。整合後完整測試 Ran 612、OK、skipped 0（本機證據：`output/verify-20261008-integrate/`）。
-2. **7.3 技能收斂。** 用 6′ 當底，或等整合線含有 `39f669e` 再做。
-3. **8.3 刪 builder。** 等整合線含有 5.1、5.2、6.3。
+2. ~~7.3 技能收斂~~：已完成（`docs/phase7.3-skills-6`），見[進度頁](restructure-progress-2026-10-08.md)。
+3. **8.3 刪 builder。** 影片 builder 與 5 個轉址檔已完成（`refactor/phase8.3-remove-builders`）；`VideoPlan.finalize` 與圖片 builder 留成 8.3b，原因見[進度頁](restructure-progress-2026-10-08.md)。
 4. **8.4 部署與 verify-install。** queue 確認是空的之後。部署後重啟，再 `doctor --refresh`。
 5. **SD1.5 template。** 要等 `dreamshaper_8.safetensors` 在磁碟上，並且 hash 是實測的。
 6. **recipe 實機確認。** `object-mark-inpaint` 會停在確認點，等使用者看遮罩預覽。三條草稿維持 draft，等使用者同意才轉正。

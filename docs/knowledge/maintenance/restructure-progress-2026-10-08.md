@@ -12,7 +12,20 @@ status: current
 
 **整合線已完成（2026-10-08 17:20 台北）：** `integrate/phase3-8`。從 `132201f` 切出，依序 cherry-pick 6.3、6′、7.2、5.1、5.2（`-x`，新 commit，沒有 rebase），再收進本頁所在的文件 commit。8 個 commit 的 `git patch-id` 和原 commit 相同；5.2 只有 `image_from_template.py` 的 seed 衝突，另加 `1d65de7`：有 seed slot 才抽、省略時只抽一次 48-bit、明確的 0 保持 0。整合後完整測試 Ran 612、OK、skipped 0（本機證據：`output/verify-20261008-integrate/`）。
 
-下一手是 7.3，底用 `integrate/phase3-8`。8.3、8.4 還沒開始。
+**7.3 與 8.3 已完成（2026-10-08 台北，自行 review）：** 分支依序堆疊在整合線上，都已 push：
+
+| 項目 | 分支 | 重點 |
+|---|---|---|
+| 7.3 | `docs/phase7.3-skills-6`（`5ec1854`、`7cc8c84`、`c60d35e`） | 18 個技能收成 6 個；舊技能整個資料夾搬到新技能的 `references/<舊名>/`，對照與路由走查見[技能收斂對照](skills-6-mapping.md)。8 份影片 template 的 evidence 路徑跟著搬，各升 patch。完整測試 Ran 612 OK |
+| 8.3 | `refactor/phase8.3-remove-builders`（疊在 7.3 上） | 刪 `video_builders.py`（6 個影片 builder 已沒有產線呼叫）；VACE builder 的輸出刪前凍結在 `tests/fixtures/vace_builder_frozen.json`，影片 golden 改由 template 維護（重寫後 40 個 fixture 內容不變）。刪掉 5 個還被程式引用的轉址檔，程式改連正式頁。完整測試 Ran 610 OK（少的 2 個是 builder 層測試） |
+
+8.3 **刻意沒做**的兩件，留成 8.3b：
+- `VideoPlan.finalize`：`video_inpaint` 的貼回仍走它。要刪就得讓 `generate.py video_inpaint` 整個改用 runner 執行（pre／post 步驟、輸出位置、`result.json` 相容），需要 GPU 實跑比對，排進 GPU 批次。
+- 圖片 builder（`image_graphs.build_*`）：SD1.5 沒有 template（磁碟上沒有 `dreamshaper_8.safetensors`），sd15 仍退回 builder；`tools_src/maintenance/build_image_templates.py` 也用它們產生 template。SD1.5 template 補上後再刪。
+
+8.3 改了 `profiles/*.json` 的 `notes_ref`（原本指向已刪的轉址檔），profile 內容 hash 因此改變：`sdxl_standard` `6dbd988b…` → `2b130154…`，`sd15_light` `e206db93…` → `38019030…`。profile 裡的驗證證據都是 legacy、沒綁 hash，不受影響；但 2026-10-06 的 smoke 報告記的是舊 hash，之後拿那份報告做 `validation propose` 會顯示「設定檔內容已變動」，要用新的 smoke 報告。
+
+下一手：GPU 批次（8.3 的 smoke 一輪、8.3b、8.4 部署），都需要 ComfyUI；8188 目前停止，要先問使用者。
 
 審查方式改了：使用者在 2026-10-08 要求不再用 grok 審核，改由實作的 agent 自己 review（範圍、正確性、測試、第 2 節規則），結果寫進 commit 或證據資料夾。
 
@@ -138,7 +151,7 @@ status: current
 依這個順序。每一項仍要：實作、測試、grok plan-mode 審查、結論是可以合併才 push。不開 PR。使用者自己 merge。
 
 1. ~~整合分支~~：已完成，見「接手時從這裡開始」。
-2. **7.3 技能收斂**。底要用已含 Pillow 說明的 6′（`39f669e`），否則技能頁會和 6′ 衝突。18 個技能收成 6 個，目錄維持扁平 `skills/<name>/SKILL.md`：
+2. ~~7.3 技能收斂~~（已完成，見上）。底要用已含 Pillow 說明的 6′（`39f669e`），否則技能頁會和 6′ 衝突。18 個技能收成 6 個，目錄維持扁平 `skills/<name>/SKILL.md`：
    - `game-art-brief` ← game-art-workflow、game-art-edit-brief、game-art-initialize、project-knowledge
    - `platform-image-gen` 留著
    - `comfyui-run` ← art-gen、object-design、video-gen、character-animation、film、face-swap、video-layers、wan-animate、image-sweep
@@ -146,7 +159,7 @@ status: current
    - `comfyui-extend` ← new-tool-checklist、pipeline-review（這個目錄現在還不存在；7.4 協議已經單獨 push，不要重寫）
    - `comfyui-install` 留著
    細節放到 catalog 或 references。更新 `AGENTS.md` 路由。用這些請求走一遍，記下打到哪個 skill、哪份 template：icon、本機 inpaint、物件遮罩加 VACE、prop swap、Idle action、FX alpha、新節點提案。舊規則要有對照表。跑連結測試和中性用語測試。範圍大就拆兩段：先加新頁並把舊頁改成轉址，再刪舊頁。
-3. **8.3** 刪已被 template 取代的 builder。前提是 5.1、5.2、6.3 都在即將部署的那條整合線上。先修還在呼叫剩餘 stub 的地方。golden 改由 template 維護。
+3. **8.3**（影片 builder 與 5 個轉址檔已完成；剩 8.3b，見上）刪已被 template 取代的 builder。前提是 5.1、5.2、6.3 都在即將部署的那條整合線上。先修還在呼叫剩餘 stub 的地方。golden 改由 template 維護。
 4. **8.4** queue 確認是空的之後：`deploy` dry-run，再 `deploy --yes`，再另外跑 `gameart.py verify-install`，數字用實測的。部署範圍含 `templates/`。第三方 node 版本寫進 `docs/tested-versions.md`。重啟後再 `doctor --refresh`。3.5 的部署副本若找不到 `templates/` 會 SystemExit。不要為了 8.1 去佔 8188，也不要另開 8199，除非使用者另外要求。
 
 草稿 recipe 維持 draft，等使用者同意才升狀態。`object-mark-inpaint` 的實機確認點沒跑（流程會停在 confirm）。idle-anchored-action 和 prop-swap 仍是 `executable: false`。fx-alpha-export 是本機 vfx，不經 ComfyUI。

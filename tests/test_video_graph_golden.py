@@ -1,8 +1,8 @@
-"""影片 graph golden:鎖住 5 個 Python 影片 builder 與 7 個影片 task 目前送出的 graph(第 6.1 階段)。
+"""影片 graph golden:鎖住 7 個影片 task 送出的 graph(第 6.1 階段建立)。
 
-fixture 由 ``tests/golden_video_graphs.py --write`` 產生。這裡分兩層比對:
-- builder 層:用 fixture 記錄的參數直接呼叫 builder,graph 逐節點、逐欄位等於 golden(6.2 的 template 對照這層)。
-- task 層:``tasks.video.prepare`` 用假的上傳與媒體函式組出的 graph 等於 golden。第 6.3 階段改由 template 填值,不再呼叫 builder。
+fixture 的 ``graph`` 是第 6.1 階段 5 個 Python builder 的輸出。第 6.3 階段起 task 改由 template 填值,
+PR 8.3 刪掉了 builder,golden 改由 template 維護:``tasks.video.prepare`` 用假的上傳與媒體函式組出的 graph
+必須逐節點、逐欄位等於這份凍結的 golden。fixture 的 ``builder`` 欄是當時呼叫的 builder 與參數紀錄。
 """
 
 import contextlib
@@ -29,7 +29,7 @@ class VideoGraphGoldenTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.modules = G.load_modules()
-        cls.task_video, cls.video_builders, cls.image_results = cls.modules
+        cls.task_video, cls.image_results = cls.modules
         cls.expected = {G.fixture_name(t, b, c): G.load_fixture(G.fixture_name(t, b, c)) for t, b, c, _ in G.CASES}
 
     def assertGraphEqual(self, expected, actual, label):
@@ -85,16 +85,6 @@ class VideoGraphGoldenTests(unittest.TestCase):
         catalog = sys.modules["comfyui_pipeline.video_catalog"]
         return (catalog.VIDEO_TASK_CAPS[task],) + tuple(catalog.VIDEO_TASK_EXTRA_CAPS.get(task, ()))
 
-    def test_builders_reproduce_golden_graphs(self):
-        for name, data in self.expected.items():
-            with self.subTest(case=name):
-                builder = getattr(self.video_builders, data["builder"]["name"])
-                graph, output_node = builder(*data["builder"]["args"], **data["builder"]["kwargs"],
-                                             video_config=G.VIDEO_CONFIG)
-                self.assertEqual(data["output_node"], output_node)
-                self.assertGraphEqual(data["graph"], _jsonable(graph), name)
-                self.assertEqual(data["graph_sha256"], self.image_results.graph_sha256(graph))
-
     def _prepare_task(self, task, backend, overrides):
         """跟 golden 的假上傳／假媒體相同,但不要求 prepare 再呼叫 builder。"""
         task_video = self.task_video
@@ -137,15 +127,6 @@ class VideoGraphGoldenTests(unittest.TestCase):
                          if node["class_type"] in loader_fields]
                 self.assertTrue(names)
                 self.assertTrue(set(names) <= models[data["backend"]], names)
-
-    def test_builders_follow_a_different_explicit_config(self):
-        renamed = _jsonable(G.VIDEO_CONFIG)
-        for spec in renamed["backends"].values():
-            spec["models"] = {key: f"other-{value}" for key, value in spec["models"].items()}
-        data = self.expected[G.fixture_name("pose_drive", "h3", "pose")]
-        graph, _ = self.video_builders.build_pose_drive_h3(
-            *data["builder"]["args"], **data["builder"]["kwargs"], video_config=renamed)
-        self.assertEqual("other-minimax_h3_ref2va_pruned_int8_convrot.safetensors", graph["6"]["inputs"]["unet_name"])
 
     def test_unsupported_task_backend_pairs_fail_fast(self):
         for task, overrides in (

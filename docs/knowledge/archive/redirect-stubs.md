@@ -10,6 +10,8 @@ status: current
 
 ## 已移除
 
+PR 8.3（2026-10-08）移除了最後 5 個還被程式引用的轉址檔（程式改連正式頁）。其中 `skills/comfyui-art-gen/` 底下的 4 個，在 PR 7.3 到 8.3 之間曾經放在 `skills/comfyui-run/references/comfyui-art-gen/` 底下；PR 7.3 為 profile 筆記另外留的兩個轉址檔也一起移除。
+
 | 舊路徑 | canonical 位置 |
 |---|---|
 | `skills/comfyui-art-gen/reference/control-type-selection.md` | [`docs/knowledge/art/control-type-selection.md`](../art/control-type-selection.md) |
@@ -29,17 +31,11 @@ status: current
 | `skills/comfyui-pipeline-review/reference/scan-categories.md` | [`docs/knowledge/maintenance/scan-categories.md`](../maintenance/scan-categories.md) |
 | `skills/comfyui-character-animation-workflow/reference/templates.md` | [`docs/knowledge/animation/workflow.md`](../animation/workflow.md) |
 | `docs/knowledge/flux2-and-structure-lock-observations.md` | [`docs/knowledge/experiences/flux2-and-structure-lock-observations.md`](../experiences/flux2-and-structure-lock-observations.md) |
-
-## 保留中的轉址檔（PR 7.3）
-
-技能收斂（[對照表](../maintenance/skills-6-mapping.md)）時，只有這兩個舊路徑留下轉址檔：`tools_src/comfyui_pipeline/profiles/*.json` 的 `notes_ref` 指向它們，而 `notes_ref` 算在 profile 內容 hash 裡，改路徑會讓 hash 和既有 smoke 驗證報告對不上。
-
-| 轉址檔 | canonical 位置 |
-|---|---|
-| `skills/comfyui-art-gen/reference/profiles/sdxl_standard.md` | [`skills/comfyui-run/references/comfyui-art-gen/reference/profiles/sdxl_standard.md`](../../../skills/comfyui-run/references/comfyui-art-gen/reference/profiles/sdxl_standard.md) |
-| `skills/comfyui-art-gen/reference/profiles/sd15_light.md` | [`skills/comfyui-run/references/comfyui-art-gen/reference/profiles/sd15_light.md`](../../../skills/comfyui-run/references/comfyui-art-gen/reference/profiles/sd15_light.md) |
-
-其他舊技能路徑沒有轉址檔，對照見[技能收斂對照](../maintenance/skills-6-mapping.md)。
+| `skills/comfyui-install/reference/models.md` | [`docs/knowledge/installation/models-and-sources.md`](../installation/models-and-sources.md) |
+| `skills/comfyui-art-gen/reference/masking.md` | [`docs/knowledge/art/masking.md`](../art/masking.md) |
+| `skills/comfyui-art-gen/reference/structure-ref.md` | [`docs/knowledge/art/structure-ref.md`](../art/structure-ref.md) |
+| `skills/comfyui-art-gen/reference/profiles/sd15_light.md` | [`docs/knowledge/art/profiles/sd15-light.md`](../art/profiles/sd15-light.md) |
+| `skills/comfyui-art-gen/reference/profiles/sdxl_standard.md` | [`docs/knowledge/art/profiles/sdxl-standard.md`](../art/profiles/sdxl-standard.md) |
 
 ## 已刪除的舊資產（第二階段）
 

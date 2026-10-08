@@ -20,7 +20,7 @@ if TOOLS_SRC not in sys.path:
 
 from comfyui_pipeline import (  # noqa: E402
     cli, client, image_capabilities, image_graphs, image_runtime, profiles, tasks,
-    video_builders, video_catalog, video_config, video_contract, video_graphs, video_media,
+    video_catalog, video_config, video_contract, video_graphs, video_media,
 )
 from comfyui_pipeline.context import RunContext  # noqa: E402
 from comfyui_pipeline.tasks import video as task_video, video_local as task_video_local  # noqa: E402
@@ -709,9 +709,12 @@ class GenerateTests(unittest.TestCase):
                     concat.assert_not_called()
 
     def test_h3_video_graph_has_basic_i2v_structure(self):
-        graph, output_id = video_builders.build_img2video_h3(
-            "slow idle motion", "still.png", width=512, height=512, seed=42, duration=2.0,
-        )
+        # PR 8.3 刪掉 builder 後,改看 video/h3/img2video template(golden 見 test_video_graph_golden)
+        from comfyui_pipeline.runner import template as runner_template
+        repo = os.path.dirname(TOOLS_SRC)
+        template = runner_template.load_template(os.path.join(repo, "templates"), "video/h3/img2video",
+                                                 repo_root=repo)
+        graph, output_id = template.graph, template.data["outputs"][0]["node"]
         self.assertEqual("92", output_id)
         self.assertEqual("MiniMaxH3ImageToVideo", graph["104"]["class_type"])
         self.assertEqual(["56", 0], graph["104"]["inputs"]["first_frame"])

@@ -70,7 +70,7 @@
     "layer_split": {"requires": []}
   },
 
-  "notes_ref": "skills/comfyui-art-gen/reference/profiles/sdxl_standard.md",
+  "notes_ref": "docs/knowledge/art/profiles/sdxl-standard.md",
 
   "validation": {
     "windows-cuda": [

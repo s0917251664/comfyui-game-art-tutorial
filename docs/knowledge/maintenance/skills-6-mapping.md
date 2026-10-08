@@ -8,7 +8,7 @@ status: current
 
 `project-knowledge` 的兩個檔案位元組不變（sha256 仍和 `third_party/claude-obsidian-source.json` 記錄的相同），`.gitattributes` 的 `-text` 規則改到新路徑。全域安裝的那一份不受影響。
 
-`skills/comfyui-art-gen/reference/profiles/` 的兩份 profile 調校筆記搬走後，舊路徑留下轉址檔：`profiles/*.json` 的 `notes_ref` 指向它們，改 `notes_ref` 會改變 profile 內容 hash（sdxl_standard 會從既有 smoke 報告記錄的 `6dbd988b…` 變成別的值）。見[轉址檔索引](../archive/redirect-stubs.md)。
+PR 8.3 刪掉了 5 個只剩轉址文字的舊 reference（下表標「已刪除」），程式改連正式頁；見[轉址檔索引](../archive/redirect-stubs.md)。
 
 指向**本來就已刪除**的舊資產與舊轉址檔的紀錄（[轉址檔索引](../archive/redirect-stubs.md)、實驗腳本、`test_templates` 的舊位置檢查）維持原本的舊路徑，沒有改寫。
 
@@ -28,10 +28,10 @@ status: current
 | 舊技能 | 舊路徑 | 新路徑 |
 |---|---|---|
 | comfyui-art-gen | `skills/comfyui-art-gen/SKILL.md` | [`skills/comfyui-run/references/comfyui-art-gen/README.md`](../../../skills/comfyui-run/references/comfyui-art-gen/README.md) |
-| comfyui-art-gen | `skills/comfyui-art-gen/reference/masking.md` | [`skills/comfyui-run/references/comfyui-art-gen/reference/masking.md`](../../../skills/comfyui-run/references/comfyui-art-gen/reference/masking.md) |
-| comfyui-art-gen | `skills/comfyui-art-gen/reference/profiles/sd15_light.md` | [`skills/comfyui-run/references/comfyui-art-gen/reference/profiles/sd15_light.md`](../../../skills/comfyui-run/references/comfyui-art-gen/reference/profiles/sd15_light.md) |
-| comfyui-art-gen | `skills/comfyui-art-gen/reference/profiles/sdxl_standard.md` | [`skills/comfyui-run/references/comfyui-art-gen/reference/profiles/sdxl_standard.md`](../../../skills/comfyui-run/references/comfyui-art-gen/reference/profiles/sdxl_standard.md) |
-| comfyui-art-gen | `skills/comfyui-art-gen/reference/structure-ref.md` | [`skills/comfyui-run/references/comfyui-art-gen/reference/structure-ref.md`](../../../skills/comfyui-run/references/comfyui-art-gen/reference/structure-ref.md) |
+| comfyui-art-gen | `skills/comfyui-art-gen/reference/masking.md` | `skills/comfyui-run/references/comfyui-art-gen/reference/masking.md`（PR 8.3 已刪除；正式內容在 [masking.md](../art/masking.md)） |
+| comfyui-art-gen | `skills/comfyui-art-gen/reference/profiles/sd15_light.md` | `skills/comfyui-run/references/comfyui-art-gen/reference/profiles/sd15_light.md`（PR 8.3 已刪除；正式內容在 [sd15-light.md](../art/profiles/sd15-light.md)） |
+| comfyui-art-gen | `skills/comfyui-art-gen/reference/profiles/sdxl_standard.md` | `skills/comfyui-run/references/comfyui-art-gen/reference/profiles/sdxl_standard.md`（PR 8.3 已刪除；正式內容在 [sdxl-standard.md](../art/profiles/sdxl-standard.md)） |
+| comfyui-art-gen | `skills/comfyui-art-gen/reference/structure-ref.md` | `skills/comfyui-run/references/comfyui-art-gen/reference/structure-ref.md`（PR 8.3 已刪除；正式內容在 [structure-ref.md](../art/structure-ref.md)） |
 | comfyui-character-animation-workflow | `skills/comfyui-character-animation-workflow/SKILL.md` | [`skills/comfyui-run/references/comfyui-character-animation-workflow/README.md`](../../../skills/comfyui-run/references/comfyui-character-animation-workflow/README.md) |
 | comfyui-face-swap-workflow | `skills/comfyui-face-swap-workflow/SKILL.md` | [`skills/comfyui-run/references/comfyui-face-swap-workflow/README.md`](../../../skills/comfyui-run/references/comfyui-face-swap-workflow/README.md) |
 | comfyui-face-swap-workflow | `skills/comfyui-face-swap-workflow/references/integration.md` | [`skills/comfyui-run/references/comfyui-face-swap-workflow/references/integration.md`](../../../skills/comfyui-run/references/comfyui-face-swap-workflow/references/integration.md) |

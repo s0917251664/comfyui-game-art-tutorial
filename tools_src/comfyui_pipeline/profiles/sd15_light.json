@@ -43,7 +43,7 @@
     "layer_split": {"requires": []}
   },
 
-  "notes_ref": "skills/comfyui-art-gen/reference/profiles/sd15_light.md",
+  "notes_ref": "docs/knowledge/art/profiles/sd15-light.md",
 
   "validation": {}
 }

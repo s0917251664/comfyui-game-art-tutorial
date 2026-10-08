@@ -19,7 +19,20 @@ from PIL import Image
 from comfyui_pipeline import tasks, video_edit_media as media
 from comfyui_pipeline.context import RunContext
 from comfyui_pipeline.tasks import video_edit
-from comfyui_pipeline.video_builders import build_video_inpaint_wan
+from comfyui_pipeline.runner import template as runner_template
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+def build_video_inpaint_wan(prompt, control, mask, width, height, length, seed):
+    """PR 8.3 刪掉 builder 後,改用 video/wan-vace/inpaint template 組同一份 graph(等價見 test_template_wan_vace)。"""
+    template = runner_template.load_template(REPO_ROOT / "templates", "video/wan-vace/inpaint", repo_root=REPO_ROOT)
+    resolution = runner_template.resolve(
+        template, {"source_video": "s.mp4", "masks": "m", "prompt": prompt, "seed": seed}, run_id="test")
+    runner_template.fill_from_pre(template, resolution, {"vace_work_area": {
+        "width": width, "height": height, "length": length, "frames": length}})
+    graph, _ = runner_template.patch(template, resolution, {"control_video": control, "mask_video": mask})
+    return graph, template.data["outputs"][0]["node"]
 from comfyui_pipeline.video_catalog import VACE_MAX_PIXELS, VIDEO_BACKEND_SPECS, VIDEO_TASK_CAPS
 
 

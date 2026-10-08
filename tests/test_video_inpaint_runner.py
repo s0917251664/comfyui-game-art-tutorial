@@ -1,8 +1,11 @@
 """PR 3.5：generate.py video_inpaint 的 graph 改由 runner 填 VACE template。
 
 CLI 旗標與 prepare()/finalize 的契約不變。指定 seed、固定上傳檔名時，送出的 graph
-和 build_video_inpaint_wan 逐欄位相同（canonical sha256 相同）。
+和 build_video_inpaint_wan 逐欄位相同。PR 8.3 刪掉 builder 後，改和刪除前凍結的 builder 輸出比對
+（tests/fixtures/vace_builder_frozen.json），只替換 slot 會寫入的欄位。
 """
+import copy
+import json
 import os
 import sys
 import tempfile
@@ -21,9 +24,25 @@ from PIL import Image
 from comfyui_pipeline.context import RunContext
 from comfyui_pipeline.runner import template as T
 from comfyui_pipeline.tasks import video_edit
-from comfyui_pipeline.video_builders import build_video_inpaint_wan
+from comfyui_pipeline.video_catalog import VACE_NEGATIVE_DEFAULT
 from comfyui_pipeline.video_contract import video_filename_prefix
 from test_video_inpaint import synthetic, write_clip
+
+FROZEN = Path(__file__).resolve().parent / "fixtures" / "vace_builder_frozen.json"
+
+
+def build_video_inpaint_wan(prompt, control, mask, width, height, length, seed, strength, filename_prefix,
+                            negative=None):
+    """刪除前凍結的 builder 輸出,換上這次的值。只換 template slot 會寫的欄位,其他欄位必須和 builder 一樣。"""
+    frozen = json.loads(FROZEN.read_text(encoding="utf-8"))["cases"]["defaults_1024"]
+    graph = copy.deepcopy(frozen["graph"])
+    graph["6"]["inputs"]["text"] = prompt
+    graph["7"]["inputs"]["text"] = negative or VACE_NEGATIVE_DEFAULT
+    graph["80"]["inputs"]["file"], graph["82"]["inputs"]["file"] = control, mask
+    graph["55"]["inputs"].update(width=width, height=height, length=length, strength=float(strength))
+    graph["3"]["inputs"]["seed"] = seed
+    graph["58"]["inputs"]["filename_prefix"] = filename_prefix
+    return graph, frozen["output_node"]
 
 
 class VideoInpaintRunnerTests(unittest.TestCase):
@@ -61,8 +80,7 @@ class VideoInpaintRunnerTests(unittest.TestCase):
         built, out_id = build_video_inpaint_wan(
             "glowing hammer", names and f"fixed/{names[0]}", f"fixed/{names[1]}",
             plan.graph["55"]["inputs"]["width"], plan.graph["55"]["inputs"]["height"],
-            plan.graph["55"]["inputs"]["length"], seed=11, strength=1.0, filename_prefix=prefix,
-            video_config=None)
+            plan.graph["55"]["inputs"]["length"], seed=11, strength=1.0, filename_prefix=prefix)
         self.assertEqual("58", out_id)
         self.assertEqual(T.canonical_sha256(built), T.canonical_sha256(plan.graph))
         for node_id, node in built.items():

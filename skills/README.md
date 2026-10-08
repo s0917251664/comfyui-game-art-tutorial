@@ -15,8 +15,6 @@ PR 7.3（2026-10-08）把 18 個技能收成 6 個。技能入口只寫怎麼選
 | [`comfyui-extend`](comfyui-extend/SKILL.md) | 缺能力時照擴充協議提案；技能庫與架構審視 | comfyui-new-tool-checklist、comfyui-pipeline-review |
 | [`comfyui-install`](comfyui-install/SKILL.md) | 安裝、部署與依賴補齊 | （不變） |
 
-`skills/comfyui-art-gen/reference/profiles/` 只剩兩個轉址檔，不是技能（沒有 `SKILL.md`）；保留原因見[轉址檔索引](../docs/knowledge/archive/redirect-stubs.md)。
-
 ## B. Obsidian 上游技能（不在本資料夾）
 
 15 個 `claude-obsidian` 上游技能的專案副本放在 [`third_party/claude-obsidian-skills/`](../third_party/claude-obsidian-skills/README.md)（2026-10-07 從 `skills/` 移出）。只有使用者明確要處理另外初始化的 Obsidian vault 時才用，範圍與限制見 [`docs/knowledge/maintenance/obsidian-integration.md`](../docs/knowledge/maintenance/obsidian-integration.md)。

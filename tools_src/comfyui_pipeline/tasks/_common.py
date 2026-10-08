@@ -55,7 +55,7 @@ def build_parents():
         help="換一顆風格底模(選配,不給就用這台機器裝機時鎖定的預設 checkpoint)。"
              "realistic=寫實(Juggernaut XL)、illustration=插畫/概念藝術(Illustrious XL)、"
              "anime=二次元/動漫(Pony Diffusion V6 XL)。需要先在這台機器裝好對應 checkpoint,"
-             "見 skills/comfyui-install/reference/models.md;只支援 SDXL 家族 tier。",
+             "見 docs/knowledge/installation/models-and-sources.md;只支援 SDXL 家族 tier。",
     )
     model_common.add_argument(
         "--rating", choices=["safe", "questionable", "explicit"],
