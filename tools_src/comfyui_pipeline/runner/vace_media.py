@@ -13,9 +13,9 @@ import io
 import math
 import os
 import zipfile
-from fractions import Fraction
 
 from ..video_catalog import VACE_MAX_FRAMES, VACE_MAX_PIXELS, VIDEO_FPS, VIDEO_FPS_TOLERANCE
+import local_pixels
 
 ALIGN = 16
 MIN_SIDE = 128
@@ -28,14 +28,7 @@ def _np():
 
 def read_video_frames(path):
     """Decode every frame as RGB uint8; returns (frames, fps)."""
-    import av
-    np = _np()
-    frames = []
-    with av.open(os.fspath(path)) as container:
-        stream = container.streams.video[0]
-        fps = float(stream.average_rate) if stream.average_rate else None
-        for frame in container.decode(video=0):
-            frames.append(np.asarray(frame.to_image().convert("RGB")))
+    frames, fps = local_pixels.decode_video_frames(path, "RGB")
     if not frames:
         raise ValueError(f"影片沒有可解碼影格: {path}")
     return frames, fps
@@ -54,14 +47,10 @@ def validate_source(frames, fps):
 
 def _gray_mask(im):
     """Return (ok, L array). Accept L/1 and R=G=B RGB (e.g. SAM3 SaveImage); reject alpha modes and colour."""
-    np = _np()
-    if im.mode in ("L", "1"):
-        return True, np.asarray(im.convert("L"))
-    if im.mode == "RGB":
-        rgb = np.asarray(im)
-        if np.array_equal(rgb[..., 0], rgb[..., 1]) and np.array_equal(rgb[..., 1], rgb[..., 2]):
-            return True, rgb[..., 0].copy()
-    return False, None
+    arr = local_pixels.decode_selected_white_mask(im)
+    if arr is None:
+        return False, None
+    return True, arr
 
 
 def read_masks(source, count, size, object_id=1):
@@ -191,29 +180,14 @@ def build_work_clips(frames, grown_masks, crop, size, mode):
 
 def write_lossless_video(frames, path, fps=VIDEO_FPS):
     """FFV1 RGB in Matroska: decodes back to identical RGB bytes."""
-    import av
-    path = os.fspath(path)
-    h, w = frames[0].shape[:2]
-    with av.open(path, "w", format="matroska") as container:
-        stream = container.add_stream("ffv1", rate=Fraction(fps).limit_denominator(1001))
-        stream.width, stream.height, stream.pix_fmt = w, h, "bgr0"
-        for f in frames:
-            for packet in stream.encode(av.VideoFrame.from_ndarray(f, format="rgb24")):
-                container.mux(packet)
-        for packet in stream.encode():
-            container.mux(packet)
-    return path
+    return local_pixels.encode_video_frames(
+        frames, path, codec="ffv1", pix_fmt="bgr0", ndarray_format="rgb24",
+        fps=fps, container_format="matroska")
 
 
 def paste_weight(grown_mask, feather):
     """貼回權重(uint8,0=完全保留來源):擴張遮罩再向外 ``feather`` 像素,邊緣高斯羽化。"""
-    from PIL import Image, ImageFilter
-    np = _np()
-    if not feather:
-        return grown_mask
-    grown = Image.fromarray(grown_mask).filter(ImageFilter.MaxFilter(2 * feather + 1))
-    blurred = np.asarray(grown.filter(ImageFilter.GaussianBlur(feather / 2.0)))
-    return np.where(np.asarray(grown) > 0, blurred, 0).astype("uint8")
+    return local_pixels.feather_weight(grown_mask, feather)
 
 
 def paste_back(source_frames, raw_frames, crop, grown_masks, feather=4):
@@ -236,38 +210,22 @@ def paste_back(source_frames, raw_frames, crop, grown_masks, feather=4):
         edited = src.copy()
         edited[y0:y1, x0:x1] = np.asarray(patch)[..., :3]
         weight = paste_weight(g, feather)
-        w = weight.astype("float32")[..., None] / 255.0
-        blended = np.round(edited.astype("float32") * w + src.astype("float32") * (1.0 - w)).astype("uint8")
-        outside = weight == 0
-        blended[outside] = src[outside]
-        changed_outside = int(np.any(blended[outside] != src[outside], axis=1).sum())
-        if changed_outside:
+        blended, stats = local_pixels.blend_inside_mask(src, edited, weight)
+        if stats["outside_changed_pixels"]:
             raise RuntimeError("貼回後遮罩外像素被改動，已停止")
-        inside = ~outside
-        delta = np.abs(blended.astype("int16") - src.astype("int16"))
         report.append({
-            "edited_pixels": int(inside.sum()),
+            "edited_pixels": stats["inside_pixels"],
             "outside_changed_pixels": 0,
-            "edited_mean_abs_rgb_delta": float(delta[inside].mean()) if inside.any() else 0.0,
+            "edited_mean_abs_rgb_delta": stats["inside_mean_abs_rgb_delta"],
         })
         out.append(blended)
     return out, report
 
 
 def encode_mp4(frames, path, fps=VIDEO_FPS, crf=18):
-    import av
-    path = os.fspath(path)
-    h, w = frames[0].shape[:2]
-    with av.open(path, "w") as container:
-        stream = container.add_stream("libx264", rate=Fraction(fps).limit_denominator(1001))
-        stream.width, stream.height, stream.pix_fmt = w, h, "yuv420p"
-        stream.options = {"crf": str(crf)}
-        for f in frames:
-            for packet in stream.encode(av.VideoFrame.from_ndarray(_np().ascontiguousarray(f), format="rgb24")):
-                container.mux(packet)
-        for packet in stream.encode():
-            container.mux(packet)
-    return path
+    return local_pixels.encode_video_frames(
+        frames, path, codec="libx264", pix_fmt="yuv420p", ndarray_format="rgb24",
+        fps=fps, options={"crf": str(crf)}, contiguous=True)
 
 
 def write_composited(frames, out_dir):

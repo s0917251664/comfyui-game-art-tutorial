@@ -28,6 +28,8 @@ import time
 import numpy as np
 from PIL import Image, ImageDraw
 
+import local_pixels
+
 DARK_BG = (24, 27, 33)
 LIGHT_BG = (232, 231, 225)
 EDGE_LOW, EDGE_HIGH = 0.05, 0.95
@@ -70,13 +72,7 @@ def read_frames(source, mode="RGB"):
             with Image.open(p) as im:
                 frames.append(np.asarray(im.convert(mode)))
         return frames, None
-    import av
-    frames = []
-    with av.open(str(source)) as container:
-        stream = container.streams.video[0]
-        fps = float(stream.average_rate) if stream.average_rate else None
-        for frame in container.decode(video=0):
-            frames.append(np.asarray(frame.to_image().convert(mode)))
+    frames, fps = local_pixels.decode_video_frames(source, mode)
     if not frames:
         raise ValueError(f"No decodable video frames in {source}")
     return frames, fps
@@ -84,14 +80,11 @@ def read_frames(source, mode="RGB"):
 
 def gray_mask_array(im, name="mask"):
     """Selected-white mask as L array. Accept L/1 and R=G=B RGB (SAM3 SaveImage); reject alpha and colour."""
-    if im.mode in ("L", "1"):
-        return np.asarray(im.convert("L"))
-    if im.mode == "RGB":
-        rgb = np.asarray(im)
-        if np.array_equal(rgb[..., 0], rgb[..., 1]) and np.array_equal(rgb[..., 1], rgb[..., 2]):
-            return rgb[..., 0].copy()
-    raise ValueError(f"Mask {name} must be selected-white grayscale (L, or RGB with R=G=B); got mode {im.mode}. "
-                     "Alpha masks (image inpaint, 0=edit) use the opposite convention")
+    arr = local_pixels.decode_selected_white_mask(im)
+    if arr is None:
+        raise ValueError(f"Mask {name} must be selected-white grayscale (L, or RGB with R=G=B); got mode {im.mode}. "
+                         "Alpha masks (image inpaint, 0=edit) use the opposite convention")
+    return arr
 
 
 def read_masks(directory, count=None, size=None):
@@ -353,21 +346,13 @@ def write_apng(rgba_frames, target, fps=24):
 
 def write_webm_alpha(rgba_frames, target, fps=24, crf=18):
     """VP9 + alpha (yuva420p). Chroma is subsampled and lossy; PNG stays the master."""
-    import av
-    from fractions import Fraction
     h, w = rgba_frames[0].shape[:2]
     if w % 2 or h % 2:
         raise ValueError("WebM yuva420p needs even width and height")
-    with av.open(str(target), "w", format="webm") as container:
-        stream = container.add_stream("libvpx-vp9", rate=Fraction(fps).limit_denominator(1001))
-        stream.width, stream.height, stream.pix_fmt = w, h, "yuva420p"
-        stream.options = {"crf": str(crf), "b": "0", "auto-alt-ref": "0"}
-        for frame in rgba_frames:
-            vf = av.VideoFrame.from_ndarray(np.ascontiguousarray(frame), format="rgba")
-            for packet in stream.encode(vf):
-                container.mux(packet)
-        for packet in stream.encode():
-            container.mux(packet)
+    local_pixels.encode_video_frames(
+        rgba_frames, target, codec="libvpx-vp9", pix_fmt="yuva420p", ndarray_format="rgba",
+        fps=fps, container_format="webm", options={"crf": str(crf), "b": "0", "auto-alt-ref": "0"},
+        contiguous=True)
     return target
 
 
@@ -397,20 +382,20 @@ def sam_to_edit_mask(selected_l):
 
 
 def masked_hue_rotate(rgb, selected, from_hue, to_hue, hue_range=45.0, min_saturation=0.12):
-    """Hue rotation limited to ``selected`` (bool) and a source-hue window. Non-AI, exact elsewhere."""
+    """Hue rotation limited to ``selected`` (bool) and a source-hue window. Non-AI, exact elsewhere.
+
+    Degrees stay float32. image_edit_tools.recolor uses float64 and can differ by a pixel.
+    """
     for name, value, upper in (("from_hue", from_hue, 360), ("to_hue", to_hue, 360),
                                ("hue_range", hue_range, 180), ("min_saturation", min_saturation, 1)):
         _check_unit(name, value, 0, upper)
-    image = Image.fromarray(rgb[..., :3])
-    hsv = np.asarray(image.convert("HSV")).copy()
+    hsv = local_pixels.rgb_to_hsv(rgb)
     degrees = hsv[..., 0].astype(np.float32) * (360 / 255)
     distance = np.abs((degrees - from_hue + 180) % 360 - 180)
     hit = selected & (distance <= hue_range) & (hsv[..., 1] / 255 >= min_saturation)
     shifted = np.round(((degrees + to_hue - from_hue) % 360) * (255 / 360)).astype(np.uint8)
     hsv[..., 0][hit] = shifted[hit]
-    converted = np.asarray(Image.fromarray(hsv, "HSV").convert("RGB"))
-    out = rgb[..., :3].copy()
-    out[hit] = converted[hit]
+    out = local_pixels.write_hsv_hits(rgb, hsv, hit, local_pixels.hsv_to_rgb_fromarray)
     return out, int(hit.sum())
 
 
@@ -420,29 +405,18 @@ def mask_composite(original, edited, selected_masks, feather=0):
         raise ValueError(f"Frame counts differ: original={len(original)} edited={len(edited)} masks={len(selected_masks)}")
     if isinstance(feather, bool) or not isinstance(feather, int) or feather < 0:
         raise ValueError("feather must be a non-negative integer")
-    from PIL import ImageFilter
     out, per_frame = [], []
     for o, e, m in zip(original, edited, selected_masks):
         if o.shape[:2] != e.shape[:2] or o.shape[:2] != m.shape[:2]:
             raise ValueError("original, edited and mask sizes must match; automatic resizing is not allowed")
-        weight = m
-        if feather:
-            # Grow-then-blur keeps the zero region outside the dilated mask exactly zero.
-            grown = Image.fromarray(m).filter(ImageFilter.MaxFilter(2 * feather + 1))
-            weight = np.asarray(grown.filter(ImageFilter.GaussianBlur(feather / 2)))
-            weight = np.where(np.asarray(grown) > 0, weight, 0).astype(np.uint8)
-        w = weight.astype(np.float32)[..., None] / 255.0
-        blended = np.round(e[..., :3].astype(np.float32) * w + o[..., :3].astype(np.float32) * (1 - w)).astype(np.uint8)
-        outside = weight == 0
-        blended[outside] = o[..., :3][outside]
-        changed_outside = int(np.any(blended[outside] != o[..., :3][outside], axis=1).sum())
-        if changed_outside:
+        weight = local_pixels.feather_weight(m, feather)
+        blended, stats = local_pixels.blend_inside_mask(o, e, weight)
+        if stats["outside_changed_pixels"]:
             raise RuntimeError("Outside-mask preservation invariant failed")
-        inside = ~outside
-        delta = np.abs(blended.astype(np.int16) - o[..., :3].astype(np.int16))
-        per_frame.append({"outside_pixels": int(outside.sum()), "outside_changed_pixels": changed_outside,
-                          "inside_pixels": int(inside.sum()),
-                          "inside_mean_abs_rgb_delta": float(delta[inside].mean()) if inside.any() else 0.0})
+        per_frame.append({"outside_pixels": stats["outside_pixels"],
+                          "outside_changed_pixels": stats["outside_changed_pixels"],
+                          "inside_pixels": stats["inside_pixels"],
+                          "inside_mean_abs_rgb_delta": stats["inside_mean_abs_rgb_delta"]})
         out.append(blended)
     return out, per_frame
 
