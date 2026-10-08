@@ -241,6 +241,19 @@ class ImageTaskTemplateTests(unittest.TestCase):
                               lora=args.lora, width=args.width, negative=args.negative):
                 self._assert_same_submission(ctx, args, None)
 
+    def test_omitted_seed_uses_builder_draw_once(self):
+        ctx = _ctx(image_golden.TIER_DEVICES["sdxl"])
+        args = _concept(seed=None)
+        with mock.patch.object(image_graphs, "seed_or_random", return_value=12345) as drawn:
+            graph, _image_node = image_from_template.graph_from_template(ctx, args, None, lambda path: path)
+        self.assertEqual(1, drawn.call_count)
+        self.assertEqual([None], [call.args[0] for call in drawn.call_args_list])
+        seeds = [
+            node["inputs"]["seed"] for node in graph.values()
+            if node.get("class_type") == "KSampler"
+        ]
+        self.assertEqual([12345], seeds)
+
     def test_seed_zero_and_partial_size_match_builder(self):
         ctx = _ctx(image_golden.TIER_DEVICES["sdxl"])
         self._assert_same_submission(ctx, _concept(seed=0, width=640))
