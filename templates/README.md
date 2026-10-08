@@ -10,6 +10,8 @@
 
 `_schema/template.schema.json` 是 `template.json` 的結構說明（文件用途）；實際驗證在 `tools_src/comfyui_pipeline/runner/template.py`，只用標準庫。以 `_` 開頭的資料夾不是 template。
 
+清單與能力不要在別的文件手寫。自動產生的 [catalog.json](catalog.json) 與 [能力索引](../docs/knowledge/maintenance/template-catalog.md) 才是目錄；改了 template 就重跑 `python tools_src/maintenance/build_catalog.py --write`。
+
 ## 規則（載入時強制）
 
 - `graph.api.json` 的位元組 sha256 與 canonical sha256 都要和 `template.json` 一致。位元組不符但 canonical 相符時，通常是 git 把換行轉換了。

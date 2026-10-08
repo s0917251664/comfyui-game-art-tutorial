@@ -82,3 +82,4 @@ repo 附最小 `.obsidian/app.json` 和 `core-plugins.json`，使用檔案瀏覽
 - [平台驗證流程（smoke suite）](maintenance/validation-workflow.md)：`deploy --yes` → `smoke` → `--record`，技術紀錄不等於美術接受（[R1](rules/candidate-review.md)）。
 - [路線化新增能力清單](maintenance/new-capability-checklist.md)與[技能／產線審視流程](maintenance/pipeline-review.md)：依任務選驗證與研究範圍。
 - [新增固定 graph 的擴充協議](maintenance/extension-protocol.md)：使用者確認後，優先從官方範本派生，再標 draft、測試、實機、技術通過。
+- [Template 能力索引](maintenance/template-catalog.md)：由 `template.json` 自動產生，勿手改。機器可讀清單在 `templates/catalog.json`。

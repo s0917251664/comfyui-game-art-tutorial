@@ -1,0 +1,556 @@
+{
+  "schema_version": 1,
+  "note": "自動產生，勿手改。改 template.json 後重跑 tools_src/maintenance/build_catalog.py。",
+  "generated_by": "tools_src/maintenance/build_catalog.py",
+  "templates": [
+    {
+      "id": "video/sam3/track-mask",
+      "version": "1.0.1",
+      "title": "SAM3 影片物件追蹤（第 0 幀手繪遮罩起手）",
+      "summary": "以第 0 幀遮罩指定一個物件，SAM3 追蹤整支影片，輸出逐幀灰階遮罩（白色＝選取）",
+      "media": "video",
+      "capability": "object_track",
+      "status": "technical_pass",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "technical_pass",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "selection",
+        "time_alignment": "per_source_frame",
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "sam3",
+          "filename": "sam3.1_multiplex_fp16.safetensors",
+          "directory": "checkpoints"
+        }
+      ],
+      "upstream_kind": "workflow_templates",
+      "upstream_name": "video_wan21_scail2_character_replacement"
+    },
+    {
+      "id": "video/sam3/track-text",
+      "version": "1.0.1",
+      "title": "SAM3 影片物件追蹤（英文文字起手）",
+      "summary": "以英文名詞指定物件，SAM3 追蹤整支影片，輸出逐幀灰階遮罩（白色＝選取）",
+      "media": "video",
+      "capability": "object_track",
+      "status": "technical_pass",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "technical_pass",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": "per_source_frame",
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "sam3",
+          "filename": "sam3.1_multiplex_fp16.safetensors",
+          "directory": "checkpoints"
+        }
+      ],
+      "upstream_kind": "workflow_templates",
+      "upstream_name": "video_wan21_scail2_character_replacement"
+    },
+    {
+      "id": "video/wan-animate/mix",
+      "version": "1.1.1",
+      "title": "Wan Animate Mix（單段 17／33 幀）",
+      "summary": "把參考角色置入來源影片（保留來源背景），以 SAM2 點位決定替換範圍",
+      "media": "video",
+      "capability": "wan_animate_mix",
+      "status": "technical_pass",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_controlnet_aux",
+          "source": "registry"
+        },
+        {
+          "id": "comfyui-kjnodes",
+          "source": "registry"
+        },
+        {
+          "id": "comfyui-segment-anything-2",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "technical_pass",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "identity",
+        "time_alignment": "source_from_frame_0",
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "diffusion",
+          "filename": "Wan2_2-Animate-14B_fp8_e4m3fn_scaled_KJ.safetensors",
+          "directory": "diffusion_models"
+        },
+        {
+          "role": "lora_distill",
+          "filename": "lightx2v_I2V_14B_480p_cfg_step_distill_rank64_bf16.safetensors",
+          "directory": "loras"
+        },
+        {
+          "role": "lora_relight",
+          "filename": "WanAnimate_relight_lora_fp16.safetensors",
+          "directory": "loras"
+        },
+        {
+          "role": "text_encoder",
+          "filename": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+          "directory": "text_encoders"
+        },
+        {
+          "role": "vae",
+          "filename": "wan_2.1_vae.safetensors",
+          "directory": "vae"
+        },
+        {
+          "role": "clip_vision",
+          "filename": "clip_vision_h.safetensors",
+          "directory": "clip_vision"
+        },
+        {
+          "role": "pose_bbox",
+          "filename": "yolox_l.onnx",
+          "directory": null
+        },
+        {
+          "role": "pose_estimator",
+          "filename": "dw-ll_ucoco_384.onnx",
+          "directory": null
+        },
+        {
+          "role": "sam2",
+          "filename": "sam2_hiera_base_plus.safetensors",
+          "directory": "sam2"
+        }
+      ],
+      "upstream_kind": "workflow_templates",
+      "upstream_name": "video_wan2_2_14B_animate"
+    },
+    {
+      "id": "video/wan-animate/mix-extend",
+      "version": "1.1.1",
+      "title": "Wan Animate Mix（兩段串接 61 幀）",
+      "summary": "把參考角色置入來源影片（保留來源背景），以 SAM2 點位決定替換範圍；兩段 33＋28＝61 幀",
+      "media": "video",
+      "capability": "wan_animate_mix",
+      "status": "technical_pass",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_controlnet_aux",
+          "source": "registry"
+        },
+        {
+          "id": "comfyui-kjnodes",
+          "source": "registry"
+        },
+        {
+          "id": "comfyui-segment-anything-2",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "technical_pass",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "identity",
+        "time_alignment": "source_from_frame_0",
+        "continuity": {
+          "segments": 2,
+          "overlap_frames": 5,
+          "seam_frames": [
+            32,
+            33
+          ],
+          "manual_check": "seam"
+        }
+      },
+      "models": [
+        {
+          "role": "diffusion",
+          "filename": "Wan2_2-Animate-14B_fp8_e4m3fn_scaled_KJ.safetensors",
+          "directory": "diffusion_models"
+        },
+        {
+          "role": "lora_distill",
+          "filename": "lightx2v_I2V_14B_480p_cfg_step_distill_rank64_bf16.safetensors",
+          "directory": "loras"
+        },
+        {
+          "role": "lora_relight",
+          "filename": "WanAnimate_relight_lora_fp16.safetensors",
+          "directory": "loras"
+        },
+        {
+          "role": "text_encoder",
+          "filename": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+          "directory": "text_encoders"
+        },
+        {
+          "role": "vae",
+          "filename": "wan_2.1_vae.safetensors",
+          "directory": "vae"
+        },
+        {
+          "role": "clip_vision",
+          "filename": "clip_vision_h.safetensors",
+          "directory": "clip_vision"
+        },
+        {
+          "role": "pose_bbox",
+          "filename": "yolox_l.onnx",
+          "directory": null
+        },
+        {
+          "role": "pose_estimator",
+          "filename": "dw-ll_ucoco_384.onnx",
+          "directory": null
+        },
+        {
+          "role": "sam2",
+          "filename": "sam2_hiera_base_plus.safetensors",
+          "directory": "sam2"
+        }
+      ],
+      "upstream_kind": "workflow_templates",
+      "upstream_name": "video_wan2_2_14B_animate"
+    },
+    {
+      "id": "video/wan-animate/move",
+      "version": "1.1.1",
+      "title": "Wan Animate Move（單段 17／33 幀）",
+      "summary": "參考角色跟著來源影片的動作動起來（背景由參考圖與 prompt 決定）",
+      "media": "video",
+      "capability": "wan_animate_move",
+      "status": "technical_pass",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_controlnet_aux",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "technical_pass",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "identity",
+        "time_alignment": "source_from_frame_0",
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "diffusion",
+          "filename": "Wan2_2-Animate-14B_fp8_e4m3fn_scaled_KJ.safetensors",
+          "directory": "diffusion_models"
+        },
+        {
+          "role": "lora_distill",
+          "filename": "lightx2v_I2V_14B_480p_cfg_step_distill_rank64_bf16.safetensors",
+          "directory": "loras"
+        },
+        {
+          "role": "text_encoder",
+          "filename": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+          "directory": "text_encoders"
+        },
+        {
+          "role": "vae",
+          "filename": "wan_2.1_vae.safetensors",
+          "directory": "vae"
+        },
+        {
+          "role": "clip_vision",
+          "filename": "clip_vision_h.safetensors",
+          "directory": "clip_vision"
+        },
+        {
+          "role": "pose_bbox",
+          "filename": "yolox_l.onnx",
+          "directory": null
+        },
+        {
+          "role": "pose_estimator",
+          "filename": "dw-ll_ucoco_384.onnx",
+          "directory": null
+        }
+      ],
+      "upstream_kind": "workflow_templates",
+      "upstream_name": "video_wan2_2_14B_animate"
+    },
+    {
+      "id": "video/wan-animate/move-extend",
+      "version": "1.1.1",
+      "title": "Wan Animate Move（兩段串接 61 幀）",
+      "summary": "參考角色跟著來源影片的動作動起來（背景由參考圖與 prompt 決定）；兩段 33＋28＝61 幀",
+      "media": "video",
+      "capability": "wan_animate_move",
+      "status": "technical_pass",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_controlnet_aux",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "technical_pass",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "identity",
+        "time_alignment": "source_from_frame_0",
+        "continuity": {
+          "segments": 2,
+          "overlap_frames": 5,
+          "seam_frames": [
+            32,
+            33
+          ],
+          "manual_check": "seam"
+        }
+      },
+      "models": [
+        {
+          "role": "diffusion",
+          "filename": "Wan2_2-Animate-14B_fp8_e4m3fn_scaled_KJ.safetensors",
+          "directory": "diffusion_models"
+        },
+        {
+          "role": "lora_distill",
+          "filename": "lightx2v_I2V_14B_480p_cfg_step_distill_rank64_bf16.safetensors",
+          "directory": "loras"
+        },
+        {
+          "role": "text_encoder",
+          "filename": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+          "directory": "text_encoders"
+        },
+        {
+          "role": "vae",
+          "filename": "wan_2.1_vae.safetensors",
+          "directory": "vae"
+        },
+        {
+          "role": "clip_vision",
+          "filename": "clip_vision_h.safetensors",
+          "directory": "clip_vision"
+        },
+        {
+          "role": "pose_bbox",
+          "filename": "yolox_l.onnx",
+          "directory": null
+        },
+        {
+          "role": "pose_estimator",
+          "filename": "dw-ll_ucoco_384.onnx",
+          "directory": null
+        }
+      ],
+      "upstream_kind": "workflow_templates",
+      "upstream_name": "video_wan2_2_14B_animate"
+    },
+    {
+      "id": "video/wan-animate/scail2",
+      "version": "1.0.1",
+      "title": "SCAIL-2 角色替換／動畫（單段 33 幀）",
+      "summary": "用參考圖驅動角色跟著來源影片動，或把來源影片裡的人換成參考角色；SAM3 依文字追蹤人物並以彩色遮罩綁定身份",
+      "media": "video",
+      "capability": "scail2",
+      "status": "technical_pass",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "technical_pass",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "identity",
+        "time_alignment": "source_from_frame_0",
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "diffusion",
+          "filename": "wan2.1_14B_SCAIL_2_fp8_scaled.safetensors",
+          "directory": "diffusion_models"
+        },
+        {
+          "role": "lora_dpo",
+          "filename": "wan2.1_SCAIL_2_DPO_lora_bf16.safetensors",
+          "directory": "loras"
+        },
+        {
+          "role": "lora_distill",
+          "filename": "lightx2v_I2V_14B_480p_cfg_step_distill_rank64_bf16.safetensors",
+          "directory": "loras"
+        },
+        {
+          "role": "text_encoder",
+          "filename": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+          "directory": "text_encoders"
+        },
+        {
+          "role": "vae",
+          "filename": "wan_2.1_vae.safetensors",
+          "directory": "vae"
+        },
+        {
+          "role": "clip_vision",
+          "filename": "clip_vision_h.safetensors",
+          "directory": "clip_vision"
+        },
+        {
+          "role": "sam3",
+          "filename": "sam3.1_multiplex_fp16.safetensors",
+          "directory": "checkpoints"
+        }
+      ],
+      "upstream_kind": "workflow_templates",
+      "upstream_name": "video_wan21_scail2_character_replacement"
+    },
+    {
+      "id": "video/wan-animate/scail2-extend",
+      "version": "1.0.1",
+      "title": "SCAIL-2 角色替換／動畫（兩段串接 61 幀）",
+      "summary": "用參考圖驅動角色跟著來源影片動，或把來源影片裡的人換成參考角色；SAM3 依文字追蹤人物並以彩色遮罩綁定身份",
+      "media": "video",
+      "capability": "scail2",
+      "status": "technical_pass",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "technical_pass",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "identity",
+        "time_alignment": "source_from_frame_0",
+        "continuity": {
+          "segments": 2,
+          "overlap_frames": 5,
+          "seam_frames": [
+            32,
+            33
+          ],
+          "manual_check": "seam"
+        }
+      },
+      "models": [
+        {
+          "role": "diffusion",
+          "filename": "wan2.1_14B_SCAIL_2_fp8_scaled.safetensors",
+          "directory": "diffusion_models"
+        },
+        {
+          "role": "lora_dpo",
+          "filename": "wan2.1_SCAIL_2_DPO_lora_bf16.safetensors",
+          "directory": "loras"
+        },
+        {
+          "role": "lora_distill",
+          "filename": "lightx2v_I2V_14B_480p_cfg_step_distill_rank64_bf16.safetensors",
+          "directory": "loras"
+        },
+        {
+          "role": "text_encoder",
+          "filename": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+          "directory": "text_encoders"
+        },
+        {
+          "role": "vae",
+          "filename": "wan_2.1_vae.safetensors",
+          "directory": "vae"
+        },
+        {
+          "role": "clip_vision",
+          "filename": "clip_vision_h.safetensors",
+          "directory": "clip_vision"
+        },
+        {
+          "role": "sam3",
+          "filename": "sam3.1_multiplex_fp16.safetensors",
+          "directory": "checkpoints"
+        }
+      ],
+      "upstream_kind": "workflow_templates",
+      "upstream_name": "video_wan21_scail2_character_replacement"
+    },
+    {
+      "id": "video/wan-vace/inpaint",
+      "version": "0.1.1",
+      "title": "Wan2.1 VACE 影片局部重繪（遮罩內重畫、貼回原片）",
+      "summary": "只重畫遮罩內（白色＝重畫），遮罩外貼回原片並逐 byte 檢查不變；和 generate.py video_inpaint 同一個 graph 與前後處理",
+      "media": "video",
+      "capability": "masked_edit",
+      "status": "technical_pass",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "technical_pass",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": "per_source_frame",
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "vace_unet",
+          "filename": "wan2.1_vace_1.3B_fp16.safetensors",
+          "directory": "diffusion_models"
+        },
+        {
+          "role": "text_encoder",
+          "filename": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+          "directory": "text_encoders"
+        },
+        {
+          "role": "vae",
+          "filename": "wan_2.1_vae.safetensors",
+          "directory": "vae"
+        }
+      ],
+      "upstream_kind": "workflow_templates",
+      "upstream_name": "video_wan_vace_inpainting"
+    }
+  ]
+}
