@@ -117,7 +117,7 @@ status: current
 
 | PR | 範圍 | 驗收 | 實機驗證 |
 |---|---|---|---|
-| **6′.1** `refactor/phase6p.1-dedupe` | 重複實作各留一份：色相旋轉（`vfx_alpha_tools.masked_hue_rotate` 和 `image_edit_tools.recolor`）、`read_masks`（vfx 和 `video_edit_media`）、遮罩貼回、影片讀寫 | `test_vfx_alpha_tools`、`test_image_edit_tools`、`test_video_inpaint` 全過；`prop-paste` 輸出和研究 master 逐 byte 相同 | 實跑一次 `vfx prop-paste`，和舊輸出比對 hash |
+| **6′.1** `refactor/phase6p.1-dedupe` | 重複實作各留一份：色相旋轉（`vfx_alpha_tools.masked_hue_rotate` 和 `image_edit_tools.recolor`）、`read_masks`（vfx 和 `runner/vace_media`，PR 3.3 前在 `video_edit_media`）、遮罩貼回、影片讀寫 | `test_vfx_alpha_tools`、`test_image_edit_tools`、`test_video_inpaint` 全過；`prop-paste` 輸出和研究 master 逐 byte 相同 | 實跑一次 `vfx prop-paste`，和舊輸出比對 hash |
 | **6′.2** `refactor/phase6p.2-split-vfx` | `vfx_alpha_tools.py`（1,020 行）拆成 pixel／mask／media／qa 模組，`gameart.py vfx` 的介面不變；`deploy_manifest` 同步 | 同上；部署 dry run 清單正確 | `deploy --yes` 後另外跑 `verify-install`，回報通過數 |
 | **6′.3**（待決） | `comfyui_design.py` 改寫成純 Pillow；`vfx birefnet-alpha` 的部署處理 | 等使用者決定後才開 | — |
 

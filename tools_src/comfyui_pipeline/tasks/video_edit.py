@@ -125,7 +125,6 @@ def prepare(ctx, args, upload):
 
 def finalize_paste_back(args, raw_path, frames, grown, crop, size, length):
     """Paste the VACE work-area output back into the source; outside the mask stays byte-exact."""
-    from PIL import Image
     raw, _ = media.read_video_frames(raw_path)
     stem = os.path.splitext(os.path.basename(raw_path))[0].rstrip("_")
     out_dir = os.path.join(os.path.dirname(os.path.abspath(raw_path)), stem + "_composited")
@@ -134,11 +133,7 @@ def finalize_paste_back(args, raw_path, frames, grown, crop, size, length):
     composed, per_frame = media.paste_back(frames, raw[:len(frames)], crop, grown, args.feather)
     staging = tempfile.mkdtemp(prefix=f".{stem}_composited.", dir=os.path.dirname(out_dir))
     try:
-        frame_dir = os.path.join(staging, "frames")
-        os.makedirs(frame_dir)
-        for i, f in enumerate(composed):
-            Image.fromarray(f).save(os.path.join(frame_dir, f"{i:05d}.png"))
-        media.encode_mp4(composed, os.path.join(staging, "composited.mp4"))
+        media.write_composited(composed, staging)  # frames/00000.png… 與 composited.mp4
         report = {
             "schema_version": 1, "kind": "video_inpaint_paste_back", "status": "candidate",
             "raw_output": {"path": os.path.abspath(raw_path), "sha256": _sha256_file(raw_path),

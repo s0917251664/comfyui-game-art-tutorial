@@ -225,14 +225,16 @@ def _dry_run_summary(template, resolution, run_id, graph, changes, warnings):
         "inputs": {name: os.path.abspath(path) for name, path in resolution["inputs"].items()},
         "changed_inputs": changes, "patched_graph_sha256": T.canonical_sha256(graph) if graph else None,
         "platforms": T.platform_summary(template), "warnings": warnings,
-        "note": "dry-run:沒有連線 ComfyUI、沒有上傳、沒有 queue;上傳欄位以 <upload:slot> 表示",
+        "note": "dry-run:沒有連線 ComfyUI、沒有上傳、沒有 queue;上傳欄位以 <upload:slot> 表示,pre 步驟才知道的值以 <pre:步驟.欄位> 表示",
     }
 
 
-def _input_file_warnings(resolution, mode):
+def _input_file_warnings(template, resolution, mode):
     warnings, problems = [], []
     for name, path in resolution["inputs"].items():
-        if not os.path.isfile(path):
+        # path slot 可以是檔案或資料夾(例如遮罩 PNG 資料夾);其他本機／上傳輸入必須是檔案
+        exists = os.path.exists(path) if template.slots[name]["type"] == "path" else os.path.isfile(path)
+        if not exists:
             if mode == "run":
                 problems.append(f"slot {name} 的檔案不存在: {os.path.abspath(path)}")
             else:
@@ -276,7 +278,7 @@ def cmd_run(args, root, out, err, rng=None, fetch_object_info=None):
     graph, changes = None, []
     if not resolution["missing"]:
         graph, changes = T.patch(template, resolution, require_uploads=False)
-    file_warnings, file_problems = _input_file_warnings(resolution, mode)
+    file_warnings, file_problems = _input_file_warnings(template, resolution, mode)
     warnings = list(resolution["warnings"]) + file_warnings
     summary = _dry_run_summary(template, resolution, run_id, graph, changes, warnings)
     if mode == "run":

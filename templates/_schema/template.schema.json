@@ -247,7 +247,7 @@
       "items": {
         "$ref": "#/$defs/step"
       },
-      "description": "送出前步驟;2.1 只驗證格式,實作在 2.3"
+      "description": "送出前步驟(檢查輸入、產生工作檔、上傳);清單外的步驟一律拒絕"
     },
     "post": {
       "type": "array",
@@ -446,15 +446,17 @@
             "image",
             "video",
             "mask_image",
+            "path",
             "output_prefix"
-          ]
+          ],
+          "description": "path 是本機檔案或資料夾(例如遮罩 PNG 資料夾或 layers.zip),只給 pre／post 步驟讀,不上傳、不寫進 graph。image／video／mask_image 有 upload 時上傳到 ComfyUI;沒有 upload 時也是本機輸入"
         },
         "targets": {
           "type": "array",
-          "minItems": 1,
           "items": {
             "$ref": "#/$defs/target"
-          }
+          },
+          "description": "一般必須至少一個;本機輸入(path、沒有 upload 的檔案)一定是 [];int／float／string／text／bool 寫 [] 時只給步驟用,必須被某個 pre／post 步驟引用"
         },
         "default": {},
         "default_from": {
@@ -464,7 +466,17 @@
           "type": "boolean"
         },
         "upload": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "只能用在 image／video／mask_image;true 時必須剛好出現在一個 upload 步驟"
+        },
+        "generated": {
+          "type": "boolean",
+          "description": "PR 3.3:上傳檔由 pre 步驟產生(例如 vace_work_area 的 control／mask),使用者不能指定;產生它的步驟要排在 upload 步驟之前"
+        },
+        "from_pre": {
+          "type": "string",
+          "pattern": "^\\{pre\\.[a-z0-9_]+\\.[a-z0-9_]+\\}$",
+          "description": "PR 3.3:值來自 pre 步驟的結果,例如 {pre.vace_work_area.width}。dry-run／preflight 時 graph 顯示 <pre:步驟.欄位>;graph 目標可以是占位"
         },
         "validate": {
           "type": "object"
@@ -530,7 +542,8 @@
         "step": {
           "type": "string"
         }
-      }
+      },
+      "description": "可用步驟與參數以 tools_src/comfyui_pipeline/runner/steps.py 的 STEPS 為準。PR 3.3 新增 vace_work_area(pre)、paste_back、qa_outside_mask_unchanged(post)"
     },
     "model": {
       "type": "object",

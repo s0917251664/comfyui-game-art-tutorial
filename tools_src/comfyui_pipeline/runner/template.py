@@ -33,8 +33,13 @@ OPTIONAL_FIELDS = ("status_note", "options", "constraints", "fixed_notes")
 STATUSES = ("draft", "technical_pass", "retired")
 PLATFORM_STATUSES = ("technical_pass", "untested", "unsupported")
 SLOT_TYPES = ("text", "string", "int", "float", "bool", "seed", "points", "image", "video", "mask_image",
-              "output_prefix")
+              "path", "output_prefix")
 UPLOAD_TYPES = frozenset({"image", "video", "mask_image"})
+# 本機輸入:只給 pre／post 步驟讀,不上傳、不寫進 graph(targets 是 [])。
+# path 是檔案或資料夾(例如遮罩 PNG 資料夾或 layers.zip);image／video／mask_image 沒有 upload 時也是本機檔。
+FILE_TYPES = UPLOAD_TYPES | {"path"}
+FROM_PRE_TYPES = frozenset({"text", "string", "int", "float", "bool"})
+PRE_MARK = "<pre:{}>"
 VALIDATE_KEYS = {
     "text": {"min_length", "max_length"},
     "string": {"pattern", "enum", "min_length", "max_length"},
@@ -42,7 +47,8 @@ VALIDATE_KEYS = {
     "float": {"min", "max", "enum"},
     "points": {"min_items", "max_items"},
 }
-SLOT_KEYS = {"type", "targets", "default", "required", "validate", "tested_values", "help", "upload", "default_from"}
+SLOT_KEYS = {"type", "targets", "default", "required", "validate", "tested_values", "help", "upload", "default_from",
+             "generated", "from_pre"}
 TARGET_KEYS = {"node", "input", "placeholder"}
 OPTION_OPS = ("set_link", "set_value")
 CONSTRAINT_RULES = ("points_within",)
@@ -140,7 +146,11 @@ class Template:
         return self.data.get("options") or {}
 
     def upload_slots(self):
-        return [name for name, slot in self.slots.items() if slot["type"] in UPLOAD_TYPES]
+        return [name for name, slot in self.slots.items() if slot.get("upload")]
+
+    def deferred_slots(self):
+        """值由 pre 步驟決定的 slot:``generated``(pre 產生的上傳檔)與 ``from_pre``(pre 量到的值)。"""
+        return [name for name, slot in self.slots.items() if slot.get("generated") or slot.get("from_pre")]
 
     def declared_targets(self, enabled_options=()):
         """slot 與已啟用 option 會寫入的 (node, input) 集合。"""
@@ -321,8 +331,19 @@ def validate_template(template, repo_root=None):
         if kind not in SLOT_TYPES:
             problems.append(f"{where}: type 必須是 {', '.join(SLOT_TYPES)} 之一")
             continue
-        if bool(slot.get("upload")) != (kind in UPLOAD_TYPES):
-            problems.append(f"{where}: upload 只能(而且必須)用在 image／video／mask_image")
+        upload = slot.get("upload", False)
+        if not isinstance(upload, bool) or upload and kind not in UPLOAD_TYPES:
+            problems.append(f"{where}: upload 只能用在 image／video／mask_image(true/false)")
+        local_file = kind in FILE_TYPES and not upload
+        generated, from_pre = slot.get("generated", False), slot.get("from_pre")
+        if not isinstance(generated, bool) or generated and not upload:
+            problems.append(f"{where}: generated 只能用在 upload 的 slot(值是 pre 步驟產生的檔案)")
+        if from_pre is not None:
+            if kind not in FROM_PRE_TYPES:
+                problems.append(f"{where}: from_pre 只能用在 {'／'.join(sorted(FROM_PRE_TYPES))}")
+            elif not _steps.is_step_result_ref(from_pre):
+                problems.append(f"{where}: from_pre 要寫成 {{pre.<步驟>.<欄位>}},可用: "
+                                + "、".join(f"{s}.{f}" for s, fields in _steps.STEP_RESULTS.items() for f in fields))
         rules = slot.get("validate") or {}
         bad_rules = set(rules) - VALIDATE_KEYS.get(kind, set())
         if bad_rules:
@@ -333,7 +354,13 @@ def validate_template(template, repo_root=None):
             except re.error as exc:
                 problems.append(f"{where}: pattern 不是合法正規表示式: {exc}")
         targets = slot.get("targets")
-        if not isinstance(targets, list) or not targets:
+        if not isinstance(targets, list):
+            problems.append(f"{where}: targets 必須是陣列")
+            continue
+        if local_file and targets:
+            problems.append(f"{where}: 本機輸入(path 或沒有 upload 的 {kind})不寫進 graph,targets 要是 []")
+            continue
+        if not targets and not local_file and (upload or kind in ("seed", "points", "output_prefix") or from_pre):
             problems.append(f"{where}: targets 必須是非空陣列")
             continue
         for target in targets:
@@ -352,12 +379,13 @@ def validate_template(template, repo_root=None):
                 problems.append(f"{where}: {node}.{field} 目前是 {current!r},不是宣告的占位 {target['placeholder']!r}")
             if isinstance(current, str) and PLACEHOLDER_RE.match(current) and target.get("placeholder") != current:
                 problems.append(f"{where}: {node}.{field} 是占位 {current!r},target 要寫 placeholder")
-            problems.extend(_type_matches_graph(where, kind, node, field, current))
+            if not (from_pre and isinstance(current, str) and PLACEHOLDER_RE.match(current)):
+                problems.extend(_type_matches_graph(where, kind, node, field, current))
             claimed.setdefault((node, field), []).append(name)
         has_default = "default" in slot or "default_from" in slot
-        if kind == "output_prefix":
+        if kind == "output_prefix" or generated or from_pre:
             if has_default or slot.get("required"):
-                problems.append(f"{where}: output_prefix 由 runner 產生,不能有 default 或 required")
+                problems.append(f"{where}: 值由 runner 或 pre 步驟決定,不能有 default 或 required")
         elif not slot.get("required") and not has_default:
             problems.append(f"{where}: 不是 required 就必須有 default 或 default_from")
         elif slot.get("required") and has_default:
@@ -467,8 +495,9 @@ def validate_template(template, repo_root=None):
         if uploaded.count(name) != 1:
             problems.append(f"slot {name}: 必須剛好出現在一個 upload 步驟")
     for name in uploaded:
-        if name in slots and slots[name].get("type") not in UPLOAD_TYPES:
-            problems.append(f"upload 步驟列了非上傳類型的 slot {name}")
+        if name in slots and not slots[name].get("upload"):
+            problems.append(f"upload 步驟列了沒有 upload 的 slot {name}")
+    problems.extend(_steps.validate_step_slots(data["pre"], data["post"], slots))
 
     problems.extend(_validate_anchoring(data["frame_anchoring"]))
     problems.extend(_validate_models(data["models"], graph, data["status"]))
@@ -760,7 +789,7 @@ def validate_value(name, slot, value):
             raise TemplateError(f"{where}: 至少要 {rules['min_items']} 個點")
         if "max_items" in rules and len(value) > rules["max_items"]:
             raise TemplateError(f"{where}: 最多 {rules['max_items']} 個點")
-    elif kind in UPLOAD_TYPES:
+    elif kind in FILE_TYPES:
         if not isinstance(value, str) or not value:
             raise TemplateError(f"{where}: 需要檔案路徑")
 
@@ -800,6 +829,10 @@ def resolve(template, values=None, options=None, *, run_id, dry_run=False, rng=N
                     coerce(name, slot, values[name])
                 resolved[name] = output_prefix(template.id, run_id)
                 continue
+            if slot.get("generated") or slot.get("from_pre"):
+                if name in values:
+                    raise TemplateError(f"slot {name}: 值由 pre 步驟產生,不能指定")
+                continue
             if name in values:
                 value = coerce(name, slot, values[name])
                 source = "explicit"
@@ -808,7 +841,7 @@ def resolve(template, values=None, options=None, *, run_id, dry_run=False, rng=N
                 continue
             elif "default" in slot:
                 value, source = copy.deepcopy(slot["default"]), "default"
-            elif kind in UPLOAD_TYPES and dry_run:
+            elif kind in FILE_TYPES and dry_run:
                 warnings.append(f"slot {name} 沒有提供檔案;graph 以 {UPLOAD_MARK.format(name)} 代替")
                 continue
             elif allow_missing:
@@ -823,7 +856,7 @@ def resolve(template, values=None, options=None, *, run_id, dry_run=False, rng=N
         except TemplateError as exc:
             problems.extend(exc.problems)
             continue
-        if kind in UPLOAD_TYPES:
+        if kind in FILE_TYPES:
             inputs[name] = value
             continue
         resolved[name] = value
@@ -868,6 +901,29 @@ def resolve(template, values=None, options=None, *, run_id, dry_run=False, rng=N
             "warnings": warnings, "missing": missing}
 
 
+def fill_from_pre(template, resolution, pre_results):
+    """實際執行時,pre 步驟跑完後填入 ``from_pre`` slot 的值(就地更新 resolution)並驗證。回傳填了哪些。"""
+    problems, filled = [], []
+    for name, slot in template.slots.items():
+        if not slot.get("from_pre"):
+            continue
+        try:
+            value = _steps.resolve_param(slot["from_pre"], resolution["slot_values"], resolution["options"],
+                                         pre_results)
+            validate_value(name, slot, value)
+        except KeyError as exc:
+            problems.append(f"slot {name}: {exc.args[0] if exc.args else exc}")
+            continue
+        except TemplateError as exc:
+            problems.extend(exc.problems)
+            continue
+        resolution["slot_values"][name] = value
+        filled.append(name)
+    if problems:
+        raise TemplateError(problems, template.id)
+    return filled
+
+
 # ---------- patch ----------
 
 def _encode(slot, value):
@@ -887,7 +943,7 @@ def patch(template, resolution, upload_paths=None, *, require_uploads=True):
     values = resolution["slot_values"]
     missing = []
     for name, slot in template.slots.items():
-        if slot["type"] in UPLOAD_TYPES:
+        if slot.get("upload"):
             if name in upload_paths:
                 value = upload_paths[name]
             elif require_uploads:
@@ -895,8 +951,12 @@ def patch(template, resolution, upload_paths=None, *, require_uploads=True):
                 continue
             else:
                 value = UPLOAD_MARK.format(name)
+        elif slot["type"] in FILE_TYPES:
+            continue  # 本機輸入,不寫進 graph
         elif name in values:
             value = _encode(slot, values[name])
+        elif slot.get("from_pre") and not require_uploads:
+            value = PRE_MARK.format(slot["from_pre"][len("{pre."):-1])  # dry-run／preflight:pre 步驟還沒跑
         else:
             missing.append(name)
             continue
@@ -944,6 +1004,8 @@ def check_patched(template, graph, enabled_options=(), *, allow_upload_marks=Fal
                 problems.append(f"{node_id}.{field} 還是占位 {value}")
             if isinstance(value, str) and value.startswith("<upload:") and not allow_upload_marks:
                 problems.append(f"{node_id}.{field} 還沒有上傳路徑")
+            if isinstance(value, str) and value.startswith("<pre:") and not allow_upload_marks:
+                problems.append(f"{node_id}.{field} 還沒有 pre 步驟的值")
             if field in SEED_INPUTS and value == -1:
                 problems.append(f"{node_id}.{field} 還是 -1")
     changed, structural = graph_changes(template.graph, graph)

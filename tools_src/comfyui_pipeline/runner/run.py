@@ -69,6 +69,29 @@ def sha256_file(path):
     return digest.hexdigest()
 
 
+def directory_record(path):
+    """資料夾輸入(例如遮罩 PNG 序列)的紀錄:檔案數與 ``名稱\\0sha256`` 逐行排序後的 sha256。"""
+    absolute = os.path.abspath(path)
+    lines = []
+    for name in sorted(os.listdir(absolute)):
+        full = os.path.join(absolute, name)
+        if os.path.isfile(full):
+            lines.append(f"{name}\0{sha256_file(full)}\n")
+    digest = hashlib.sha256("".join(lines).encode("utf-8")).hexdigest()
+    return {"path": absolute, "kind": "directory", "files": len(lines), "sha256": digest}
+
+
+def _derived_record(item):
+    """post 步驟產生的檔案(例如貼回的 MP4 或 PNG 資料夾)。"""
+    path = item.get("path")
+    if path and os.path.isdir(path):
+        return dict(directory_record(path), role=item["role"])
+    record = {"role": item["role"], "path": path}
+    if path and os.path.isfile(path):
+        record.update(sha256=sha256_file(path), size_bytes=os.path.getsize(path))
+    return record
+
+
 def _write_json(path, data):
     with open(path, "w", encoding="utf-8") as handle:
         handle.write(json.dumps(data, ensure_ascii=False, indent=2) + "\n")
@@ -225,7 +248,8 @@ def execute(template, resolution, settings, preflight, folder, *, run_id, timeou
     state = {"prompt_id": None, "queue": None, "history": None, "graph": None, "upload_paths": {},
              "inputs": [], "downloaded": {}, "measured": {}, "pre_checks": [], "post_checks": [],
              "warnings": list(preflight.get("warnings") or []), "keyframes": {},
-             "mask_preview": None, "timing": {"started_at": utc_now()}, "step": "pre", "environment": None}
+             "mask_preview": None, "timing": {"started_at": utc_now()}, "step": "pre", "environment": None,
+             "derived": []}
     failure = None
 
     def on_queued(prompt_id, response):
@@ -236,8 +260,12 @@ def execute(template, resolution, settings, preflight, folder, *, run_id, timeou
         _write_json(os.path.join(folder, QUEUE_FILE), state["queue"])
         log(f"已送出 prompt_id={prompt_id};等待完成(上限 {timeout:g} 秒,不會重送)")
 
+    context = {}
     try:
         for name, path in resolution["inputs"].items():
+            if os.path.isdir(path):
+                state["inputs"].append(dict(directory_record(path), role=name))
+                continue
             if not os.path.isfile(path):
                 continue  # preflight 已列為問題
             absolute = os.path.abspath(path)
@@ -249,11 +277,22 @@ def execute(template, resolution, settings, preflight, folder, *, run_id, timeou
         state["environment"] = _environment(comfy_url, system_stats(comfy_url))
 
         log("檢查輸入媒體")
-        pre_results, state["pre_checks"], problems, warnings = S.run_pre_checks(template, resolution, media)
+        pre_results, state["pre_checks"], problems, warnings = S.run_pre_checks(
+            template, resolution, media, work_dir=folder, context=context)
         state["pre_results"] = pre_results
         state["warnings"] += warnings
         if problems:
             raise RunFailure("pre", ";".join(problems))
+        for name, path in context["generated"].items():  # pre 步驟產生、接著要上傳的檔案
+            resolution["inputs"][name] = path
+            state["inputs"].append({"role": name, "path": os.path.abspath(path), "sha256": sha256_file(path),
+                                    "size_bytes": os.path.getsize(path), "generated": True})
+            log(f"pre 步驟產生 {name}: {path}")
+        try:
+            for name in T.fill_from_pre(template, resolution, pre_results):
+                log(f"slot {name} = {resolution['slot_values'][name]!r}(來自 {template.slots[name]['from_pre']})")
+        except T.TemplateError as exc:
+            raise RunFailure("pre", str(exc)) from exc
 
         state["step"] = "upload"
         records = {r["role"]: r for r in state["inputs"]}
@@ -307,8 +346,9 @@ def execute(template, resolution, settings, preflight, folder, *, run_id, timeou
         state["step"] = "post"
         outputs = {k: [e["path"] for e in v] for k, v in state["downloaded"].items()}
         checks, problems, warnings, artifacts = S.run_post_checks(template, resolution, pre_results, outputs,
-                                                                  folder, media)
+                                                                  folder, media, context=context)
         state["post_checks"], state["measured"] = checks, artifacts["media"]
+        state["derived"] = [_derived_record(item) for item in artifacts["derived"]]
         state["keyframes"], state["mask_preview"] = artifacts["keyframes"], artifacts["mask_preview"]
         state["warnings"] += warnings
         if problems:
@@ -390,6 +430,7 @@ def build_manifest(template, resolution, settings, preflight, state, failure, ru
         "outputs": _output_records(template, state["downloaded"], state["measured"]),
         "keyframes": {k: v["path"] for k, v in state["keyframes"].items()},
         "mask_preview": state["mask_preview"],
+        "derived_outputs": state["derived"],
         "platform_key": settings.get("platform_key"),
         "platform_source": settings.get("platform_source"),
         "device_platform_key": settings.get("device_platform_key"),

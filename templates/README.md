@@ -58,6 +58,25 @@ python tools_src/gameart.py run video/sam3/track-mask --set source_video=clip.mp
 
 `run.result.json` 的 kind 是 `template_run_result`：記錄 template 版本與 hash、prompt_id、client_id、run_id、seed、送出 graph 的 sha256、模型、slot 值、輸入檔與上傳位置、輸出檔 sha256 與量測值、平台、ComfyUI 版本、時間（`timing.execution_seconds` 是 ComfyUI history 記錄的執行時間）、每一項檢查結果。影片的 `fps` 是數字（整數幀率記成 `16`，非整數記成小數），分數形式另外記在 `fps_rational`（例如 `"16/1"`、`"30000/1001"`）。任何一步失敗都會寫 `status: failed` 和 `failure`（步驟、prompt_id、錯誤），已下載的檔案保留。技術檢查通過不等於美術接受：`content_review` 一律是 `pending`，接受與否由使用者決定後用 `gameart.py review list|accept|reject` 記錄（failed 的結果不能 accept）。延伸段 template 會提醒「延伸段接縫（第 32/33 幀前後）需要人工檢查」，也寫進 manifest 的 warnings。
 
+### 本機輸入、pre 產生的上傳檔與 VACE 步驟（PR 3.3）
+
+有些 graph 需要先在本機處理輸入，再把處理結果上傳（例如 VACE 局部重繪要先裁工作區、編成無損片段）。`template.json` 用下面的寫法宣告，runner 依序執行，graph 仍然只在宣告的 slot 目標上改值：
+
+- **本機輸入**：`type: path`（檔案或資料夾，例如遮罩 PNG 資料夾或 `layers.zip`），或沒有 `upload` 的 `image`／`video`／`mask_image`。這類 slot 只給 pre／post 步驟讀，不上傳、不寫進 graph，`targets` 一定是 `[]`。`int`／`float`／`string`／`text`／`bool` 也可以寫 `targets: []`，只當步驟參數用。`targets` 是 `[]` 的 slot，一定要被某個步驟引用。
+- **pre 產生的上傳檔**：`upload: true` 加 `generated: true`。使用者不能用 `--set` 指定；值由 pre 步驟產生（例如 `vace_work_area` 的 `control`、`mask` 參數），產生它的步驟要排在 `upload` 步驟之前。
+- **pre 量到的值**：`from_pre: "{pre.<步驟>.<欄位>}"`（例如 `{pre.vace_work_area.width}`），使用者也不能指定。graph 目標可以是占位；dry-run／preflight 時 graph 顯示 `<pre:vace_work_area.width>`，實際執行時在 pre 步驟跑完、上傳之前填入並驗證。
+- 步驟參數也可以引用 pre 步驟的結果，例如 `"frames": "{pre.vace_work_area.length}"`。
+
+VACE 的三個步驟（實作在 `tools_src/comfyui_pipeline/runner/vace_media.py`，和 `generate.py video_inpaint` 共用同一份程式）：
+
+| 步驟 | 階段 | 參數 | 做什麼 |
+|---|---|---|---|
+| `vace_work_area` | pre | `video`、`masks`、`mask_object`、`grow`、`pad`、`crop`、`mode`、`control`、`mask` | 讀來源與遮罩（白色＝重畫）、擴張遮罩、算工作區、縮到 VACE 像素上限，寫出兩支 FFV1 無損片段到 run 資料夾的 `work/`，並交給 `control`／`mask` 指定的 generated slot 上傳。結果欄位：`frames`、`width`、`height`、`length` |
+| `paste_back` | post | `output`、`feather` | 把 VACE 輸出縮回原尺寸，只在擴張＋羽化遮罩內貼回來源，寫 `composited/frames/*.png`（無損母帶）與 `composited/composited.mp4`（H.264，不是無損），記在 `run.result.json` 的 `derived_outputs` |
+| `qa_outside_mask_unchanged` | post | （無） | 重新讀貼回的 PNG，逐幀數遮罩外和來源不同的像素，不是 0 就判定失敗 |
+
+清單外的步驟一律拒絕；`paste_back` 需要 pre 有 `vace_work_area`，`qa_outside_mask_unchanged` 需要排在 `paste_back` 之後。
+
 ### 清理上傳到 ComfyUI 的輸入
 
 runner 不會刪除上傳的檔案：每次執行的輸入留在 `<comfyui_path>/input/<run_id>/`（`run_id` 記在 `run.result.json` 與 `uploads.json`）。這是目前的預設，是否改成自動清理還沒決定。要手動清理時：
