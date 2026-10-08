@@ -63,4 +63,4 @@ runner 不會刪除上傳的檔案：每次執行的輸入留在 `<comfyui_path>
 
 ## 修改
 
-改 graph 或 template.json 都要升版本（graph 改動升 major），更新兩個 sha256，並重跑 `python tests/golden_template_graphs.py --write` 後檢查 golden diff。舊的 `skills/comfyui-wan-animate/assets/template-manifest.json` 在 PR 2.4 刪除前保留，不再是這些 graph 的權威來源。
+改 graph 或 template.json 都要升版本（graph 改動升 major），更新兩個 sha256，並重跑 `python tests/golden_template_graphs.py --write` 後檢查 golden diff。`template.json` 是這些 graph 唯一的權威來源；舊的 `skills/comfyui-wan-animate/assets/template-manifest.json` 已在 PR 2.4 刪除（見[轉址檔索引](../docs/knowledge/archive/redirect-stubs.md)）。

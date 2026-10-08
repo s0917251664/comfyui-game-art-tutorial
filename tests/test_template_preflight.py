@@ -552,11 +552,6 @@ class RealTemplatePinsTests(unittest.TestCase):
             expected_auto = {"dw-ll_ucoco_384.onnx", "yolox_l.onnx"} | ({"sam2_hiera_base_plus.safetensors"} if "mix" in name else set())
             self.assertEqual(expected_auto, {f for f, m in by_name.items() if m.get("auto_download")})
 
-    def test_old_manifest_has_dwpose_pin(self):
-        manifest = json.loads((ROOT / "skills/comfyui-wan-animate/assets/template-manifest.json").read_text(encoding="utf-8"))
-        pins = {m["source"]: m for m in manifest["models"]}
-        self.assertEqual("724f4ff2439ed61afb86fb8a1951ec39c6220682803b4a8bd4f598cd913b1843", pins["dw-ll_ucoco_384.onnx"]["sha256"])
-
 
 if __name__ == "__main__":
     unittest.main()
