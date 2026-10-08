@@ -1,6 +1,6 @@
 # video/sam3/track-mask
 
-**SAM3 影片物件追蹤（第 0 幀手繪遮罩起手）**（v1.0.0，technical_pass）
+**SAM3 影片物件追蹤（第 0 幀手繪遮罩起手）**（v1.0.1，technical_pass）
 
 以第 0 幀遮罩指定一個物件，SAM3 追蹤整支影片，輸出逐幀灰階遮罩（白色＝選取）。
 

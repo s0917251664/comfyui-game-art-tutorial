@@ -31,6 +31,8 @@ date: 2026-10-08
    | `models[].url`、`models[].directory` | 節點 `properties.models` 的 `url`、`directory`（sha256 我們已經有） |
    | `provenance.upstream` | 官方範本名稱或 blueprint 檔名，加上 blob／commit 與 ComfyUI 版本 |
 
+   落實狀態：PR 3.2 完成。validator 檢查欄位一致性，preflight 依 `min_comfyui_version` 擋下版本太舊的 ComfyUI；8 份 template 補齊欄位並各升 patch。欄位規則見 [templates/README](../../../templates/README.md)「規則」。
+
 4. **新 template 的來源：** 官方已有對應的範本或 blueprint 時，從它派生並記錄 blob。我們仍然固定成 API 格式的 `graph.api.json`，雙 hash 等規則不變（見[第二階段 ADR](2026-10-07-phase2-template-runner.md)）。
 5. **第 8 階段**評估改用 ComfyUI core 的 Node Replacement API，取代 custom node 的隱藏舊名稱別名。這是 ComfyUI 本體的功能，不是 comfy-cli。
 

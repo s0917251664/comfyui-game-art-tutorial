@@ -1,6 +1,6 @@
 # video/wan-animate/move-extend
 
-**Wan Animate Move（兩段串接 61 幀）**（v1.1.0，technical_pass）
+**Wan Animate Move（兩段串接 61 幀）**（v1.1.1，technical_pass）
 
 參考角色跟著來源影片的動作動起來（背景由參考圖與 prompt 決定）；兩段 33＋28＝61 幀。
 

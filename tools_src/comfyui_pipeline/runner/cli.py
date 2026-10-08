@@ -117,6 +117,14 @@ def cmd_show(args, root, out):
         print(f"狀態說明: {data['status_note']}", file=out)
     print(f"graph: {data['graph']['file']}  sha256 {template.graph_sha256[:16]}…  canonical {template.graph_canonical_sha256[:16]}…",
           file=out)
+    nodes = "、".join(f"{n['id']}({n['source']})" for n in data["requires_custom_nodes"]) or "無(只用 core 節點)"
+    print(f"ComfyUI: {data['min_comfyui_version']} 以上  custom node: {nodes}", file=out)
+    upstream = data["provenance"]["upstream"]
+    if upstream["kind"] == "none":
+        print(f"官方來源: 無({upstream.get('note', '')})", file=out)
+    else:
+        print(f"官方來源: {upstream['kind']} {upstream['name']}  blob {upstream['blob'][:12]}…"
+              f"(ComfyUI {upstream['comfyui_version']})", file=out)
     print("\nslots:", file=out)
     for name, slot in data["slots"].items():
         if slot["type"] == "output_prefix":

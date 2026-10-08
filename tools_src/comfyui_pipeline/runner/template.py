@@ -26,8 +26,9 @@ TEMPLATE_FILE = "template.json"
 GRAPH_FORMAT = "comfyui-api"
 SCHEMA_DIR = "_schema"
 
-REQUIRED_FIELDS = ("schema_version", "id", "version", "title", "summary", "status", "graph", "provenance",
-                   "slots", "pre", "post", "frame_anchoring", "models", "capability_gate", "outputs")
+REQUIRED_FIELDS = ("schema_version", "id", "version", "title", "summary", "status", "min_comfyui_version",
+                   "requires_custom_nodes", "graph", "provenance", "slots", "pre", "post", "frame_anchoring", "models",
+                   "capability_gate", "outputs")
 OPTIONAL_FIELDS = ("status_note", "options", "constraints", "fixed_notes")
 STATUSES = ("draft", "technical_pass", "retired")
 PLATFORM_STATUSES = ("technical_pass", "untested", "unsupported")
@@ -50,12 +51,20 @@ REFERENCE_ROLES = ("identity", "selection", "none")
 TIME_ALIGNMENTS = ("source_from_frame_0", "per_source_frame")
 OUTPUT_KINDS = ("video", "image", "image_sequence")
 OUTPUT_ROLES = ("candidate", "mask", "preview")
-MODEL_KEYS = {"role", "node", "input", "filename", "path", "size_bytes", "sha256", "source", "notes", "pin_status",
-              "auto_download"}
+MODEL_KEYS = {"role", "node", "input", "filename", "path", "directory", "url", "size_bytes", "sha256", "source",
+              "notes", "pin_status", "auto_download"}
+SOURCE_KEYS = {"repo", "revision", "file"}
+# 對齊官方範本 properties.models[].url(Hugging Face 下載網址);我們固定 revision,不用 main。
+MODEL_URL = "https://huggingface.co/{repo}/resolve/{revision}/{file}"
+CUSTOM_NODE_SOURCES = ("registry", "repo")
+UPSTREAM_KINDS = ("workflow_templates", "core_blueprint", "none")
+UPSTREAM_KEYS = {"kind", "name", "blob", "comfyui_version", "note"}
 
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*(/[a-z0-9][a-z0-9_-]*)+$")
 SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+$")
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+GIT_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
+REGISTRY_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 PLATFORM_RE = re.compile(r"^[a-z0-9]+-[a-z0-9]+$")
 PLACEHOLDER_RE = re.compile(r"^__[A-Z0-9_]+__$")
 SEED_INPUTS = ("seed", "noise_seed")
@@ -226,6 +235,9 @@ def _check_header(data, template_id):
         problems.append("version 必須是 semver(例如 1.0.0)")
     if data["status"] not in STATUSES:
         problems.append(f"status 必須是 {', '.join(STATUSES)} 之一")
+    if not isinstance(data["min_comfyui_version"], str) or not SEMVER_RE.match(data["min_comfyui_version"]):
+        problems.append("min_comfyui_version 必須是 X.Y.Z(例如 0.34.0)")
+    problems.extend(_check_custom_nodes(data["requires_custom_nodes"]))
     graph = data["graph"]
     if not isinstance(graph, dict) or set(graph) != {"file", "format", "sha256", "canonical_sha256"}:
         problems.append("graph 必須剛好有 file、format、sha256、canonical_sha256")
@@ -238,6 +250,33 @@ def _check_header(data, template_id):
             if not isinstance(graph[key], str) or not SHA256_RE.match(graph[key]):
                 problems.append(f"graph.{key} 必須是 64 位小寫十六進位")
     return problems
+
+
+def _check_custom_nodes(nodes):
+    """requires_custom_nodes:[{id, source}]。source=registry 時 id 是 Comfy registry id;repo 是這個 repo 的套件。"""
+    if not isinstance(nodes, list):
+        return ["requires_custom_nodes 必須是陣列(不需要 custom node 時寫 [])"]
+    problems, seen = [], set()
+    for index, node in enumerate(nodes):
+        where = f"requires_custom_nodes[{index}]"
+        if not isinstance(node, dict) or set(node) != {"id", "source"}:
+            problems.append(f"{where}: 必須剛好有 id、source")
+            continue
+        if not isinstance(node["id"], str) or not REGISTRY_ID_RE.match(node["id"]):
+            problems.append(f"{where}: id 格式不對: {node['id']!r}")
+        elif node["id"] in seen:
+            problems.append(f"{where}: id {node['id']} 重複")
+        else:
+            seen.add(node["id"])
+        if node["source"] not in CUSTOM_NODE_SOURCES:
+            problems.append(f"{where}: source 必須是 {'／'.join(CUSTOM_NODE_SOURCES)} 之一")
+    return problems
+
+
+def parse_version(text):
+    """``0.34.0``、``v0.34.0``、``0.34.0-dev`` → (0, 34, 0);認不出來回傳 None。"""
+    match = re.match(r"^v?(\d+)\.(\d+)\.(\d+)", text.strip()) if isinstance(text, str) else None
+    return tuple(int(part) for part in match.groups()) if match else None
 
 
 # ---------- 驗證 ----------
@@ -511,8 +550,38 @@ def _validate_models(models, graph, status):
         path = model.get("path")
         if isinstance(path, str) and (path.startswith(("/", "\\")) or ":" in path or ".." in path.split("/")):
             problems.append(f"{where}: path 必須是相對 comfyui_path 的路徑(正斜線,不能有 ..)")
+        problems.extend(_check_model_location(where, model))
     if missing_pin and status == "technical_pass":
         problems.append("有模型 pin 尚未補齊(sha256 為 null),status 不能是 technical_pass")
+    return problems
+
+
+def _check_model_location(where, model):
+    """directory／url 對齊官方 properties.models,必須和 path、source 一致。兩個欄位都必填(不適用時寫 null)。"""
+    problems = [f"{where}: 缺少 {key}(不適用時寫 null)" for key in ("directory", "url") if key not in model]
+    directory, path, filename = model.get("directory"), model.get("path"), model.get("filename")
+    if directory is not None and (not isinstance(directory, str) or not directory
+                                  or directory.startswith("/") or ".." in directory.split("/")):
+        problems.append(f"{where}: directory 必須是 models/ 底下的資料夾名稱(例如 diffusion_models)或 null")
+    elif isinstance(path, str) and isinstance(filename, str):
+        if path.startswith("models/"):
+            if path != f"models/{directory}/{filename}":
+                problems.append(f"{where}: directory {directory!r} 和 path {path!r} 不一致"
+                                "(path 在 models/ 底下時必須是 models/<directory>/<filename>)")
+        elif directory is not None:
+            problems.append(f"{where}: path {path!r} 不在 models/ 底下(例如 custom node 自己的 ckpts),"
+                            "directory 要寫 null")
+    source, url = model.get("source"), model.get("url")
+    if source is not None:
+        if not isinstance(source, dict) or set(source) != SOURCE_KEYS or \
+                not all(isinstance(source[k], str) and source[k] for k in SOURCE_KEYS):
+            return problems + [f"{where}: source 必須是 null 或剛好有 repo、revision、file"]
+        if not GIT_SHA_RE.match(source["revision"]):
+            problems.append(f"{where}: source.revision 必須是 40 位 commit sha(固定版本,不能用 main)")
+        if url != MODEL_URL.format(**source):
+            problems.append(f"{where}: url 和 source 不一致,應該是 {MODEL_URL.format(**source)}")
+    elif url is not None:
+        problems.append(f"{where}: 沒有 source 時 url 必須是 null")
     return problems
 
 
@@ -548,9 +617,9 @@ def _validate_gate(gate):
 
 
 def _validate_provenance(prov, repo_root):
-    if not isinstance(prov, dict) or set(prov) != {"derived_from", "tested_source_sha256", "evidence"}:
-        return ["provenance 必須剛好有 derived_from、tested_source_sha256、evidence"]
-    problems = []
+    if not isinstance(prov, dict) or set(prov) != {"derived_from", "tested_source_sha256", "evidence", "upstream"}:
+        return ["provenance 必須剛好有 derived_from、tested_source_sha256、evidence、upstream"]
+    problems = _validate_upstream(prov["upstream"])
     if not isinstance(prov["derived_from"], str) or not prov["derived_from"]:
         problems.append("provenance.derived_from 必填")
     sha = prov["tested_source_sha256"]
@@ -568,6 +637,37 @@ def _validate_provenance(prov, repo_root):
             rel = item["path"].split("#", 1)[0]
             if not (Path(repo_root) / rel).exists():
                 problems.append(f"provenance.evidence[{index}]: repo 裡沒有 {rel}")
+    return problems
+
+
+def _validate_upstream(upstream):
+    """provenance.upstream:對應的官方範本或 core blueprint。沒有對應時 kind=none,並在 note 說明。"""
+    if not isinstance(upstream, dict) or not {"kind", "name", "blob", "comfyui_version"} <= set(upstream) \
+            or set(upstream) - UPSTREAM_KEYS:
+        return ["provenance.upstream 必須有 kind、name、blob、comfyui_version(可另加 note)"]
+    kind, note = upstream["kind"], upstream.get("note")
+    if kind not in UPSTREAM_KINDS:
+        return [f"provenance.upstream.kind 必須是 {'／'.join(UPSTREAM_KINDS)} 之一"]
+    problems = []
+    if "note" in upstream and (not isinstance(note, str) or not note):
+        problems.append("provenance.upstream.note 必須是非空字串")
+    if kind == "none":
+        if any(upstream[key] is not None for key in ("name", "blob", "comfyui_version")):
+            problems.append("provenance.upstream.kind 是 none 時,name、blob、comfyui_version 都要是 null")
+        if not note:
+            problems.append("provenance.upstream.kind 是 none 時要在 note 說明為什麼沒有對應的官方來源")
+        return problems
+    name = upstream["name"]
+    if not isinstance(name, str) or not name:
+        problems.append("provenance.upstream.name 必填")
+    elif kind == "workflow_templates" and (name.endswith(".json") or not re.match(r"^[A-Za-z0-9_.-]+$", name)):
+        problems.append("provenance.upstream.name 是官方範本名稱,不含 .json(例如 video_wan_vace_inpainting)")
+    elif kind == "core_blueprint" and not name.endswith(".json"):
+        problems.append("provenance.upstream.name 是 ComfyUI blueprints/ 裡的檔名,要含 .json")
+    if not isinstance(upstream["blob"], str) or not GIT_SHA_RE.match(upstream["blob"]):
+        problems.append("provenance.upstream.blob 必須是 40 位 git blob sha(git hash-object 的結果)")
+    if not isinstance(upstream["comfyui_version"], str) or not SEMVER_RE.match(upstream["comfyui_version"]):
+        problems.append("provenance.upstream.comfyui_version 必須是 X.Y.Z")
     return problems
 
 

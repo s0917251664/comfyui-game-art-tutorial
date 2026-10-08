@@ -1,7 +1,7 @@
 {
   "template": "video/wan-animate/move-extend",
   "case": "default",
-  "template_version": "1.1.0",
+  "template_version": "1.1.1",
   "graph_canonical_sha256": "70c470ed24c6e0198067f37ca3edfd1e045f3fc26c101a16289ac25268b5ad98",
   "values": {
     "prompt": "the robot from the reference image dances, same pose as the source video",

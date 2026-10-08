@@ -1,10 +1,12 @@
 {
   "schema_version": 1,
   "id": "video/sam3/track-mask",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "title": "SAM3 影片物件追蹤（第 0 幀手繪遮罩起手）",
   "summary": "以第 0 幀遮罩指定一個物件，SAM3 追蹤整支影片，輸出逐幀灰階遮罩（白色＝選取）",
   "status": "technical_pass",
+  "min_comfyui_version": "0.34.0",
+  "requires_custom_nodes": [],
   "graph": {
     "file": "graph.api.json",
     "format": "comfyui-api",
@@ -13,6 +15,13 @@
   },
   "provenance": {
     "derived_from": "SCAIL-2 範本中的 SAM3 節點參數（templates/video/wan-animate/scail2）",
+    "upstream": {
+      "kind": "workflow_templates",
+      "name": "video_wan21_scail2_character_replacement",
+      "blob": "1fc5602b9c54b3517ed6af320ff281d5615e9306",
+      "comfyui_version": "0.34.0",
+      "note": "只取 SCAIL-2 範本裡 SAM3 節點的參數；官方另有 utility_video_segment_sam3 範本與 core blueprint「Video Segmentation (SAM3).json」，沒有從它們派生"
+    },
     "tested_source_sha256": null,
     "evidence": [
       {
@@ -115,13 +124,15 @@
       "input": "ckpt_name",
       "filename": "sam3.1_multiplex_fp16.safetensors",
       "path": "models/checkpoints/sam3.1_multiplex_fp16.safetensors",
+      "directory": "checkpoints",
       "size_bytes": 1745546848,
       "sha256": "9ba99c92703c2e8b4f47de2d34a539bb8e18923049e238b780d70dbe6368eb03",
       "source": {
         "repo": "Comfy-Org/sam3.1",
         "revision": "7bb8374780a725b4353ed31f3a9395c9742b5621",
         "file": "checkpoints/sam3.1_multiplex_fp16.safetensors"
-      }
+      },
+      "url": "https://huggingface.co/Comfy-Org/sam3.1/resolve/7bb8374780a725b4353ed31f3a9395c9742b5621/checkpoints/sam3.1_multiplex_fp16.safetensors"
     }
   ],
   "capability_gate": {

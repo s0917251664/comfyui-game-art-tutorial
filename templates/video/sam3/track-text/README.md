@@ -1,6 +1,6 @@
 # video/sam3/track-text
 
-**SAM3 影片物件追蹤（英文文字起手）**（v1.0.0，technical_pass）
+**SAM3 影片物件追蹤（英文文字起手）**（v1.0.1，technical_pass）
 
 以英文名詞指定物件，SAM3 追蹤整支影片，輸出逐幀灰階遮罩（白色＝選取）。
 

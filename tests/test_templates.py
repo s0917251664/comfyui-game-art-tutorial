@@ -226,6 +226,140 @@ class RejectBrokenTemplatesTests(TemplateFixture, unittest.TestCase):
         self.assertRejected("video/sam3/track-mask", "video/sam3/other")
 
 
+class OfficialFieldsTests(TemplateFixture, unittest.TestCase):
+    """PR 3.2:min_comfyui_version、requires_custom_nodes、models[].directory／url、provenance.upstream。"""
+
+    MIX = "video/wan-animate/mix"
+
+    def model(self, data, role):
+        return next(m for m in data["models"] if m["role"] == role)
+
+    def rejected(self, change, fragment, template_id=MIX):
+        self.edit(template_id, change)
+        self.assertRejected(template_id, fragment)
+
+    def accepted(self, change, template_id=MIX):
+        self.edit(template_id, change)
+        return self.load(template_id)
+
+    def test_min_comfyui_version_required_and_semver(self):
+        self.rejected(lambda d: d.pop("min_comfyui_version"), "缺少必填欄位 min_comfyui_version")
+        shutil.rmtree(self.root)
+        self.rejected(lambda d: d.update(min_comfyui_version="0.34"), "min_comfyui_version 必須是 X.Y.Z")
+
+    def test_requires_custom_nodes(self):
+        cases = [
+            (lambda d: d.update(requires_custom_nodes={"id": "x"}), "requires_custom_nodes 必須是陣列"),
+            (lambda d: d["requires_custom_nodes"].append({"id": "comfyui-kjnodes", "source": "registry"}), "重複"),
+            (lambda d: d["requires_custom_nodes"].append({"id": "x", "source": "github"}), "source 必須是"),
+            (lambda d: d["requires_custom_nodes"].append({"id": "x"}), "必須剛好有 id、source"),
+            (lambda d: d["requires_custom_nodes"].append({"id": "bad id", "source": "registry"}), "id 格式不對"),
+        ]
+        for change, fragment in cases:
+            with self.subTest(fragment):
+                shutil.rmtree(self.root, ignore_errors=True)
+                self.rejected(change, fragment)
+        shutil.rmtree(self.root)
+        loaded = self.accepted(lambda d: d["requires_custom_nodes"].append({"id": "comfyui-video-layers", "source": "repo"}))
+        self.assertEqual(4, len(loaded.data["requires_custom_nodes"]))
+
+    def test_directory_must_match_path(self):
+        cases = [
+            (lambda d: self.model(d, "vae").update(directory="loras"), "directory 'loras' 和 path"),
+            (lambda d: self.model(d, "vae").update(directory=None), "directory None 和 path"),
+            (lambda d: self.model(d, "pose_bbox").update(directory="ckpts"), "directory 要寫 null"),
+            (lambda d: self.model(d, "vae").update(directory="../vae"), "directory 必須是 models/ 底下"),
+            (lambda d: self.model(d, "vae").pop("directory"), "缺少 directory"),
+        ]
+        for change, fragment in cases:
+            with self.subTest(fragment):
+                shutil.rmtree(self.root, ignore_errors=True)
+                self.rejected(change, fragment)
+
+    def test_url_must_match_source(self):
+        def other_revision(d):
+            self.model(d, "vae")["url"] = self.model(d, "vae")["url"].replace("123acf1", "0000000")
+        def unpinned_revision(d):
+            self.model(d, "vae")["source"]["revision"] = "main"
+            self.model(d, "vae")["url"] = T.MODEL_URL.format(**self.model(d, "vae")["source"])
+        def url_without_source(d):
+            self.model(d, "vae")["source"] = None
+        cases = [
+            (other_revision, "url 和 source 不一致"),
+            (unpinned_revision, "source.revision 必須是 40 位 commit sha"),
+            (url_without_source, "沒有 source 時 url 必須是 null"),
+            (lambda d: self.model(d, "vae")["source"].pop("file"), "source 必須是 null 或剛好有 repo、revision、file"),
+            (lambda d: self.model(d, "vae").pop("url"), "缺少 url"),
+        ]
+        for change, fragment in cases:
+            with self.subTest(fragment):
+                shutil.rmtree(self.root, ignore_errors=True)
+                self.rejected(change, fragment)
+        shutil.rmtree(self.root)
+        loaded = self.accepted(lambda d: self.model(d, "vae").update(source=None, url=None))
+        self.assertIsNone(self.model(loaded.data, "vae")["url"])
+
+    def test_upstream(self):
+        up = lambda d: d["provenance"]["upstream"]  # noqa: E731
+        cases = [
+            (lambda d: d["provenance"].pop("upstream"), "provenance 必須剛好有"),
+            (lambda d: up(d).update(kind="github"), "provenance.upstream.kind 必須是"),
+            (lambda d: up(d).update(blob="ee96a29c"), "40 位 git blob sha"),
+            (lambda d: up(d).update(name="video_wan2_2_14B_animate.json"), "不含 .json"),
+            (lambda d: up(d).update(kind="core_blueprint", name="Video Inpainting"), "要含 .json"),
+            (lambda d: up(d).update(comfyui_version="latest"), "comfyui_version 必須是 X.Y.Z"),
+            (lambda d: up(d).update(kind="none", name=None, blob=None, comfyui_version=None, note=None) or up(d).pop("note"),
+             "要在 note 說明"),
+            (lambda d: up(d).update(kind="none"), "name、blob、comfyui_version 都要是 null"),
+            (lambda d: up(d).update(extra=1), "provenance.upstream 必須有"),
+        ]
+        for change, fragment in cases:
+            with self.subTest(fragment):
+                shutil.rmtree(self.root, ignore_errors=True)
+                self.rejected(change, fragment)
+        for kind, name in (("core_blueprint", "Video Inpainting (Wan2.1 VACE).json"), ("none", None)):
+            with self.subTest(kind):
+                shutil.rmtree(self.root, ignore_errors=True)
+                blob = None if kind == "none" else "3eb700cb9478e00a3b8d8a7c415a36609193ac5e"
+                version = None if kind == "none" else "0.34.0"
+                loaded = self.accepted(lambda d: up(d).update(kind=kind, name=name, blob=blob, comfyui_version=version,
+                                                              note="測試"))
+                self.assertEqual(kind, loaded.data["provenance"]["upstream"]["kind"])
+
+    def test_parse_version(self):
+        self.assertEqual((0, 34, 0), T.parse_version("0.34.0"))
+        self.assertEqual((0, 34, 1), T.parse_version("v0.34.1-dev"))
+        self.assertIsNone(T.parse_version("nightly"))
+        self.assertIsNone(T.parse_version(None))
+
+
+class RealTemplateOfficialFieldsTests(unittest.TestCase):
+    """8 份 template 的 3.2 欄位值(graph hash 不變由 LoadTemplatesTests 確認)。"""
+
+    EXPECTED_VERSION = {"video/sam3/track-mask": "1.0.1", "video/sam3/track-text": "1.0.1",
+                        "video/wan-animate/mix": "1.1.1", "video/wan-animate/mix-extend": "1.1.1",
+                        "video/wan-animate/move": "1.1.1", "video/wan-animate/move-extend": "1.1.1",
+                        "video/wan-animate/scail2": "1.0.1", "video/wan-animate/scail2-extend": "1.0.1"}
+    CUSTOM = {"mix": {"comfyui_controlnet_aux", "comfyui-kjnodes", "comfyui-segment-anything-2"},
+              "move": {"comfyui_controlnet_aux"}}
+
+    def test_fields(self):
+        for template_id in ALL_IDS:
+            data = T.load_template(TEMPLATES, template_id, repo_root=ROOT).data
+            with self.subTest(template_id):
+                self.assertEqual(self.EXPECTED_VERSION[template_id], data["version"])
+                self.assertEqual("0.34.0", data["min_comfyui_version"])
+                family = template_id.rsplit("/", 1)[-1].replace("-extend", "")
+                self.assertEqual(self.CUSTOM.get(family, set()), {n["id"] for n in data["requires_custom_nodes"]})
+                upstream = data["provenance"]["upstream"]
+                self.assertEqual("workflow_templates", upstream["kind"])
+                expected_blob = ("ee96a29cbac97c89d961ba7a95f219b2326c2063" if family in ("mix", "move")
+                                 else "1fc5602b9c54b3517ed6af320ff281d5615e9306")
+                self.assertEqual(expected_blob, upstream["blob"])
+                for model in data["models"]:
+                    self.assertIsNotNone(model["url"], model["filename"])
+
+
 class ValueValidationTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -390,7 +524,8 @@ class CliTests(unittest.TestCase):
         code, out, _ = self.run_cli("show", "video/wan-animate/mix")
         self.assertEqual(0, code)
         for fragment in ("positive_points", "keep_audio", "dw-ll_ucoco_384.onnx", "724f4ff2439e", "缺檔會自動下載",
-                         "windows-cuda"):
+                         "windows-cuda", "ComfyUI: 0.34.0 以上", "comfyui-kjnodes(registry)",
+                         "官方來源: workflow_templates video_wan2_2_14B_animate  blob ee96a29cbac9"):
             self.assertIn(fragment, out)
         code, out, _ = self.run_cli("show", "video/sam3/track-text", "--json")
         self.assertEqual("video/sam3/track-text", json.loads(out)["id"])

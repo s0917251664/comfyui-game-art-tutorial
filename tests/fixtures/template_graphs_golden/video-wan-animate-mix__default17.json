@@ -1,7 +1,7 @@
 {
   "template": "video/wan-animate/mix",
   "case": "default17",
-  "template_version": "1.1.0",
+  "template_version": "1.1.1",
   "graph_canonical_sha256": "d429b607fe912fcc7f5b226ac27c3e10dbbf51ac306b6b6e46266c233c904a9c",
   "values": {
     "prompt": "the robot from the reference image dances, same pose as the source video",

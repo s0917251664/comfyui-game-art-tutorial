@@ -12,6 +12,8 @@
     "title",
     "summary",
     "status",
+    "min_comfyui_version",
+    "requires_custom_nodes",
     "graph",
     "provenance",
     "slots",
@@ -52,6 +54,37 @@
     "status_note": {
       "type": "string"
     },
+    "min_comfyui_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "對應官方範本的 minComfyUIVersion。preflight 讀 /system_stats 的 comfyui_version,較低就擋下,讀不到只提醒。目前寫實測通過的版本;要放寬必須在較舊版本實測"
+    },
+    "requires_custom_nodes": {
+      "type": "array",
+      "description": "對應官方範本的 requiresCustomNodes:graph 用到的非 core 節點所屬套件。只用 core 節點時寫 []",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "source"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$",
+            "description": "source=registry 時是 Comfy registry id(套件 pyproject.toml 的 project.name)"
+          },
+          "source": {
+            "enum": [
+              "registry",
+              "repo"
+            ],
+            "description": "repo＝這個 repo 自己的 custom node(tools_src/ 底下)"
+          }
+        }
+      }
+    },
     "graph": {
       "type": "object",
       "additionalProperties": false,
@@ -85,12 +118,59 @@
       "additionalProperties": false,
       "required": [
         "derived_from",
+        "upstream",
         "tested_source_sha256",
         "evidence"
       ],
       "properties": {
         "derived_from": {
           "type": "string"
+        },
+        "upstream": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "name",
+            "blob",
+            "comfyui_version"
+          ],
+          "description": "對應的官方來源。kind=none 時 name、blob、comfyui_version 都是 null,並在 note 說明原因",
+          "properties": {
+            "kind": {
+              "enum": [
+                "workflow_templates",
+                "core_blueprint",
+                "none"
+              ]
+            },
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "workflow_templates:範本名稱,不含 .json(例如 video_wan_vace_inpainting);core_blueprint:ComfyUI blueprints/ 裡的檔名,含 .json"
+            },
+            "blob": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "pattern": "^[0-9a-f]{40}$",
+              "description": "派生時那份官方檔案的 git blob sha(git hash-object --no-filters)"
+            },
+            "comfyui_version": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "pattern": "^\\d+\\.\\d+\\.\\d+$",
+              "description": "派生／比對時使用的 ComfyUI 版本"
+            },
+            "note": {
+              "type": "string"
+            }
+          }
         },
         "tested_source_sha256": {
           "type": [
@@ -461,9 +541,11 @@
         "input",
         "filename",
         "path",
+        "directory",
         "size_bytes",
         "sha256",
-        "source"
+        "source",
+        "url"
       ],
       "properties": {
         "role": {
@@ -484,6 +566,13 @@
             "null"
           ]
         },
+        "directory": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "對應官方 properties.models[].directory。path 在 models/ 底下時必須是 models/<directory>/<filename>;不在 models/ 底下(custom node 自己的 ckpts)時寫 null"
+        },
         "size_bytes": {
           "type": [
             "integer",
@@ -500,7 +589,33 @@
           "type": [
             "object",
             "null"
-          ]
+          ],
+          "additionalProperties": false,
+          "required": [
+            "repo",
+            "revision",
+            "file"
+          ],
+          "properties": {
+            "repo": {
+              "type": "string"
+            },
+            "revision": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{40}$"
+            },
+            "file": {
+              "type": "string"
+            }
+          },
+          "description": "Hugging Face repo、固定 commit 與檔案路徑"
+        },
+        "url": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "對應官方 properties.models[].url,必須等於 https://huggingface.co/<repo>/resolve/<revision>/<file>;沒有 source 時是 null"
         },
         "notes": {
           "type": "string"

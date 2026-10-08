@@ -16,6 +16,12 @@
 - 每個 slot／option／model 指到的節點與 input 都必須存在；graph 裡每個 `__XXX__` 占位與每個 `seed`／`noise_seed = -1` 都要有 slot 認領；兩個 slot 不能寫同一個目標（`default_from` 例外）。
 - patch 後的 graph 和原 graph 只能在「slot 目標＋已啟用 option 的目標」不同，不能新增或刪除節點，也不能改 class_type。
 - 任何 model 沒有 sha256 pin 時，template 狀態不能是 `technical_pass`。目前 8 份的模型都已 pin（`dw-ll_ucoco_384.onnx` 在 PR 2.2 補上），都是 `technical_pass`。
+- 對齊官方範本的欄位（PR 3.2，見 [ADR 2026-10-08](../docs/knowledge/decisions/2026-10-08-official-comfy-tooling.md)）：
+  - `min_comfyui_version`（對應 `minComfyUIVersion`）：目前寫實測通過的版本 0.34.0。要放寬，必須先在較舊的版本實測。
+  - `requires_custom_nodes`（對應 `requiresCustomNodes`）：`[{id, source}]`，列出 graph 用到的非 core 節點所屬套件。`source` 是 `registry`（id 用 Comfy registry id，也就是套件 `pyproject.toml` 的 `project.name`）或 `repo`（這個 repo 自己的 custom node）。只用 core 節點時寫 `[]`。
+  - `models[].directory`（對應官方的 `directory`）：`path` 在 `models/` 底下時，必須剛好是 `models/<directory>/<filename>`；不在 `models/` 底下（例如 DWPose 放在 custom node 自己的 `ckpts/`）時寫 `null`。
+  - `models[].url`（對應官方的 `url`）：必須等於 `https://huggingface.co/<source.repo>/resolve/<source.revision>/<source.file>`。`source.revision` 一定要是 40 位 commit sha，不能用 `main`；沒有 `source` 時寫 `null`。
+  - `provenance.upstream`：`{kind, name, blob, comfyui_version, note}`。`kind` 是 `workflow_templates`（`name` 寫範本名稱，不含 `.json`）、`core_blueprint`（`name` 寫 ComfyUI `blueprints/` 裡的檔名，含 `.json`）或 `none`。`blob` 是派生時那份官方檔案的 `git hash-object --no-filters` 結果；`comfyui_version` 是派生或比對時的 ComfyUI 版本。找不到對應的官方來源時寫 `kind: none`，`name`、`blob`、`comfyui_version` 都是 `null`，並在 `note` 說明原因。
 
 ## 使用
 
@@ -35,6 +41,7 @@ python tools_src/gameart.py run video/sam3/track-mask --set source_video=clip.mp
 - 平台（D6）：讀 `<comfyui_path>/tools/device_config.json` 的 `platform_key`（或 `--platform-key`；和快照不同時會提醒，preflight.json／run.result.json 兩個值都記錄）。template 對這個平台不是 `technical_pass`（含沒列出的平台）就擋下，加 `--allow-unverified-platform` 才放行；`unsupported` 一律擋下。
 - graph 寫死 `device: "cuda"` 的節點（Mix 的 node 108）在非 CUDA 平台擋下，`--allow-unverified-platform` 時降為警告；graph 不改。
 - ComfyUI `/object_info` 要有 graph 用到的每個 node class，模型 input 的選項清單要有 template 寫的檔名。
+- ComfyUI 版本（PR 3.2）：讀 `/system_stats` 的 `system.comfyui_version`，比 template 的 `min_comfyui_version` 低就擋下；讀不到或認不出版本時只提醒，不擋。
 - 模型檔 `<comfyui_path>/<path>` 存在且大小相符（D5，摘要分開列「存在」與「大小相符」）；`--verify-hashes` 才完整算 sha256，快取在 `<output-dir>/../.hash-cache.json`（沒給 `--output-dir` 時是 `<repo>/output/runs/.hash-cache.json`）。`auto_download: true` 的模型（SAM2 下載器、DWPose 的兩個 onnx）缺檔時節點會自己下載，runner 不允許，所以缺檔一定擋下。
 - slot 沒給齊時只檢查環境；給齊時另外寫出 `workflow_api.dryrun.json`。`--output-dir` 會寫 `preflight.json`。
 - 已知限制：不讀 ComfyUI 的 `extra_model_paths.yaml`，模型檔只在 `<comfyui_path>/<path>` 找。模型放在其他資料夾時 preflight 會回報找不到（`/object_info` 的選項檢查仍然有效）。

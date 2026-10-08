@@ -1,7 +1,7 @@
 {
   "template": "video/sam3/track-mask",
   "case": "default",
-  "template_version": "1.0.0",
+  "template_version": "1.0.1",
   "graph_canonical_sha256": "bce7d463f3aa43748d15f9958369d995c8a276d92e82f7baab4d01248d165141",
   "values": {},
   "options": {},

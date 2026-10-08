@@ -1,6 +1,6 @@
 # video/wan-animate/scail2
 
-**SCAIL-2 角色替換／動畫（單段 33 幀）**（v1.0.0，technical_pass）
+**SCAIL-2 角色替換／動畫（單段 33 幀）**（v1.0.1，technical_pass）
 
 用參考圖驅動角色跟著來源影片動，或把來源影片裡的人換成參考角色；SAM3 依文字追蹤人物並以彩色遮罩綁定身份。
 

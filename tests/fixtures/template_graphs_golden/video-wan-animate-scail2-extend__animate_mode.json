@@ -1,7 +1,7 @@
 {
   "template": "video/wan-animate/scail2-extend",
   "case": "animate_mode",
-  "template_version": "1.0.0",
+  "template_version": "1.0.1",
   "graph_canonical_sha256": "398a5e0194e1b68f690c203b0272ce0660392f60d850fb5b5d2012a05a54099f",
   "values": {
     "prompt": "the robot from the reference image dances, same pose as the source video",

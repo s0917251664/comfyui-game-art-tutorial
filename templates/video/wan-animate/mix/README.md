@@ -1,6 +1,6 @@
 # video/wan-animate/mix
 
-**Wan Animate Mix（單段 17／33 幀）**（v1.1.0，technical_pass）
+**Wan Animate Mix（單段 17／33 幀）**（v1.1.1，technical_pass）
 
 把參考角色置入來源影片（保留來源背景），以 SAM2 點位決定替換範圍。
 
