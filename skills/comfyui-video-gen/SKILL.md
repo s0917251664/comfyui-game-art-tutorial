@@ -11,7 +11,7 @@ description: 將短片、循環特效與鏡頭需求路由到已接入的影片 
 
 上述本機處理不需 ComfyUI server，但仍依賴 `generate.py` facade、整個 `comfyui_pipeline/` 及相關 PyAV/Pillow/NumPy runtime，不是任意平台可執行的獨立單檔。平台圖片工具只能生成靜態素材；目前沒有平台影片執行技能或已接入 provider，不能把共用 VFX 計畫當成影片執行能力。
 
-先查[工具範圍總表](../../docs/knowledge/TOOLS.md)，了解當前可用能力；本技能只用既有 CLI，不臨場組 ComfyUI graph（[R2](../../docs/knowledge/rules/fixed-graphs.md)）。Backend、模型/runtime、影格、驗收細節與實測經驗見[影片知識庫](../../docs/knowledge/video/README.md)。歷史設計（包含未實作項目）見[影片設計稿](../../docs/knowledge/video/design.md)，不可把規劃當作可用 task。
+先查[工具範圍總表](../../docs/knowledge/TOOLS.md)，了解當前可用能力；本技能只用既有 CLI，不臨場組 ComfyUI graph（[R2](../../docs/knowledge/rules/fixed-graphs.md)；新的固定 graph 走[擴充協議](../../docs/knowledge/maintenance/extension-protocol.md)）。Backend、模型/runtime、影格、驗收細節與實測經驗見[影片知識庫](../../docs/knowledge/video/README.md)。歷史設計（包含未實作項目）見[影片設計稿](../../docs/knowledge/video/design.md)，不可把規劃當作可用 task。
 
 ## 何時使用
 

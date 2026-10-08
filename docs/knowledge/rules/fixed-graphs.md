@@ -12,7 +12,7 @@ status: current
    - 手動呼叫 ComfyUI HTTP（自己上傳、`POST /prompt`）只用來除錯 runner 本身，不是產線執行方式，結果也不能代替 `run.result.json` 當證據。
    - 新的固定 graph 要先做成 template（見 [templates/README](../../../templates/README.md) 的「修改」），不要在技能文件裡另寫一套送出步驟。
 2. 不為單次需求臨場組、改接或拼接 ComfyUI graph 與節點，也不臨場改用 API、換模型或補不存在的旗標。
-3. 缺能力時如實說明目前做不到，不自動換引擎，也不用相似的 graph 或 task 頂替。需要新能力時，照 [新增能力清單](../maintenance/new-capability-checklist.md) 走。
+3. 缺能力時如實說明目前做不到，不自動換引擎，也不用相似的 graph 或 task 頂替。需要新的固定 graph 時，照 [擴充協議](../maintenance/extension-protocol.md) 走：使用者確認後，優先從官方範本或 core blueprint 派生，不要臨場組節點。其他新能力仍照 [新增能力清單](../maintenance/new-capability-checklist.md)。
 4. 研究用的一次性腳本（例如 `experiences/*/scripts/`）不是產線入口，不可當工具呼叫，也不要從裡面衍生新功能。
 5. 發現文件和實作衝突時，先核對實作並修正說明，不要為了符合舊文件而改 graph。
 

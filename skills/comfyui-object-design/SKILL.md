@@ -27,7 +27,7 @@ description: 在選定 ComfyUI 路線時，以既有圖片 task 和 Core helper 
 - `sheet` 是排版檢視圖，可統一格子與可見範圍留白，不會讓生成的多個物件自動共享風格或相同物件比例。
 - `pattern` 重複一個母圖樣，不做 seamless（無縫）接縫生成或檢查。
 - `TextOverlay` 目前只接受可列印 ASCII，不支援中文字型與一般海報排版。
-- 不得臨場組 graph（[R2](../../docs/knowledge/rules/fixed-graphs.md)），也不新增 `generate.py` task、模型或 profile。需要新生成能力時先走[新能力清單](../comfyui-new-tool-checklist/SKILL.md)。
+- 不得臨場組 graph（[R2](../../docs/knowledge/rules/fixed-graphs.md)；新的固定 graph 走[擴充協議](../../docs/knowledge/maintenance/extension-protocol.md)），也不新增 `generate.py` task、模型或 profile。需要新生成能力時先走[新能力清單](../comfyui-new-tool-checklist/SKILL.md)。
 
 
 ## 固定 CLI 範例

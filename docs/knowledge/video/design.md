@@ -6,7 +6,7 @@ status: mixed-implemented-and-planned
 # 影片產線設計稿
 
 > **狀態:第一波 CLI 已上線並實測。** 對外契約是 **task 名 + `--backend`**,不是模型名。`img2video` / `fx_loop` / `transition` / `clip_extend` / `video_concat` / `video_composite` / `character_video` / `camera_move` / `pose_drive` 都在 `generate.py`。目前 backend/runtime 契約見 [`README.md`](README.md)。
-> 實際操作走 repo 的 `skills/comfyui-video-gen/SKILL.md`（由 [工具總表](../TOOLS.md) 路由），不要臨場組節點（[R2](../rules/fixed-graphs.md)）或自動播放成品。
+> 實際操作走 repo 的 `skills/comfyui-video-gen/SKILL.md`（由 [工具總表](../TOOLS.md) 路由），不要臨場組節點（[R2](../rules/fixed-graphs.md)；新的固定 graph 走[擴充協議](../maintenance/extension-protocol.md)）或自動播放成品。
 >
 > 初稿日期:2026-08-26；文件契約校對:2026-09-15（未新增實機驗證）。本文保留歷史設計；尚未接入的構想不能作為可執行選項。
 > 分支:`feature/video-pipeline`
@@ -148,7 +148,7 @@ status: mixed-implemented-and-planned
 跟 `AGENTS.md`、`generate.py` 開頭註解同一套:
 
 - 每個 task 對應一組**鎖死大部分參數**的 ComfyUI graph,只留必要欄位可調
-- 不靠 LLM 每次臨場組節點
+- 不靠 LLM 每次臨場組節點。真的要新的固定 graph，走[擴充協議](../maintenance/extension-protocol.md)
 - 上層 skill 只把自然語言收成結構化參數
 - 目前沒預算,本機免費模型;之後有預算走 ComfyUI 內建 API 節點(Kling 等),**不重建產線**
 - 換機器至少重跑 `detect_device.py`,不要假設影片 checkpoint 檔名跟這台一樣

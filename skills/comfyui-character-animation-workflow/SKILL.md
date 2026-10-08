@@ -16,7 +16,7 @@ description: 在選定 ComfyUI 執行路線時，編排角色動作組的既有�
 ## 執行邊界
 
 - 本技能只編排流程與記錄使用者決定，不定義底層參數。角色靜幀、圖片 task 與圖片驗收走 `comfyui-art-gen`；影片 task、backend、sidecar 與影片驗收走 `comfyui-video-gen`。
-- 開始排動作前檢查本機 `image_capabilities.json` 與 `video_capabilities.json`。依知識頁處理不可用／`unverified` task；整條路線缺關鍵能力時先停下說明。不要猜 backend、改用不合需求的 task 或臨場組 ComfyUI graph（[R2](../../docs/knowledge/rules/fixed-graphs.md)）。
+- 開始排動作前檢查本機 `image_capabilities.json` 與 `video_capabilities.json`。依知識頁處理不可用／`unverified` task；整條路線缺關鍵能力時先停下說明。不要猜 backend、改用不合需求的 task 或臨場組 ComfyUI graph（[R2](../../docs/knowledge/rules/fixed-graphs.md)；新的固定 graph 走[擴充協議](../../docs/knowledge/maintenance/extension-protocol.md)）。
 - **Idle 錨定**：所有動作第一幀用已驗收 Idle 圖；Idle 循環、回到 Idle 的動作與只出不回的動作各用哪個 task、補邊與驗收量測，依 [R3 Idle 錨定](../../docs/knowledge/rules/idle-anchoring.md)。
 - **換道具**：已驗收的動作片要換道具材質或造型時，先做道具母版（`flux2_edit`＋`gameart.py vfx prop-paste`），再用 H3 `pose_drive --control-type canny` 套原片動作，見 [vfx-tools §4](../../docs/knowledge/video/vfx-tools.md#4-換道具材質造型先定母版再整幀套原片動作)；整幀重新生成，角色要重新驗收。
 - 母圖定稿與代表動作的順序依共用製作流程；本機 `pose_drive` 另須準備與動作片首幀姿勢／方向接近且已驗收的目標角色靜幀。
