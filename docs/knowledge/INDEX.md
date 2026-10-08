@@ -52,6 +52,7 @@ status: current
 
 - [生效中決策](DECISIONS.md)
 - [日期化決策紀錄](decisions/)
+- [ADR 2026-10-08：物件組裝改本機 Pillow，BiRefNet 去背留在 repo](decisions/2026-10-08-local-design-and-birefnet.md)
 - [ADR 2026-10-08：圖片 template 採方案 A，每個家族一份固定 graph](decisions/2026-10-08-image-template-variants.md)
 - [ADR 2026-10-08：不採用 comfy-cli／comfy-mcp，只對齊官方範本欄位與 core blueprints](decisions/2026-10-08-official-comfy-tooling.md)
 - [ADR 2026-10-08：影片 template 一份 graph，不按平台複製模型檔](decisions/2026-10-08-video-model-pins.md)

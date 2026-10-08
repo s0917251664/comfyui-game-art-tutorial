@@ -181,7 +181,7 @@ class GenerateTests(unittest.TestCase):
             image_runtime.build_inpaint(self.ctx, "x", "image.png", "mask.png", denoise=-0.1)
 
     def test_generate_entry_reexports_names_used_by_other_tools(self):
-        # comfyui_design / face_swap / video_layers 以 generate.<名稱> 讀取這些(唯讀)。
+        # face_swap / video_layers 以 generate.<名稱> 讀取這些(唯讀)。
         for name in ("main", "resolve_comfy_url", "validate_timeout", "submit_and_wait", "download_outputs",
                      "upload_image", "_fetch_comfy_object_info", "check_image_graph_against_object_info"):
             self.assertTrue(callable(getattr(self.generate, name)), name)
