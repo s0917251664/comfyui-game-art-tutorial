@@ -16,7 +16,7 @@ Wan Animate 是已安裝的獨立 ComfyUI 原生能力：Mix 將參考角色置�
 template 在 repo 頂層 `templates/video/wan-animate/<名稱>/`，下面以 id（例如 `video/wan-animate/mix`）稱呼。`python tools_src/gameart.py run show <id>` 會列出可填的 slot、option、模型 pin 與平台狀態。
 
 - 一般角色替換／動作驅動，片長 ≤ 33 幀：`video/wan-animate/mix`／`video/wan-animate/move`。
-- 需要 61 幀（約 3.8 秒）：`video/wan-animate/mix-extend`／`video/wan-animate/move-extend`。更長的片段沒有 template，停止並告知，不要臨場複製延伸節點。
+- 需要 61 幀（約 3.8 秒）：`video/wan-animate/mix-extend`／`video/wan-animate/move-extend`。更長的片段沒有 template，停止並告知，不要臨場複製延伸節點。真的要新的固定 graph，走[擴充協議](../../docs/knowledge/maintenance/extension-protocol.md)。
 - 要保留來源音訊：加 `--option keep_audio`。要改寬高：填 `width`／`height` slot（只實測過 384×384 與 384×640）。
 - 使用者指定 SCAIL-2，或需要多角色／依顏色綁定身份的替換：讀 [scail2.md](references/scail2.md)，用 `video/wan-animate/scail2`／`scail2-extend`。不要因 Wan Animate 結果不佳就自動改跑 SCAIL-2，反之亦然。
 
@@ -35,4 +35,4 @@ template 在 repo 頂層 `templates/video/wan-animate/<名稱>/`，下面以 id�
 6. 人工檢視：打開 `keyframes/` 的三張圖與 `outputs/video/` 的影片，依 brief 逐項檢查；延伸段一定要看第 32／33 幀前後的接縫（runner 也會在 warnings 提醒）。依[測試紀錄模板](../../docs/knowledge/video/templates/animation-test-record.md)記錄結果。
 7. 交給美術審核者：用 `<py> tools_src/gameart.py review list <run 資料夾>` 列出候選。只有使用者確認後才執行 `review accept|reject <輸出檔> --by <決定的人>`；agent 不可自行 accept。審核前一律是 candidate。
 
-不得臨場另組或改接節點圖、繞過 runner 直接送 JSON、改模型 profiles 或假裝能力已接入 `generate.py`（[R2](../../docs/knowledge/rules/fixed-graphs.md)）。不覆寫舊候選（每次 run 都是新資料夾）、不因瑕疵自動重送。brief 與受控比較方式見[動畫 brief 模板](../../docs/knowledge/video/templates/animation-brief.md)及[評估筆記](../../docs/knowledge/video/animation-evaluation.md)。
+不得臨場另組或改接節點圖、繞過 runner 直接送 JSON、改模型 profiles 或假裝能力已接入 `generate.py`（[R2](../../docs/knowledge/rules/fixed-graphs.md)；新的固定 graph 走[擴充協議](../../docs/knowledge/maintenance/extension-protocol.md)）。不覆寫舊候選（每次 run 都是新資料夾）、不因瑕疵自動重送。brief 與受控比較方式見[動畫 brief 模板](../../docs/knowledge/video/templates/animation-brief.md)及[評估筆記](../../docs/knowledge/video/animation-evaluation.md)。

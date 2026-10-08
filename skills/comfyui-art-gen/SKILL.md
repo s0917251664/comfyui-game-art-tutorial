@@ -13,7 +13,7 @@ description: 執行 ComfyUI 遊戲圖片既有 task，負責本機能力檢查�
 
 每次先看[工具範圍總表](../../docs/knowledge/TOOLS.md)，再按任務只查本技能與 vault 的相關頁面；不要讀入整個知識庫。把自然語言需求轉成 `generate.py` 的固定 task 與必要參數；目標是可重複產圖，不臨場組 graph（[R2](../../docs/knowledge/rules/fixed-graphs.md)；新的固定 graph 走[擴充協議](../../docs/knowledge/maintenance/extension-protocol.md)）。適用於概念圖、角色／姿勢圖、構圖控制、局部修改、材質變體、圖示與去背。
 
-不適用於整張 UI 版面、Logo／中文字排版、影片或尚未接入的能力。單一 UI 圖示可用 `icon_asset`。影片需求改讀 [comfyui-video-gen](../comfyui-video-gen/SKILL.md)。未有 task 覆蓋的重複生產需求，依 [新能力清單](../comfyui-new-tool-checklist/SKILL.md) 評估；不可把圖片 task 假裝成影片或自行接線替代。
+不適用於整張 UI 版面、Logo／中文字排版、影片或尚未接入的能力。單一 UI 圖示可用 `icon_asset`。影片需求改讀 [comfyui-video-gen](../comfyui-video-gen/SKILL.md)。未有 task 覆蓋的重複生產需求，新的固定 graph 走[擴充協議](../../docs/knowledge/maintenance/extension-protocol.md)，其他新能力依 [新能力清單](../comfyui-new-tool-checklist/SKILL.md) 評估；不可把圖片 task 假裝成影片或自行接線替代。
 
 物件展示合成、物件候選檢視表或單圖樣重複，可按需讀[物件與平面素材流程](../comfyui-object-design/SKILL.md)；其中固定 Core graph 只組合既有輸入，不新增生成 task。中文排版仍交給外部排版工具。
 

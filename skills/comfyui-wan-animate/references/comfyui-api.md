@@ -62,7 +62,7 @@ Move 不給 SAM points，也不接來源角色遮罩或沿用來源背景要求�
 
 - seed：`seed_segment2` 預設等於 `seed`；沒有特別理由時不要分開。兩個 seed 都會寫進 manifest。
 - Mix 的點位、遮罩、背景對整段 61 幀共用，點位以第一幀判定，仍要抽查後段人物沒有離開遮罩。
-- 只有兩段的固定 templates。需要更長的片段時停止並告知，不要臨場複製延伸節點；可以分多次兩段輸出各自驗收，或由維護者另做並實測新的 template。
+- 只有兩段的固定 templates。需要更長的片段時停止並告知，不要臨場複製延伸節點；可以分多次兩段輸出各自驗收，或由維護者照[擴充協議](../../../docs/knowledge/maintenance/extension-protocol.md)另做並實測新的 template。
 - 接縫幀（第 32、33 幀前後）是必要的人工檢查點，runner 會寫進 warnings。
 
 ## 音訊保留
