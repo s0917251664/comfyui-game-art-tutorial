@@ -269,7 +269,13 @@ def write_manifest_atomic(path, manifest):
             stream.flush()
             os.fsync(stream.fileno())
         # Hard-link creation is atomic and fails if a destination appeared since validation.
-        os.link(temp_path, path)
+        try:
+            os.link(temp_path, path)
+        except FileExistsError:
+            raise
+        except (OSError, NotImplementedError, AttributeError):
+            # exFAT／部分網路磁碟不支援 hard link:改用 O_EXCL 建檔,仍然不會覆寫既有檔案。
+            _create_exclusive(path, payload)
     except FileExistsError as exc:
         raise FileExistsError(f"拒絕覆寫既有 result manifest: {path}") from exc
     finally:
@@ -278,3 +284,18 @@ def write_manifest_atomic(path, manifest):
         except FileNotFoundError:
             pass
     return path
+
+
+def _create_exclusive(path, payload):
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0), 0o644)
+    try:
+        with os.fdopen(fd, "wb") as stream:
+            stream.write(payload)
+            stream.flush()
+            os.fsync(stream.fileno())
+    except BaseException:
+        try:
+            os.unlink(path)
+        except OSError:
+            pass
+        raise
