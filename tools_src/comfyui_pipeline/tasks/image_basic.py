@@ -1,5 +1,5 @@
 """基本圖片 task:concept(文生圖)、icon_asset(去背小圖示)、refine(圖生圖精修)。"""
-from .. import image_runtime
+from .. import image_from_template, image_runtime
 from ..image_graphs import validate_unit_interval
 from ._common import validate_explore_args
 
@@ -61,7 +61,13 @@ def check_capabilities(ctx, args):
 
 
 def build_graph(ctx, args, style_checkpoint, upload):
-    """組圖片 task 的 graph;``upload`` 回傳 ComfyUI 端檔名。"""
+    """組圖片 task 的 graph;``upload`` 回傳 ComfyUI 端檔名。
+
+    sdxl 走 template。sd15 的 template 目錄不存在時沿用下面的 builder，graph 不變。
+    """
+    built = image_from_template.graph_from_template(ctx, args, style_checkpoint, upload)
+    if built is not None:
+        return built
     if args.task == "concept":
         prompt, out_id = image_runtime.build_concept(ctx, args.prompt, args.negative, args.width, args.height, args.seed,
                                         batch_size=args.batch, lora_name=args.lora, lora_strength=args.lora_strength,

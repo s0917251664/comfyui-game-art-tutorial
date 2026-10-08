@@ -1,7 +1,8 @@
 """圖片 task 的結構旗標 → template id。
 
-第 5 階段的薄轉接用這支選 template，再填 slot。現在不改 ``tasks/*.py`` 的
-``build_graph``，生成路徑仍走 builder。
+第 5.1 階段的 concept、icon_asset、refine、character_action、pose_only、style_lock
+用這支選 template，再由 ``image_from_template`` 填 slot。
+sd15 那 13 份目錄還沒落地時，concept／icon_asset／refine 仍走 builder。
 
 id 規則（方案 A，每種會增刪或更換節點的組合各一份）:
 ``image/<family>/<task 詞幹>[-union-<type>|-<type>][-structure][-appearance][-lora][-transparent]``。
