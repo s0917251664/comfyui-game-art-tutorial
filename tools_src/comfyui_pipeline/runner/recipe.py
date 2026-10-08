@@ -40,8 +40,9 @@ STEP_ID_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 INPUT_NAME_RE = STEP_ID_RE
 SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+$")
 ARG_KEY_RE = re.compile(r"^--[a-z0-9][a-z0-9-]*$")
-REF_RE = re.compile(
-    r"^\{(inputs\.[a-z][a-z0-9_]*|steps\.[a-z][a-z0-9_]*\.(?:outputs\.[a-z][a-z0-9_]*|dir))\}$")
+_REF_BODY = r"inputs\.[a-z][a-z0-9_]*|steps\.[a-z][a-z0-9_]*\.(?:outputs\.[a-z][a-z0-9_]*|dir)"
+REF_RE = re.compile(r"^\{(" + _REF_BODY + r")\}$")
+EMBEDDED_REF_RE = re.compile(r"\{(" + _REF_BODY + r")\}")
 TOKEN_RE = re.compile(r"\{[^{}]*\}")
 TRUE_WORDS = {"true", "1", "yes", "on"}
 FALSE_WORDS = {"false", "0", "no", "off"}
@@ -938,14 +939,21 @@ def _ensure_confirmation(state, step, index, look_at):
 
 
 def resolve_value(value, state):
+    """整段剛好是一個參考時保留原型別（seed 仍是整數）。
+
+    前後還有文字時，把每個參考代成字串。代不掉的大括號是錯誤，不留原文。
+    """
     if not isinstance(value, str):
         return value
     match = REF_RE.fullmatch(value)
     if match:
         return _lookup(match.group(1), state)
-    if "{" in value or "}" in value:
-        return REF_RE.sub(lambda item: str(_lookup(item.group(1), state)), value)
-    return value
+    if "{" not in value and "}" not in value:
+        return value
+    expanded = EMBEDDED_REF_RE.sub(lambda item: str(_lookup(item.group(1), state)), value)
+    if TOKEN_RE.search(expanded) or expanded.count("{") != expanded.count("}"):
+        raise RecipeError(f"參考沒有展開: {value!r}")
+    return expanded
 
 
 def _try_resolve(value, state):

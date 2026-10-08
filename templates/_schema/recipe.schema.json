@@ -190,7 +190,8 @@
           "description": "沒有確認就停。要寫清楚使用者該看什麼"
         },
         "look_at": {
-          "type": "string"
+          "type": "string",
+          "description": "確認時要看的路徑。可以是整段參考，或把 {steps.步驟.dir} 嵌在路徑裡。執行到確認點才展開。"
         }
       }
     },
@@ -211,7 +212,7 @@
         },
         "command": {
           "type": "string",
-          "description": "本機指令,例如 gameart.py vfx luma-alpha。不呼叫 ComfyUI"
+          "description": "本機指令,例如 gameart.py vfx luma-alpha。可嵌 {inputs.名稱}。執行時展開;dry-run 仍顯示來源。不呼叫 ComfyUI"
         },
         "args": {
           "type": "object",

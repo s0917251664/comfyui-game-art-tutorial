@@ -192,7 +192,7 @@ class RecipeCatalogTests(unittest.TestCase):
         self.assertEqual(["local", "confirm", "local"], [step["kind"] for step in steps])
         self.assertIn("luma-alpha", payload["inputs"]["method"]["enum"])
         self.assertIn("chroma-alpha", payload["inputs"]["method"]["enum"])
-        self.assertIn("{inputs.method}", steps[0]["command"])
+        self.assertIn("{inputs.method}", steps[0]["command"])  # dry-run 顯示來源，不展開
         self.assertLess(steps[1]["index"], steps[2]["index"])
         self.assertIn("pack", steps[2]["command"])
         self.assertTrue(steps[1]["confirmation_point"])
@@ -241,6 +241,42 @@ class RecipeCatalogTests(unittest.TestCase):
             self.assertIn("沒有 slot image", err)
 
 
+class ReferenceExpansionTests(unittest.TestCase):
+    def test_embedded_ref_expands_and_whole_ref_keeps_type(self):
+        state = {
+            "inputs": {"method": "luma-alpha", "video": "fx.mp4", "seed": 7},
+            "steps": [{"id": "track", "dir": "C:/runs/00-track", "outputs": {"masks": "C:/runs/masks"}}],
+        }
+        self.assertEqual(7, R.resolve_value("{inputs.seed}", state))
+        self.assertEqual(
+            "C:/runs/00-track/keyframes/mask_preview.png",
+            R.resolve_value("{steps.track.dir}/keyframes/mask_preview.png", state))
+        self.assertEqual("gameart.py vfx luma-alpha", R.resolve_value("gameart.py vfx {inputs.method}", state))
+        with self.assertRaises(R.RecipeError):
+            R.resolve_value("gameart.py vfx {inputs.missing}", state)
+        with self.assertRaises(R.RecipeError):
+            R.resolve_value("gameart.py vfx {not-a-ref}", state)
+
+    def test_fx_alpha_run_expands_method_before_confirm(self):
+        executor, clock = FakeExecutor(), Clock()
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp) / "run"
+            code, out, err = run_cli(
+                ["run", "fx-alpha-export", "--draft", "--output-dir", str(folder),
+                 "--set", "video=fx.mp4", "--set", "method=luma-alpha"],
+                executor=executor, clock=clock)
+            self.assertEqual(0, code, err)
+            self.assertIn("等待確認", out)
+            self.assertEqual(1, len(executor.calls))
+            call = executor.calls[0]
+            self.assertEqual("local", call["kind"])
+            self.assertEqual("gameart.py vfx luma-alpha", call["command"])
+            self.assertEqual("fx.mp4", call["args"]["--input"])
+            self.assertNotIn("{inputs.method}", call["command"])
+            state = json.loads((folder / "recipe.state.json").read_text(encoding="utf-8"))
+            self.assertEqual(state["steps"][0]["outputs"]["frames"], state["confirmations"][0]["look_at"])
+
+
 class ConfirmationTests(unittest.TestCase):
     def test_object_mark_stops_until_confirm_then_runs_next_template(self):
         executor, clock = FakeExecutor(), Clock()
@@ -273,6 +309,9 @@ class ConfirmationTests(unittest.TestCase):
             self.assertEqual(first["outputs"]["masks"], done["outputs"]["masks"])
             self.assertFalse(state["confirmations"][0]["confirmed"])
             self.assertEqual("pending", state["confirmations"][0]["content_review"])
+            preview = done["dir"] + "/keyframes/mask_preview.png"
+            self.assertEqual(preview, state["confirmations"][0]["look_at"])
+            self.assertIn("請看: " + preview, out)
             self.assertNotIn("accept", (folder / "recipe.state.json").read_text(encoding="utf-8"))
 
             code, out, err = run_cli(["resume", str(folder)], executor=executor, clock=clock)

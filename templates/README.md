@@ -130,7 +130,8 @@ python tools_src/gameart.py recipe resume DIR --confirm
 
 - `list`：列出一般指令會跑到的 recipe。`--draft` 才連 `_drafts/` 一起列。
 - `show <id>`：顯示輸入與每一步。引用的 template 還沒登記也不會失敗。template 已登記時，recipe 寫的 slot 名稱必須存在；對不上會失敗。
-- `run <id> --dry-run`：展開每一步用哪個 template、確認點在哪。不連線、不 queue。還沒登記的 template 標 `unresolved`，不檢查 slot。已登記但 `executable` 為 false 的步驟標 `described`，不會送出。
+- `run <id> --dry-run`：展開每一步用哪個 template、確認點在哪。不連線、不 queue。還沒登記的 template 標 `unresolved`，不檢查 slot。已登記但 `executable` 為 false 的步驟標 `described`，不會送出。dry-run 顯示來源裡的 `{...}`，不代入值。
+- 真正執行時，整段剛好是一個參考的值保留原型別（seed 仍是整數）。嵌在路徑或本機指令裡的參考會代成文字，例如確認點的 `look_at` 變成該步目錄加上 `/keyframes/mask_preview.png`。
 - `run <id> --set KEY=VALUE --output-dir DIR`：寫入 state，跑到下一個確認點就停。若這一步需要 ComfyUI 但沒有接上執行器，不送出、停在確認點之前（`status` 為 `blocked`）。若第一步就是確認點，寫 state、結束碼 0，並印出「等待確認」。
 - `resume DIR`：沒有 `--confirm` 時，不得執行確認點之後的步驟。`resume DIR --confirm` 才把目前這個確認點記下來並繼續。這不是美術接受；內容審查仍是 pending（見 [R1](../docs/knowledge/rules/candidate-review.md)）。
 
