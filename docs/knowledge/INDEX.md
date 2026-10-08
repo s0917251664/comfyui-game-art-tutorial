@@ -79,6 +79,7 @@ repo 附最小 `.obsidian/app.json` 和 `core-plugins.json`，使用檔案瀏覽
 
 ## 技能庫與執行路線維護
 
+- [重構交付脈絡 2026-10-08](maintenance/restructure-delivery-2026-10-08.md)：第 3–8 階段的完整交付說明，給人讀。
 - [重構進度 2026-10-08](maintenance/restructure-progress-2026-10-08.md)：第 3–8 階段做到哪、已 push 的 SHA、審查結論、未完成項。接手時先讀。
 - [重構交接：第 3–8 階段](maintenance/restructure-handoff.md)：Windows 本機 agent 的必守規則、PR 流程、各階段 PR 計畫與回報格式。
 - [技能庫現況與路線界線](maintenance/skill-library.md)：17 個美術技能現行實作、直接 API 與後續候選。
