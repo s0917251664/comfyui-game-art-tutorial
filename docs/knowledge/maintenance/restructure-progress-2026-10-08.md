@@ -19,9 +19,9 @@ status: current
 - 不 `review accept|reject`，不 `validation approve`。`content_review` 維持 pending。
 - 不下載 `dreamshaper_8.safetensors`，不發明 SD1.5 的 hash，不寫 `templates/image/sd15/`。
 - 不重跑已經通過的實機（3.4、3.5、6.3）。不把 draft recipe 升成 `technical_pass`。
-- 不硬砍 ComfyUI，不呼叫 `/interrupt`，不清 queue。現在 v0.34.0 在 `127.0.0.1:8188` 跑著（背景任務 `01a11a78-a3b6-73e2-9286-b2f7fefc0c54`）。這次中斷點之前 queue 是空的；下次要 queue 或 deploy 前再查一次。
+- 不硬砍 ComfyUI，不呼叫 `/interrupt`，不清 queue。8188 已由使用者停止（背景任務 `01a11a78-a3b6-73e2-9286-b2f7fefc0c54`）。沒有另外要求就不要重開。停掉之前那一輪實機結束時 queue 是空的；下次要 queue 或 deploy 前再確認行程與 queue。
 - 5.1 與 7.2 的工作區仍有未追蹤的 `HANDOFF-phase3-8.md` 和 `WIKI.md` 刪除。不要把這兩項加進任何 commit。
-- 不 `deploy --yes`。8.2 只改了 repo，執行中的 8188 仍是舊節點名。
+- 不 `deploy --yes`。8.2 只改了 repo，本機已部署的節點仍是舊名稱。8188 目前沒有在跑。
 - 文件引用本機證據只用純文字路徑，不寫成連結。
 
 ## 線怎麼疊
