@@ -29,7 +29,7 @@
 | 本專案編修映射的舊入口 | `game-art-edit-brief/SKILL.md` | 共用方法轉交 workflow；只保留 ComfyUI 輸入映射與平台交接 |
 | 五個本機圖片檔案操作 | `local-image-edit-tools/SKILL.md` | 可接任一來源的原始檔；只需 Python、Pillow、NumPy 與檔案存取 |
 | 固定輸入的 ComfyUI 參數比較 | `comfyui-image-sweep/SKILL.md` | 只有明確比較需求才讀 plan 格式；不是通用平台重試 |
-| 物件固定 Core 合成 | `comfyui-object-design/SKILL.md` | 使用共用系列方法；執行仍需要 Core schema／server 與既有 helper |
+| 物件 Pillow 合成 | `comfyui-object-design/SKILL.md` | 使用共用系列方法；本機 Pillow／NumPy 與 `image_edit_tools.py`，不需 ComfyUI server |
 | 影片生成／接片／綠幕／抽幀 | `comfyui-video-gen/SKILL.md` | 共用 VFX 需求與實際 task/backend 分開；本機處理也有 facade/package 依賴 |
 | 角色動作組的本機執行編排 | `comfyui-character-animation-workflow/SKILL.md` | 使用共用動作方法，再接圖片／影片及抽幀契約 |
 | SAM 影片遮罩／ordered layer compose | `comfyui-video-layers/SKILL.md` | 與生成、綠幕合成分開 gate；只讀相應 segment 或 compose 契約 |
@@ -79,7 +79,7 @@
 - **`sam_segment.py`**：固定 SAM 2.1 small 的候選遮罩、預覽及 cutout；需相應權重與 runtime，不是只處理普通 PNG 的免依賴工具。它是候選來源，不是已確認遮罩，使用前要人工驗收。
 - **`image_edit_tools.py`**：`composite` 在已確認 Alpha mask 內合成生成結果、`compare` 做 RGBA byte 差異、`recolor` 在遮罩內調整符合條件可見像素色相、`reference-board` 排列用途標籤、`asset-audit` 檢查 Alpha／尺寸／碰邊。這五個命令依賴本機 Pillow/NumPy，不需 ComfyUI server。`sweep` 同檔中的另一命令依賴 ComfyUI task、config 與能力 gate，對白名單 task 做固定輸入有限比較；不是通用重試。工具均非語意理解或自動美術評分。
 - **`layer_split`**：由 ComfyUI Core 做遮罩裁切，不需生成底模；仍屬 ComfyUI task 入口與契約，不應歸入免 ComfyUI 的本機 Pillow/NumPy 工具。
-- **`comfyui_design.py` 物件 helper**：`scene` 將透明物件放上不透明背景、`sheet` 排多個透明素材供檢視、`pattern` 重複單一透明圖樣。依賴 ComfyUI Core 的固定確定性合成，非生成 task；輸出不透明 RGB，不重打光、不保證 seamless，也不替多個生成物統一風格。
+- **`comfyui_design.py` 物件 helper**：`scene` 將透明物件放上不透明背景、`sheet` 排多個透明素材供檢視、`pattern` 重複單一透明圖樣。本機 Pillow 確定性合成，不組 ComfyUI graph、不 upload、不 queue，非生成 task；輸出不透明 RGB，不重打光、不保證 seamless，也不替多個生成物統一風格。
 
 `image_edit_tools.py sweep` 應作為獨立的 ComfyUI task 比較職責路由。其 CLI 仍是既有腳本 `image_edit_tools.py sweep`，會呼叫 `refine`、`inpaint`、`guided_inpaint` 或 `character_action`，最多 16 個候選並依 task validation gate 執行。它沿用 ComfyUI 產線能力與本機參數，不是平台 Agent 通用重試機制；詳細規則見專用的 ComfyUI sweep 技能。
 

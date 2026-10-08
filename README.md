@@ -15,7 +15,7 @@
 |---|---|---|
 | 概念圖、道具、圖示、角色圖 | 釐清用途、主體、參考來源與交付條件 | 初次使用或尚未選引擎先走[初始化技能](skills/game-art-initialize/SKILL.md)；已選／已配置路線依其 gate 執行。平台圖片能力依當下工具 schema 確認，不需本機 GPU/config。 |
 | 編修既有圖片、多參考圖、指定局部或保留角色結構 | 標示每張參考圖職責，寫清修改與保留項及版本 | 先讀[共用工作流程](skills/game-art-workflow/SKILL.md)，再選 [ComfyUI 圖片技能](skills/comfyui-art-gen/SKILL.md)或[平台圖片技能](skills/platform-image-gen/SKILL.md)。工具不支援的輸入要列明，不能只靠提示文字假裝可控。 |
-| 物件系列、展示圖、檢視表或重複圖樣 | 先驗收單件，再依規則擴展系列；`scene`、`sheet`、`pattern` 是不同展示目的 | 製作方法見[共用 production reference](skills/game-art-workflow/references/production.md)；現有 `comfyui_design.py` 是依賴 ComfyUI Core 的固定合成 helper，不生成物件，輸出為不透明 RGB。 |
+| 物件系列、展示圖、檢視表或重複圖樣 | 先驗收單件，再依規則擴展系列；`scene`、`sheet`、`pattern` 是不同展示目的 | 製作方法見[共用 production reference](skills/game-art-workflow/references/production.md)；現有 `comfyui_design.py` 是本機 Pillow 合成 helper，不生成物件、不組 ComfyUI graph，輸出為不透明 RGB。 |
 | 本機 PNG 素材處理 | 對齊尺寸和遮罩契約，保留來源並人工檢查輸出 | `image_edit_tools.py` 的 `composite`、`recolor`、`compare`、`reference-board`、`asset-audit` 五個操作使用 Pillow／NumPy，不需 GPU、ComfyUI server 或 `local_config.json`；需要可執行 Python 並取得實際圖片檔。 |
 | 固定來源的有限參數比較 | 來源、prompt、seed 和參考固定，只比較事先列明的參數 | 由[ComfyUI sweep 技能](skills/comfyui-image-sweep/SKILL.md)處理；它呼叫既有 `image_edit_tools.py sweep`，需 ComfyUI task 與本機能力 gate，不是一般重試功能。 |
 | 靜態或短動態特效、角色動作集合 | 先定效果外觀、起訖／循環條件或角色母圖與代表動作，再逐支驗收 | 共用製作方法見 [production reference](skills/game-art-workflow/references/production.md)；ComfyUI 影片技能只使用已接入 task。平台影片生成目前未整合，圖片工具不能代替影片工具。影片驅動角色或影片角色替換可用[Wan Animate／SCAIL-2 技能](skills/comfyui-wan-animate/SKILL.md)，固定 template，以 `gameart.py run` 執行。 |
@@ -94,7 +94,7 @@ python -m pytest
 | [產影片技能](skills/comfyui-video-gen/SKILL.md) / [單角色動畫](skills/comfyui-character-animation-workflow/SKILL.md) | ComfyUI 影片 task、backend 與角色動作交付 |
 | [安裝流程](skills/comfyui-install/SKILL.md) / [模型清單](docs/knowledge/installation/models-and-sources.md) | 新機器環境與模型準備 |
 | [模型設定檔設計](docs/model-profiles-design.md) | SDXL／SD1.5 設定檔與平台驗證狀態 |
-| [本機圖片工具](skills/local-image-edit-tools/SKILL.md) / [物件組裝](skills/comfyui-object-design/SKILL.md) / [工具總表](docs/knowledge/TOOLS.md) | 本機像素操作、固定 Core 組裝與能力入口 |
+| [本機圖片工具](skills/local-image-edit-tools/SKILL.md) / [物件組裝](skills/comfyui-object-design/SKILL.md) / [工具總表](docs/knowledge/TOOLS.md) | 本機像素操作、Pillow 物件組裝與能力入口 |
 | [單一物件換色紀錄](docs/knowledge/art/single-object-color.md) | HSV 色相旋轉案例與限制 |
 | [已驗證版本](docs/tested-versions.md) | commit、套件版本、模型 SHA-256 與 smoke test 紀錄 |
 

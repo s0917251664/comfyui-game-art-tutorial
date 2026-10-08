@@ -54,5 +54,5 @@
 - [`教學.md`](教學.md)：環境建置、功能地圖與設備／預算選型。
 - [`docs/knowledge/TOOLS.md`](docs/knowledge/TOOLS.md)：能力、執行方式、狀態及文件路由；[`docs/knowledge/INDEX.md`](docs/knowledge/INDEX.md)：知識庫導覽。
 - [`local_config.json`](local_config.json)：本機 ComfyUI 路徑，不進版控；依所選 executor 核對設定與依賴，缺此檔不代表需要安裝。
-- `workflows/` 是不進版控的選用 UI 除錯／開發參考，不要求每個 task 補檔。ComfyUI Core 合成／裁切、手繪遮罩服務、SAM 與純圖片工具依賴不同，不能統稱為免 ComfyUI。
+- `workflows/` 是不進版控的選用 UI 除錯／開發參考，不要求每個 task 補檔。ComfyUI Core 裁切（`layer_split`）、本機 Pillow 物件組裝、手繪遮罩服務、SAM 與純圖片工具依賴不同，不能統稱為免 ComfyUI。
 - Wan Animate 安裝、執行契約與驗收狀態見 [`skills/comfyui-wan-animate/SKILL.md`](skills/comfyui-wan-animate/SKILL.md) 及其連結的主紀錄 [`docs/knowledge/video/wan-animate-install.md`](docs/knowledge/video/wan-animate-install.md)。

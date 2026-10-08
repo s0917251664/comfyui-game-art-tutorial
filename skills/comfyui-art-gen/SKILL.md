@@ -15,7 +15,7 @@ description: 執行 ComfyUI 遊戲圖片既有 task，負責本機能力檢查�
 
 不適用於整張 UI 版面、Logo／中文字排版、影片或尚未接入的能力。單一 UI 圖示可用 `icon_asset`。影片需求改讀 [comfyui-video-gen](../comfyui-video-gen/SKILL.md)。未有 task 覆蓋的重複生產需求，新的固定 graph 走[擴充協議](../../docs/knowledge/maintenance/extension-protocol.md)，其他新能力依 [新能力清單](../comfyui-new-tool-checklist/SKILL.md) 評估；不可把圖片 task 假裝成影片或自行接線替代。
 
-物件展示合成、物件候選檢視表或單圖樣重複，可按需讀[物件與平面素材流程](../comfyui-object-design/SKILL.md)；其中固定 Core graph 只組合既有輸入，不新增生成 task。中文排版仍交給外部排版工具。
+物件展示合成、物件候選檢視表或單圖樣重複，可按需讀[物件與平面素材流程](../comfyui-object-design/SKILL.md)；其中 Pillow 合成只組合既有輸入，不新增生成 task，也不組 ComfyUI graph。中文排版仍交給外部排版工具。
 
 使用者要先整理多參考圖、局部編修、角色／結構保留需求時，可按需讀[遊戲圖片編修需求整理](../game-art-edit-brief/SKILL.md)；該技能只整理 brief，task 選擇與能力 gate 仍依本技能。
 
