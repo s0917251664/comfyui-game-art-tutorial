@@ -40,7 +40,7 @@ status: current
 4. **6.2 落地的影片 template 是 18 份，不是計畫表上的 5 個 graph 名稱。** 多出來的是同一批影片 task 的結構組合（有無尾幀、不同姿態條件、不同張數）。狀態仍是 draft。
 5. **6′.3 原表寫等使用者決定。** 這次定成：`scene`／`sheet`／`pattern` 改純 Pillow；`birefnet-alpha` 留在 repo，不部署。ADR 在 6′ 那條分支，還沒出現在 `132201f` 的決策索引裡。
 6. **兩次審查先退回再通過。** 6.4 的內嵌參考不會展開；5.1 省略 `--seed` 時會抽兩次亂數。都是在原分支加新 commit 修好，沒有 rebase。
-7. **8.2 只改了 repo。** 正在跑的 ComfyUI 仍是舊節點名。要等 8.4，而且 queue 必須是空的，才能部署並重啟。
+7. **8.2 只改了 repo。** 本機已部署的節點仍是舊名稱。要等 8.4，而且 queue 必須是空的，才能部署並重啟。8188 已由使用者停止，沒有另外要求就不要重開。
 8. **技術通過不等於美術接受。** 3.4、3.5、6.3 的實機都留著 `content_review: pending`。沒有人執行 accept 或 validation approve。
 
 ## 現在實際上有兩層東西
@@ -259,7 +259,7 @@ Recipe 現況：
 | 8.3 刪 builder | 未開始。要等 5.1、5.2、6.3 都在即將部署的那條線上。先改還在呼叫 stub 的地方。golden 改由 template 維護 | — |
 | 8.4 部署 | 未開始。queue 空了才做：deploy dry-run、`deploy --yes`、另外跑 `gameart.py verify-install`。範圍含 `templates/`。第三方 node 版本寫進 `docs/tested-versions.md`。重啟後再 `doctor --refresh` | — |
 
-正在跑的 ComfyUI 是 v0.34.0，`127.0.0.1:8188`。這次沒有硬砍、沒有呼叫 `/interrupt`、沒有清 queue。舊的 UI workflow 要等 8.4 部署並重啟之後，才會變成缺少新節點。在那之前，伺服器仍認舊名稱。`output/` 裡有 21 份舊的 API prompt，它們是紀錄，沒有 `_meta`。重啟之後若原樣再送，預期是 HTTP 400。使用者的 `Ch8_影片換臉_Server.json` 沒有改。
+ComfyUI v0.34.0 曾在 `127.0.0.1:8188` 跑過實機。實機期間沒有硬砍、沒有呼叫 `/interrupt`、沒有清 queue。其後 8188 已由使用者停止，沒有另外要求就不要重開。舊的 UI workflow 要等 8.4 部署並重啟之後，才會變成缺少新節點。在那之前，已部署的那一份仍認舊名稱。`output/` 裡有 21 份舊的 API prompt，它們是紀錄，沒有 `_meta`。重啟之後若原樣再送，預期是 HTTP 400。使用者的 `Ch8_影片換臉_Server.json` 沒有改。
 
 ## 測試數字
 
@@ -290,6 +290,6 @@ Python 是 `C:\Users\XU\ComfyUI\.venv\Scripts\python.exe`。完整測試先設 `
 
 合併進 `develop` 建議等整合線出現再做。若先合併 `132201f`，得到的是 VACE、圖片與影片 template、recipe、catalog、擴充協議、以及 repo 裡已刪掉的舊節點別名；圖片 task、影片 task、Pillow 物件組裝、template 能力偵測都不在裡面。
 
-不需要為了這份交付去做美術 accept，也不需要為了 8.1 再開一個 8199。ComfyUI 可以繼續留著；下次要 queue 或 deploy 之前再看一次 queue。
+不需要為了這份交付去做美術 accept，也不需要為了 8.1 再開一個 8199。8188 保持停止，直到使用者要求再啟動。下次要 queue 或 deploy 之前，先確認行程與 queue。
 
 本機若還看得到、但沒有進 commit 的說明稿：`output/verify-20261008-4/pr-body.md`、`output/verify-20261008-6.2/pr-body.md`、`output/verify-20261008-6.3/pr-body.md`、`output/verify-20261008-6.4/pr-body.md`、`output/verify-20261008-6p/pr-body.md`。它們是當時準備的 PR 正文，PR 沒有開。
