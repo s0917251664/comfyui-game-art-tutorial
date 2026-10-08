@@ -74,8 +74,8 @@ class WanVaceEquivalenceTests(unittest.TestCase):
 
     def test_template_shape(self):
         data = self.template.data
-        self.assertEqual("draft", data["status"])
-        self.assertEqual({"windows-cuda": "untested", "macos-mps": "untested"}, T.platform_summary(self.template))
+        self.assertEqual("technical_pass", data["status"])
+        self.assertEqual({"windows-cuda": "technical_pass", "macos-mps": "untested"}, T.platform_summary(self.template))
         self.assertEqual(["control_video", "mask_video"], self.template.upload_slots())
         self.assertEqual(["vace_work_area", "upload"], [s["step"] for s in data["pre"]][1:])
         self.assertEqual(["check_video_output", "extract_keyframes", "paste_back", "qa_outside_mask_unchanged"],

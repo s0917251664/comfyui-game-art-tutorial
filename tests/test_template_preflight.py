@@ -592,8 +592,9 @@ class PreflightCliTests(PreflightFixture, unittest.TestCase):
         self.assertEqual(["out", "err"], [e[0] for e in events[:2]], events)
 
 
-# 新增後還沒有實機證據的 template(PR 3.4 的 VACE;統一實機執行後改成 technical_pass 並從這裡移除)
-DRAFT_UNTIL_LIVE_RUN = {"video/wan-vace/inpaint"}
+# 新增後還沒有實機證據的 template 放這裡,狀態維持 draft。有實機技術通過後移出。
+# video/wan-vace/inpaint 已在 2026-10-08 windows-cuda 通過,不再列在這裡。
+DRAFT_UNTIL_LIVE_RUN = set()
 
 
 class RealTemplatePinsTests(unittest.TestCase):

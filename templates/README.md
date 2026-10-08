@@ -15,7 +15,7 @@
 - `graph.api.json` 的位元組 sha256 與 canonical sha256 都要和 `template.json` 一致。位元組不符但 canonical 相符時，通常是 git 把換行轉換了。
 - 每個 slot／option／model 指到的節點與 input 都必須存在；graph 裡每個 `__XXX__` 占位與每個 `seed`／`noise_seed = -1` 都要有 slot 認領；兩個 slot 不能寫同一個目標（`default_from` 例外）。
 - patch 後的 graph 和原 graph 只能在「slot 目標＋已啟用 option 的目標」不同，不能新增或刪除節點，也不能改 class_type。
-- 任何 model 沒有 sha256 pin 時，template 狀態不能是 `technical_pass`。Wan Animate 與 SAM3 的 8 份模型都已 pin（`dw-ll_ucoco_384.onnx` 在 PR 2.2 補上），都是 `technical_pass`；PR 3.4 新增的 `video/wan-vace/inpaint` 模型也已 pin，實機驗證完成前是 `draft`。
+- 任何 model 沒有 sha256 pin 時，template 狀態不能是 `technical_pass`。Wan Animate、SAM3 與 `video/wan-vace/inpaint` 的模型都已 pin，狀態都是 `technical_pass`。VACE 的 macos-mps 仍是 `untested`。
 - 對齊官方範本的欄位（PR 3.2，見 [ADR 2026-10-08](../docs/knowledge/decisions/2026-10-08-official-comfy-tooling.md)）：
   - `min_comfyui_version`（對應 `minComfyUIVersion`）：目前寫實測通過的版本 0.34.0。要放寬，必須先在較舊的版本實測。
   - `requires_custom_nodes`（對應 `requiresCustomNodes`）：`[{id, source}]`，列出 graph 用到的非 core 節點所屬套件。`source` 是 `registry`（id 用 Comfy registry id，也就是套件 `pyproject.toml` 的 `project.name`）或 `repo`（這個 repo 自己的 custom node）。只用 core 節點時寫 `[]`。

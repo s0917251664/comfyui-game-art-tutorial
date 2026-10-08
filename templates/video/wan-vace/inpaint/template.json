@@ -1,11 +1,10 @@
 {
   "schema_version": 1,
   "id": "video/wan-vace/inpaint",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "title": "Wan2.1 VACE 影片局部重繪（遮罩內重畫、貼回原片）",
   "summary": "只重畫遮罩內（白色＝重畫），遮罩外貼回原片並逐 byte 檢查不變；和 generate.py video_inpaint 同一個 graph 與前後處理",
-  "status": "draft",
-  "status_note": "新 template；windows-cuda 實機執行與比對完成前維持 draft",
+  "status": "technical_pass",
   "min_comfyui_version": "0.34.0",
   "requires_custom_nodes": [],
   "graph": {
@@ -351,8 +350,8 @@
     "files": "from_models",
     "platforms": {
       "windows-cuda": {
-        "status": "untested",
-        "notes": "等實機執行與舊 generate.py video_inpaint 輸出比對"
+        "status": "technical_pass",
+        "evidence": "2026-10-08：seed 202、與 2026-10-07 同一句 prompt。raw 544×560、57 幀、24 FPS、h264、無音軌；遮罩外變動像素 0；crop 140,206,684,766。規格與 2026-10-07 舊輸出相同，檔案 sha256 不同。本機證據 output/verify-20261008-3.4/live。"
       },
       "macos-mps": {
         "status": "untested",
