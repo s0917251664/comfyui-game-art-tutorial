@@ -6,19 +6,11 @@ status: current
 
 下一個 agent **先讀這一頁**，再讀 [重構交接](restructure-handoff.md) 的規則和原始計畫。規則以交接頁為準；做到哪裡以這一頁為準。兩者都讓路給已經生效的[決策](../DECISIONS.md)。
 
-這一頁寫的時候，5.2 的審查還在跑。5.1 重審和 7.2 初審已經結束。沒有開 PR，沒有 merge 到 `develop`。
+5.1、5.2、7.2 的審查都是可以合併，而且三條分支都已 push。沒有開 PR，沒有 merge 到 `develop`。
 
-## 接手時先做這三件
+## 接手時從這裡開始
 
-1. 讓 5.2 的審查自己跑完。任務 `01a11ac9-8a67-72a1-8d08-42b749a5f864`。JSON 還是 0 byte 就不要解析。結束後才跑下面的解析指令。可以合併才 push；需要修改就在原分支加新 commit。
-2. Push 已經可以合併、但遠端還沒有的 5.1（`1dd86fa`）和 7.2（`00039a7`）。不要 force-push，不要開 PR。
-3. 做到這裡就停，向使用者回報。7.3、8.3、8.4 和整合成一條線都還沒開始。
-
-解析審查（程序已結束才跑；有 BOM 會失敗）：
-
-```text
-C:\Users\XU\ComfyUI\.venv\Scripts\python.exe output\grok_result.py <json>
-```
+下一手做整合分支。7.3、8.3、8.4 還沒開始。做到整合線可以合併並 push 之後，再向使用者回報，然後才進 7.3。
 
 ## 不要做
 
@@ -28,7 +20,7 @@ C:\Users\XU\ComfyUI\.venv\Scripts\python.exe output\grok_result.py <json>
 - 不下載 `dreamshaper_8.safetensors`，不發明 SD1.5 的 hash，不寫 `templates/image/sd15/`。
 - 不重跑已經通過的實機（3.4、3.5、6.3）。不把 draft recipe 升成 `technical_pass`。
 - 不硬砍 ComfyUI，不呼叫 `/interrupt`，不清 queue。現在 v0.34.0 在 `127.0.0.1:8188` 跑著（背景任務 `01a11a78-a3b6-73e2-9286-b2f7fefc0c54`）。這次中斷點之前 queue 是空的；下次要 queue 或 deploy 前再查一次。
-- 審查還在讀的工作區不要改檔。5.2 的工作區是 `C:\Users\XU\.grok\worktrees\phase5.2`。
+- 5.1 與 7.2 的工作區仍有未追蹤的 `HANDOFF-phase3-8.md` 和 `WIKI.md` 刪除。不要把這兩項加進任何 commit。
 - 不 `deploy --yes`。8.2 只改了 repo，執行中的 8188 仍是舊節點名。
 - 文件引用本機證據只用純文字路徑，不寫成連結。
 
@@ -44,9 +36,9 @@ C:\Users\XU\ComfyUI\.venv\Scripts\python.exe output\grok_result.py <json>
 |---|---|---|---|
 | `refactor/phase6.3-video-tasks-runner` | `f6b3c75` | 父 commit `dbf95fd` | 已 push |
 | `refactor/phase6p-tools-on-stack` | `39f669e`（`ef70dfe`、`e7d8ea4`、`cab2f3a`、`39f669e`） | 父 commit `dbf95fd` | 已 push |
-| `feat/phase7.2-capability-detect` | `00039a7` | 父 commit `dbf95fd` | 未 push |
-| `refactor/phase5.1-image-tasks-runner-a` | 修復後 `1dd86fa`，父 commit `b35d3e3` | `b35d3e3` 的父 commit 是 `b240e74` | 未 push |
-| `refactor/phase5.2-image-tasks-runner-b` | `2d1e173`，父 commit也是 `b35d3e3` | 同上 | 未 push |
+| `feat/phase7.2-capability-detect` | `00039a7` | 父 commit `dbf95fd` | 已 push |
+| `refactor/phase5.1-image-tasks-runner-a` | `1dd86fa`，父 commit `b35d3e3` | `b35d3e3` 的父 commit 是 `b240e74` | 已 push |
+| `refactor/phase5.2-image-tasks-runner-b` | `2d1e173`，父 commit 也是 `b35d3e3` | 同上 | 已 push |
 
 `132201f` 比 `dbf95fd` 多一個 commit：`132201f` 本身（recipe 內嵌參考）。6.3、6′、7.2 都是從 `dbf95fd` 長出去的。5.1 和 5.2 是從 `b240e74` 長出去的，recipe 那三個 commit 它們都沒有。
 
@@ -81,12 +73,14 @@ C:\Users\XU\ComfyUI\.venv\Scripts\python.exe output\grok_result.py <json>
 
 4.1 採用方案 A：一種結構組合一份凍結 graph。ADR 在 `docs/knowledge/decisions/2026-10-08-image-template-variants.md`。72 份 SDXL，加 `image/layer-split`，加 FLUX.2 concept／edit，共 75。`video/wan-vace/inpaint` 已是 `technical_pass`（windows-cuda）；`macos-mps` 仍是 untested。
 
-## 審完但還沒 push
+## 5.1、5.2、7.2 已 push
 
-### 5.1 種子修復：可以合併
+`git ls-remote` 對過：`1dd86fa`、`2d1e173`、`00039a7`。主 repo 若本地的 `refactor/phase5.1-image-tasks-runner-a` 仍停在 `b35d3e3`，以 `origin` 的 `1dd86fa` 為準，先 `git fetch origin`。
+
+### 5.1 種子修復：可以合併，已 push
 
 - 分支 `refactor/phase5.1-image-tasks-runner-a`
-- 要 push 的 tip：`1dd86fa`（訊息：省略圖片 seed 時只抽一次，沿用 builder 的範圍）
+- tip `1dd86fa`（訊息：省略圖片 seed 時只抽一次，沿用 builder 的範圍）
 - 工作區：`C:\Users\XU\.grok\worktrees\tools-comfyui-game-art-tutorial\subagent-01a11a9c-81a6-7ec1-92b0-e3cf56b62788`
 - 這個工作區是髒的：`D third_party/claude-obsidian/WIKI.md`、`?? HANDOFF-phase3-8.md`。不要加進 commit。
 - 審查 JSON（本機證據：`output/verify-20261008-5.1/grok-rereview.json`，在上面那個工作區裡）
@@ -95,13 +89,7 @@ C:\Users\XU\ComfyUI\.venv\Scripts\python.exe output\grok_result.py <json>
 - 該工作區在 `b35d3e3` 上回報 discover 573 OK。`1dd86fa` 之後只跑了 `tests/test_image_task_template.py`（7 OK），沒有再跑完整 discover。
 - 六個 task：concept、icon_asset、refine、character_action、pose_only、style_lock。SDXL 與三個 control task 缺 template 就 SystemExit。sd15 的 concept／icon_asset／refine 在目錄不存在時回 `None`，task 仍走 builder。
 
-Push 前確認 HEAD 是 `1dd86fa`，然後從**那個工作區**推，不要從主 repo 的舊指標推：
-
-```text
-git -C <上面的 5.1 工作區> push -u origin HEAD:refactor/phase5.1-image-tasks-runner-a
-```
-
-### 7.2 能力偵測：可以合併
+### 7.2 能力偵測：可以合併，已 push
 
 - 分支 `feat/phase7.2-capability-detect`
 - tip `00039a7`，父 commit `dbf95fd`
@@ -111,23 +99,18 @@ git -C <上面的 5.1 工作區> push -u origin HEAD:refactor/phase5.1-image-tas
 - `stopReason=end_turn`，20 輪。結論：可以合併。審查沒有執行測試，也沒有連 ComfyUI。
 - 行為：`schema_version` 仍是 1；新增頂層 `template_capabilities`。略過 `image_generation` 和底線開頭的路徑段。`available` 為真的條件是至少一份宣告該能力的 template 沒問題。沒連上 `/object_info` 時不因此判不可用，`reasons.note` 是「節點未檢查」。sha256 只在 `--hash-models`。doctor 要容忍舊報告沒有這個欄位。
 - 不要用這條分支寫使用者的 `video_capabilities.json`。寫檔仍要原本的 `--out`，既有檔要 `--overwrite`。
-- 這次 session 在主 repo 跑過的 `doctor --refresh` 用的是 **7.2 之前** 的偵測器，快照裡沒有 `template_capabilities`。
+- 這次 session 在主 repo 跑過的 `doctor --refresh` 用的是 7.2 之前的偵測器，快照裡沒有 `template_capabilities`。
 
-```text
-git -C <上面的 7.2 工作區> push -u origin HEAD:feat/phase7.2-capability-detect
-```
-
-### 5.2：審查還沒結束
+### 5.2：可以合併，已 push
 
 - 分支 `refactor/phase5.2-image-tasks-runner-b`
 - tip `2d1e173`，父 commit `b35d3e3`（不含 `1dd86fa`，但 seed 只抽一次已經在這個 commit 裡自己寫過）
 - 工作區：`C:\Users\XU\.grok\worktrees\phase5.2`（主 repo 的 linked worktree）
-- 任務 `01a11ac9-8a67-72a1-8d08-42b749a5f864` 仍在跑 grok plan mode（`--max-turns 80`）
-- diff 已寫出（本機證據：`output/verify-20261008-5.2/pr-5.2.diff`，42052 bytes）
-- JSON（本機證據：`output/verify-20261008-5.2/grok-review.json`）寫這頁時是 0 byte。不要解析半份 JSON。
+- 審查 JSON（本機證據：`output/verify-20261008-5.2/grok-review.json`）
+- `stopReason=end_turn`，25 輪。結論：可以合併。審查沒有執行測試。
 - 實作者回報：`test_image_task_template.py` 13 OK、`test_generate.py` 67 OK、`test_image_template_equivalence.py` 4 OK、`test_templates.py` 58 OK、`test_neutral_wording.py` 3 OK、`test_doc_links.py` 5 OK、discover 580 OK。這是 5.2 工作區的回報，不是這頁重跑的。
 - 六個 task：inpaint、guided_inpaint、upscale、layer_split、flux2_concept、flux2_edit。SD1.5 目錄不存在就退回 builder。SDXL、layer_split、FLUX.2 缺檔是 SystemExit。不要呼叫 `runner.run()`。不要改 golden json。
-- 可以合併之後才 push：`git push -u origin refactor/phase5.2-image-tasks-runner-b`
+- 疊上 `1dd86fa` 時，`image_from_template.py` 的 seed 寫法會衝突。兩邊都要留下「只抽一次、0 仍是 0」。
 
 ## 實機證據（不要重跑，不要 accept）
 
@@ -150,9 +133,8 @@ git -C <上面的 7.2 工作區> push -u origin HEAD:feat/phase7.2-capability-de
 
 依這個順序。每一項仍要：實作、測試、grok plan-mode 審查、結論是可以合併才 push。不開 PR。使用者自己 merge。
 
-1. **收尾 5.1／7.2／5.2 的 push**（上一節）。
-2. **整合分支**。從 `132201f` 開新分支，依序 cherry-pick：`f6b3c75`，6′ 的 `ef70dfe` `e7d8ea4` `cab2f3a` `39f669e`，`00039a7`，再 `b35d3e3`、`1dd86fa`、`2d1e173`。衝突處理見上面。新 commit only。
-3. **7.3 技能收斂**。底要用已含 Pillow 說明的 6′（`39f669e`），否則技能頁會和 6′ 衝突。18 個技能收成 6 個，目錄維持扁平 `skills/<name>/SKILL.md`：
+1. **整合分支**。從 `132201f` 開新分支，依序 cherry-pick：`f6b3c75`，6′ 的 `ef70dfe` `e7d8ea4` `cab2f3a` `39f669e`，`00039a7`，再 `b35d3e3`、`1dd86fa`、`2d1e173`。衝突處理見上面。新 commit only。
+2. **7.3 技能收斂**。底要用已含 Pillow 說明的 6′（`39f669e`），否則技能頁會和 6′ 衝突。18 個技能收成 6 個，目錄維持扁平 `skills/<name>/SKILL.md`：
    - `game-art-brief` ← game-art-workflow、game-art-edit-brief、game-art-initialize、project-knowledge
    - `platform-image-gen` 留著
    - `comfyui-run` ← art-gen、object-design、video-gen、character-animation、film、face-swap、video-layers、wan-animate、image-sweep
@@ -160,8 +142,8 @@ git -C <上面的 7.2 工作區> push -u origin HEAD:feat/phase7.2-capability-de
    - `comfyui-extend` ← new-tool-checklist、pipeline-review（這個目錄現在還不存在；7.4 協議已經單獨 push，不要重寫）
    - `comfyui-install` 留著
    細節放到 catalog 或 references。更新 `AGENTS.md` 路由。用這些請求走一遍，記下打到哪個 skill、哪份 template：icon、本機 inpaint、物件遮罩加 VACE、prop swap、Idle action、FX alpha、新節點提案。舊規則要有對照表。跑連結測試和中性用語測試。範圍大就拆兩段：先加新頁並把舊頁改成轉址，再刪舊頁。
-4. **8.3** 刪已被 template 取代的 builder。前提是 5.1、5.2、6.3 都在即將部署的那條整合線上。先修還在呼叫剩餘 stub 的地方。golden 改由 template 維護。
-5. **8.4** queue 確認是空的之後：`deploy` dry-run，再 `deploy --yes`，再另外跑 `gameart.py verify-install`，數字用實測的。部署範圍含 `templates/`。第三方 node 版本寫進 `docs/tested-versions.md`。重啟後再 `doctor --refresh`。3.5 的部署副本若找不到 `templates/` 會 SystemExit。不要為了 8.1 去佔 8188，也不要另開 8199，除非使用者另外要求。
+3. **8.3** 刪已被 template 取代的 builder。前提是 5.1、5.2、6.3 都在即將部署的那條整合線上。先修還在呼叫剩餘 stub 的地方。golden 改由 template 維護。
+4. **8.4** queue 確認是空的之後：`deploy` dry-run，再 `deploy --yes`，再另外跑 `gameart.py verify-install`，數字用實測的。部署範圍含 `templates/`。第三方 node 版本寫進 `docs/tested-versions.md`。重啟後再 `doctor --refresh`。3.5 的部署副本若找不到 `templates/` 會 SystemExit。不要為了 8.1 去佔 8188，也不要另開 8199，除非使用者另外要求。
 
 草稿 recipe 維持 draft，等使用者同意才升狀態。`object-mark-inpaint` 的實機確認點沒跑（流程會停在 confirm）。idle-anchored-action 和 prop-swap 仍是 `executable: false`。fx-alpha-export 是本機 vfx，不經 ComfyUI。
 
@@ -187,6 +169,6 @@ Python：`C:\Users\XU\ComfyUI\.venv\Scripts\python.exe`。完整測試先設 `$e
 cmd /c "chcp 65001 >nul & C:\Users\XU\.grok\bin\grok.exe --permission-mode plan --max-turns 300 --output-format json --prompt-file <prompt.md> > <out.json>"
 ```
 
-不要用 PowerShell 的 `>` 或 `Set-Content` 接 grok 的 stdout（會變成 UTF-16）。`stopReason=end_turn` 才算跑完。最後一行必須是 `VERDICT: 可以合併` 或 `VERDICT: 需要修改`。程序還在跑時 JSON 可能是 0 byte，不要解析。
+不要用 PowerShell 的 `>` 或 `Set-Content` 接 grok 的 stdout（會變成 UTF-16）。`stopReason=end_turn` 才算跑完。最後一行必須是 `VERDICT: 可以合併` 或 `VERDICT: 需要修改`。程序還在跑時 JSON 可能是 0 byte，不要解析。程序結束後用 `C:\Users\XU\ComfyUI\.venv\Scripts\python.exe output\grok_result.py <json>` 讀結論（檔案有 BOM 會失敗）。
 
 先前寫過、沒有開 PR 的說明稿若還在本機：`output/verify-20261008-4/pr-body.md`、`output/verify-20261008-6.2/pr-body.md`、`output/verify-20261008-6.3/pr-body.md`、`output/verify-20261008-6.4/pr-body.md`、`output/verify-20261008-6p/pr-body.md`。
