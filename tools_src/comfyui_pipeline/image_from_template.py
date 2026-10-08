@@ -159,7 +159,9 @@ def _slot_values(args, slots, style_checkpoint):
         _put(values, slots, "height", height)
     _put(values, slots, "batch_size", getattr(args, "batch", None))
     # 省略 --seed 時只抽一次，而且用 builder 的 48-bit。留給 slot 的 "auto" 會再抽 32-bit。
-    _put(values, slots, "seed", image_graphs.seed_or_random(getattr(args, "seed", None)))
+    # 沒有 seed slot 的 task(layer_split)不抽。
+    if "seed" in slots:
+        _put(values, slots, "seed", image_graphs.seed_or_random(getattr(args, "seed", None)))
     sampling = image_graphs._resolve_sampling()
     _put(values, slots, "steps", sampling["steps"])
     _put(values, slots, "cfg", sampling["cfg"])
