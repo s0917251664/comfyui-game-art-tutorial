@@ -427,15 +427,29 @@ class GenerateTests(unittest.TestCase):
                 cli.download_outputs({"outputs": {}}, output_dir, comfy_url="http://server:8188")
 
     def test_main_downloads_only_transparent_saveimage_after_background_removal(self):
-        graph = {"1": {"class_type": "SaveImage", "inputs": {}}}
-        with mock.patch.object(image_runtime, "build_concept", return_value=(graph, "1")), \
-                mock.patch.object(tasks, "preflight_image_task", return_value=True), \
-                patch_all("attach_bg_removal", (cli, tasks,), return_value="9") as attach, \
-                mock.patch.object(cli, "submit_and_wait", return_value={"outputs": {}}), \
+        # concept --remove-bg 選 -transparent template，graph 裡已經有一顆去背 SaveImage。
+        # 下載節點就是那一顆；不能再接一次 attach，否則會多一顆 RemoveBackground。
+        captured = {}
+
+        def fake_submit(prompt, **_kwargs):
+            captured["graph"] = prompt
+            return {"outputs": {}}
+
+        with mock.patch.object(tasks, "preflight_image_task", return_value=True), \
+                mock.patch.object(cli, "submit_and_wait", side_effect=fake_submit), \
                 mock.patch.object(cli, "download_outputs", return_value=["out.png"]) as download:
-            self.main(["--comfy-url", "http://server:8188", "concept", "--prompt", "x", "--remove-bg"])
-        attach.assert_called_once_with(graph, "1")
-        self.assertEqual(["9"], download.call_args.kwargs["node_ids"])
+            self.main(["--comfy-url", "http://server:8188", "concept", "--prompt", "x",
+                       "--remove-bg", "--seed", "1"])
+        graph = captured["graph"]
+        transparent = [
+            node_id for node_id, node in graph.items()
+            if node.get("class_type") == "SaveImage"
+            and (node.get("inputs") or {}).get("filename_prefix") == "transparent"
+        ]
+        removals = [node for node in graph.values() if node.get("class_type") == "RemoveBackground"]
+        self.assertEqual(1, len(transparent))
+        self.assertEqual(1, len(removals))
+        self.assertEqual(transparent, download.call_args.kwargs["node_ids"])
 
     def _object_info_for(self, graph, drop_nodes=(), drop_models=()):
         """依 graph 產生剛好足夠的 /object_info;可指定要拿掉的 node 或模型檔。"""

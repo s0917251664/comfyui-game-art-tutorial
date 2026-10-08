@@ -21,8 +21,9 @@ from .client import (
 from .image_capabilities import (
     IMAGE_GRAPH_TASKS, IMAGE_PROFILE_TASKS, load_image_capabilities, resolve_image_profile,
 )
+from .image_from_template import background_removal_output
 from .image_graphs import (
-    DEVICE_CONFIG_PATH, RATING_TAGS, STYLE_CHECKPOINTS, attach_bg_removal, seed_or_random,
+    DEVICE_CONFIG_PATH, RATING_TAGS, STYLE_CHECKPOINTS, seed_or_random,
 )
 from .image_runtime import sync_image_runtime
 from .video_catalog import DEFAULT_VIDEO_TIMEOUT, VIDEO_TASK_CAPS
@@ -357,7 +358,8 @@ def run(argv=None, context=None):
 
     target_output_id = None
     if args.task == "icon_asset" or getattr(args, "remove_bg", False):
-        target_output_id = attach_bg_removal(prompt, out_id)
+        # -transparent template 已經含去背；sd15 builder 路徑才在這裡接上。
+        target_output_id = background_removal_output(prompt, out_id)
 
     print(f"[送出] task={args.task}")
     try:
