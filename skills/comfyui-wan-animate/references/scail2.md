@@ -1,13 +1,13 @@
-# SCAIL-2 固定 ComfyUI API 操作契約
+# SCAIL-2 固定 template 操作契約
 
-SCAIL-2（Wan2.1 14B 架構）是另一個角色動畫模型：用參考圖驅動角色跟著來源影片動，或把來源影片裡的人換成參考角色。和 Wan Animate 不同，它不用 DWPose 骨架，而是把來源影片本身當 pose 輸入，再用 SAM3 依文字追蹤人物，產生**彩色身份遮罩**把參考圖的角色和影片裡的人一一綁定。上傳、queue、輪詢、下載與證據保存都沿用 [Wan Animate API 契約](comfyui-api.md)，本頁只寫 SCAIL-2 不同的地方。
+SCAIL-2（Wan2.1 14B 架構）是另一個角色動畫模型：用參考圖驅動角色跟著來源影片動，或把來源影片裡的人換成參考角色。和 Wan Animate 不同，它不用 DWPose 骨架，而是把來源影片本身當 pose 輸入，再用 SAM3 依文字追蹤人物，產生**彩色身份遮罩**把參考圖的角色和影片裡的人一一綁定。執行方式和 Wan Animate 相同，一律用 `gameart.py run`（preflight → 實際執行 → `run.result.json` → 人工檢視 → 使用者決定後 `review`），步驟、結束碼與驗收見 [Wan Animate 操作契約](comfyui-api.md)；本頁只寫 SCAIL-2 不同的地方。
 
 ## Templates 與來源
 
 | Template | 用途 | 輸出 |
 |---|---|---|
-| [scail2](../../../templates/video/wan-animate/scail2/graph.api.json)（`templates/video/wan-animate/scail2/`） | 單段 | 33 幀 |
-| [scail2-extend](../../../templates/video/wan-animate/scail2-extend/graph.api.json)（`templates/video/wan-animate/scail2-extend/`） | 兩段串接 | 33 + 28 = 61 幀 |
+| [video/wan-animate/scail2](../../../templates/video/wan-animate/scail2/template.json) | 單段 | 33 幀 |
+| [video/wan-animate/scail2-extend](../../../templates/video/wan-animate/scail2-extend/template.json) | 兩段串接 | 33 + 28 = 61 幀 |
 
 兩份都是依官方 [`video_wan21_scail2_character_replacement.json`](https://github.com/Comfy-Org/workflow_templates/blob/main/templates/video_wan21_scail2_character_replacement.json)（Git blob `1fc5602b9c54b3517ed6af320ff281d5615e9306`）逐節點對應的 API graph，並做了三項明確調整：
 
@@ -19,31 +19,43 @@ SCAIL-2（Wan2.1 14B 架構）是另一個角色動畫模型：用參考圖驅�
 
 ## 模型 preflight
 
-除 Wan Animate 共用的 UMT5、CLIP Vision H、Wan2.1 VAE、LightX2V LoRA 外，另需三個檔案（[template manifest](../assets/template-manifest.json) 的 `scail2_models` 有 revision、bytes、SHA-256）：
+除 Wan Animate 共用的 UMT5、CLIP Vision H、Wan2.1 VAE、LightX2V LoRA 外，另需三個檔案（revision、bytes、SHA-256 記在 template.json 的 `models`，`run show` 可查）：
 
 - `models/diffusion_models/wan2.1_14B_SCAIL_2_fp8_scaled.safetensors`（17,694,586,857 bytes）
 - `models/loras/wan2.1_SCAIL_2_DPO_lora_bf16.safetensors`（1,226,936,552 bytes）
 - `models/checkpoints/sam3.1_multiplex_fp16.safetensors`（1,745,546,848 bytes；SAM3 用 `CheckpointLoaderSimple` 載入）
 
-Live `object_info` 必須有 `WanSCAILToVideo`、`SCAIL2ColoredMask`、`SAM3_VideoTrack`、`ColorTransfer`、`BatchImagesNode`，且上述檔名出現在對應 loader 的 selector。缺任何一項就停止，不下載、不換相似檔名。
+`gameart.py run video/wan-animate/scail2 --preflight` 會核對 live `object_info` 有 `WanSCAILToVideo`、`SCAIL2ColoredMask`、`SAM3_VideoTrack`、`ColorTransfer`、`BatchImagesNode`，以及上述檔案的大小（`--verify-hashes` 完整核對 sha256）。被擋下就停止，不下載、不換相似檔名。
 
-## 動態欄位
+## Slot
 
-只可改以下欄位，其餘照 template：
+只能填 template 宣告的 slot，其餘照 graph：
 
-| 欄位 | Node | 說明 |
-|---|---|---|
-| `__REFERENCE_IMAGE__`／`__SOURCE_VIDEO__` | 1 `image`／2 `file` | 上傳後的 server path |
-| `__POSITIVE_PROMPT__` | 20 `text` | 描述**最終畫面**：角色外觀、動作、鏡頭與背景 |
-| `__SAM3_VIDEO_OBJECT__` | 31 `text` | SAM3 在來源影片要追蹤的對象，英文名詞，例如 `person` |
-| `__SAM3_IMAGE_OBJECT__` | 32 `text` | SAM3 在參考圖要追蹤的對象，例如 `robot`、`person` |
-| `noise_seed` | 43（延伸段另有 53） | 明確整數，不可留 -1；兩段沒有理由時用同一個 |
-| `__OUTPUT_PREFIX__` | 61 `filename_prefix` | 唯一前綴 |
-| `replacement_mode` | 35、40（延伸段另有 50） | 三處必須一致，見下方模式 |
-| 寬高 | 5 `width`／`height`、40（及 50）`width`／`height` | 必須是 32 的倍數且一致；只實測過 384×384 |
-| `object_indices` | 35 | 多人時只取部分人物，例如 `"0,2"`；空字串代表全部 |
+| Slot | 說明 |
+|---|---|
+| `reference_image`／`source_video` | 本機檔案路徑，runner 負責上傳 |
+| `prompt` | 描述**最終畫面**：角色外觀、動作、鏡頭與背景 |
+| `sam3_video_object` | SAM3 在來源影片要追蹤的對象，英文名詞片語，例如 `person` |
+| `sam3_image_object` | SAM3 在參考圖要追蹤的對象，例如 `robot`、`person` |
+| `seed`（延伸段另有 `seed_segment2`） | `auto` 或明確整數；`seed_segment2` 預設等於 `seed`，沒有理由不要分開 |
+| `replacement_mode` | `true`／`false`，runner 會同時填進所有相關節點，見下方模式 |
+| `width`／`height` | 32 的倍數；只實測過 384×384 |
+| `object_indices` | 多人時只取部分人物，例如 `"0,2"`；空字串代表全部 |
 
-來源影片：16 FPS CFR，單段需剛好 33 幀，延伸段需剛好 61 幀（node 4 `length` 依 template 固定）。音訊與 Wan Animate 相同：預設不輸出，需要時在 node 60 加 `"audio": ["3", 1]`。
+例子（`values.json`）：
+
+```json
+{
+  "reference_image": "D:/work/scail/reference.png",
+  "source_video": "D:/work/scail/source_33f.mp4",
+  "prompt": "a pink metallic robot with a camera head in a white and blue knit sweater, waving both hands, gray studio background",
+  "sam3_video_object": "person",
+  "sam3_image_object": "robot",
+  "replacement_mode": true
+}
+```
+
+來源影片：16 FPS CFR，單段剛好 33 幀，延伸段剛好 61 幀；runner 的 pre 步驟會檢查。音訊與 Wan Animate 相同：預設不輸出，需要時加 `--option keep_audio`。
 
 ## 兩種模式
 
@@ -59,12 +71,12 @@ SCAIL2ColoredMask 會依模式自動決定遮罩背景色（替換：來源遮�
 - 主 prompt 寫最終輸出長什麼樣，不是寫來源影片；只描述來源實際有的動作，不加道具。
 - SAM3 文字只決定「追蹤誰」，不影響外觀。主體相同時兩個欄位可用同一詞；參考圖不是人時（機器人、怪物）改寫成對應名詞。
 - 來源畫面多人時要寫得更具體，或用 `object_indices` 篩人。追蹤失敗（沒偵測到人）時輸出仍會產生，但動作不會跟隨，所以抽幀時要特別確認動作對應。
-- SAM3 文字太籠統時會把非主角也當成追蹤對象：2026-10-07 實測「man」在有人形怪人的鏡頭同時追蹤主角與怪人，替換後怪人消失、畫面重畫；改成較具體的「man with black hair」後只追蹤主角，怪人與飛過的道具保留。queue 前可先用 SAM3 遮罩確認只框到目標。
+- SAM3 文字太籠統時會把非主角也當成追蹤對象：2026-10-07 實測「man」在有人形怪人的鏡頭同時追蹤主角與怪人，替換後怪人消失、畫面重畫；改成較具體的「man with black hair」後只追蹤主角，怪人與飛過的道具保留。送出前可以先用 `video/sam3/track-text` template 以同一個詞追蹤來源影片（門檻 0.5、max_objects 4，和 SCAIL-2 graph 的 SAM3 設定相同），看遮罩是否只框到目標，見 [sam3-track.md](../../comfyui-video-layers/references/sam3-track.md)。
 - 參考圖構圖會主導輸出比例：參考圖是胸口以上的大頭照時，遠景或背影來源會被畫成大頭特寫。把參考圖縮小並擺在來源人物頭部的位置與大小（灰底畫布、同輸出寬高）後，遠景鏡頭恢復原片的全身構圖。近景來源配近景參考圖本來就能跟上。
 
 ## 實測（2026-10-06，RTX 4080 16 GB）
 
-輸入與 Wan Animate 延伸段測試相同：官方機器人參考圖、官方來源片段 frames 64..124（`source61-tone.mp4`，SHA-256 `1d05e47f…`），seed 20261006，SAM3 文字 `person`／`robot`。全部完整解碼通過：384×384、16 FPS、PTS 逐幀 1/16 秒、H.264、無音軌。
+以下是 runner 出現前，以同一批固定 graph 直接呼叫 HTTP 的紀錄（graph 之後搬到 `templates/`，位元組不變）。輸入與 Wan Animate 延伸段測試相同：官方機器人參考圖、官方來源片段 frames 64..124（`source61-tone.mp4`，SHA-256 `1d05e47f…`），seed 20261006，SAM3 文字 `person`／`robot`。全部完整解碼通過：384×384、16 FPS、PTS 逐幀 1/16 秒、H.264、無音軌。
 
 | 測試 | Template | 輸出 | Prompt ID | Server execution time | 證據 |
 |---|---|---|---|---:|---|
@@ -85,4 +97,4 @@ SCAIL2ColoredMask 會依模式自動決定遮罩背景色（替換：來源遮�
 
 ## 界線
 
-SCAIL-2 與 Wan Animate 是兩個模型，不能互相推定能力或品質；一方結果不佳時不自動改跑另一方，由使用者決定。這仍是獨立 API 路線，未接 `generate.py`，也不登記為 video backend。所有輸出維持 candidate，等使用者明確驗收。
+SCAIL-2 與 Wan Animate 是兩個模型，不能互相推定能力或品質；一方結果不佳時不自動改跑另一方，由使用者決定。這是 template＋runner 路線，未接 `generate.py`，也不登記為 video backend。所有輸出維持 candidate，等使用者明確驗收。
