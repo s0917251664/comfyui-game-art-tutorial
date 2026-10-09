@@ -5,7 +5,7 @@ status: active
 
 # 影片產線知識
 
-這頁是影片 task 的工具範圍、backend 選擇、技術契約與歷史驗收紀錄。repo 入口技能為 `skills/comfyui-run/references/comfyui-video-gen/README.md`（由 [TOOLS.md](../TOOLS.md) 路由）；ComfyUI server-side SAM 遮罩與 ordered layer 合成是獨立工具，規格與狀態見 [`layers.md`](layers.md) 及 `skills/comfyui-run/references/comfyui-video-layers/README.md`。要規劃單一角色多動作則改讀 [`animation/workflow.md`](../animation/workflow.md)。設計稿保留在 [`design.md`](design.md)，其中尚未接入的能力仍是規劃，不是可呼叫 task。
+影片 task 的工具範圍、backend 選擇、技術契約與經驗。入口技能是 [comfyui-run](../../../skills/comfyui-run/SKILL.md)（由 [TOOLS.md](../TOOLS.md) 路由），各 task 的旗標查 `generate.py <task> --help`，對照見 [CLI 對照](cli.md)。ComfyUI server 端的 SAM 遮罩與圖層合成是獨立工具（[layers](layers.md)）；單一角色多動作見 [animation/workflow](../animation/workflow.md)；設計判斷見 [design](design.md)，其中未接入的構想不是可呼叫的 task。
 
 ## 狀態與工具範圍
 
@@ -68,14 +68,14 @@ timeout 會保存 `prompt_id` 及精確 queue/running ownership；只有確認�
 
 角色靜幀說明「是誰」，動作影片說明「怎麼動」。輸入角色圖需接近參考影片第一幀姿勢／朝向；站姿角色套走路片會造成雙人或重影。找不到起始 pose 時先從動作片抽首幀；若不是目標角色，先用目標角色靜幀加該姿勢走 `character_action`，驗收後再驅動。只有動作片本來就是目標角色且該幀已接受才直接當角色圖。`--control-type` 預設 `pose`，可用 `canny`、`depth`；參考影片短於輸出時，超出段的控制變弱。
 
-2026-08-27 RTX 4080 16GB 實測：同一走路參考片、角色圖取動作首幀，H3 2.33 秒/56 幀/154.6 秒、H.264+AAC，首幀差 4.1，中後段臉可辨認；Wan 2.04 秒/49 幀/94.4 秒、H.264 無聲，中段起漂移至末幀換臉。另兩個跨角色的預備起姿案例（金甲騎士、紫袍法師）都輸出單人走路片。反例：棚拍持槍站姿去套走路片造成雙人；換 canny 雖單人但武器/場景亂。這是已記錄的單機案例，不是品質承諾。H3 不是像素級鎖臉，也不是真正 ControlNet Union；身份由靜幀角色參考、動作由預處理影片承擔。
+2026-08-27 RTX 4080 16GB 實測：同一走路參考片、角色圖取動作首幀，H3 2.33 秒/56 幀/154.6 秒、H.264+AAC，首幀差 4.1，中後段臉可辨認；Wan 2.04 秒/49 幀/94.4 秒、H.264 無聲，中段起漂移至末幀身份被換掉。另兩個跨角色的預備起姿案例（金甲騎士、紫袍法師）都輸出單人走路片。反例：棚拍持槍站姿去套走路片造成雙人；換 canny 雖單人但武器/場景亂。這是已記錄的單機案例，不是品質承諾。H3 不是像素級鎖臉，也不是真正 ControlNet Union；身份由靜幀角色參考、動作由預處理影片承擔。
 
 正確綁法的完整比較（輸入為 `character_video_h3_00001_.mp4`，同 `pose`、2 秒、seed 42）：
 
 | | H3 (`pose_drive_00004`) | Wan (`pose_drive_00003`) |
 |---|---|---|
 | 時間、輸出 | 154.6 秒；512×768、56 幀、2.33 秒、24 FPS、H.264+AAC 立體聲 | 94.4 秒；512×768、49 幀、2.04 秒、24 FPS、H.264 無聲 |
-| 首幀差與畫面 | 4.1；一人走向鏡頭，背心、步槍、馬尾符合，末段仍可辨識 | 4.3；中段起漂、末段換臉，背心和槍套糊掉 |
+| 首幀差與畫面 | 4.1；一人走向鏡頭，背心、步槍、馬尾符合，末段仍可辨識 | 4.3；中段起漂、末段身份被換成另一張臉，背心和槍套糊掉 |
 | frames | `pose_drive_00004_frames/`（56 PNG） | `pose_drive_00003_frames/`（49 PNG） |
 
 同一走路片驅動兩個不同目標角色的預備起姿案例：
@@ -107,7 +107,7 @@ timeout 會保存 `prompt_id` 及精確 queue/running ownership；只有確認�
 
 需要 PNG sequence 時，生成 task 明確加 `--extract-frames`；`img2video` 預設只留 MP4，`fx_loop` 預設抽幀、可加 `--no-extract-frames`。其他生成 task 只在明確要求時抽幀。`video_concat`/`video_composite` 後使用既有抽幀 helper。Helper 對 staging 完整解碼且至少一幀後才取代固定輸出目錄；失敗保留上一版。抽幀不重建 sidecar，不重新產生影片；核對 frames 數量與 sidecar 實際 frame count。
 
-技術驗收後仍要逐支人眼檢查：I2V 保來源角色與動作；character video 核對臉、服裝、道具比例；pose drive 查是否雙人、重影、換臉；camera move 查運鏡方向且主體未表演；transition 核對起訖靜幀；clip extend 查接續；fx loop 至少連看多輪，檢查接縫、方向、慣性、表情與位置；concat/composite 查順序、縮放/裁切、音訊政策及合成邊緣。首尾像素差只可協助找候選問題。
+技術驗收後仍要逐支人眼檢查：I2V 保來源角色與動作；character video 核對臉、服裝、道具比例；pose drive 查是否雙人、重影、身份被換掉；camera move 查運鏡方向且主體未表演；transition 核對起訖靜幀；clip extend 查接續；fx loop 至少連看多輪，檢查接縫、方向、慣性、表情與位置；concat/composite 查順序、縮放/裁切、音訊政策及合成邊緣。首尾像素差只可協助找候選問題。
 
 需要主觀驗收時，回報可觀看路徑與具體項目，由使用者接受、調整或放棄。不要自動重送、覆寫或將 technical `pass` 推成使用者接受。透明影片、逐幀 AI 去背、APNG、sprite sheet 打包、外部 provider backend 尚未接入；本機綠幕合成不能宣稱透明序列能力。
 
@@ -115,8 +115,7 @@ timeout 會保存 `prompt_id` 及精確 queue/running ownership；只有確認�
 
 角色身份/動作自然度無法由目前自動分數保證；loop/transition 等連續性分數閾值尚未跨題材校準。輸入姿勢與動作首幀不符仍可能得到壞結果，即使 task 技術檢查 pass。背景音訊混音、字幕、配樂、對白與精剪交外部剪輯工具。雲端/API、Fun Camera、透明影片及包裝工具只出現在 [`design.md`](design.md) 的歷史/規劃討論，不代表已接入。
 
-## 可靠範圍盤點
+## 相關頁面
 
-- [2026-10-03 本機影片可靠範圍盤點](reliability-audit-2026-10-03.md)：環境快照、MP4/sidecar 追溯、有限內容抽樣與下一階段基準缺口。
-
-Wan Animate 為獨立固定 API 路徑，未接入 `generate.py` task/backend；現已涵蓋 61 幀延伸段、來源音訊保留、寬高調整及 SCAIL-2；使用／查詢依[專用技能](../../../skills/comfyui-run/references/comfyui-wan-animate/README.md)，安裝見[安裝紀錄](wan-animate-install.md)、實驗記錄見 [2026-10-06 實驗紀錄](wan-animate-scail2-experiments-2026-10-06.md)。本頁不取代執行前 live preflight。
+- Wan Animate 與 SCAIL-2 是獨立的 template 路線（`gameart.py run`），未接入 `generate.py` task／backend，取捨見 [wan-animate-choice](wan-animate-choice.md)；本頁不取代執行前的 live preflight。
+- 物件追蹤遮罩見 [SAM3 追蹤](sam3-tracking.md)，劇情多鏡見 [production-flow](production-flow.md)。

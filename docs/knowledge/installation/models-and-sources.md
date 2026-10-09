@@ -1,12 +1,12 @@
 # 模型清單（依選定設定檔與獨立能力分）
 
-`skills/comfyui-install/SKILL.md` 步驟 8 指向這裡——先依安裝流程確認選定的 image profile，再看對應 family；tier 只提供預設建議，大機器選 `sd15_light` 時也應使用 SD1.5 清單。影片與 FLUX.2 另看各自段落。
+先確認選定的模型設定檔，再看對應段落；tier 只提供預設建議。影片與 FLUX.2 另看各自段落。
 
 **這件事不是只有底模(checkpoint)要跟著 tier 換,ControlNet/IPAdapter/CLIP Vision 全部都是跟底模綁定的,底模架構變了,這些都要跟著換成對應版本,不能只換 checkpoint、其他照抄。**
 
-> **這張表是安裝流程的模型家族、檔名與來源基準,不是 hash-level 的可重現版本 manifest。** 裝機時只管照表裝,不要因為你知道有更新的模型就自作主張換掉——不同人在不同時間裝出來的美術基準要一致,是這整條產線存在的意義。實際可重現的 ComfyUI/custom node commit、套件版本與模型 SHA-256 以 `docs/tested-versions.md` 為準；XU-Nano-PC 的 manifest 已完成 verified capture，其他機器若仍是 `pending_on_installed_machine`，表格中的日期、大小與檔名不可單獨被宣稱為已鎖定版本。真的想評估要不要升級,用 `skills/comfyui-extend/references/comfyui-pipeline-review/README.md`,那是獨立於安裝流程之外、需要使用者明確觸發跟核准的另一件事。
+> **這張表是安裝流程的模型家族、檔名與來源基準,不是 hash-level 的可重現版本 manifest。** 裝機時只管照表裝,不要因為你知道有更新的模型就自作主張換掉——不同人在不同時間裝出來的美術基準要一致,是這整條產線存在的意義。實際可重現的 ComfyUI/custom node commit、套件版本與模型 SHA-256 以 `docs/tested-versions.md` 為準；XU-Nano-PC 的 manifest 已完成 verified capture，其他機器若仍是 `pending_on_installed_machine`，表格中的日期、大小與檔名不可單獨被宣稱為已鎖定版本。真的想評估要不要升級,用 [審視流程](../maintenance/pipeline-review.md),那是獨立於安裝流程之外、需要使用者明確觸發跟核准的另一件事。
 
-## `sdxl_high` / `sdxl` / `sdxl_light` tier(SDXL 家族,目前唯一實際驗證過的組合)
+## SDXL 家族（sdxl_standard，目前唯一實際驗證過的組合）
 
 下載到 `<ComfyUI 安裝路徑>/models/<子資料夾>/`,已存在的檔案跳過:
 
@@ -41,7 +41,7 @@ Union 是額外的實驗權重，**不會取代**上面三顆正式模型。ProM
 
 ## 選用風格底模(`generate.py` 的 `--style`,選配)
 
-**不是基本配備,只有使用者主動要用 `--style` 切換風格才裝。** 只適用 SDXL 家族 tier(`sdxl_high`/`sdxl`/`sdxl_light`),`sd15` 機器不要提。裝法跟裝表格一的 SDXL 底模一樣,下載到 `<ComfyUI 安裝路徑>/models/checkpoints/`,不用額外裝 ControlNet/IPAdapter/CLIP Vision(這幾個都是綁 SDXL 架構,不是綁特定微調版,現有那份繼續共用)。
+**不是基本配備,只有使用者主動要用 `--style` 切換風格才裝。** 只適用 SDXL 家族 tier(`sdxl_high`/`sdxl`/`sdxl_light`)。裝法跟裝表格一的 SDXL 底模一樣,下載到 `<ComfyUI 安裝路徑>/models/checkpoints/`,不用額外裝 ControlNet/IPAdapter/CLIP Vision(這幾個都是綁 SDXL 架構,不是綁特定微調版,現有那份繼續共用)。
 
 | `--style` 值 | 風格方向 | Checkpoint | 概估大小 | 授權注意事項 | 最後確認日期 |
 |---|---|---|---|---|---|
@@ -88,7 +88,7 @@ Union 是額外的實驗權重，**不會取代**上面三顆正式模型。ProM
 
 ### ComfyUI Video Layers 使用的 SAM 2.1 small（不是影片生成 backend）
 
-Video Layers 使用的 `facebook/sam2.1-hiera-small` 為短影片遮罩傳播模型，來源為 [Meta 官方 Hugging Face model repository](https://huggingface.co/facebook/sam2.1-hiera-small)，模型程式／文件見 [facebookresearch/sam2](https://github.com/facebookresearch/sam2)。本工具固定 revision `ee5bba1d82bb8749febdf90f45e84b687142ba03`，只讀取既有 Hugging Face cache 並核對 `config.json`、`model.safetensors`、`preprocessor_config.json` 的 hash；不自動下載，也不加入 `video_capabilities.json` 的生成 backend/task。本機實際 runtime pins 見 [Video Layers reference](../../../skills/comfyui-run/references/comfyui-video-layers/references/local-tool.md) 和 [tested-versions](../../tested-versions.md)；它們是此機 preflight gate，未宣稱其他平台相容。新機若沒有快取，按需回到安裝技能及使用者授權流程，勿由日常 preflight 觸發下載。
+Video Layers 使用的 `facebook/sam2.1-hiera-small` 為短影片遮罩傳播模型，來源為 [Meta 官方 Hugging Face model repository](https://huggingface.co/facebook/sam2.1-hiera-small)，模型程式／文件見 [facebookresearch/sam2](https://github.com/facebookresearch/sam2)。本工具固定 revision `ee5bba1d82bb8749febdf90f45e84b687142ba03`，只讀取既有 Hugging Face cache 並核對 `config.json`、`model.safetensors`、`preprocessor_config.json` 的 hash；不自動下載，也不加入 `video_capabilities.json` 的生成 backend/task。本機實際 runtime pins 見 [Video Layers](../video/layers.md) 和 [tested-versions](../../tested-versions.md)；它們是此機 preflight gate，未宣稱其他平台相容。新機若沒有快取，按需回到安裝技能及使用者授權流程，勿由日常 preflight 觸發下載。
 
 以下是 Windows / RTX 4080 的歷史安裝與實測紀錄(路徑相對於 `<ComfyUI 安裝路徑>/models/`)，不是目前 repository 可直接重建的鎖定檔。當時的檔名、大小與日期可作為辨識線索；XU-Nano-PC 的實際版本、hash 與 smoke 已填入 `docs/tested-versions.md` 的 `verified` manifest，其他已安裝機器仍須自行擷取並從 `pending_on_installed_machine` 完成 smoke 後再改為 `verified`:
 
@@ -109,27 +109,6 @@ Wan I2V + H3 FL2VA 約 56.4 GiB；加上 Ref2VA 約 76 GiB；若再安裝表內 
 
 模型安裝完成後，若要開影片能力，執行 `tools_src/detect_video_capabilities.py` 產生 machine-specific `video_capabilities.json`。它會把每個 backend 的模型路徑與可用 capability 寫入設定，預設只記 size；明確帶 `--hash-models` 才計算 SHA-256，也不會下載缺檔；可重現的 SHA-256 仍要在 smoke test 收尾時填入 `docs/tested-versions.md`。`generate.py` 每次影片 task 都會重新檢查模型檔案、runtime 與 ComfyUI nodes，避免把「檔案曾經存在」誤當成目前可跑。
 
-## `sd15` tier(VRAM < 8GB,SD1.5 家族)
-
-**這條路線目前這個 repo 完全沒有實機驗證過**。`tools_src/comfyui_pipeline/profiles/sd15_light.json` 模型設定檔目前只有 SD1.5 底模、BiRefNet 與放大模型，沒有任何 ControlNet/IPAdapter/CLIP Vision，因此 CLI 目前會對需要 ControlNet/IPAdapter 的 SD1.5 組合先 fail-fast（提早拒絕）；只有繞過 capability gate、直接把 SDXL add-on graph 跟 SD1.5 底模混用時，才會因架構不符發生 shape mismatch。遇到這個 tier 時:
-
-1. 先跟使用者說清楚這是還沒驗證過的路線,不是「裝了就一定動」
-2. 依選定的 `sd15_light.json` 安裝 `dreamshaper_8.safetensors`；不要從較大機器的 `device_config.json` 沿用 SDXL checkpoint。下載來源須確認，不能臆測網址
-3. ControlNet/IPAdapter/CLIP Vision 路徑目前會被 capability gate 主動拒絕；只下載對應的 **SD1.5 版本**並不會自動開通，不能把「模型已安裝」當成「task 已支援」
-4. 真正新增 SD1.5 add-on 支援時，要照 `skills/comfyui-extend/references/comfyui-new-tool-checklist/README.md` 完整處理：在 `sd15_light.json` 補上 SD1.5 版 ControlNet/IPAdapter/CLIP Vision 與對應 `tasks`、更新 capability gate、補 graph/CLI 測試、完成 ComfyUI 實機 smoke test，再同步文件與設定檔的 `validation`。只補 ControlNet 仍不完整，IPAdapter/CLIP Vision 與 gate 也必須一起處理
-
-### `sd15_light` 設定檔的模型與空間
-
-步驟 4b 報空間時用這張表；`sd15_light` 不需要 ControlNet/IPAdapter/CLIP Vision。
-
-| 模型 | 子資料夾 | 檔名 | 概估大小 | 是否必要 |
-|---|---|---|---|---|
-| SD1.5 底模（DreamShaper 8） | `checkpoints` | `dreamshaper_8.safetensors` | **待確認**：這個 repo 還沒實際下載過，下載前以來源頁面顯示的大小告知使用者，不要自行估算 | 必要 |
-| BiRefNet 去背 | `background_removal` | `birefnet.safetensors` | ~0.9GB（同 SDXL 表格，架構無關共用） | 選配；`icon_asset` 與 `--remove-bg` 需要 |
-| 4x-UltraSharp 放大模型 | `upscale_models` | `4x-UltraSharp.pth` | ~67MB（同 SDXL 表格） | 選配；`upscale` 需要 |
-
-合計 = DreamShaper 8 實際大小 + 最多約 1GB。實際下載後把確認的大小與日期補回這張表。
-
 ## Wan2.2 Animate 原生 workflow（本機已安裝）
 
 此模型組只供 ComfyUI 官方 Wan2.2 Animate UI workflow，不加入 `generate.py` model profile/backend。模型下載由 `output/wan-animate-install/download_models.py` 固定 Hugging Face revision、檔案大小及 SHA-256；2026-10-06 七個新增檔案皆完成 size／SHA-256 驗證，合計 22,634,628,209 bytes（21.08 GiB）。Mix／Move 短片技術 smoke 已通過，內容有身份漂移，仍待人工驗收。已安裝的 UMT5 encoder 依官方 workflow 重用，未由本次腳本下載。
@@ -148,7 +127,7 @@ UMT5 依官方 workflow 使用現有 text encoder；實際檔案由環境檢查�
 
 ## SCAIL-2（本機已安裝，2026-10-06）
 
-供 [comfyui-wan-animate 技能](../../../skills/comfyui-run/references/comfyui-wan-animate/README.md)的 SCAIL-2 固定 API templates 使用，不加入 `generate.py` profile/backend。三個檔案皆完成 size／SHA-256 驗證；其餘依賴重用上方 Wan Animate 檔案（VAE 以 `wan_2.1_vae.safetensors` 替代官方範本的 `Wan2_1_VAE_bf16`）。
+供 [Wan Animate 取捨](../video/wan-animate-choice.md)的 SCAIL-2 固定 API templates 使用，不加入 `generate.py` profile/backend。三個檔案皆完成 size／SHA-256 驗證；其餘依賴重用上方 Wan Animate 檔案（VAE 以 `wan_2.1_vae.safetensors` 替代官方範本的 `Wan2_1_VAE_bf16`）。
 
 | 用途 | Repository @ 固定 revision | 上游檔案 → ComfyUI 路徑 | Bytes | SHA-256 |
 |---|---|---|---:|---|

@@ -28,4 +28,4 @@ date: 2026-10-01
 
 ## 驗證狀態
 
-Markdown 範例依照實際 smoke candidate 和可用 JSON manifest 填寫。撤回前的測試數字只代表當時程式版本；撤回後驗證見[重構報告](../../agent-pipeline-refactor-2026-10-01.md)，不可沿用撤回前數字宣稱現況。
+Markdown 範例依照實際 smoke candidate 和可用 JSON manifest 填寫。撤回前的測試數字只代表當時程式版本；撤回後驗證見[重構報告](../archive/agent-pipeline-refactor-2026-10-01.md)，不可沿用撤回前數字宣稱現況。

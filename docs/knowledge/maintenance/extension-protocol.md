@@ -25,7 +25,7 @@ status: current
 
 - 官方範本 `video_wan_vace_inpainting`，blob `4af6c58919482553498d0e9f5bc7b5985030b914`。另有 core blueprint「Video Inpainting (Wan2.1 VACE)」，blob `3eb700cb9478e00a3b8d8a7c415a36609193ac5e`，取樣參數相同，沒有從它派生。
 - 差異寫在 template 的 note：主模型用本機已有的 1.3B（範本是 14B）、不接 CausVid LoRA、遮罩與工作區在本機先做成無損片段。
-- 先以 `draft` 放進 `templates/video/wan-vace/inpaint`。等價測試對上 `build_video_inpaint_wan`。
+- 先以 `draft` 放進 `templates/video/wan-vace/inpaint`。等價測試對上當時的舊實作輸出。
 - 2026-10-08 在 windows-cuda 用 2026-10-07 的素材、同一句 prompt、seed 202 跑過：raw 544×560、57 幀、24 FPS、h264、無音軌，遮罩外變動像素 0，crop 140,206,684,766。規格與舊輸出相同，檔案 sha256 不同。之後把 windows-cuda 改成 `technical_pass`（v0.1.1）。macos-mps 仍是 `untested`。
 - `generate.py video_inpaint` 的指令與旗標沒變，graph 改由 runner 填這份 template。
 

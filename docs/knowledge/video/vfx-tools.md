@@ -6,7 +6,7 @@ last_updated: 2026-10-07
 
 # 特效去背、物件標記局部重繪與 Idle 首尾量測
 
-這頁是 `vfx_alpha_tools.py`（`gameart.py vfx`）與 `generate.py video_inpaint` 的操作契約和證據入口。研究過程與完整數據見 [`experiences/2026-10-07-vfx-research/`](../experiences/2026-10-07-vfx-research/design.md)。所有輸出都是 candidate（[R1](../rules/candidate-review.md)）。
+這頁是 `vfx_alpha_tools.py`（`gameart.py vfx`）與 `generate.py video_inpaint` 的操作契約和證據入口。研究過程與完整數據見 [`experiences/2026-10-07-vfx-research/`](../archive/experiments/2026-10-07-vfx-research/design.md)。所有輸出都是 candidate（[R1](../rules/candidate-review.md)）。
 
 ## 1. 特效去背輸出
 
@@ -24,7 +24,7 @@ last_updated: 2026-10-07
 
 ### 2.1 指定物件並追蹤整支影片
 
-**預設：SAM3 固定 template（`gameart.py run`）**，詳見 [sam3-track reference](../../../skills/comfyui-run/references/comfyui-video-layers/references/sam3-track.md)。
+**預設：SAM3 固定 template（`gameart.py run`）**，詳見 [sam3-track reference](sam3-tracking.md)。
 
 ```text
 gameart.py vfx keyframes --video <src.mp4> --frames 0 --output-dir <dir>/keyframes      # 抽第 0 幀
@@ -149,4 +149,4 @@ gameart.py vfx unpack-masks --segment-dir <dir>/segment --video <src.mp4> --outp
 | SAM3 用第 0 幀手繪遮罩（`SAM3_VideoTrack.initial_mask`，不給文字） | 塗多少就追多少，從頭到尾不會自己修正；使用者實際手繪的遮罩只追到槌頭和槌柄，握把、手、尾巴都沒被選進去，7.4 秒 |
 | SAM3 用隨手框的方塊當第 0 幀遮罩 | 前段把背景和整個角色都選進去，不可用 |
 
-SAM3 追蹤已做成固定 template（`templates/video/sam3/track-{mask,text}/`，2026-10-07 前放在 `skills/comfyui-video-layers/assets/`），以 `gameart.py run` 執行。2026-10-07 runner 出現前的直接 HTTP smoke：遮罩版 56 幀，和實驗遮罩平均 IoU 0.998；文字版 `mallet` 56 幀，IoU 1.0（`output/experiments/vfx-sam3-graph-smoke-20261007/smoke.json`）。研究用腳本放在 [`experiences/2026-10-07-vfx-research/scripts/`](../experiences/2026-10-07-vfx-research/scripts/README.md)，不是產線入口。2026-10-08 Windows 以 runner 跑 track-mask（同一支 56 幀）：GPU 7.896 秒、56 張 1024² 遮罩，技術檢查通過。
+SAM3 追蹤已做成固定 template（`templates/video/sam3/track-{mask,text}/`，2026-10-07 前放在 `skills/comfyui-video-layers/assets/`），以 `gameart.py run` 執行。2026-10-07 runner 出現前的直接 HTTP smoke：遮罩版 56 幀，和實驗遮罩平均 IoU 0.998；文字版 `mallet` 56 幀，IoU 1.0（`output/experiments/vfx-sam3-graph-smoke-20261007/smoke.json`）。研究用腳本放在 [`experiences/2026-10-07-vfx-research/scripts/`](../archive/experiments/2026-10-07-vfx-research/scripts/README.md)，不是產線入口。2026-10-08 Windows 以 runner 跑 track-mask（同一支 56 幀）：GPU 7.896 秒、56 張 1024² 遮罩，技術檢查通過。

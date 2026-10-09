@@ -4,57 +4,47 @@ status: current
 ---
 # 工具與技能總表
 
-此表提供能力發現與路由，不取代技能契約。技術執行成功不等於美術內容驗收（[R1](rules/candidate-review.md)）；生成前依各路線核對本機能力、當下平台 schema 或 live preflight。詳情連結是各項能力的主要操作／證據來源。
+能力發現與路由，不取代技能與 `--help`。用法以 `template.json`（`gameart.py run show <id>`）與各工具的 `--help` 為準，這裡不抄參數。技術執行成功不等於美術驗收（[R1](rules/candidate-review.md)）；生成前依路線核對本機能力、當下平台 schema 或 live preflight。
 
-| 能力／執行方式 | 技術與內容狀態 | 技能入口與詳情 |
+## 三種執行方式
+
+| 執行方式 | 說明 | 技能 |
 |---|---|---|
-| 共用 brief、參考責任、分階段與美術驗收；不執行生成 | 方法文件，不代表任何 executor 可用；物件系列、VFX、動作方法按需查 production reference | [`game-art-brief`／game-art-workflow](../../skills/game-art-brief/references/game-art-workflow/README.md)、[production](../../skills/game-art-brief/references/game-art-workflow/references/production.md)、[responsibilities](../../skills/game-art-brief/references/game-art-workflow/references/responsibilities.md) |
-| 初次使用／路線初始化與需求盤點 | 不安裝、不生成；明確選路線後交給相應入口 | [`game-art-brief`／game-art-initialize](../../skills/game-art-brief/references/game-art-initialize/README.md)、[初始化說明](installation/initialization.md) |
-| 平台原生圖片工具 | 依本次會話 schema；2026-10-05 單張文字生圖及編修技術完成，均候選待驗收；多參考、其他平台、影片未測 | [`platform-image-gen`](../../skills/platform-image-gen/SKILL.md)、[本地測試範圍](../../README.md#平台圖片工具的實測範圍) |
-| ComfyUI 固定圖片 task：`generate.py`（薄 CLI 入口）+ `comfyui_pipeline/`（task 在 `tasks/`，ComfyUI client 在 `client.py`，流程在 `cli.py`，執行期狀態在 `context.RunContext`） | 12 個現有 task；SDXL／SD1.5 依 image capability/profile gate；FLUX.2 獨立 preflight。沿用固定 graph，不臨場組圖（新 graph 走[擴充協議](maintenance/extension-protocol.md)） | [`comfyui-run`／comfyui-art-gen](../../skills/comfyui-run/references/comfyui-art-gen/README.md)、[圖片路由與 gate](art-generation.md)、[參數](art-parameters.md) |
-| ComfyUI brief 輸入映射 | 相容入口，只映射已存在 task，不執行生成 | [`game-art-brief`／game-art-edit-brief](../../skills/game-art-brief/references/game-art-edit-brief/README.md)、[情境](../../skills/game-art-brief/references/game-art-edit-brief/references/scenarios.md) |
-| 固定來源有限參數 sweep：`image_edit_tools.py sweep` | 包裝四個既有 task，最多 16 個候選；不新增 task／graph，也不是自動重試 | [`comfyui-run`／comfyui-image-sweep](../../skills/comfyui-run/references/comfyui-image-sweep/README.md)、[計畫格式](../../skills/comfyui-run/references/comfyui-image-sweep/reference/plan-format.md) |
-| 本機像素處理：`image_edit_tools.py` | Pillow／NumPy；composite、HSV recolor、RGBA compare、reference-board、asset-audit。只技術檢查，不做語意／美術評分 | [`local-media-tools`／local-image-edit-tools](../../skills/local-media-tools/references/local-image-edit-tools/README.md)、[契約與驗證](art/edit-tools.md)、[換色案例](art/single-object-color.md) |
-| 本機 Pillow 物件組裝：`comfyui_design.py`（`gameart.py design`） | `scene`／`sheet`／`pattern` 純 Pillow 合成，不組 ComfyUI graph、不 upload、不 queue。不新增圖片 task，輸出不透明 RGB；素材生成依原 task gate。`--comfy-url`、`--config`、`--timeout` 仍接受但不使用 | [`comfyui-run`／comfyui-object-design](../../skills/comfyui-run/references/comfyui-object-design/README.md)、[工作流紀錄](art/object-design-workflows.md)、[ADR](decisions/2026-10-08-local-design-and-birefnet.md) |
-| 影片生成與本機 concat／composite：`generate.py` + PyAV | 8 個生成 task（含 `video_inpaint` VACE 遮罩局部重繪，需 wan `masked_edit`）、2 個本機 task；依 video capability/backend gate，不能從圖片 tier 推定 | [`comfyui-run`／comfyui-video-gen](../../skills/comfyui-run/references/comfyui-video-gen/README.md)、[影片總覽](video/README.md)、[backend reference](video/README.md#backend模型與-runtime) |
-| 劇情片本機聲音、Animatic、配音：`film_audio.py`、`film_qwen.py`、`film_sapi.ps1` | 不新增 task/custom node；Qwen 中文雙聲線、Animatic/dub 有技術 smoke，聲音表演待聽驗 | [`comfyui-run`／comfyui-film-workflow](../../skills/comfyui-run/references/comfyui-film-workflow/README.md)、[audio tools](../../skills/comfyui-run/references/comfyui-film-workflow/references/audio-tools.md) |
-| 本機 lipsync：`film_lipsync.py` | MuseTalk v1.5 隔離 runtime；單近正面臉、24 CFR、最長 30 秒候選。helper contract smoke pass，內容仍候選，適用性未驗收 | [`lipsync-tools`](../../skills/comfyui-run/references/comfyui-film-workflow/references/lipsync-tools.md) |
-| ComfyUI server-side ReActor 換臉：`face_swap.py` + server custom node | client 只做 preflight／queue／download，媒體處理在 server；warning candidate，未美術驗收；獨立 gate，不是 generate task | [`comfyui-run`／comfyui-face-swap-workflow](../../skills/comfyui-run/references/comfyui-face-swap-workflow/README.md)、[local tool contract](../../skills/comfyui-run/references/comfyui-face-swap-workflow/references/local-tool.md) |
-| ComfyUI server-side SAM Video Layers：`video_layers.py` + `GameArtVideoLayers` node | 固定 server node，client 僅 preflight／queue／download；2026-10-04 current preflight 與四個 strict codec/CFR smoke 通過，內容仍 candidate；不宣稱 baked VFX 可 exact 分離 | [`comfyui-run`／comfyui-video-layers](../../skills/comfyui-run/references/comfyui-video-layers/README.md)、[contract](../../skills/comfyui-run/references/comfyui-video-layers/references/local-tool.md)、[驗收紀錄](video/layers.md)、completion audit（本機證據：`output/*-kabuto-upper-body/video-layers/completion-audit.md`） |
-| 特效去背／打包／影片物件標記／Idle 首尾量測：`vfx_alpha_tools.py`（`gameart.py vfx`） | Pillow／NumPy／PyAV 本機處理；黑底亮度與綠幕 unmix 去背、sprite sheet／APNG／WebM VP9 alpha、手繪遮罩→video_layers plan、遮罩換色與貼回、道具母版貼回 `prop-paste`、loop-metrics。2026-10-07 windows-cuda 實測，輸出皆 candidate；`birefnet-alpha` 只能在 repo 執行 | [`comfyui-run`／comfyui-video-gen](../../skills/comfyui-run/references/comfyui-video-gen/README.md)、[操作與證據](video/vfx-tools.md)、[研究紀錄](experiences/2026-10-07-vfx-research/design.md) |
-| SAM3 影片物件追蹤固定 template（手繪第 0 幀或英文名詞起手） | `gameart.py run video/sam3/track-mask`／`track-text`；逐幀遮罩在 `<run>/outputs/masks/`，可直接給 `video_inpaint`／`vfx`。2026-10-07 smoke：遮罩版 IoU 0.998、文字版 1.0，56 幀；2026-10-08 runner 實跑 track-mask 通過；遮罩範圍仍需美術確認 | [`comfyui-run`／comfyui-video-layers](../../skills/comfyui-run/references/comfyui-video-layers/README.md)、[sam3-track](../../skills/comfyui-run/references/comfyui-video-layers/references/sam3-track.md) |
-| 手繪遮罩服務：`mask_session.py` + `simple_mask_tool/` | 獨立手繪，不含／不依賴 SAM；標準遮罩可選串其他工具 | [遮罩路由與部署](art/masking.md) |
-| 選用 GrabCut 遮罩邊界候選：`mask_refine.py` | OpenCV helper；粗選區內收窄候選，需人工預覽，無 OpenCV 不影響手繪功能 | [遮罩說明](art/masking.md)、[安裝指南](installation/install-guide.md) |
-| SAM 2.1 候選遮罩：`sam_segment.py` | 官方 small 權重，產生預覽／cutout／`mask_comfy.png`；人工驗收後才下游使用 | [SAM segmentation](art/sam-segmentation.md) |
-| 固定 API graph template：`gameart.py run`（REPO_ONLY） | `templates/<id>/` 的清單、能力、平台與模型檔名見自動產生的 [catalog](maintenance/template-catalog.md)（勿在這裡手寫份數）。graph 位元組不改，`template.json` 宣告 slot／option／模型 pin／平台狀態；載入時強制驗證 hash、占位、diff 白名單。`run list`／`run show`／`run <id> --dry-run`（不連線）／`--preflight`（平台閘門、`/object_info` 節點與模型選項、模型檔大小，`--verify-hashes` 算 sha256；不上傳、不 queue）／`run <id>` 實際執行（preflight → 輸入檢查 → 上傳到 `input/<run_id>/` → queue → 輪詢 → 下載 → 輸出檢查，寫 `run.result.json`，kind `template_run_result`，`review` 可列出；技術通過仍待人工審查）。不讀 `extra_model_paths.yaml`。平台狀態與模型 pin 以 catalog 為準；不是 technical_pass 的平台預設擋下。固定 API graph 一律走這裡（[R2](rules/fixed-graphs.md)） | [templates/README](../../templates/README.md)、[Wan Animate 操作契約](../../skills/comfyui-run/references/comfyui-wan-animate/references/comfyui-api.md)、[sam3-track](../../skills/comfyui-run/references/comfyui-video-layers/references/sam3-track.md) |
-| Wan Animate 固定 template（`gameart.py run video/wan-animate/*`） | Mix／Move 單段 17 幀、兩段延伸 61 幀、來源音訊保留、直式 384×640 於 2026-10-06 直接 HTTP smoke 技術通過，2026-10-08 runner 實跑 Move17 通過；內容 candidate、未接 `generate.py`。H3/Wan 5B snapshot 不涵蓋，查詢依 live schema/model preflight | [`comfyui-run`／comfyui-wan-animate](../../skills/comfyui-run/references/comfyui-wan-animate/README.md)、[操作契約](../../skills/comfyui-run/references/comfyui-wan-animate/references/comfyui-api.md)、[安裝與驗證紀錄](video/wan-animate-install.md) |
-| SCAIL-2 固定 template（替換／動畫、兩段延伸；`gameart.py run video/wan-animate/scail2*`） | 2026-10-06 FP8 權重已安裝，替換 33／61 幀與動畫 33 幀直接 HTTP 技術通過（runner 出現前）；內容 candidate，構圖未貼合來源近景；未接 `generate.py` | [`comfyui-run`／comfyui-wan-animate](../../skills/comfyui-run/references/comfyui-wan-animate/README.md)、[SCAIL-2 reference](../../skills/comfyui-run/references/comfyui-wan-animate/references/scail2.md)、[2026-10-06 實驗紀錄](video/wan-animate-scail2-experiments-2026-10-06.md) |
-| SCAIL-2／Wan Animate 研究評估與受控候選紀錄 | 受控比較方法與 prompt-only UI 候選（未 queue） | [animation evaluation](video/animation-evaluation.md)、[brief template](video/templates/animation-brief.md)、[test record template](video/templates/animation-test-record.md) |
-| 角色動作組與逐支交付編排 | 編排既有圖片／影片 task 及人工驗收，不新增模型參數或 provider | [`comfyui-run`／comfyui-character-animation-workflow](../../skills/comfyui-run/references/comfyui-character-animation-workflow/README.md)、[workflow](animation/workflow.md) |
-| 圖片結果 manifest：`--result-json` | 選用 schema v1 技術追溯，不記美術驗收 | [art generation](art-generation.md)、[result records](result-records.md) |
-| 素材版本與驗收 Markdown | 按需記錄實際輸出；accepted/rejected 必須有使用者決定與理由 | [result records](result-records.md)、[範例](assets/smoke-potion.md) |
-| 設備偵測：`detect_device.py` | 掃 GPU／VRAM／OS，產生機器專用 `device_config.json`；換設備重跑 | [`comfyui-install`](../../skills/comfyui-install/SKILL.md)、[installation guide](installation/install-guide.md) |
-| 圖片能力偵測：`detect_image_capabilities.py` | 只掃 profiles、已裝模型／nodes 與驗證狀態，不下載；FLUX.2 不在 snapshot | [`comfyui-run`／comfyui-art-gen](../../skills/comfyui-run/references/comfyui-art-gen/README.md)、[art generation gate](art-generation.md)、[模型設定設計](../model-profiles-design.md) |
-| 影片能力偵測：`detect_video_capabilities.py` | 只掃現有模型、runtime、nodes，不下載；不能從圖片 tier 猜影片 backend。偵測器會列出 template 宣告的影片能力。 | [`comfyui-run`／comfyui-video-gen](../../skills/comfyui-run/references/comfyui-video-gen/README.md)、[video overview](video/README.md) |
-| 素材決定紀錄：`gameart.py review` | `list` 列出 `*.result.json` 候選與 pending/accepted/rejected/mismatch；`accept|reject --by` 僅在使用者明確決定後記錄到 `*.decisions.json`（綁輸出 SHA-256，重生成不繼承）；技術 manifest 不被改動 | [result-records](result-records.md) |
-| 部署：`gameart.py deploy` | 把 repo `tools_src/` 依 `deploy_manifest.py` 同步到 `<ComfyUI>/tools/` 與已安裝的 `custom_nodes/`；預設 dry run，`--yes` 才寫入；寫前備份到 `tools/.deploy-backups/<時間戳>/`、寫後跑 source sync 驗證，部署檔案失敗自動還原；`--rollback [ts\|latest] --yes`、`--list-backups`、`--keep N`；不碰機器快照與 `generated/`；僅能從 repo 執行 | [install-guide](installation/install-guide.md) |
-| 煙霧測試：`gameart.py smoke` | 固定提示詞／種子／尺寸的 `image-core` 套件，逐 task 呼叫 generate.py 並寫 `smoke-report.json` + 總覽圖（含環境指紋、profile sha256、輸出 hash）；未安裝的選用模型記為 `not_installed`（非失敗）；`--record <repo>` 存入 `docs/knowledge/validation/<platform_key>/`；`smoke record <report>` 可事後記錄既有報告；從 repo 執行時自動用 `<repo>/local_config.json`、快照讀 `<ComfyUI>/tools/`；僅技術檢查，不改 profile validation | [validation-workflow](maintenance/validation-workflow.md) |
-| 驗證證據升格：`gameart.py validation`（REPO_ONLY） | `propose <報告>` 唯讀列出將升為 verified 的 task（只看 `pass`，未安裝／略過中性略過；檢查報告在 repo 內且設定檔內容雜湊一致）；`approve <報告> --by <使用者>` 附加證據項目到 profile `validation`（**僅使用者明確要求才可執行**）；`status` 列 task×平台。證據綁報告與環境指紋，環境不同顯示 `verified_other_env`；舊手寫紀錄為 legacy（視同 verified、無環境紀錄） | [validation-workflow](maintenance/validation-workflow.md) |
-| 快照健檢：`gameart.py doctor` | 唯讀列出三份快照是否存在／過期（比對 ComfyUI commit、custom_nodes、模型清單指紋，存於 `capability_fingerprint.json`）與 unverified 摘要；`--refresh` 重跑三個 detector 並更新指紋，`--json` 供程式讀取 | [`game-art-brief`／game-art-initialize](../../skills/game-art-brief/references/game-art-initialize/README.md) |
-| 可攜部署驗證：`verify_portable_install.py` | 核對部署 generate.py、package、profiles 等安裝內容；依安裝設定執行 | [`comfyui-install`](../../skills/comfyui-install/SKILL.md) |
-| BiRefNet benchmark：`benchmark_birefnet.py` | 維護者去背模型 A/B，不是日常 task；現有證據不足以取代正式模型 | [`comfyui-extend`／comfyui-pipeline-review](../../skills/comfyui-extend/references/comfyui-pipeline-review/README.md)、[`comfyui-extend`／comfyui-new-tool-checklist](../../skills/comfyui-extend/references/comfyui-new-tool-checklist/README.md) |
-| 外部 kohya_ss／sd-scripts LoRA 訓練 | repo 無訓練程式；RTX 4080 單次 smoke 不證明其他機器可用 | [LoRA knowledge](installation/lora-training.md) |
-| 新技能／工具／路線維護 | 依實際路線做相應 gate，不強制新增 Python 或 generate task | [`comfyui-extend`／comfyui-new-tool-checklist](../../skills/comfyui-extend/references/comfyui-new-tool-checklist/README.md)、[checklist](maintenance/new-capability-checklist.md) |
-| 技能庫／產線審視 | repo 證據離線盤點；模型研究只查明確指定範圍，不自動下載／改 profile | [`comfyui-extend`／comfyui-pipeline-review](../../skills/comfyui-extend/references/comfyui-pipeline-review/README.md)、[review reference](maintenance/pipeline-review.md)、[skill library](maintenance/skill-library.md) |
-| 專案知識庫讀寫：標準 Markdown | 小模型 draft、root review；按需閱讀，不把觀察自動升格為 profile／驗收 | [`game-art-brief`／project-knowledge](../../skills/game-art-brief/references/project-knowledge/README.md)、[knowledge index](INDEX.md)、[Obsidian integration](maintenance/obsidian-integration.md) |
-| 上游 Obsidian skills（`third_party/claude-obsidian-skills/`） | 只用於另外初始化的 claude-obsidian vault，不是本知識庫讀寫路徑；vault/runtime 支援有限，legacy vault 不代表 ingest/query 已就緒 | [Obsidian integration](maintenance/obsidian-integration.md)、[技能副本說明](../../third_party/claude-obsidian-skills/README.md) |
-| ComfyUI 安裝／升級／初始化 | 安裝依賴硬體與已選路線；升級審視需明確要求；初次使用先走初始化 | [`comfyui-install`](../../skills/comfyui-install/SKILL.md)、[`game-art-brief`／game-art-initialize](../../skills/game-art-brief/references/game-art-initialize/README.md)、[`pipeline-review`](../../skills/comfyui-extend/references/comfyui-pipeline-review/README.md) |
+| 固定 template＋runner | `templates/<id>/` 的固定 API graph，由 runner 填 slot、預檢、上傳、送出、下載、檢查（[R2](rules/fixed-graphs.md)）。清單與能力見自動產生的 [catalog](maintenance/template-catalog.md) | [comfyui-run](../../skills/comfyui-run/SKILL.md) |
+| `generate.py` task | 依 task 與旗標選出 template id，再交給同一個 runner。你選 task，不選 graph | comfyui-run |
+| 本機 Python 工具 | Pillow／NumPy／PyAV／音訊工具，不組 ComfyUI graph，不套 template | [local-media-tools](../../skills/local-media-tools/SKILL.md) |
 
-圖片、影片與本機工具各有自身依賴及狀態；`unverified` task 在執行前告知使用者。影片與動畫細節以各自 canonical page 為準。repo 尚無 ComfyUI MCP 生成入口；不可列作 fallback。能力目錄只記錄入口與證據，不能將不同 gate 壓成通用 `verified` 標籤。
+## 能力索引
+
+| 能力 | 入口 | 狀態與判斷 |
+|---|---|---|
+| 需求 brief、驗收、編修情境 | [game-art-brief](../../skills/game-art-brief/SKILL.md) | [brief 與驗收](art/brief-and-acceptance.md)、[編修情境](art/edit-scenarios.md)；不執行生成 |
+| 平台原生圖片工具 | [platform-image-gen](../../skills/platform-image-gen/SKILL.md) | 依本次會話 schema；單張文字生圖與編修曾技術完成，候選待驗收；多參考、其他平台、影片未測 |
+| 圖片 task（概念、圖示、角色動作、姿勢、風格鎖、局部重繪、精修、放大、分層、FLUX.2） | `generate.py` | SDXL 為既有基線，FLUX.2 為獨立實驗路線；[task 選擇](art-generation.md)、[參數判斷](art-parameters.md)、[已知限制](art/known-limitations.md) |
+| 影片 task（靜幀轉影片、循環特效、轉場、接續、角色參考、運鏡、動作驅動、局部重繪） | `generate.py` | H3／Wan backend 依本機 `video_capabilities.json`；[影片知識](video/README.md)、[CLI 對照](video/cli.md) |
+| 接片、綠幕合成、抽幀 | `generate.py video_concat`／`video_composite` | 本機 PyAV，不連 ComfyUI |
+| 物件追蹤遮罩 | `gameart.py run video/sam3/*` | SAM3 template，內容仍須美術確認；[SAM3 追蹤](video/sam3-tracking.md) |
+| 影片局部重繪 | `gameart.py run video/wan-vace/inpaint`、`generate.py video_inpaint`、recipe `object-mark-inpaint` | 遮罩外逐 byte 不變；[vfx-tools](video/vfx-tools.md) |
+| Wan Animate、SCAIL-2 | `gameart.py run video/wan-animate/*` | 技術通過、內容 candidate；[取捨](video/wan-animate-choice.md)、[安裝紀錄](video/wan-animate-install.md) |
+| SAM2 影片遮罩備援與 2D 圖層合成 | `gameart.py video-layers`（server node＋薄 client） | 不是 template；[Video Layers](video/layers.md) |
+| 多步驟含確認點的流程 | `gameart.py recipe` | [templates/README](../../templates/README.md)「recipe」 |
+| 參數比較 sweep | `gameart.py edit sweep` | 包裝四個既有圖片 task，最多 16 個候選；[edit-tools](art/edit-tools.md) |
+| 本機像素處理 | `gameart.py edit`（composite、recolor、compare、reference-board、asset-audit） | Pillow／NumPy；[edit-tools](art/edit-tools.md)、[單一物件換色](art/single-object-color.md) |
+| 物件展示組裝 | `gameart.py design`（scene、sheet、pattern） | 純 Pillow，輸出不透明 RGB；[物件組裝](art/object-design-workflows.md) |
+| 特效去背、打包、Idle 量測、道具貼回 | `gameart.py vfx` | [vfx-tools](video/vfx-tools.md) |
+| 配音、Animatic、對嘴 | `gameart.py film-audio`、`film-qwen`、`film-lipsync` | 本機 Python 工具；技術 smoke 通過，內容待聽驗；[劇情流程](video/production-flow.md) |
+| 遮罩：手繪、邊界貼合、SAM 候選 | `gameart.py mask-session`、`mask-refine`、`sam` | 手繪服務需 ComfyUI 網頁服務；[遮罩](art/masking.md)、[SAM](art/sam-segmentation.md) |
+| 角色動作組編排 | 既有圖片／影片 task | [動作組](animation/workflow.md) |
+| 素材決定紀錄 | `gameart.py review` | `list` 唯讀；`accept\|reject --by` 只在使用者明確決定後；[result-records](result-records.md) |
+| 設備與能力偵測 | `gameart.py detect-device`／`detect-image`／`detect-video`、`doctor` | 只掃描不下載；換機或環境變動後 `doctor --refresh` |
+| 部署、驗證、煙霧測試 | `gameart.py deploy`、`verify-install`、`smoke`、`validation` | `deploy` 預設 dry run；`validation approve` 只由使用者決定；[驗證流程](maintenance/validation-workflow.md) |
+| 安裝 ComfyUI 與模型 | [comfyui-install](../../skills/comfyui-install/SKILL.md) | [安裝指南](installation/install-guide.md)、[模型清單](installation/models-and-sources.md) |
+| 新增能力、審視 | [comfyui-extend](../../skills/comfyui-extend/SKILL.md) | [擴充協議](maintenance/extension-protocol.md)、[新增能力清單](maintenance/new-capability-checklist.md) |
+| LoRA 訓練 | 外部 kohya_ss | repo 沒有訓練程式；[LoRA](installation/lora-training.md) |
+| 去背模型 A/B | `gameart.py benchmark-birefnet` | 維護者用，不是日常 task |
+
+圖片、影片與本機工具各有自身依賴與狀態；`unverified` 的 task 先告知使用者。repo 沒有 ComfyUI MCP 生成入口，不可列作 fallback。能力目錄只記入口，不能把不同的 gate 壓成通用的 `verified` 標籤。
 
 ## 統一入口 `gameart.py`
 
-`tools_src/gameart.py` 是薄 dispatcher：`python gameart.py <tool> [args...]` 以 `runpy` 轉發到既有腳本，argv、`--help`、結束碼與直接執行相同，只載入被選工具的相依套件。`python gameart.py list` 列出對應：`gen`(generate.py)、`design`、`edit`(image_edit_tools.py)、`face-swap`、`video-layers`、`film-audio`、`film-lipsync`、`film-qwen`、`sam`、`mask-refine`、`mask-session`、`vfx`(vfx_alpha_tools.py)、`detect-device`、`detect-image`、`detect-video`、`review`(asset_review.py)、`deploy`、`smoke`、`validation`、`verify-install`、`benchmark-birefnet`。`deploy`、`validation` 與 `verify-install` 同屬 REPO_ONLY。
-
-- 它是 repo 端便利入口，不列入 `verify_portable_install.py` 的部署同步清單；部署副本（`<ComfyUI>/tools/`）仍直接呼叫各腳本。
-- 輸出位置慣例（現況，未統一）：多數工具的 `--output-dir` 為必填且要求新資料夾／空資料夾；`generate.py` 省略時預設 `<腳本所在資料夾>/generated`；`face_swap.py`／`video_layers.py` 的 `--output-dir` 只在 swap／run 必填；偵測工具用 `--out`（JSON 路徑）；`film_audio.py`／`film_lipsync.py` 用 `--output`（檔案）。技能文件要求圖片生成明確帶 `--output-dir <output_dir>`（`local_config.json`，即 repo 的 `output/`）。
+`python tools_src/gameart.py <tool> [args...]` 轉發到對應腳本，argv、`--help`、結束碼與直接執行相同；`gameart.py list` 列出全部工具。`deploy`、`validation`、`verify-install`、`benchmark-birefnet`、`run`、`recipe` 只能從 repo 執行。部署副本（`<ComfyUI>/tools/`）仍可直接呼叫各腳本。輸出位置慣例：多數工具的 `--output-dir` 必填且要求新資料夾；`generate.py` 省略時預設寫到腳本旁的 `generated/`，技能要求明確帶 `--output-dir <output_dir>`（`local_config.json`，即 repo 的 `output/`）。

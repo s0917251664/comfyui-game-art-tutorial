@@ -30,4 +30,4 @@ evidence: ../experiences/2026-10-07-vfx-research/design.md
 
 ## 證據
 
-2026-10-07 實測數字見 [vfx-tools §3](../video/vfx-tools.md#3-idle-起始幀與首尾呼應)，研究過程見 [VFX 研究](../experiences/2026-10-07-vfx-research/design.md)。動作表與交付流程見 [animation/workflow.md](../animation/workflow.md)。
+2026-10-07 實測數字見 [vfx-tools §3](../video/vfx-tools.md#3-idle-起始幀與首尾呼應)，研究過程見 [VFX 研究](../archive/experiments/2026-10-07-vfx-research/design.md)。動作表與交付流程見 [animation/workflow.md](../animation/workflow.md)。
