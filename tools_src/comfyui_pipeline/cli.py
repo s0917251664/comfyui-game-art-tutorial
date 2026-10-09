@@ -19,7 +19,8 @@ from .client import (
     resolve_comfy_url, submit_and_wait, upload_image, validate_timeout,
 )
 from .image_capabilities import (
-    IMAGE_GRAPH_TASKS, IMAGE_PROFILE_TASKS, load_image_capabilities, resolve_image_profile,
+    IMAGE_GRAPH_TASKS, IMAGE_PROFILE_TASKS, load_image_capabilities, require_local_image_support,
+    resolve_image_profile,
 )
 from .image_from_template import background_removal_output
 from .image_graphs import (
@@ -76,8 +77,7 @@ def _resolve_style_checkpoint(ctx, args):
             raise SystemExit(
                 f"--style 目前只支援 SDXL 家族機器(sdxl_high/sdxl/sdxl_light),"
                 f"這台機器偵測到的 tier 是 {ctx.device.get('tier')!r}。"
-                f"這幾個風格 checkpoint 都是 SDXL 架構,跟 sd15 tier 的 ControlNet/IPAdapter 對不上,"
-                f"直接送出去 ComfyUI 執行期會 shape mismatch。"
+                f"這幾個風格 checkpoint 都是 SDXL 架構,非 SDXL 家族的機器不能用。"
             )
         style_checkpoint = STYLE_CHECKPOINTS[args.style]
 
@@ -255,6 +255,10 @@ def run(argv=None, context=None):
     except RuntimeError as exc:
         raise SystemExit(str(exc)) from exc
     sync_image_runtime(ctx)
+    try:
+        require_local_image_support(args.task, ctx.device, ctx.active_image_profile)
+    except RuntimeError as exc:
+        raise SystemExit(str(exc)) from exc
     # 只在 sidecar 存在且過期時印一行 stderr 提醒;不阻擋、不影響結束碼。
     _fingerprint.reminder_if_stale(os.path.dirname(os.path.abspath(DEVICE_CONFIG_PATH)))
 
@@ -365,7 +369,7 @@ def run(argv=None, context=None):
 
     target_output_id = None
     if args.task == "icon_asset" or getattr(args, "remove_bg", False):
-        # -transparent template 已經含去背；sd15 builder 路徑才在這裡接上。
+        # -transparent template 已經含去背，這裡只取出它的 SaveImage 節點 id。
         target_output_id = background_removal_output(prompt, out_id)
 
     print(f"[送出] task={args.task}")

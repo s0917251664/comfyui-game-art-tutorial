@@ -24,7 +24,7 @@ def add_runtime_arguments(parser):
     )
     parser.add_argument(
         "--profile", dest="profile_id", default=argparse.SUPPRESS,
-        help=("明確選用圖片模型設定檔（例如 sd15_light）；會檢查是否符合這台機器與 task。"
+        help=("明確選用圖片模型設定檔（例如 sdxl_standard）；會檢查是否符合這台機器與 task。"
               "未指定時用 image_capabilities.json 的 default_profile，再沒有就沿用 tier 對應。"),
     )
     parser.add_argument(

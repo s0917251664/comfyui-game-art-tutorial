@@ -169,7 +169,7 @@ class VerifyPortableInstallTests(unittest.TestCase):
             "gpu_name": "Test GPU",
             "vram_mb": 24576,
         }
-        stale = dict(live, tier="sd15", checkpoint="dreamshaper_8.safetensors")
+        stale = dict(live, tier="sdxl_light", default_width=768, default_height=768)
 
         with tempfile.TemporaryDirectory() as tmp:
             temp_root = pathlib.Path(tmp)
@@ -358,10 +358,9 @@ class VerifyPortableInstallTests(unittest.TestCase):
         return code, out.getvalue()
 
     def test_missing_deployed_profile_fails_source_sync(self):
-        code, text = self._profile_sync_output(lambda d: (d / "sd15_light.json").unlink())
+        code, text = self._profile_sync_output(lambda d: (d / "sdxl_standard.json").unlink())
         self.assertEqual(1, code)
-        self.assertIn("[FAIL] comfyui_pipeline/profiles/sd15_light.json source sync", text)
-        self.assertIn("[PASS] comfyui_pipeline/profiles/sdxl_standard.json source sync", text)
+        self.assertIn("[FAIL] comfyui_pipeline/profiles/sdxl_standard.json source sync", text)
 
     def test_stale_deployed_profile_fails_source_sync(self):
         code, text = self._profile_sync_output(lambda d: (d / "retired.json").write_text("{}", encoding="utf-8"))

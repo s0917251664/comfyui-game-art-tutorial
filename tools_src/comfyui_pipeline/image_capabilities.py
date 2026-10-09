@@ -197,6 +197,24 @@ def resolve_image_profile(task, device, cli_profile=None, capabilities=None, cap
     return chosen
 
 
+UNSUPPORTED_LOCAL_IMAGE_MESSAGE = (
+    "這台機器的顯卡記憶體不足（SDXL 至少需要 8000 MB 可用記憶體），不支援本機生圖，也不會自動降級到更小的模型。"
+    "請改用平台生圖（platform-image-gen）。"
+)
+
+
+def require_local_image_support(task, device, active_profile=None):
+    """device_config.json 已偵測過、但這台機器沒有任何可用的本機圖片 tier 時，在送出前停止。
+
+    detect_device.py 對記憶體不足的機器寫入 ``"tier": null``。FLUX.2 task 不吃 tier，不在這裡擋；
+    明確選了設定檔的情況交給 resolve_image_profile 的平台檢查。找不到 device_config.json 時沒有 tier 欄位，不擋。
+    """
+    if task not in IMAGE_PROFILE_TASKS or active_profile is not None:
+        return
+    if "tier" in device and device["tier"] is None:
+        raise RuntimeError(UNSUPPORTED_LOCAL_IMAGE_MESSAGE)
+
+
 def validate_flux2_capability(task, comfy_url, request_timeout=DEFAULT_HTTP_TIMEOUT):
     """Fail before image upload/queue when FLUX.2 nodes or models are absent."""
     required = list(FLUX2_REQUIRED_NODES)

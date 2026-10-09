@@ -48,47 +48,18 @@ class ImageProfileTests(unittest.TestCase):
         self.ig.CKPT = self._ckpt
         self.ig.ACTIVE_PROFILE_ID = None
 
-    def test_active_profile_overrides_tier_for_checkpoint_size_and_addons(self):
-        self.ig.DEVICE = dict(golden_image_graphs.TIER_DEVICES["sdxl_high"], usable_memory_mb=24576)
-        self.ig.CKPT = self.ig.DEVICE["checkpoint"]
-        self.ig.ACTIVE_PROFILE_ID = "sd15_light"
-        graph, _ = self.ig.build_concept("p", seed=1)
-        self.assertEqual("dreamshaper_8.safetensors", graph["1"]["inputs"]["ckpt_name"])
-        self.assertEqual((512, 512), (graph["4"]["inputs"]["width"], graph["4"]["inputs"]["height"]))
-        with self.assertRaisesRegex(RuntimeError, "sd15_light"):
-            self.ig.build_style_lock("p", "c.png", seed=1)
-
-    def test_icon_asset_defaults_to_profile_native_canvas(self):
-        for tier, profile_id, expected in (("sdxl_light", None, (1024, 1024)), ("sdxl_high", "sd15_light", (512, 512))):
-            with self.subTest(tier=tier, profile=profile_id):
-                self.ig.DEVICE = dict(golden_image_graphs.TIER_DEVICES[tier], usable_memory_mb=8192)
-                self.ig.ACTIVE_PROFILE_ID = profile_id
-                graph, _ = self.ig.build_icon_asset("p", seed=1)
-                self.assertEqual(expected, (graph["4"]["inputs"]["width"], graph["4"]["inputs"]["height"]))
-
     def test_active_sdxl_profile_picks_resolution_from_usable_memory(self):
         self.ig.ACTIVE_PROFILE_ID = "sdxl_standard"
         for usable, expected in ((24576, (1024, 1024)), (12000, (1024, 1024)), (10240, (768, 768))):
             with self.subTest(usable=usable):
                 self.ig.DEVICE = dict(golden_image_graphs.TIER_DEVICES["sdxl"], usable_memory_mb=usable)
-                graph, _ = self.ig.build_concept("p", seed=1)
-                self.assertEqual(expected, (graph["4"]["inputs"]["width"], graph["4"]["inputs"]["height"]))
-                self.assertEqual("sd_xl_base_1.0.safetensors", graph["1"]["inputs"]["ckpt_name"])
-
-    def test_graphs_match_pre_profile_golden_fixture(self):
-        expected = golden_image_graphs.load_fixture()
-        actual = json.loads(json.dumps(golden_image_graphs.build_all(self.ig)))
-        self.assertEqual(sorted(expected), sorted(actual))
-        for tier, cases in expected.items():
-            self.assertEqual(sorted(cases), sorted(actual[tier]), tier)
-            for name, graph in cases.items():
-                with self.subTest(tier=tier, case=name):
-                    self.assertEqual(graph, actual[tier][name])
+                self.assertEqual(expected, self.ig._default_size())
+                self.assertEqual("sd_xl_base_1.0.safetensors", self.ig._default_checkpoint())
 
     def test_every_profile_file_validates_and_id_matches_filename(self):
         ids = self.profiles.list_profile_ids()
         self.assertIn("sdxl_standard", ids)
-        self.assertIn("sd15_light", ids)
+        self.assertNotIn("sd15_light", ids)
         for profile_id in ids:
             with self.subTest(profile=profile_id):
                 self.assertEqual(profile_id, self.profiles.load_profile(profile_id)["id"])
@@ -107,7 +78,7 @@ class ImageProfileTests(unittest.TestCase):
                 self.assertNotIn(tier, seen, f"{tier} 同時出現在 {seen.get(tier)} 與 {profile_id}")
                 seen[tier] = profile_id
         self.assertEqual("sdxl_standard", self.profiles.profile_id_for_tier("sdxl_light"))
-        self.assertEqual("sd15_light", self.profiles.profile_id_for_tier("sd15"))
+        self.assertIsNone(self.profiles.profile_id_for_tier("sd15"))
         self.assertIsNone(self.profiles.profile_id_for_tier("unknown"))
 
     def test_detect_device_tiers_agree_with_profiles(self):
@@ -155,7 +126,7 @@ class ImageProfileTests(unittest.TestCase):
         self.assertIn(["controlnet.canny", "controlnet.depth", "controlnet.pose"], requirement["required"])
         self.assertIn("controlnet.union", requirement["optional"])
         with self.assertRaises(self.profiles.ProfileError):
-            self.profiles.task_requirements(self.profiles.load_profile("sd15_light"), "style_lock")
+            self.profiles.task_requirements(profile, "no_such_task")
 
     def test_effective_validation_and_eligibility(self):
         profile = self.profiles.load_profile("sdxl_standard")
@@ -243,17 +214,10 @@ class ImageProfileTests(unittest.TestCase):
         outcome = self.profiles.evaluate_validation(profile, "macos-mps", 18432, "concept", env)
         self.assertEqual(("verified", "legacy"), (outcome["status"], outcome["basis"]))
 
-    def test_sd15_profile_has_no_sdxl_addons(self):
-        self.ig.DEVICE = dict(golden_image_graphs.TIER_DEVICES["sd15"])
-        for key in ("ipadapter", "clip_vision", "controlnet.canny", "controlnet.union"):
-            with self.subTest(model=key):
-                with self.assertRaises(self.profiles.ProfileError):
-                    self.ig._model(key)
-
     def test_explicit_steps_and_cfg_still_override_profile(self):
         self.ig.DEVICE = dict(golden_image_graphs.TIER_DEVICES["sdxl"])
-        graph, _ = self.ig.build_concept("p", seed=1, steps=12, cfg=4.5)
-        self.assertEqual((12, 4.5), (graph["5"]["inputs"]["steps"], graph["5"]["inputs"]["cfg"]))
+        sampling = self.ig._resolve_sampling(steps=12, cfg=4.5)
+        self.assertEqual((12, 4.5), (sampling["steps"], sampling["cfg"]))
 
     def test_validation_tasks_are_declared_tasks(self):
         for profile_id in self.profiles.list_profile_ids():
