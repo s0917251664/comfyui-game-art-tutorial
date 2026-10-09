@@ -34,6 +34,6 @@
 - 候選與驗收依 [R1](docs/knowledge/rules/candidate-review.md)：技術檢查不等於美術接受；`gameart.py review accept|reject --by <使用者>` 與 `validation approve` 只在使用者明確決定後才執行，agent 不自行決定。素材紀錄格式見 [`result-records.md`](docs/knowledge/result-records.md)。
 - 圖片模型設定檔在 `tools_src/comfyui_pipeline/profiles/*.json`，驗證以 `platform_key` 為準；FLUX.2 使用獨立 preflight。大機器要指定較小設定檔時用 `--profile` 或 detector 選項，不手改 `device_config.json`。
 - 不自動用系統播放器開成品；逾時不重送，不呼叫全域 `/interrupt`，不清 queue。
-- `local_config.json` 是本機實際路徑（不進版控，缺此檔不代表需要安裝）；依所選路線核對設定與依賴。安裝見 `comfyui-install`。
+- [`local_config.json`](local_config.json) 是本機實際路徑（不進版控，缺此檔不代表需要安裝）；依所選路線核對設定與依賴。安裝見 `comfyui-install`。
 - 本專案目前無預算，使用本機免費模型；日後接外部雲端服務須依使用者明確選擇的路線處理。新增 `.ps1` 必須使用帶 BOM 的 UTF-8，以支援 Windows PowerShell 5.1。
 - 文件草稿由小模型撰寫、主 agent 審核實際差異、來源、連結與規則影響。
