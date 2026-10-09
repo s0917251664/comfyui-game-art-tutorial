@@ -282,7 +282,7 @@ Python 是 `C:\Users\XU\ComfyUI\.venv\Scripts\python.exe`。完整測試先設 `
 2. ~~7.3 技能收斂~~：已完成（`docs/phase7.3-skills-6`），見[進度頁](restructure-progress-2026-10-08.md)。
 3. **8.3 刪 builder。** 影片 builder 與 5 個轉址檔已完成（`refactor/phase8.3-remove-builders`）；`VideoPlan.finalize` 與圖片 builder 留成 8.3b，原因見[進度頁](restructure-progress-2026-10-08.md)。
 4. ~~8.4 部署與 verify-install~~：2026-10-09 完成（verify-install 305/305），見[進度頁](restructure-progress-2026-10-08.md)。原文： queue 確認是空的之後。部署後重啟，再 `doctor --refresh`。
-5. **SD1.5 template。** 要等 `dreamshaper_8.safetensors` 在磁碟上，並且 hash 是實測的。
+5. ~~SD1.5 template~~：使用者 2026-10-09 決定暫不做。**SD1.5 暫不做（使用者 2026-10-09 決定）：** `sd15_light` 只給可用記憶體低於 8 GB 的機器當備援，這台 RTX 4080 用不到，近期也沒有低階機器要跑。所以 4.3 的 SD1.5 template 不做、不下載 `dreamshaper_8.safetensors`；圖片 builder（`image_graphs.build_*`）保留，只當 SD1.5 沒有 template 時的退路。等真的有低記憶體的機器要跑時，再確認模型來源與授權、補 SD1.5 template，然後刪圖片 builder。這兩項不算第 3–8 階段未完成。
 6. **recipe 實機確認。** `object-mark-inpaint` 會停在確認點，等使用者看遮罩預覽。三條草稿維持 draft，等使用者同意才轉正。
 7. **美術接受與平台驗證升格。** 維持 pending，等使用者自己下 `review accept|reject` 或 `validation approve`。
 

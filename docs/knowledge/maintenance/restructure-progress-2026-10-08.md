@@ -37,7 +37,9 @@ status: current
 - 實機（本機證據：`output/verify-20261009-8.3b/`）：10-07 素材、seed 202，crop／處理尺寸／VACE 長度／seed／遮罩外 0 都和 10-07 舊路徑相同；raw 影片 sha 不同（GPU 生成不逐 byte 一致，3.5 也一樣）。第一次跑被影片能力快照的 schema 指紋擋下：8.4 重啟後 30 秒內刷新的快照不準，重跑 `doctor --refresh` 後通過。
 - recipe 補上真的執行器 `TemplateExecutor`（template 步驟交給 `gameart.py run`；local 步驟仍不執行，只有 `_drafts` 用到）。`object-mark-inpaint` 實機跑到確認點（本機證據：`output/verify-20261009-6.4/recipe2/`），等使用者看 `steps/00-track/keyframes/mask_preview.png` 後才 `recipe resume <DIR> --confirm`。
 
-還沒做的：圖片 builder（等 SD1.5 template）、SD1.5 template（要下載 `dreamshaper_8.safetensors`，需使用者同意）、6.4 recipe 的人工確認點、美術接受與驗證升格（使用者決定）。
+**SD1.5 暫不做（使用者 2026-10-09 決定）：** `sd15_light` 只給可用記憶體低於 8 GB 的機器當備援，這台 RTX 4080 用不到，近期也沒有低階機器要跑。所以 4.3 的 SD1.5 template 不做、不下載 `dreamshaper_8.safetensors`；圖片 builder（`image_graphs.build_*`）保留，只當 SD1.5 沒有 template 時的退路。等真的有低記憶體的機器要跑時，再確認模型來源與授權、補 SD1.5 template，然後刪圖片 builder。這兩項不算第 3–8 階段未完成。
+
+還沒做的（都要使用者處理）：6.4 recipe 的人工確認點（遮罩預覽）、美術接受與驗證升格。
 
 審查方式改了：使用者在 2026-10-08 要求不再用 grok 審核，改由實作的 agent 自己 review（範圍、正確性、測試、第 2 節規則），結果寫進 commit 或證據資料夾。
 
