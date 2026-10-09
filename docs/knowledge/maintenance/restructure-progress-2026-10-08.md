@@ -31,7 +31,13 @@ status: current
 - 8.4 `feat/phase8.4-deploy-templates`（`57cf455`，疊在 8.3 上）：`templates/` 的 image／video template 納入部署（`<ComfyUI>/tools/templates`），`gameart.py run`／`recipe` 決定仍只從 repo 執行；`docs/tested-versions.md` 補第三方 custom node commit。完整測試 Ran 613 OK。
 - 8.4 實機：queue 空 → `deploy` dry run（new 215／changed 39／remove 1）→ `deploy --yes`（備份 `tools/.deploy-backups/20261009-170301`）→ 用 ComfyUI-Manager 的 `/manager/reboot` 正常重啟（不是硬砍）→ `/object_info` 有 3 個 `GameArt*` 節點、3 個舊名稱都不在了 → 另外跑 `verify-install`：passed 305、failed 0 → `doctor --refresh` 正常，影片能力列出 template 能力 → 從部署端 `tools/smoke.py` 跑 concept smoke pass（本機證據：`output/verify-20261009-8.4/`）。
 
-還沒做的：8.3b（`VideoPlan.finalize`：`video_inpaint` 改成整個走 runner 會改變輸出位置與 `result.json`，要先由使用者決定；圖片 builder：等 SD1.5 template）、SD1.5 template（要下載 `dreamshaper_8.safetensors`，需使用者同意）、6.4 recipe 的人工確認點、美術接受與驗證升格（使用者決定）。
+**8.3b 與 recipe 執行器（2026-10-09，使用者說「繼續做完」）：** `refactor/phase8.3b-video-inpaint-runner`（疊在 8.4 上）。
+
+- `generate.py video_inpaint` 整個交給 template runner（`run_with_runner`），刪掉 `VideoPlan.finalize` 與 `cli.py` 的呼叫。旗標不變；輸出改在 `<output-dir>/<名稱>_run/`（`run.result.json`、`outputs/raw/`、`composited/`），`composited/result.json` 和舊版欄位相同（另加 `template_run_result`）。不再寫影片 sidecar，`--resume` 不支援。完整測試 Ran 618 OK；`test_video_inpaint_runner` 有真的 runner＋小影片＋假 ComfyUI 的完整流程測試。
+- 實機（本機證據：`output/verify-20261009-8.3b/`）：10-07 素材、seed 202，crop／處理尺寸／VACE 長度／seed／遮罩外 0 都和 10-07 舊路徑相同；raw 影片 sha 不同（GPU 生成不逐 byte 一致，3.5 也一樣）。第一次跑被影片能力快照的 schema 指紋擋下：8.4 重啟後 30 秒內刷新的快照不準，重跑 `doctor --refresh` 後通過。
+- recipe 補上真的執行器 `TemplateExecutor`（template 步驟交給 `gameart.py run`；local 步驟仍不執行，只有 `_drafts` 用到）。`object-mark-inpaint` 實機跑到確認點（本機證據：`output/verify-20261009-6.4/recipe2/`），等使用者看 `steps/00-track/keyframes/mask_preview.png` 後才 `recipe resume <DIR> --confirm`。
+
+還沒做的：圖片 builder（等 SD1.5 template）、SD1.5 template（要下載 `dreamshaper_8.safetensors`，需使用者同意）、6.4 recipe 的人工確認點、美術接受與驗證升格（使用者決定）。
 
 審查方式改了：使用者在 2026-10-08 要求不再用 grok 審核，改由實作的 agent 自己 review（範圍、正確性、測試、第 2 節規則），結果寫進 commit 或證據資料夾。
 

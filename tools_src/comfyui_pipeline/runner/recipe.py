@@ -714,6 +714,43 @@ class OfflineExecutor:
         raise RecipeNotRunnable(f"本機步驟尚未執行({command})。這次沒有呼叫外部程式,也沒有呼叫 ComfyUI")
 
 
+class TemplateExecutor(OfflineExecutor):
+    """實際執行 template 步驟:交給 ``gameart.py run``(同一個 runner,preflight 不過就不送)。
+
+    步驟資料夾就是那次 run 的 ``--output-dir``,所以 ``{steps.<id>.dir}`` 底下有 ``run.result.json``、
+    ``keyframes/`` 等證據。回傳的 outputs:template 宣告的每個 output id → 檔案(只有一個檔)或
+    ``outputs/<id>`` 資料夾(影像序列)。local 步驟仍然不執行(只有 ``_drafts`` 的 recipe 用到)。
+    """
+
+    def __init__(self, templates_root, *, cli_main=None, extra_args=(), out=None, err=None):
+        self.templates_root = Path(templates_root)
+        self.cli_main = cli_main
+        self.extra_args = list(extra_args)
+        self.out, self.err = out, err
+
+    def run_template(self, template_id, slots, step_dir):
+        import json as _json
+        from . import cli as _cli
+        argv = [template_id, "--output-dir", str(step_dir), *self.extra_args]
+        for name, value in slots.items():
+            argv += ["--set", f"{name}={value}"]
+        main = self.cli_main or _cli.main
+        code = main(argv, root=self.templates_root, out=self.out, err=self.err)
+        result_path = Path(step_dir) / "run.result.json"
+        manifest = _json.loads(result_path.read_text(encoding="utf-8")) if result_path.is_file() else None
+        if code != 0 or not manifest or manifest.get("status") != "completed":
+            failure = (manifest or {}).get("failure") or {}
+            raise RecipeError(f"template {template_id} 執行失敗(結束碼 {code}):"
+                              f"{failure.get('step') or '-'} {failure.get('error') or '沒有 run.result.json'}")
+        grouped = {}
+        for record in manifest.get("outputs") or []:
+            grouped.setdefault(record["output_id"], []).append(record["path"])
+        outputs = {}
+        for output_id, paths in grouped.items():
+            outputs[output_id] = paths[0] if len(paths) == 1 else str(Path(paths[0]).parent)
+        return {"outputs": outputs, "command": "gameart.py run " + " ".join(argv)}
+
+
 def start_run(recipe, output_dir, values, *, templates_root, executor=None, clock=None, out=None):
     inputs = coerce_inputs(recipe, values, require=True)
     directory = prepare_output_dir(output_dir)

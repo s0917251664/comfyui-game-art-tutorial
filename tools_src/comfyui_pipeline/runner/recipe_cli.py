@@ -7,7 +7,8 @@
     python tools_src/gameart.py recipe resume DIR [--confirm] [--json]
 
 ``--dry-run`` 不連 ComfyUI。沒有 ``--confirm`` 的 resume 不會執行確認點之後的步驟。
-``_drafts/`` 要加 ``--draft``。預設 executor 不 queue prompt。
+``_drafts/`` 要加 ``--draft``。實際執行時,template 步驟交給 ``gameart.py run``(同一個 runner,先 preflight);
+local 步驟目前不執行(只有 ``_drafts`` 的 recipe 用到),會停下並說明。
 """
 import argparse
 import json
@@ -201,10 +202,10 @@ def main(argv=None, *, recipes_root=None, templates_root=None, out=None, err=Non
             return cmd_show(build_show_parser().parse_args(rest), recipes_root, templates_root, out)
         if command == "run":
             return cmd_run(build_run_parser().parse_args(rest), recipes_root, templates_root, out,
-                           executor=executor, clock=clock)
+                           executor=executor or R.TemplateExecutor(templates_root, out=out, err=err), clock=clock)
         if command == "resume":
             return cmd_resume(build_resume_parser().parse_args(rest), recipes_root, templates_root, out,
-                              executor=executor, clock=clock)
+                              executor=executor or R.TemplateExecutor(templates_root, out=out, err=err), clock=clock)
         raise CliError(f"未知子命令 {command!r}。可用 list、show、run、resume")
     except (CliError, R.RecipeError, argparse.ArgumentError) as exc:
         _eprint(f"recipe: {exc}", out, err)

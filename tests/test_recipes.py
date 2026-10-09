@@ -372,7 +372,8 @@ class ConfirmationTests(unittest.TestCase):
             folder = Path(tmp) / "run"
             code, out, err = run_cli(
                 ["run", "object-mark-inpaint", "--output-dir", str(folder),
-                 "--set", "source_video=clip.mp4", "--set", "seed_mask=mask.png", "--set", "prompt=glow"])
+                 "--set", "source_video=clip.mp4", "--set", "seed_mask=mask.png", "--set", "prompt=glow"],
+                executor=R.OfflineExecutor())
             self.assertEqual(0, code, err)
             self.assertNotIn("等待確認", out)
             self.assertIn("沒有送出", out)
@@ -508,6 +509,75 @@ class DispatcherSurfaceTests(unittest.TestCase):
         self.assertEqual(0, proc.returncode, proc.stderr)
         self.assertIn("object-mark-inpaint", proc.stdout)
         self.assertNotIn("prop-swap", proc.stdout)
+
+
+class TemplateExecutorTests(unittest.TestCase):
+    """真的執行時,template 步驟交給 gameart.py run;這裡用假的 runner main 寫 run.result.json。"""
+
+    def fake_main(self, status="completed", code=0, outputs=None):
+        calls = []
+
+        def main(argv, root=None, out=None, err=None):
+            calls.append((argv, root))
+            folder = Path(argv[argv.index("--output-dir") + 1])
+            manifest = {"status": status, "failure": None if status == "completed" else
+                        {"step": "preflight", "error": "ComfyUI 連不上"},
+                        "outputs": outputs if outputs is not None else []}
+            (folder / "run.result.json").write_text(json.dumps(manifest), encoding="utf-8")
+            return code
+        return main, calls
+
+    def test_outputs_map_to_file_or_sequence_folder(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            step_dir = Path(tmp) / "steps" / "00-track"
+            step_dir.mkdir(parents=True)
+            masks = [str(step_dir / "outputs" / "masks" / f"m{i}.png") for i in range(3)]
+            main, calls = self.fake_main(outputs=[
+                *({"output_id": "masks", "path": path} for path in masks),
+                {"output_id": "raw", "path": str(step_dir / "outputs" / "raw" / "a.mp4")}])
+            executor = R.TemplateExecutor(Path(tmp) / "templates", cli_main=main)
+            result = executor.run_template("video/sam3/track-mask", {"source_video": "clip.mp4", "seed": 7},
+                                           str(step_dir))
+            self.assertEqual(str(step_dir / "outputs" / "masks"), result["outputs"]["masks"])
+            self.assertEqual(str(step_dir / "outputs" / "raw" / "a.mp4"), result["outputs"]["raw"])
+            argv, root = calls[0]
+            self.assertEqual(["video/sam3/track-mask", "--output-dir", str(step_dir),
+                              "--set", "source_video=clip.mp4", "--set", "seed=7"], argv)
+            self.assertEqual(Path(tmp) / "templates", root)
+            self.assertIn("gameart.py run video/sam3/track-mask", result["command"])
+
+    def test_failed_run_stops_the_recipe(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            main, _ = self.fake_main(status="failed", code=1)
+            executor = R.TemplateExecutor(Path(tmp), cli_main=main)
+            with self.assertRaises(R.RecipeError) as ctx:
+                executor.run_template("video/sam3/track-mask", {}, tmp)
+            self.assertIn("ComfyUI 連不上", str(ctx.exception))
+
+    def test_local_steps_are_still_not_run(self):
+        with self.assertRaises(R.RecipeNotRunnable):
+            R.TemplateExecutor(Path(".")).run_local("vfx prop-paste", {}, ".")
+
+    def test_cli_defaults_to_template_executor_for_real_runs(self):
+        seen = []
+
+        class Spy(R.TemplateExecutor):
+            def __init__(self, templates_root, **kwargs):
+                seen.append(templates_root)
+                super().__init__(templates_root, **kwargs)
+
+        original = R.TemplateExecutor
+        R.TemplateExecutor = Spy
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                code, out, err = run_cli(["run", "object-mark-inpaint", "--output-dir", str(Path(tmp) / "run"),
+                                          "--set", "source_video=missing.mp4", "--set", "seed_mask=missing.png",
+                                          "--set", "prompt=glow"])
+        finally:
+            R.TemplateExecutor = original
+        self.assertEqual(1, len(seen))
+        self.assertEqual(2, code)  # runner 擋下(檔案不存在),recipe 停下回報錯誤
+        self.assertIn("執行失敗", out + err)
 
 
 if __name__ == "__main__":

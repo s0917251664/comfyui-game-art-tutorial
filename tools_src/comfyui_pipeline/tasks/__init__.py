@@ -39,7 +39,9 @@ for _module in MODULES:
 assert set(_OWNERS) == set(TASK_ORDER), "TASK_ORDER 與各模組 TASKS 不一致"
 
 IMAGE_TASKS = frozenset(task for task, module in _OWNERS.items() if hasattr(module, "build_graph"))
-VIDEO_TASKS = frozenset(task for task, module in _OWNERS.items() if hasattr(module, "prepare"))
+# 影片 task:prepare() 回傳 VideoPlan,或 run_with_runner() 整個交給 template runner(video_inpaint,PR 8.3b)
+VIDEO_TASKS = frozenset(task for task, module in _OWNERS.items()
+                        if hasattr(module, "prepare") or hasattr(module, "run_with_runner"))
 LOCAL_TASKS = frozenset(task for task, module in _OWNERS.items() if hasattr(module, "run_local"))
 
 

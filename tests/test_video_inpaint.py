@@ -209,38 +209,11 @@ class TaskTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 video_edit.validate(self.args(**kw))
 
-    def test_prepare_uploads_lossless_clips_then_finalize_pastes_back(self):
-        uploaded = []
-
-        def upload(path):
-            back, _ = media.read_video_frames(path)
-            uploaded.append((os.path.basename(path), back))
-            return os.path.basename(path)
-
-        ctx = RunContext(device={"tier": "sdxl"})
-        plan = video_edit.prepare(ctx, self.args(), upload)
-        self.assertEqual(2, len(uploaded))
-        self.assertEqual([], [p for p in os.listdir(self.root / "out") if p.endswith(".mkv")])
-        self.assertEqual(9, plan.graph["55"]["inputs"]["length"])
-        self.assertEqual(9, plan.contract["expected_frames"])
-        self.assertFalse(plan.contract["audio_expected"])
-        self.assertEqual(1 + 9, len(plan.inputs))
-        w, h = plan.graph["55"]["inputs"]["width"], plan.graph["55"]["inputs"]["height"]
-        raw = self.root / "out" / "video_inpaint_t_00001_.mp4"
-        write_clip(raw, [np.zeros((h, w, 3), np.uint8)] * 9)
-        out_dir = plan.finalize(str(raw))
-        result = json.loads((Path(out_dir) / "result.json").read_text(encoding="utf-8"))
-        self.assertEqual(0, result["outside_changed_pixels_total"])
-        self.assertEqual(9, len(list((Path(out_dir) / "frames").glob("*.png"))))
-        self.assertTrue((Path(out_dir) / "composited.mp4").is_file())
-        first = np.asarray(Image.open(Path(out_dir) / "frames" / "00000.png"))
-        self.assertTrue(np.array_equal(first[:, :10], self.frames[0][:, :10]))
-        with self.assertRaises(RuntimeError):
-            plan.finalize(str(raw))
-
     def test_h3_backend_is_rejected(self):
+        # PR 8.3b:video_inpaint 整個交給 runner(完整流程見 test_video_inpaint_runner);backend 檢查仍在最前面
         with self.assertRaises(SystemExit):
-            video_edit.prepare(RunContext(device={}), self.args(backend="h3"), lambda p: p)
+            video_edit.run_with_runner(RunContext(device={}), self.args(backend="h3"), "http://127.0.0.1:1",
+                                       runner_main=lambda *a, **k: 0)
 
 
 class RegionToolTests(unittest.TestCase):

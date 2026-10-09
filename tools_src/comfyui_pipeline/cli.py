@@ -296,6 +296,13 @@ def run(argv=None, context=None):
     if args.task in tasks.VIDEO_TASKS:
         args.seed = seed_or_random(getattr(args, "seed", None))
 
+    runner_task = getattr(tasks.owner(args.task), "run_with_runner", None) if args.task in tasks.VIDEO_TASKS else None
+    if runner_task is not None:
+        code = runner_task(ctx, args, comfy_url)
+        if code:
+            raise SystemExit(code)
+        return
+
     video_started = (
         time.monotonic()
         if args.task in tasks.VIDEO_TASKS or args.task in tasks.LOCAL_TASKS
@@ -394,5 +401,3 @@ def run(argv=None, context=None):
         print(f"[完成] {p}")
         if p.lower().endswith(".mp4") and plan is not None:
             _verify_video_output(ctx, args, plan, p, history, video_started, video_prompt, video_negative)
-            if plan.finalize is not None:
-                plan.finalize(p)
