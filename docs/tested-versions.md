@@ -18,7 +18,7 @@
 - 每台目標機都必須重新執行 `detect_device.py`；圖片 checkpoint family、tier 與預設解析度由該機的 backend、VRAM／統一記憶體動態決定。不得複製來源機的 `device_config.json`。
 - 圖片需再執行 `detect_image_capabilities.py`，依選定 image profile 記錄模型／nodes 與平台驗證狀態；不得複製來源機的 `image_capabilities.json`。
 - 要使用影片時，每台目標機都必須重新執行 `detect_video_capabilities.py`；可用 backend 與 task capability 由該機現有模型、Python runtime 與 ComfyUI node schema 動態決定。不得複製來源機的 `video_capabilities.json`。
-- `local_config.json` 只記錄目標機的絕對路徑與 URL，也必須在目標機重建。`workflows/` 是不進版控的維護用視覺化參考；正式 task 由 `generate.py` 依上述 machine-specific config 組 graph，不靠人工逐台修改 workflow JSON。
+- `local_config.json` 只記錄目標機的絕對路徑與 URL，也必須在目標機重建。正式 task 由 `generate.py` 依上述 machine-specific config 選 `templates/` 的固定 graph，不靠人工逐台修改 workflow JSON。
 - 本頁的 XU-Nano-PC hash 是已驗證的 SDXL／影片基線。若目標硬體偵測到另一個 tier，只能使用該 tier 已明確支援並完成 smoke 的模型組；不能為了追求「相同」而強制載入不適合該平台的模型造成 OOM 或架構不相容。
 
 ## 擷取規則
