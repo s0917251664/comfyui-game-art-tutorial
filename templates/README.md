@@ -97,7 +97,7 @@ runner 不會刪除上傳的檔案：每次執行的輸入留在 `<comfyui_path>
 2. 只刪那個 run 的子資料夾，例如 PowerShell：`Remove-Item -LiteralPath "<comfyui_path>\input\<run_id>" -Recurse`；macOS：`rm -r "<comfyui_path>/input/<run_id>"`。不要清空整個 `input/`，裡面可能有其他工作的檔案。
 3. 刪掉之後就不能用同一份 `workflow_api.json` 在 ComfyUI 重跑；要重跑請重新 `gameart.py run`。repo 裡的 run 資料夾（輸出與 manifest）不受影響。
 
-`--set NAME=@檔案` 從 UTF-8 檔讀值（可帶 BOM，結尾換行會去掉）；`--values FILE.json` 一次給多個值；dry-run 的 `--output-dir` 寫出 `workflow_api.dryrun.json` 與 `dryrun.json`。`run` 只能從 repo 執行，`templates/` 不部署。
+`--set NAME=@檔案` 從 UTF-8 檔讀值（可帶 BOM，結尾換行會去掉）；`--values FILE.json` 一次給多個值；dry-run 的 `--output-dir` 寫出 `workflow_api.dryrun.json` 與 `dryrun.json`。`run` 只能從 repo 執行。PR 8.4 起 `deploy` 會把 `image/`、`video/` 底下的 `template.json` 與 `graph.api.json` 複製到 `<ComfyUI>/tools/templates/`（位元組不變），給部署端的 `generate.py` 圖片／影片 task 填 graph；部署副本不檢查 `provenance.evidence`（沒有 `docs/`）。
 
 ## 修改
 
@@ -135,4 +135,4 @@ python tools_src/gameart.py recipe resume DIR --confirm
 - `run <id> --set KEY=VALUE --output-dir DIR`：寫入 state，跑到下一個確認點就停。若這一步需要 ComfyUI 但沒有接上執行器，不送出、停在確認點之前（`status` 為 `blocked`）。若第一步就是確認點，寫 state、結束碼 0，並印出「等待確認」。
 - `resume DIR`：沒有 `--confirm` 時，不得執行確認點之後的步驟。`resume DIR --confirm` 才把目前這個確認點記下來並繼續。這不是美術接受；內容審查仍是 pending（見 [R1](../docs/knowledge/rules/candidate-review.md)）。
 
-`recipe` 和 `run` 一樣只能從 repo 的 `tools_src/gameart.py` 執行，`templates/` 不部署。
+`recipe` 和 `run` 一樣只能從 repo 的 `tools_src/gameart.py` 執行；recipe 不部署。

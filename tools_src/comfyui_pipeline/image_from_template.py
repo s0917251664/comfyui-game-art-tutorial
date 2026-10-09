@@ -49,7 +49,7 @@ def wants_background_removal(args):
 
 
 def _repo_root():
-    """從這個檔案往上找含 SDXL concept template 的 repo。部署到 ComfyUI/tools 時還沒有 templates/。"""
+    """從這個檔案往上找含 SDXL concept template 的 repo；部署端是 <ComfyUI>/tools(PR 8.4 起 templates/ 跟著部署)。"""
     for parent in Path(__file__).resolve().parents:
         marker = parent / "templates" / "image" / "sdxl" / "concept" / "template.json"
         if marker.is_file():

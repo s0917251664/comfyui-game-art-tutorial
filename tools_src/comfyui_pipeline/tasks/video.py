@@ -185,7 +185,7 @@ def validate(args):
 
 
 def _repo_with_video_templates():
-    """從這個檔案往上找含影片 template 的 repo 根目錄。部署到 ComfyUI/tools 時還沒有 templates/。"""
+    """從這個檔案往上找含影片 template 的 repo 根目錄；部署端是 <ComfyUI>/tools(PR 8.4 起 templates/ 跟著部署)。"""
     for parent in Path(__file__).resolve().parents:
         marker = parent / "templates" / "video" / "wan" / "img2video" / "template.json"
         if marker.is_file():
@@ -193,7 +193,7 @@ def _repo_with_video_templates():
     raise SystemExit(
         "影片 task 的 graph 在 templates/video（固定 template，由 runner 填值）。"
         "請從 repo 執行 python tools_src/generate.py <task>。"
-        "部署到 ComfyUI/tools 的複本要等 templates 納入部署後才找得到這些 template。"
+        "部署端要先用 gameart.py deploy 把 templates/ 部署到 ComfyUI/tools。"
     )
 
 

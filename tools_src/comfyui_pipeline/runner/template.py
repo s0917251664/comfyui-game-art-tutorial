@@ -701,7 +701,8 @@ def _validate_provenance(prov, repo_root):
         if not isinstance(item, dict) or not isinstance(item.get("path"), str) or set(item) - {"path", "note"}:
             problems.append(f"provenance.evidence[{index}] 必須是 {{path, note}}")
             continue
-        if repo_root is not None:
+        # 證據文件只在 repo 裡檢查;部署到 <ComfyUI>/tools/templates 的副本沒有 docs/(PR 8.4)
+        if repo_root is not None and (Path(repo_root) / "docs").is_dir():
             rel = item["path"].split("#", 1)[0]
             if not (Path(repo_root) / rel).exists():
                 problems.append(f"provenance.evidence[{index}]: repo 裡沒有 {rel}")

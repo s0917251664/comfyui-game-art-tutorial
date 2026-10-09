@@ -71,6 +71,19 @@ Windows PowerShell 的基本擷取指令如下（把路徑換成該機器的實�
       comfyui_controlnet_aux:
         commit: e8b689a513c3e6b63edc44066560ca5919c0576e
         source: https://github.com/Fannovel16/comfyui_controlnet_aux.git
+      # PR 8.4（2026-10-09）補記：templates/ 的 requires_custom_nodes 用到的第三方節點，
+      # 以及換臉 gate 釘住的 ReActor。三個 checkout 都沒有本機修改（git status 乾淨）。
+      ComfyUI-KJNodes:
+        commit: d3cfe21625e5170126ce06fbfcfe1d88108688c3
+        source: https://github.com/kijai/ComfyUI-KJNodes.git
+        registry_id: comfyui-kjnodes
+      ComfyUI-segment-anything-2:
+        commit: 0c35fff5f382803e2310103357b5e985f5437f32
+        source: https://github.com/kijai/ComfyUI-segment-anything-2.git
+        registry_id: comfyui-segment-anything-2
+      ComfyUI-ReActor:
+        commit: a12c5b19dcac9ae8b47e592da39c9711c8f8c756
+        source: https://github.com/Gourieff/ComfyUI-ReActor
     runtime:
       python: 3.13.9
       python_build: '3.13.9 | packaged by Anaconda, Inc. | (main, Oct 21 2025, 19:09:58) [MSC v.1929 64 bit (AMD64)]'

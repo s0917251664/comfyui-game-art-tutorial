@@ -90,6 +90,13 @@ class VerifyPortableInstallTests(unittest.TestCase):
         vfx = ROOT / "tools_src/vfx_alpha"
         for src in sorted(p for p in vfx.rglob("*") if p.is_file() and "__pycache__" not in p.parts):
             self._copy_source(tools_dir / "vfx_alpha" / src.relative_to(vfx), src.read_bytes())
+        # PR 8.4:template 也部署到 tools/templates(只有 image／video 的 template.json 與 graph.api.json)
+        for group in ("image", "video"):
+            for src in sorted((ROOT / "templates" / group).rglob("*")):
+                rel = src.relative_to(ROOT / "templates")
+                if src.is_file() and src.name in ("template.json", "graph.api.json") \
+                        and not any(part.startswith("_") for part in rel.parts):
+                    self._copy_source(tools_dir / "templates" / rel, src.read_bytes())
         for name in ("__init__.py", "contracts.py", "media.py", "nodes.py"):
             for location in (tools_dir / "comfyui_video_layers", comfyui_path / "custom_nodes/comfyui-video-layers"):
                 self._copy_source(location / name, (ROOT / "tools_src/comfyui_video_layers" / name).read_bytes())

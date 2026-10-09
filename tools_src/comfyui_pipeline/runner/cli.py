@@ -47,7 +47,7 @@ def _utf8_stdio():
 def default_templates_root():
     repo_root = rc.find_repo_root(TOOLS_SRC)
     if not repo_root:
-        raise CliError("run 只能從 repo 的 tools_src/gameart.py 執行(templates/ 不會部署)")
+        raise CliError("run 只能從 repo 的 tools_src/gameart.py 執行(部署端只有給 generate.py 用的 templates,run 的輸出與證據寫在 repo)")
     return T.templates_root(repo_root)
 
 

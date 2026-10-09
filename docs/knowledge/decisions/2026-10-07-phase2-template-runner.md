@@ -34,4 +34,4 @@ Wan Animate（6 份）與 SAM3（2 份）的固定 API JSON，目前都靠 agent
 
 - 這些決定不改變 R1：runner 的輸出一律維持 candidate，美術驗收仍由使用者決定。
 - 平台狀態只能透過 PR 修改，runner 不會因為一次成功就自動升級。
-- 第二階段不部署 `templates/`，runner 只從 repo 執行；部署留到第 8 階段。
+- 第二階段不部署 `templates/`，runner 只從 repo 執行；部署留到第 8 階段。PR 8.4 落實：`templates/` 的 image／video template 隨 `deploy` 部署給 `generate.py` 用，`gameart.py run`／`recipe` 仍然只從 repo 執行。
