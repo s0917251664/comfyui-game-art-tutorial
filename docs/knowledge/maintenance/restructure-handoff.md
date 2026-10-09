@@ -149,6 +149,9 @@ status: current
 | `extra_model_paths.yaml` | 不支援，模型只在 `<comfyui_path>/<path>` 找。要支援必須另外提案 |
 | 上傳到 `input/<run_id>/` 的檔案不會自動清理 | 目前要手動清理（[templates/README](../../../templates/README.md)）；要不要自動清理，**等使用者決定** |
 | macos-mps | 所有 template 都還沒實測，維持 `untested` |
+| 被握住的物件：手部（遮擋物）保護遮罩 | **待開發**（2026-10-09）：局部重繪會把握住物件的手一起重畫。一次性做法與提案方向見[第 3–8 階段總結](restructure-summary-phase3-8.md) |
+| review 只能選原始輸出，選不到 `derived_outputs` | **待開發**（2026-10-09），見[第 3–8 階段總結](restructure-summary-phase3-8.md) |
+| SD1.5 template | **暫不做**（使用者 2026-10-09 決定）；圖片 builder 保留為 SD1.5 退路 |
 
 ## 6. Windows／PowerShell 5.1 經驗
 

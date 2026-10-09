@@ -83,6 +83,7 @@ repo 附最小 `.obsidian/app.json` 和 `core-plugins.json`，使用檔案瀏覽
 - [重構進度 2026-10-08](maintenance/restructure-progress-2026-10-08.md)：第 3–8 階段做到哪、已 push 的 SHA、審查結論、未完成項。接手時先讀。
 - [重構交接：第 3–8 階段](maintenance/restructure-handoff.md)：Windows 本機 agent 的必守規則、PR 流程、各階段 PR 計畫與回報格式。
 - [技能庫現況與路線界線](maintenance/skill-library.md)：7.3 之前 17 個美術技能的實作、直接 API 與後續候選（歷史基準）。
+- [第 3–8 階段總結](maintenance/restructure-summary-phase3-8.md)：各階段結果、實機驗證、待開發與待決（2026-10-09 收尾）。
 - [技能收斂對照](maintenance/skills-6-mapping.md)：PR 7.3 把 18 個技能收成 6 個；舊技能檔案的新位置與典型需求的路由走查。
 - [custom node 改名紀錄](maintenance/custom-node-renames.md)：`GameArt*` 新名稱；舊名稱已在 PR 8.2 移除，拼法只留在這一頁。
 - [平台驗證流程（smoke suite）](maintenance/validation-workflow.md)：`deploy --yes` → `smoke` → `--record`，技術紀錄不等於美術接受（[R1](rules/candidate-review.md)）。

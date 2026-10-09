@@ -41,7 +41,9 @@ status: current
 
 **6.4 recipe 實機跑完（2026-10-09）：** 使用者在遮罩工具手繪第 0 幀（只塗槌子），`object-mark-inpaint` 用它跑 SAM3 追蹤 56 幀，停在確認點；使用者看過預覽後確認，`recipe resume --confirm` 跑完局部重繪。工作區 crop [138,206,666,766]、528×560、57 幀，`paste_back` 與 `qa_outside_mask_unchanged` 遮罩外變動都是 0（本機證據：`output/verify-20261009-6.4/recipe3/`）。第一次用 10-07 實驗留下的第 0 幀遮罩時，尾巴也被選到，改成使用者手繪後就沒有。recipe 狀態仍是 draft，轉正要另外經使用者同意；內容審查 pending。
 
-還沒做的（都要使用者處理）：美術接受與驗證升格；recipe 轉正。
+**收尾（2026-10-09）：** 手部保護遮罩修正後的結果，使用者表示「先這樣，可以用」，已用 `gameart.py review accept` 記錄；保護遮罩做成正式步驟列為待開發。第 3–8 階段的結案摘要、待開發與待決清單見[第 3–8 階段總結](restructure-summary-phase3-8.md)。
+
+還沒做的（都要使用者處理）：合併；recipe 轉正；其他產出的美術接受與驗證升格。
 
 審查方式改了：使用者在 2026-10-08 要求不再用 grok 審核，改由實作的 agent 自己 review（範圍、正確性、測試、第 2 節規則），結果寫進 commit 或證據資料夾。
 
