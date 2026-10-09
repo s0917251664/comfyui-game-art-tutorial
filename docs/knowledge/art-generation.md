@@ -1,6 +1,6 @@
 ## 職責範圍
 
-本頁只維護 ComfyUI 圖片 task、環境、輸入與執行契約；共用需求、版本與內容驗收由[共用工作流程](../../skills/game-art-workflow/SKILL.md)維護。平台原生生圖讀[平台圖片技能](../../skills/platform-image-gen/SKILL.md)，不讀本頁 config 或套用本機參數。純圖片檔案處理依其工具契約，不因缺本機生成環境而要求安裝。
+本頁只維護 ComfyUI 圖片 task、環境、輸入與執行契約；共用需求、版本與內容驗收由[共用工作流程](../../skills/game-art-brief/references/game-art-workflow/README.md)維護。平台原生生圖讀[平台圖片技能](../../skills/platform-image-gen/SKILL.md)，不讀本頁 config 或套用本機參數。純圖片檔案處理依其工具契約，不因缺本機生成環境而要求安裝。
 
 ## 環境
 
@@ -50,10 +50,10 @@ FLUX.2 不屬於上述 image profile 或 SDXL tier；`generate.py` 會以 `valid
 
 在對照下面「任務判斷」表挑 task 之前,先照這個順序確認要不要用 `generate.py`:
 
-1. **有沒有現成 task 覆蓋這個需求?** 對照下面「任務判斷」表跟 `docs/knowledge/art-parameters.md`。有覆蓋就用它,不要因為「MCP 比較彈性」或「自己組 graph 比較快」就繞過去——這條產線存在的目的就是要比臨場組圖穩定、可重現,能用鎖死 task 就不要繞道。
-2. **這台機器能不能跑、驗證過沒有?** SDXL/SD1.5 task 照上面小節讀 `image_capabilities.json`；FLUX.2 依上節核對獨立 preflight 所需內容與實測紀錄，先告知是實驗性路線；沒有適用硬體的實測紀錄時，說明尚未驗證並依使用者同意進行試跑。task 不可用或設定檔不提供(例如 `sd15_light` 要 `style_lock`)就不要硬送——`generate.py` 會在上傳前 fail-fast 拒絕,不會產出爛結果,但也不會自動找替代方案。如實告訴使用者「這台機器目前跑不了這個 task」和缺什麼,選項是補裝(照 `skills/comfyui-install/SKILL.md`)、換一台已裝好的機器(`--comfy-url` 指過去)、或先不做;`unverified` 要先講清楚再做。**不要為了避開錯誤自行換設定檔或降級**(使用者明確要求換管線時才加 `--profile`,規則見 `docs/knowledge/art-parameters.md`「選用模型設定檔」),也**不要因為 task 存在就假設任何機器都能跑**。影片是同一套邏輯,查 `video_capabilities.json` 有沒有可用 backend,見 `skills/comfyui-video-gen/SKILL.md`。
+1. **有沒有現成 task 覆蓋這個需求?** 對照下面「任務判斷」表跟 `docs/knowledge/art-parameters.md`。有覆蓋就用它,不要因為「MCP 比較彈性」或「自己組 graph 比較快」就繞過去——這條產線存在的目的就是要比臨場組圖穩定、可重現,能用鎖死 task 就不要繞道。真的要新的固定 graph，走[擴充協議](maintenance/extension-protocol.md)，不要臨場組。
+2. **這台機器能不能跑、驗證過沒有?** SDXL/SD1.5 task 照上面小節讀 `image_capabilities.json`；FLUX.2 依上節核對獨立 preflight 所需內容與實測紀錄，先告知是實驗性路線；沒有適用硬體的實測紀錄時，說明尚未驗證並依使用者同意進行試跑。task 不可用或設定檔不提供(例如 `sd15_light` 要 `style_lock`)就不要硬送——`generate.py` 會在上傳前 fail-fast 拒絕,不會產出爛結果,但也不會自動找替代方案。如實告訴使用者「這台機器目前跑不了這個 task」和缺什麼,選項是補裝(照 `skills/comfyui-install/SKILL.md`)、換一台已裝好的機器(`--comfy-url` 指過去)、或先不做;`unverified` 要先講清楚再做。**不要為了避開錯誤自行換設定檔或降級**(使用者明確要求換管線時才加 `--profile`,規則見 `docs/knowledge/art-parameters.md`「選用模型設定檔」),也**不要因為 task 存在就假設任何機器都能跑**。影片是同一套邏輯,查 `video_capabilities.json` 有沒有可用 backend,見 `skills/comfyui-run/references/comfyui-video-gen/README.md`。
 3. **⚠️ 尚未實作,先別當成可用選項——沒有現成 task 覆蓋,而且是一次性/探索性需求**(使用者在旁邊看效果、不是要排程量產、不是要當最終交付物)→ 規劃中是改用 ComfyUI MCP 直接操作,並跟使用者明講這次輸出沒有走鎖死管線,沒有 output contract/capability 驗證/resume 保障,品質自負,不要悄悄把 MCP 產出當成跟 `generate.py` 同等可靠。**這個 repo 目前還沒接 ComfyUI MCP,這條規則接上之前不適用——遇到這種需求,現在只能如實跟使用者說「目前沒有對應工具,做不到」,不要假裝有 MCP 可以救援,也不要自己臨場亂組 graph 頂替（[R2](rules/fixed-graphs.md)）。**
-4. **沒有現成 task 覆蓋,而且這個需求會重複用到**(使用者說「以後常常要這樣」、或這其實要上生產線)→ 不要一直停在 MCP 或手動操作,照 `skills/comfyui-new-tool-checklist/SKILL.md` 把它轉正成真正的 task。
+4. **沒有現成 task 覆蓋,而且這個需求會重複用到**(使用者說「以後常常要這樣」、或這其實要上生產線)→ 不要一直停在 MCP 或手動操作。新的固定 graph 走[擴充協議](maintenance/extension-protocol.md)；其他新能力照 `skills/comfyui-extend/references/comfyui-new-tool-checklist/README.md` 轉正。
 
 ## 任務判斷(先分類,再決定要問什麼)
 
@@ -64,7 +64,7 @@ FLUX.2 不屬於上述 image profile 或 SDXL tier；`generate.py` 會以 `valid
 | 「用 FLUX.2 把這張圖改成……」「用文字語意修改整張參考圖」 | `flux2_edit`（實驗性） | 明確指定 FLUX.2；一張來源圖 + 修改指令。不是局部 mask 修補，也不是 SDXL `refine` 的 denoise 變體 |
 | 「幫我做一個XX的圖示/symbol/按鈕圖案」「單一遊戲小物件,要疊加到別的畫面上用」 | `icon_asset` | 訴求是單一、獨立、預期會疊到其他畫面上的小型元素,不是完整場景/整個 UI 畫面版面 |
 | 「照這個姿勢/線稿畫」,但沒有指定要哪個角色(全新角色、或角色不重要) | `pose_only` | 只有姿勢/線稿參考圖,不需要角色一致性 |
-| 「這個角色/風格套到新場景」「姿勢隨意,但要是這個角色」 | `style_lock`(靜態圖)。若要的是影片、第一幀不必是那張定稿圖 → `skills/comfyui-video-gen/SKILL.md` 的 `character_video` | 只有角色/風格參考圖,不需要指定姿勢 |
+| 「這個角色/風格套到新場景」「姿勢隨意,但要是這個角色」 | `style_lock`(靜態圖)。若要的是影片、第一幀不必是那張定稿圖 → `skills/comfyui-run/references/comfyui-video-gen/README.md` 的 `character_video` | 只有角色/風格參考圖,不需要指定姿勢 |
 | 「這個角色換個姿勢/動作」「照這個線稿套進這個角色」 | `character_action` | 需要角色參考圖 **+** 姿勢/線稿參考圖(兩者都要) |
 | 「幫我把這張草稿上色/精緻化」「同一個造型換材質/換顏色」 | `refine` | 有來源圖,想保留大致構圖但改細節/材質/顏色 |
 | 「這裡崩壞了幫我修」「只改這個區域」「局部調整」 | `inpaint` | 有來源圖 + 需要指定修改區域,而且改動不涉及「結構要保持、外觀要換」這種衝突需求 |

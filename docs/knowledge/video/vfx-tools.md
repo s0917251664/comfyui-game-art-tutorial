@@ -24,7 +24,7 @@ last_updated: 2026-10-07
 
 ### 2.1 指定物件並追蹤整支影片
 
-**預設：SAM3 固定 template（`gameart.py run`）**，詳見 [sam3-track reference](../../../skills/comfyui-video-layers/references/sam3-track.md)。
+**預設：SAM3 固定 template（`gameart.py run`）**，詳見 [sam3-track reference](../../../skills/comfyui-run/references/comfyui-video-layers/references/sam3-track.md)。
 
 ```text
 gameart.py vfx keyframes --video <src.mp4> --frames 0 --output-dir <dir>/keyframes      # 抽第 0 幀
@@ -66,14 +66,15 @@ gameart.py vfx unpack-masks --segment-dir <dir>/segment --video <src.mp4> --outp
 - Gate：`video_capabilities.json` 的 wan backend 必須有 `masked_edit`，需要 `wan2.1_vace_1.3B_fp16.safetensors`、`wan_2.1_vae.safetensors`、`umt5_xxl_fp8_e4m3fn_scaled.safetensors`，以及核心節點 `WanVaceToVideo`、`TrimVideoLatent`、`LoadVideo`、`ImageToMask` 等。H3 沒有這個能力。
 - 輸入：來源片必須是 24 FPS、5–81 幀；遮罩是白色＝重畫的 L PNG（幀數和尺寸要和來源一致），或 video_layers 的 `layers.zip`。圖片 inpaint 的 alpha 遮罩方向相反，會被拒絕。
 - 模式：`keep` 會保留遮罩內的原內容當引導，適合改光效、材質或顏色，造型比較保得住；`replace` 會清空遮罩內再重畫（官方模板做法），適合換成新物件，每個 seed 的設計都不同。
-- 處理流程：遮罩先擴張 `--grow`，依遮罩自動算工作區（再加 `--pad`，對齊 16），超過 832×480 像素時縮小處理；控制片段和遮罩編成無損 FFV1 mkv 上傳。取樣參數照官方模板 `video_wan_vace_inpainting.json` 的非 turbo 分支（shift 5、20 步、cfg 6、uni_pc/simple）。
-- 輸出：
-  - `<name>_00001_.mp4`：工作區原始結果，走一般影片契約和 sidecar，`fps`／`frames`（4k+1）都會驗證。
-  - `<name>_00001_composited/`：
-    - `frames/*.png`：貼回後的無損主檔，遮罩（擴張＋羽化範圍）外逐 byte 等於來源解碼結果，有程式檢查。
+- 處理流程：遮罩先擴張 `--grow`，依遮罩自動算工作區（再加 `--pad`，對齊 16），超過 832×480 像素時縮小處理；控制片段和遮罩編成無損 FFV1 mkv 上傳。送出的 graph 由 runner 填固定 template `video/wan-vace/inpaint`（和 `gameart.py run` 同一份）。取樣參數照官方模板 `video_wan_vace_inpainting.json` 的非 turbo 分支（shift 5、20 步、cfg 6、uni_pc/simple）。模型檔名用 template 的 pin，不跟 `video_capabilities.json` 的檔名走。
+- 輸出（PR 8.3b 起整個由 template runner 執行，和 `gameart.py run video/wan-vace/inpaint` 相同）：在 `<output-dir>/<name>_run/`
+  - `run.result.json`：runner 的技術紀錄（kind `template_run_result`），含每個檢查步驟的結果。
+  - `outputs/raw/*.mp4`：工作區原始結果，`fps`／`frames`（4k+1）／尺寸／無音軌都會檢查。
+  - `composited/`：
+    - `frames/*.png`：貼回後的無損主檔，遮罩（擴張＋羽化範圍）外逐 byte 等於來源解碼結果，貼回時檢查一次，`qa_outside_mask_unchanged` 再重讀 PNG 檢查一次。
     - `composited.mp4`：H.264 重新編碼，不是無損。
-    - `result.json`：工作區、處理尺寸、模式、seed、遮罩外變動數。
-  - 音軌會丟掉。
+    - `result.json`：和 PR 8.3b 之前相同的欄位（工作區、處理尺寸、模式、seed、遮罩外變動數），另加 `template_run_result` 指回 `run.result.json`。
+  - 不再寫影片 sidecar，`--resume` 不支援。音軌會丟掉。
 - 實測（RTX 4080，Skye 召槌 FINAL 1024²×56 幀）：
   - 研究跑了 6 組（2 模式 × 3 seed），每組約 88 秒；遮罩外貼回前的差異約 4.4（Fun Control 整片重畫是 63.8），貼回後是 0；遮罩內相鄰幀差和原片相近。
   - 2026-10-07 正式 task smoke：工作區自動算出 544×560，耗時 99.7 秒，原始輸出驗證 pass，貼回後遮罩外 0 變動（另外獨立重算也確認）。

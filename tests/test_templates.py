@@ -18,11 +18,25 @@ from comfyui_pipeline.runner import template as T  # noqa: E402
 
 ROOT = Path(golden.ROOT)
 TEMPLATES = Path(golden.TEMPLATES)
-ALL_IDS = [
+# PR 2.1 從舊位置搬過來的 8 份(graph 位元組不能變)
+MOVED_IDS = [
     "video/sam3/track-mask", "video/sam3/track-text",
     "video/wan-animate/mix", "video/wan-animate/mix-extend", "video/wan-animate/move",
     "video/wan-animate/move-extend", "video/wan-animate/scail2", "video/wan-animate/scail2-extend",
 ]
+# discover 用路徑各段排序（video/wan 排在 video/wan-animate 前面），不是整段字串的 '/' 與 '-'。
+def _id_key(template_id):
+    return tuple(template_id.split("/"))
+
+
+VIDEO_IDS = sorted(MOVED_IDS + ["video/wan-vace/inpaint", *golden.VIDEO_TEMPLATE_IDS], key=_id_key)
+
+
+def image_template_ids():
+    return [template_id for template_id in T.discover(TEMPLATES) if template_id.startswith("image/")]
+
+
+ALL_IDS = sorted(VIDEO_IDS + image_template_ids(), key=_id_key)
 # 舊位置 → 新位置與位元組 sha256(PR 2.1 搬移前後必須一致)
 MOVED_GRAPH_SHA256 = {
     "video/wan-animate/mix": "5ba22f287ef8f9cb9cb926c249724ae050a0b3bd3076863cdd25f4b6b64c6d6c",
@@ -88,11 +102,12 @@ class TemplateFixture:
 
 
 class LoadTemplatesTests(unittest.TestCase):
-    def test_discovers_exactly_the_eight_templates(self):
+    def test_discovers_exactly_listed_templates(self):
         self.assertEqual(ALL_IDS, T.discover(TEMPLATES))
+        self.assertEqual(VIDEO_IDS, [template_id for template_id in ALL_IDS if template_id.startswith("video/")])
 
     def test_all_templates_load_and_hashes_match_moved_bytes(self):
-        for template_id in ALL_IDS:
+        for template_id in MOVED_IDS:
             with self.subTest(template_id):
                 template = T.load_template(TEMPLATES, template_id, repo_root=ROOT)
                 self.assertEqual(MOVED_GRAPH_SHA256[template_id], template.graph_sha256)
@@ -131,15 +146,15 @@ class LoadTemplatesTests(unittest.TestCase):
             for phrase in stale:
                 self.assertNotIn(phrase, text, f"{path}: {phrase}")
         for path in ("docs/knowledge/rules/fixed-graphs.md",
-                     "skills/comfyui-wan-animate/SKILL.md",
-                     "skills/comfyui-wan-animate/references/comfyui-api.md",
-                     "skills/comfyui-wan-animate/references/scail2.md",
-                     "skills/comfyui-video-layers/references/sam3-track.md"):
+                     "skills/comfyui-run/references/comfyui-wan-animate/README.md",
+                     "skills/comfyui-run/references/comfyui-wan-animate/references/comfyui-api.md",
+                     "skills/comfyui-run/references/comfyui-wan-animate/references/scail2.md",
+                     "skills/comfyui-run/references/comfyui-video-layers/references/sam3-track.md"):
             text = (ROOT / path).read_text(encoding="utf-8")
             self.assertIn("gameart.py run", text, path)
-        for path in ("skills/comfyui-wan-animate/SKILL.md",
-                     "skills/comfyui-wan-animate/references/comfyui-api.md",
-                     "skills/comfyui-video-layers/references/sam3-track.md"):
+        for path in ("skills/comfyui-run/references/comfyui-wan-animate/README.md",
+                     "skills/comfyui-run/references/comfyui-wan-animate/references/comfyui-api.md",
+                     "skills/comfyui-run/references/comfyui-video-layers/references/sam3-track.md"):
             self.assertIn("--preflight", (ROOT / path).read_text(encoding="utf-8"), path)
 
     def test_schema_required_matches_loader(self):
@@ -224,6 +239,203 @@ class RejectBrokenTemplatesTests(TemplateFixture, unittest.TestCase):
     def test_id_must_match_folder(self):
         self.edit("video/sam3/track-mask", lambda d: d.update(id="video/sam3/other"))
         self.assertRejected("video/sam3/track-mask", "video/sam3/other")
+
+
+class OfficialFieldsTests(TemplateFixture, unittest.TestCase):
+    """PR 3.2:min_comfyui_version、requires_custom_nodes、models[].directory／url、provenance.upstream。"""
+
+    MIX = "video/wan-animate/mix"
+
+    def model(self, data, role):
+        return next(m for m in data["models"] if m["role"] == role)
+
+    def rejected(self, change, fragment, template_id=MIX):
+        self.edit(template_id, change)
+        self.assertRejected(template_id, fragment)
+
+    def accepted(self, change, template_id=MIX):
+        self.edit(template_id, change)
+        return self.load(template_id)
+
+    def test_min_comfyui_version_required_and_semver(self):
+        self.rejected(lambda d: d.pop("min_comfyui_version"), "缺少必填欄位 min_comfyui_version")
+        shutil.rmtree(self.root)
+        self.rejected(lambda d: d.update(min_comfyui_version="0.34"), "min_comfyui_version 必須是 X.Y.Z")
+
+    def test_requires_custom_nodes(self):
+        cases = [
+            (lambda d: d.update(requires_custom_nodes={"id": "x"}), "requires_custom_nodes 必須是陣列"),
+            (lambda d: d["requires_custom_nodes"].append({"id": "comfyui-kjnodes", "source": "registry"}), "重複"),
+            (lambda d: d["requires_custom_nodes"].append({"id": "x", "source": "github"}), "source 必須是"),
+            (lambda d: d["requires_custom_nodes"].append({"id": "x"}), "必須剛好有 id、source"),
+            (lambda d: d["requires_custom_nodes"].append({"id": "bad id", "source": "registry"}), "id 格式不對"),
+        ]
+        for change, fragment in cases:
+            with self.subTest(fragment):
+                shutil.rmtree(self.root, ignore_errors=True)
+                self.rejected(change, fragment)
+        shutil.rmtree(self.root)
+        loaded = self.accepted(lambda d: d["requires_custom_nodes"].append({"id": "comfyui-video-layers", "source": "repo"}))
+        self.assertEqual(4, len(loaded.data["requires_custom_nodes"]))
+
+    def test_directory_must_match_path(self):
+        cases = [
+            (lambda d: self.model(d, "vae").update(directory="loras"), "directory 'loras' 和 path"),
+            (lambda d: self.model(d, "vae").update(directory=None), "directory None 和 path"),
+            (lambda d: self.model(d, "pose_bbox").update(directory="ckpts"), "directory 要寫 null"),
+            (lambda d: self.model(d, "vae").update(directory="../vae"), "directory 必須是 models/ 底下"),
+            (lambda d: self.model(d, "vae").pop("directory"), "缺少 directory"),
+        ]
+        for change, fragment in cases:
+            with self.subTest(fragment):
+                shutil.rmtree(self.root, ignore_errors=True)
+                self.rejected(change, fragment)
+
+    def test_url_must_match_source(self):
+        def other_revision(d):
+            self.model(d, "vae")["url"] = self.model(d, "vae")["url"].replace("123acf1", "0000000")
+        def unpinned_revision(d):
+            self.model(d, "vae")["source"]["revision"] = "main"
+            self.model(d, "vae")["url"] = T.MODEL_URL.format(**self.model(d, "vae")["source"])
+        def url_without_source(d):
+            self.model(d, "vae")["source"] = None
+        cases = [
+            (other_revision, "url 和 source 不一致"),
+            (unpinned_revision, "source.revision 必須是 40 位 commit sha"),
+            (url_without_source, "沒有 source 時 url 必須是 null"),
+            (lambda d: self.model(d, "vae")["source"].pop("file"), "source 必須是 null 或剛好有 repo、revision、file"),
+            (lambda d: self.model(d, "vae").pop("url"), "缺少 url"),
+        ]
+        for change, fragment in cases:
+            with self.subTest(fragment):
+                shutil.rmtree(self.root, ignore_errors=True)
+                self.rejected(change, fragment)
+        shutil.rmtree(self.root)
+        loaded = self.accepted(lambda d: self.model(d, "vae").update(source=None, url=None))
+        self.assertIsNone(self.model(loaded.data, "vae")["url"])
+
+    def test_upstream(self):
+        up = lambda d: d["provenance"]["upstream"]  # noqa: E731
+        cases = [
+            (lambda d: d["provenance"].pop("upstream"), "provenance 必須剛好有"),
+            (lambda d: up(d).update(kind="github"), "provenance.upstream.kind 必須是"),
+            (lambda d: up(d).update(blob="ee96a29c"), "40 位 git blob sha"),
+            (lambda d: up(d).update(name="video_wan2_2_14B_animate.json"), "不含 .json"),
+            (lambda d: up(d).update(kind="core_blueprint", name="Video Inpainting"), "要含 .json"),
+            (lambda d: up(d).update(comfyui_version="latest"), "comfyui_version 必須是 X.Y.Z"),
+            (lambda d: up(d).update(kind="none", name=None, blob=None, comfyui_version=None, note=None) or up(d).pop("note"),
+             "要在 note 說明"),
+            (lambda d: up(d).update(kind="none"), "name、blob、comfyui_version 都要是 null"),
+            (lambda d: up(d).update(extra=1), "provenance.upstream 必須有"),
+        ]
+        for change, fragment in cases:
+            with self.subTest(fragment):
+                shutil.rmtree(self.root, ignore_errors=True)
+                self.rejected(change, fragment)
+        for kind, name in (("core_blueprint", "Video Inpainting (Wan2.1 VACE).json"), ("none", None)):
+            with self.subTest(kind):
+                shutil.rmtree(self.root, ignore_errors=True)
+                blob = None if kind == "none" else "3eb700cb9478e00a3b8d8a7c415a36609193ac5e"
+                version = None if kind == "none" else "0.34.0"
+                loaded = self.accepted(lambda d: up(d).update(kind=kind, name=name, blob=blob, comfyui_version=version,
+                                                              note="測試"))
+                self.assertEqual(kind, loaded.data["provenance"]["upstream"]["kind"])
+
+    def test_model_platforms(self):
+        def pin(data, **override):
+            model = data["models"][0]
+            entry = {"filename": model["filename"], "sha256": model["sha256"], "size_bytes": model["size_bytes"]}
+            entry.update(override)
+            model["platforms"] = {"windows-cuda": entry}
+
+        def extra_key(data):
+            pin(data)
+            data["models"][0]["platforms"]["windows-cuda"]["extra"] = 1
+
+        def other_platform(data):
+            pin(data)
+            model = data["models"][0]
+            model["platforms"]["linux-cpu"] = {
+                "filename": "other.safetensors", "sha256": model["sha256"], "size_bytes": model["size_bytes"]}
+
+        shutil.rmtree(self.root, ignore_errors=True)
+        loaded = self.accepted(pin)
+        self.assertEqual(loaded.data["models"][0]["filename"],
+                         loaded.data["models"][0]["platforms"]["windows-cuda"]["filename"])
+        shutil.rmtree(self.root, ignore_errors=True)
+        self.accepted(other_platform)
+        cases = [
+            (lambda d: pin(d, filename="other.safetensors"), "必須等於頂層 filename"),
+            (lambda d: pin(d, sha256="0" * 64), "必須等於頂層 sha256"),
+            (lambda d: pin(d, size_bytes=1), "必須等於頂層 size_bytes"),
+            (lambda d: d["models"][0].__setitem__("platforms", {}), "非空"),
+            (lambda d: d["models"][0].__setitem__("platforms", {
+                "macos-mps": {"filename": "a.safetensors", "sha256": "ab", "size_bytes": 1}}), "必須有 windows-cuda"),
+            (extra_key, "必須剛好有"),
+        ]
+        for change, fragment in cases:
+            with self.subTest(fragment):
+                shutil.rmtree(self.root, ignore_errors=True)
+                self.rejected(change, fragment)
+
+    def test_parse_version(self):
+        self.assertEqual((0, 34, 0), T.parse_version("0.34.0"))
+        self.assertEqual((0, 34, 1), T.parse_version("v0.34.1-dev"))
+        self.assertIsNone(T.parse_version("nightly"))
+        self.assertIsNone(T.parse_version(None))
+
+
+class VideoTemplatePlatformTests(unittest.TestCase):
+    def test_windows_cuda_duplicates_the_top_level_pin(self):
+        self.assertEqual(18, len(golden.VIDEO_TEMPLATE_IDS))
+        for template_id in golden.VIDEO_TEMPLATE_IDS:
+            data = T.load_template(TEMPLATES, template_id, repo_root=ROOT).data
+            with self.subTest(template_id):
+                self.assertEqual("draft", data["status"])
+                self.assertEqual("0.34.0", data["min_comfyui_version"])
+                self.assertEqual("untested", data["capability_gate"]["platforms"]["macos-mps"]["status"])
+                for model in data["models"]:
+                    self.assertEqual(["windows-cuda"], list(model["platforms"]))
+                    pin = model["platforms"]["windows-cuda"]
+                    self.assertEqual(model["filename"], pin["filename"])
+                    self.assertEqual(model["sha256"], pin["sha256"])
+                    self.assertEqual(model["size_bytes"], pin["size_bytes"])
+
+    def test_preflight_model_check_ignores_platforms(self):
+        import inspect
+        from comfyui_pipeline.runner import preflight as preflight_mod
+        text = inspect.getsource(preflight_mod.check_models)
+        self.assertNotIn("platforms", text)
+        self.assertIn("filename", text)
+        self.assertIn("sha256", text)
+
+
+class RealTemplateOfficialFieldsTests(unittest.TestCase):
+    """8 份 template 的 3.2 欄位值(graph hash 不變由 LoadTemplatesTests 確認)。"""
+
+    # PR 3.2 各升 patch；PR 7.3 evidence 路徑跟著技能搬家，再升一次 patch
+    EXPECTED_VERSION = {"video/sam3/track-mask": "1.0.2", "video/sam3/track-text": "1.0.2",
+                        "video/wan-animate/mix": "1.1.2", "video/wan-animate/mix-extend": "1.1.2",
+                        "video/wan-animate/move": "1.1.2", "video/wan-animate/move-extend": "1.1.2",
+                        "video/wan-animate/scail2": "1.0.2", "video/wan-animate/scail2-extend": "1.0.2"}
+    CUSTOM = {"mix": {"comfyui_controlnet_aux", "comfyui-kjnodes", "comfyui-segment-anything-2"},
+              "move": {"comfyui_controlnet_aux"}}
+
+    def test_fields(self):
+        for template_id in MOVED_IDS:
+            data = T.load_template(TEMPLATES, template_id, repo_root=ROOT).data
+            with self.subTest(template_id):
+                self.assertEqual(self.EXPECTED_VERSION[template_id], data["version"])
+                self.assertEqual("0.34.0", data["min_comfyui_version"])
+                family = template_id.rsplit("/", 1)[-1].replace("-extend", "")
+                self.assertEqual(self.CUSTOM.get(family, set()), {n["id"] for n in data["requires_custom_nodes"]})
+                upstream = data["provenance"]["upstream"]
+                self.assertEqual("workflow_templates", upstream["kind"])
+                expected_blob = ("ee96a29cbac97c89d961ba7a95f219b2326c2063" if family in ("mix", "move")
+                                 else "1fc5602b9c54b3517ed6af320ff281d5615e9306")
+                self.assertEqual(expected_blob, upstream["blob"])
+                for model in data["models"]:
+                    self.assertIsNotNone(model["url"], model["filename"])
 
 
 class ValueValidationTests(unittest.TestCase):
@@ -337,8 +549,13 @@ class DiffWhitelistTests(unittest.TestCase):
 
 
 class GoldenGraphTests(unittest.TestCase):
-    def test_twenty_cases_cover_all_templates(self):
-        self.assertEqual(20, len(golden.CASES))
+    def test_golden_cases_cover_all_templates(self):
+        video_cases = [case for case in golden.CASES if case[0].startswith("video/")]
+        image_cases = [case for case in golden.CASES if case[0].startswith("image/")]
+        self.assertEqual(18, len(golden.VIDEO_TEMPLATE_IDS))
+        self.assertEqual(24 + len(golden.VIDEO_TEMPLATE_IDS), len(video_cases))
+        self.assertEqual(len(image_cases), len({case[0] for case in image_cases}))
+        self.assertEqual(len(video_cases) + len(image_cases), len(golden.CASES))
         self.assertEqual(set(ALL_IDS), {case[0] for case in golden.CASES})
         names = sorted(os.listdir(golden.FIXTURE_DIR))
         self.assertEqual(sorted(golden.fixture_name(c[0], c[1]) for c in golden.CASES), names)
@@ -390,7 +607,8 @@ class CliTests(unittest.TestCase):
         code, out, _ = self.run_cli("show", "video/wan-animate/mix")
         self.assertEqual(0, code)
         for fragment in ("positive_points", "keep_audio", "dw-ll_ucoco_384.onnx", "724f4ff2439e", "缺檔會自動下載",
-                         "windows-cuda"):
+                         "windows-cuda", "ComfyUI: 0.34.0 以上", "comfyui-kjnodes(registry)",
+                         "官方來源: workflow_templates video_wan2_2_14B_animate  blob ee96a29cbac9"):
             self.assertIn(fragment, out)
         code, out, _ = self.run_cli("show", "video/sam3/track-text", "--json")
         self.assertEqual("video/sam3/track-text", json.loads(out)["id"])

@@ -36,6 +36,8 @@ Repo 內新增、改名或責任變更的技能，應更新 `AGENTS.md` 核心�
 
 ## 技能庫盤點
 
+> **現況（2026-10-08，PR 7.3）：** 18 個技能已收成 6 個：`game-art-brief`、`platform-image-gen`、`comfyui-run`、`local-media-tools`、`comfyui-extend`、`comfyui-install`。舊技能的內容都搬到新技能的 `references/<舊名>/`，對照見[技能收斂對照](skills-6-mapping.md)，目前的清單見 [skills/README](../../../skills/README.md)。下面是 7.3 之前的盤點，保留作歷史基準；表內的技能名稱現在是 reference 名稱。
+
 盤點基準：本 repository 的 `skills/*/SKILL.md`，共 **18 個技能目錄**：17 個專案自有遊戲美術技能，加 1 個 project-knowledge skill。15 個固定來源的 Obsidian 上游技能盤點時也在 `skills/`，2026-10-07 已移到 `third_party/claude-obsidian-skills/`。下表涵蓋 17 個美術技能；project-knowledge 與上游技能不屬於本次美術執行路線盤點，並未要求修改它們。
 
 「API 後續適配度」表示日後可研究是否適合，**不是已完成遷移**。只有 Wan Animate 欄明確列出目前的固定 template 路線；其他技能仍依其現行 implementation 運作。
@@ -48,7 +50,7 @@ Repo 內新增、改名或責任變更的技能，應更新 `AGENTS.md` 核心�
 | `platform-image-gen` | 呼叫本次平台實際提供的圖片工具，依當下 schema 檢查能力。 | 平台原生路線，不經 ComfyUI API；不要求本機 Python／config。 |
 | `comfyui-art-gen` | `generate.py` 圖片 task、profile、能力 snapshot 和本機 ComfyUI CLI。 | 某些固定 graph 可另作直接 API 評估；目前圖片任務仍用現行 CLI/gate，未遷移。 |
 | `comfyui-image-sweep` | `image_edit_tools.py sweep` 包裝既有圖片 CLI task 的有限參數比較。 | 依賴既有 task 語意與 sweep orchestration；不適合把 wrapper 當單個 graph API，目前未遷移。 |
-| `comfyui-object-design` | Python helper 組合既有 ComfyUI Core graph 和圖片 task，處理 scene／sheet／pattern。 | graph 可否直接 API 呼叫需按各模式另評估；helper 現仍提供現行合成／CLI，未遷移。 |
+| `comfyui-object-design` | 本機 Pillow helper 做 scene／sheet／pattern；素材生成仍走既有圖片 task。 | 合成不經 ComfyUI graph，沒有 API 遷移；圖片 task 仍用現行 CLI，未遷移。 |
 | `comfyui-video-gen` | `generate.py` 影片 task/backend、`video_capabilities.json`、本機 concat/composite。 | 固定已接入 backend 仍走 CLI；不可由 API node 存在取代 backend gate，目前未遷移。 |
 | `comfyui-wan-animate` | 以 `gameart.py run` 執行 `templates/video/wan-animate/` 的固定 template；Mix17／Move17、兩段延伸 Mix61／Move61、音訊保留與 384×640 技術 smoke 通過（2026-10-06 直接 HTTP，2026-10-08 runner Move17）；SCAIL-2 templates 同在此技能。內容仍 candidate，未接 `generate.py`。 | 已有 template＋runner 路線；三段以上、未測尺寸與輸出品質不能由現有測試推定，依專用 skill／evidence 管理。 |
 | `comfyui-character-animation-workflow` | 編排既有圖片／影片 task、階段和人工驗收，不另加模型參數。 | 作 workflow orchestrator，可在明確支援後委派 API skill；本身沒有遷移。 |

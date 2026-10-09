@@ -1,0 +1,175 @@
+{
+  "template": "image/sdxl/icon-asset-lora-transparent",
+  "case": "defaults",
+  "template_version": "0.1.0",
+  "graph_canonical_sha256": "722bb713e59359afa95a4e744dea0443d7ad1dd0fcab054c1ad6811de0ecbf8f",
+  "values": {
+    "prompt": "p",
+    "seed": 20261006,
+    "lora_name": "test_lora.safetensors",
+    "lora_strength": 0.6
+  },
+  "options": {},
+  "uploads": {},
+  "changed": {
+    "1b.lora_name": "test_lora.safetensors",
+    "1b.strength_clip": 0.6,
+    "1b.strength_model": 0.6,
+    "2.text": "p",
+    "5.seed": 20261006
+  },
+  "patched_graph_sha256": "465b984d8094b19ad6476c1b2415903abdc80018091fc5cc1f125ee65f448638",
+  "graph": {
+    "1": {
+      "class_type": "CheckpointLoaderSimple",
+      "inputs": {
+        "ckpt_name": "sd_xl_base_1.0.safetensors"
+      }
+    },
+    "1b": {
+      "class_type": "LoraLoader",
+      "inputs": {
+        "model": [
+          "1",
+          0
+        ],
+        "clip": [
+          "1",
+          1
+        ],
+        "lora_name": "test_lora.safetensors",
+        "strength_model": 0.6,
+        "strength_clip": 0.6
+      }
+    },
+    "2": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "text": "p",
+        "clip": [
+          "1b",
+          1
+        ]
+      }
+    },
+    "3": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "text": "blurry, low quality, extra fingers, deformed, watermark, cluttered scene, multiple objects, full illustration background, cropped edges",
+        "clip": [
+          "1b",
+          1
+        ]
+      }
+    },
+    "4": {
+      "class_type": "EmptyLatentImage",
+      "inputs": {
+        "width": 1024,
+        "height": 1024,
+        "batch_size": 1
+      }
+    },
+    "5": {
+      "class_type": "KSampler",
+      "inputs": {
+        "model": [
+          "1b",
+          0
+        ],
+        "positive": [
+          "2",
+          0
+        ],
+        "negative": [
+          "3",
+          0
+        ],
+        "latent_image": [
+          "4",
+          0
+        ],
+        "seed": 20261006,
+        "steps": 25,
+        "cfg": 7.0,
+        "sampler_name": "euler",
+        "scheduler": "normal",
+        "denoise": 1.0
+      }
+    },
+    "6": {
+      "class_type": "VAEDecode",
+      "inputs": {
+        "samples": [
+          "5",
+          0
+        ],
+        "vae": [
+          "1",
+          2
+        ]
+      }
+    },
+    "7": {
+      "class_type": "SaveImage",
+      "inputs": {
+        "images": [
+          "6",
+          0
+        ],
+        "filename_prefix": "icon_asset"
+      }
+    },
+    "8": {
+      "class_type": "LoadBackgroundRemovalModel",
+      "inputs": {
+        "bg_removal_name": "birefnet.safetensors"
+      }
+    },
+    "9": {
+      "class_type": "RemoveBackground",
+      "inputs": {
+        "bg_removal_model": [
+          "8",
+          0
+        ],
+        "image": [
+          "6",
+          0
+        ]
+      }
+    },
+    "10": {
+      "class_type": "InvertMask",
+      "inputs": {
+        "mask": [
+          "9",
+          0
+        ]
+      }
+    },
+    "11": {
+      "class_type": "JoinImageWithAlpha",
+      "inputs": {
+        "image": [
+          "6",
+          0
+        ],
+        "alpha": [
+          "10",
+          0
+        ]
+      }
+    },
+    "12": {
+      "class_type": "SaveImage",
+      "inputs": {
+        "images": [
+          "11",
+          0
+        ],
+        "filename_prefix": "transparent"
+      }
+    }
+  }
+}

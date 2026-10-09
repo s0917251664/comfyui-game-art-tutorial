@@ -20,7 +20,7 @@ if TOOLS_SRC not in sys.path:
 
 from comfyui_pipeline import (  # noqa: E402
     cli, client, image_capabilities, image_graphs, image_runtime, profiles, tasks,
-    video_builders, video_catalog, video_config, video_contract, video_graphs, video_media,
+    video_catalog, video_config, video_contract, video_graphs, video_media,
 )
 from comfyui_pipeline.context import RunContext  # noqa: E402
 from comfyui_pipeline.tasks import video as task_video, video_local as task_video_local  # noqa: E402
@@ -181,7 +181,7 @@ class GenerateTests(unittest.TestCase):
             image_runtime.build_inpaint(self.ctx, "x", "image.png", "mask.png", denoise=-0.1)
 
     def test_generate_entry_reexports_names_used_by_other_tools(self):
-        # comfyui_design / face_swap / video_layers 以 generate.<名稱> 讀取這些(唯讀)。
+        # face_swap / video_layers 以 generate.<名稱> 讀取這些(唯讀)。
         for name in ("main", "resolve_comfy_url", "validate_timeout", "submit_and_wait", "download_outputs",
                      "upload_image", "_fetch_comfy_object_info", "check_image_graph_against_object_info"):
             self.assertTrue(callable(getattr(self.generate, name)), name)
@@ -427,15 +427,29 @@ class GenerateTests(unittest.TestCase):
                 cli.download_outputs({"outputs": {}}, output_dir, comfy_url="http://server:8188")
 
     def test_main_downloads_only_transparent_saveimage_after_background_removal(self):
-        graph = {"1": {"class_type": "SaveImage", "inputs": {}}}
-        with mock.patch.object(image_runtime, "build_concept", return_value=(graph, "1")), \
-                mock.patch.object(tasks, "preflight_image_task", return_value=True), \
-                patch_all("attach_bg_removal", (cli, tasks,), return_value="9") as attach, \
-                mock.patch.object(cli, "submit_and_wait", return_value={"outputs": {}}), \
+        # concept --remove-bg 選 -transparent template，graph 裡已經有一顆去背 SaveImage。
+        # 下載節點就是那一顆；不能再接一次 attach，否則會多一顆 RemoveBackground。
+        captured = {}
+
+        def fake_submit(prompt, **_kwargs):
+            captured["graph"] = prompt
+            return {"outputs": {}}
+
+        with mock.patch.object(tasks, "preflight_image_task", return_value=True), \
+                mock.patch.object(cli, "submit_and_wait", side_effect=fake_submit), \
                 mock.patch.object(cli, "download_outputs", return_value=["out.png"]) as download:
-            self.main(["--comfy-url", "http://server:8188", "concept", "--prompt", "x", "--remove-bg"])
-        attach.assert_called_once_with(graph, "1")
-        self.assertEqual(["9"], download.call_args.kwargs["node_ids"])
+            self.main(["--comfy-url", "http://server:8188", "concept", "--prompt", "x",
+                       "--remove-bg", "--seed", "1"])
+        graph = captured["graph"]
+        transparent = [
+            node_id for node_id, node in graph.items()
+            if node.get("class_type") == "SaveImage"
+            and (node.get("inputs") or {}).get("filename_prefix") == "transparent"
+        ]
+        removals = [node for node in graph.values() if node.get("class_type") == "RemoveBackground"]
+        self.assertEqual(1, len(transparent))
+        self.assertEqual(1, len(removals))
+        self.assertEqual(transparent, download.call_args.kwargs["node_ids"])
 
     def _object_info_for(self, graph, drop_nodes=(), drop_models=()):
         """依 graph 產生剛好足夠的 /object_info;可指定要拿掉的 node 或模型檔。"""
@@ -640,7 +654,6 @@ class GenerateTests(unittest.TestCase):
             ),
             "video_canvas": mock.patch.object(task_video, "video_canvas", return_value=(64, 64)),
             "upload_image": mock.patch.object(cli, "upload_image", return_value="still.png"),
-            "run_i2v": mock.patch.object(task_video, "run_i2v", return_value=({}, "1")),
             "download_outputs": mock.patch.object(cli, "download_outputs", return_value=["out.mp4"]),
             "submit_and_wait": mock.patch.object(cli, "submit_and_wait", return_value={"outputs": {}}),
             "report_video_output": patch_all(
@@ -649,7 +662,7 @@ class GenerateTests(unittest.TestCase):
             "write_video_sidecar": patch_all("write_video_sidecar", (cli, task_video_local,)),
         }
         with common_patches["configure_video_capability"], common_patches["video_canvas"], common_patches["upload_image"], \
-                common_patches["run_i2v"], common_patches["download_outputs"], \
+                common_patches["download_outputs"], \
                 common_patches["submit_and_wait"] as submit, common_patches["report_video_output"], \
                 common_patches["write_video_sidecar"]:
             self.main([
@@ -696,9 +709,12 @@ class GenerateTests(unittest.TestCase):
                     concat.assert_not_called()
 
     def test_h3_video_graph_has_basic_i2v_structure(self):
-        graph, output_id = video_builders.build_img2video_h3(
-            "slow idle motion", "still.png", width=512, height=512, seed=42, duration=2.0,
-        )
+        # PR 8.3 刪掉 builder 後,改看 video/h3/img2video template(golden 見 test_video_graph_golden)
+        from comfyui_pipeline.runner import template as runner_template
+        repo = os.path.dirname(TOOLS_SRC)
+        template = runner_template.load_template(os.path.join(repo, "templates"), "video/h3/img2video",
+                                                 repo_root=repo)
+        graph, output_id = template.graph, template.data["outputs"][0]["node"]
         self.assertEqual("92", output_id)
         self.assertEqual("MiniMaxH3ImageToVideo", graph["104"]["class_type"])
         self.assertEqual(["56", 0], graph["104"]["inputs"]["first_frame"])
@@ -738,7 +754,6 @@ class GenerateTests(unittest.TestCase):
                     mock.patch.object(cli, "configure_video_capability", return_value="h3"), \
                     mock.patch.object(task_video, "video_canvas", return_value=(64, 64)), \
                     mock.patch.object(cli, "upload_image", return_value="last.png") as upload, \
-                    mock.patch.object(task_video, "run_i2v", return_value=({}, "1")), \
                     mock.patch.object(cli, "submit_and_wait", return_value={"outputs": {}}), \
                     mock.patch.object(cli, "download_outputs", return_value=["out.mp4"]), \
                     patch_all("report_video_output", (cli, task_video_local, video_contract,), return_value={"frames": 49}), \

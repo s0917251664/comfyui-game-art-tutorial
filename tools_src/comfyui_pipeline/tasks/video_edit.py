@@ -1,20 +1,23 @@
 """ComfyUI 影片 task:video_inpaint(Wan2.1 VACE 遮罩局部重繪,只改遮罩內,貼回原片)。
 
-流程:讀來源片與 SAM 遮罩(白色=重畫)→ 擴張遮罩、算工作區、縮到 VACE 1.3B 的 480P 像素上限 →
-控制片段與遮罩編成無損 FFV1 上傳 → 固定 graph 生成工作區影片(原始 mp4 走一般契約與 sidecar)→
-finalize 把結果縮回、只在擴張+羽化遮罩內貼回原片,驗證遮罩外逐 byte 不變,寫 PNG 序列、MP4 與 result.json。
+PR 8.3b 起整個交給 template runner 執行(``video/wan-vace/inpaint``):runner 的 pre 步驟讀來源片與遮罩、
+擴張遮罩、算工作區、編成無損 FFV1 上傳;送出固定 graph;post 步驟檢查輸出、貼回原片、逐幀檢查遮罩外
+不變。CLI 名稱與旗標不變。輸出改在 ``<output-dir>/<名稱>_run/``(runner 的 run 資料夾,含 ``run.result.json``),
+貼回結果在 ``composited/``,並另外寫一份和舊版欄位相同的 ``composited/result.json``
+(kind ``video_inpaint_paste_back``)。
 """
 import json
 import os
 import tempfile
+from pathlib import Path
 
 from ..client import OUTPUT_DIR
-from ..video_builders import build_video_inpaint_wan
+from ..runner import template as runner_template
 from ..video_catalog import VIDEO_FPS
 from ..video_config import require_video_backend
-from ..video_contract import _safe_identifier, _sha256_file, make_video_contract, video_filename_prefix
-from .. import video_edit_media as media
-from ._common import VideoPlan
+from ..video_contract import _safe_identifier, video_filename_prefix
+
+VACE_TEMPLATE_ID = "video/wan-vace/inpaint"
 
 TASKS = ("video_inpaint",)
 
@@ -67,99 +70,111 @@ def validate(args):
     _parse_crop(args.crop)
 
 
-def _mask_input_paths(masks):
-    if os.path.isdir(masks):
-        return [os.path.join(masks, n) for n in sorted(os.listdir(masks)) if n.lower().endswith(".png")]
-    return [masks]
+def _repo_with_vace_template():
+    """從這個檔案往上找含 VACE template 的 repo 根目錄；部署端是 <ComfyUI>/tools(PR 8.4 起 templates/ 跟著部署)。"""
+    for parent in Path(__file__).resolve().parents:
+        marker = parent / "templates" / "video" / "wan-vace" / "inpaint" / "template.json"
+        if marker.is_file():
+            return parent
+    raise SystemExit(
+        "video_inpaint 的 graph 在 templates/video/wan-vace/inpaint（固定 template，由 runner 填值）。"
+        "請從 repo 執行 python tools_src/generate.py video_inpaint。"
+        "部署端要先用 gameart.py deploy 把 templates/ 部署到 ComfyUI/tools。"
+    )
 
 
-def prepare(ctx, args, upload):
-    backend = require_video_backend(args.task, args.backend, ctx.active_video_config)
-    try:
-        frames, fps = media.read_video_frames(args.video)
-        media.validate_source(frames, fps)
-        height, width = frames[0].shape[:2]
-        masks = media.read_masks(args.masks, len(frames), (width, height), args.mask_object)
-        grown = media.grow_masks(masks, args.grow)
-        crop = media.compute_crop(grown, (width, height), args.pad, _parse_crop(args.crop))
-        size = media.processing_size(crop[2] - crop[0], crop[3] - crop[1])
-        controls, mask_clip = media.build_work_clips(frames, grown, crop, size, args.mode)
-    except (OSError, ValueError) as exc:
-        raise SystemExit(str(exc)) from exc
-    length = media.vace_length(len(frames))
+def _slot_values(args):
+    """CLI 參數 → template slot 值(和舊 graph_from_vace_template 相同的對應)。seed 已由 cli 定好(只抽一次)。"""
+    values = {
+        "source_video": os.path.abspath(args.video),
+        "masks": os.path.abspath(args.masks),
+        "prompt": args.prompt,
+        "mode": args.mode,
+        "grow": args.grow,
+        "pad": args.pad,
+        "feather": args.feather,
+        "mask_object": args.mask_object,
+        "strength": args.strength,
+    }
+    if args.crop:
+        values["crop"] = args.crop
+    if args.negative:
+        values["negative"] = args.negative
+    if args.seed is not None:
+        values["seed"] = args.seed
+    return values
+
+
+def run_folder(args):
     out_dir = getattr(args, "output_dir", None) or OUTPUT_DIR
-    os.makedirs(out_dir, exist_ok=True)
-    temp_paths = []
+    prefix = video_filename_prefix(args.task, getattr(args, "shot_id", None), getattr(args, "name", None))
+    return Path(out_dir) / f"{prefix}_run"
+
+
+def run_with_runner(ctx, args, comfy_url, *, runner_main=None):
+    """整個交給 ``gameart.py run video/wan-vace/inpaint``(同一個 runner,先 preflight)。回傳結束碼。"""
+    require_video_backend(args.task, args.backend, ctx.active_video_config)
+    if getattr(args, "resume", False):
+        raise SystemExit("video_inpaint 改由 template runner 執行後不支援 --resume;runner 失敗時不會重送,"
+                         "請看 <名稱>_run/run.result.json,用新的 --name 重跑")
+    root = _repo_with_vace_template()
+    folder = run_folder(args)
+    if folder.exists() and any(folder.iterdir()):
+        raise SystemExit(f"拒絕覆寫既有輸出: {folder}(換一個 --name 或 --output-dir)")
+    if runner_main is None:
+        from ..runner import cli as runner_cli
+        runner_main = runner_cli.main
+    fd, values_path = tempfile.mkstemp(prefix="video_inpaint_values_", suffix=".json")
     try:
-        for kind, clip in (("control", controls), ("mask", mask_clip)):
-            fd, path = tempfile.mkstemp(prefix=f"_video_inpaint_{kind}_", suffix=".mkv", dir=out_dir)
-            os.close(fd)
-            temp_paths.append(path)
-            media.write_lossless_video(clip, path)
-        control_fn, mask_fn = upload(temp_paths[0]), upload(temp_paths[1])
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            json.dump(_slot_values(args), handle, ensure_ascii=False)
+        argv = [VACE_TEMPLATE_ID, "--values", values_path, "--output-dir", str(folder),
+                "--comfy-url", comfy_url, "--timeout", str(args.timeout)]
+        if getattr(args, "config_path", None):
+            argv += ["--config", os.path.abspath(args.config_path)]
+        code = runner_main(argv, root=runner_template.templates_root(root))
     finally:
-        for path in temp_paths:
-            try:
-                os.unlink(path)
-            except FileNotFoundError:
-                pass
-    prefix = video_filename_prefix(args.task, args.shot_id, args.name)
-    graph, out_id = build_video_inpaint_wan(
-        args.prompt, control_fn, mask_fn, size[0], size[1], length, seed=args.seed,
-        negative=args.negative, strength=args.strength, filename_prefix=prefix,
-        video_config=ctx.active_video_config,
-    )
-    contract = make_video_contract(args.task, backend, size[0], size[1], audio_expected=False,
-                                   expected_frames=length)
-    print(f"[工作區] crop={list(crop)} 處理尺寸={size[0]}x{size[1]} 幀={len(frames)}→length {length} mode={args.mode}")
-
-    def finalize(raw_path):
-        return finalize_paste_back(args, raw_path, frames, grown, crop, size, length)
-
-    return VideoPlan(
-        graph=graph, out_id=out_id, backend=backend,
-        inputs=[args.video, *_mask_input_paths(args.masks)],
-        prefix=prefix, contract=contract, finalize=finalize,
-    )
+        os.unlink(values_path)
+    manifest_path = folder / "run.result.json"
+    if code == 0 and manifest_path.is_file():
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        out = write_compat_result(args, folder, manifest)
+        print(f"[貼回] {out['source']['frames']} 幀 -> {folder / 'composited'}"
+              f"(遮罩外變動 {out['outside_changed_pixels_total']})")
+    return code
 
 
-def finalize_paste_back(args, raw_path, frames, grown, crop, size, length):
-    """Paste the VACE work-area output back into the source; outside the mask stays byte-exact."""
-    from PIL import Image
-    raw, _ = media.read_video_frames(raw_path)
-    stem = os.path.splitext(os.path.basename(raw_path))[0].rstrip("_")
-    out_dir = os.path.join(os.path.dirname(os.path.abspath(raw_path)), stem + "_composited")
-    if os.path.lexists(out_dir):
-        raise RuntimeError(f"拒絕覆寫既有貼回輸出: {out_dir}")
-    composed, per_frame = media.paste_back(frames, raw[:len(frames)], crop, grown, args.feather)
-    staging = tempfile.mkdtemp(prefix=f".{stem}_composited.", dir=os.path.dirname(out_dir))
-    try:
-        frame_dir = os.path.join(staging, "frames")
-        os.makedirs(frame_dir)
-        for i, f in enumerate(composed):
-            Image.fromarray(f).save(os.path.join(frame_dir, f"{i:05d}.png"))
-        media.encode_mp4(composed, os.path.join(staging, "composited.mp4"))
-        report = {
-            "schema_version": 1, "kind": "video_inpaint_paste_back", "status": "candidate",
-            "raw_output": {"path": os.path.abspath(raw_path), "sha256": _sha256_file(raw_path),
-                           "frames": len(raw), "used_frames": len(frames)},
-            "source": {"path": os.path.abspath(args.video), "sha256": _sha256_file(args.video),
-                       "frames": len(frames), "size": [int(frames[0].shape[1]), int(frames[0].shape[0])]},
-            "masks": os.path.abspath(args.masks), "mask_object": args.mask_object,
-            "mode": args.mode, "grow": args.grow, "feather": args.feather, "crop": list(crop),
-            "processing_size": list(size), "vace_length": length, "seed": args.seed,
-            "outside_changed_pixels_total": sum(r["outside_changed_pixels"] for r in per_frame),
-            "per_frame": per_frame, "fps": VIDEO_FPS, "audio": "dropped",
-            "outputs": {"frames_dir": "frames/ (PNG, lossless master)",
-                        "mp4": "composited.mp4 (H.264 crf 18, re-encoded, not lossless)"},
-            "acceptance": "pending human review; outside-mask preservation does not judge the edit",
-        }
-        with open(os.path.join(staging, "result.json"), "w", encoding="utf-8") as fh:
-            json.dump(report, fh, ensure_ascii=False, indent=2)
-        os.replace(staging, out_dir)
-    except Exception:
-        import shutil
-        shutil.rmtree(staging, ignore_errors=True)
-        raise
-    print(f"[貼回] {len(composed)} 幀 -> {out_dir}（遮罩外變動 0）")
-    return out_dir
+def _check_detail(manifest, step):
+    for check in (manifest.get("technical_validation") or {}).get("checks") or []:
+        if check.get("step") == step:
+            return check.get("detail") or {}
+    raise RuntimeError(f"run.result.json 沒有 {step} 的檢查結果")
+
+
+def write_compat_result(args, folder, manifest):
+    """寫 ``composited/result.json``:和 PR 8.3b 之前 finalize 寫的欄位相同(kind video_inpaint_paste_back)。"""
+    work = _check_detail(manifest, "vace_work_area")
+    paste = _check_detail(manifest, "paste_back")
+    raw = next(o for o in manifest["outputs"] if o.get("output_id") == "raw")
+    source = next(i for i in manifest["inputs"] if i.get("role") == "source_video")
+    report = {
+        "schema_version": 1, "kind": "video_inpaint_paste_back", "status": "candidate",
+        "raw_output": {"path": raw["path"], "sha256": raw["sha256"],
+                       "frames": paste["raw_frames"], "used_frames": paste["used_frames"]},
+        "source": {"path": source["path"], "sha256": source["sha256"],
+                   "frames": work["frames"], "size": [work["source_width"], work["source_height"]]},
+        "masks": os.path.abspath(args.masks), "mask_object": args.mask_object,
+        "mode": args.mode, "grow": args.grow, "feather": args.feather, "crop": work["crop"],
+        "processing_size": [work["width"], work["height"]], "vace_length": work["length"],
+        "seed": (manifest.get("slot_values") or {}).get("seed", args.seed),
+        "outside_changed_pixels_total": paste["outside_changed_pixels_total"],
+        "per_frame": paste["per_frame"], "fps": VIDEO_FPS, "audio": "dropped",
+        "outputs": {"frames_dir": "frames/ (PNG, lossless master)",
+                    "mp4": "composited.mp4 (H.264 crf 18, re-encoded, not lossless)"},
+        "acceptance": "pending human review; outside-mask preservation does not judge the edit",
+        "template_run_result": str(Path(folder) / "run.result.json"),
+    }
+    target = Path(folder) / "composited" / "result.json"
+    with open(target, "w", encoding="utf-8") as handle:
+        json.dump(report, handle, ensure_ascii=False, indent=2)
+    return report

@@ -1,0 +1,203 @@
+{
+  "args": {
+    "control_type": "pose",
+    "motion_ref": "dance.mp4",
+    "prompt": "the character performs the dance"
+  },
+  "backend": "wan",
+  "builder": {
+    "args": [
+      "the character performs the dance",
+      "golden/still.png",
+      "golden/dance.mp4"
+    ],
+    "kwargs": {
+      "control_type": "pose",
+      "duration": 2.0,
+      "filename_prefix": "pose_drive",
+      "height": 448,
+      "negative": null,
+      "seed": 20261008,
+      "width": 768
+    },
+    "name": "build_pose_drive_wan"
+  },
+  "case": "pose",
+  "graph": {
+    "3": {
+      "class_type": "KSampler",
+      "inputs": {
+        "cfg": 5.0,
+        "denoise": 1.0,
+        "latent_image": [
+          "55",
+          2
+        ],
+        "model": [
+          "48",
+          0
+        ],
+        "negative": [
+          "55",
+          1
+        ],
+        "positive": [
+          "55",
+          0
+        ],
+        "sampler_name": "uni_pc",
+        "scheduler": "simple",
+        "seed": 20261008,
+        "steps": 20
+      }
+    },
+    "37": {
+      "class_type": "UNETLoader",
+      "inputs": {
+        "unet_name": "wan2.2_fun_control_5B_bf16.safetensors",
+        "weight_dtype": "default"
+      }
+    },
+    "38": {
+      "class_type": "CLIPLoader",
+      "inputs": {
+        "clip_name": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+        "device": "default",
+        "type": "wan"
+      }
+    },
+    "39": {
+      "class_type": "VAELoader",
+      "inputs": {
+        "vae_name": "wan2.2_vae.safetensors"
+      }
+    },
+    "48": {
+      "class_type": "ModelSamplingSD3",
+      "inputs": {
+        "model": [
+          "37",
+          0
+        ],
+        "shift": 8.0
+      }
+    },
+    "55": {
+      "class_type": "Wan22FunControlToVideo",
+      "inputs": {
+        "batch_size": 1,
+        "control_video": [
+          "82",
+          0
+        ],
+        "height": 448,
+        "length": 49,
+        "negative": [
+          "7",
+          0
+        ],
+        "positive": [
+          "6",
+          0
+        ],
+        "ref_image": [
+          "56",
+          0
+        ],
+        "vae": [
+          "39",
+          0
+        ],
+        "width": 768
+      }
+    },
+    "56": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "golden/still.png"
+      }
+    },
+    "57": {
+      "class_type": "CreateVideo",
+      "inputs": {
+        "fps": 24.0,
+        "images": [
+          "8",
+          0
+        ]
+      }
+    },
+    "58": {
+      "class_type": "SaveVideo",
+      "inputs": {
+        "codec": "h264",
+        "filename_prefix": "pose_drive",
+        "format": "mp4",
+        "video": [
+          "57",
+          0
+        ]
+      }
+    },
+    "6": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "clip": [
+          "38",
+          0
+        ],
+        "text": "the character performs the dance"
+      }
+    },
+    "7": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "clip": [
+          "38",
+          0
+        ],
+        "text": "blurry, low quality, morphing face, extra limbs, camera movement, zoom, pan, text, watermark, still image, frozen"
+      }
+    },
+    "8": {
+      "class_type": "VAEDecode",
+      "inputs": {
+        "samples": [
+          "3",
+          0
+        ],
+        "vae": [
+          "39",
+          0
+        ]
+      }
+    },
+    "80": {
+      "class_type": "LoadVideo",
+      "inputs": {
+        "file": "golden/dance.mp4"
+      }
+    },
+    "81": {
+      "class_type": "GetVideoComponents",
+      "inputs": {
+        "video": [
+          "80",
+          0
+        ]
+      }
+    },
+    "82": {
+      "class_type": "OpenposePreprocessor",
+      "inputs": {
+        "image": [
+          "81",
+          0
+        ]
+      }
+    }
+  },
+  "graph_sha256": "158614964d5e84266c5024ef9826c0a79578c8f70751e7f1e0022cb2a63283ff",
+  "output_node": "58",
+  "task": "pose_drive"
+}

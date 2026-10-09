@@ -19,7 +19,20 @@ from PIL import Image
 from comfyui_pipeline import tasks, video_edit_media as media
 from comfyui_pipeline.context import RunContext
 from comfyui_pipeline.tasks import video_edit
-from comfyui_pipeline.video_builders import build_video_inpaint_wan
+from comfyui_pipeline.runner import template as runner_template
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+def build_video_inpaint_wan(prompt, control, mask, width, height, length, seed):
+    """PR 8.3 刪掉 builder 後,改用 video/wan-vace/inpaint template 組同一份 graph(等價見 test_template_wan_vace)。"""
+    template = runner_template.load_template(REPO_ROOT / "templates", "video/wan-vace/inpaint", repo_root=REPO_ROOT)
+    resolution = runner_template.resolve(
+        template, {"source_video": "s.mp4", "masks": "m", "prompt": prompt, "seed": seed}, run_id="test")
+    runner_template.fill_from_pre(template, resolution, {"vace_work_area": {
+        "width": width, "height": height, "length": length, "frames": length}})
+    graph, _ = runner_template.patch(template, resolution, {"control_video": control, "mask_video": mask})
+    return graph, template.data["outputs"][0]["node"]
 from comfyui_pipeline.video_catalog import VACE_MAX_PIXELS, VIDEO_BACKEND_SPECS, VIDEO_TASK_CAPS
 
 
@@ -196,38 +209,11 @@ class TaskTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 video_edit.validate(self.args(**kw))
 
-    def test_prepare_uploads_lossless_clips_then_finalize_pastes_back(self):
-        uploaded = []
-
-        def upload(path):
-            back, _ = media.read_video_frames(path)
-            uploaded.append((os.path.basename(path), back))
-            return os.path.basename(path)
-
-        ctx = RunContext(device={"tier": "sdxl"})
-        plan = video_edit.prepare(ctx, self.args(), upload)
-        self.assertEqual(2, len(uploaded))
-        self.assertEqual([], [p for p in os.listdir(self.root / "out") if p.endswith(".mkv")])
-        self.assertEqual(9, plan.graph["55"]["inputs"]["length"])
-        self.assertEqual(9, plan.contract["expected_frames"])
-        self.assertFalse(plan.contract["audio_expected"])
-        self.assertEqual(1 + 9, len(plan.inputs))
-        w, h = plan.graph["55"]["inputs"]["width"], plan.graph["55"]["inputs"]["height"]
-        raw = self.root / "out" / "video_inpaint_t_00001_.mp4"
-        write_clip(raw, [np.zeros((h, w, 3), np.uint8)] * 9)
-        out_dir = plan.finalize(str(raw))
-        result = json.loads((Path(out_dir) / "result.json").read_text(encoding="utf-8"))
-        self.assertEqual(0, result["outside_changed_pixels_total"])
-        self.assertEqual(9, len(list((Path(out_dir) / "frames").glob("*.png"))))
-        self.assertTrue((Path(out_dir) / "composited.mp4").is_file())
-        first = np.asarray(Image.open(Path(out_dir) / "frames" / "00000.png"))
-        self.assertTrue(np.array_equal(first[:, :10], self.frames[0][:, :10]))
-        with self.assertRaises(RuntimeError):
-            plan.finalize(str(raw))
-
     def test_h3_backend_is_rejected(self):
+        # PR 8.3b:video_inpaint 整個交給 runner(完整流程見 test_video_inpaint_runner);backend 檢查仍在最前面
         with self.assertRaises(SystemExit):
-            video_edit.prepare(RunContext(device={}), self.args(backend="h3"), lambda p: p)
+            video_edit.run_with_runner(RunContext(device={}), self.args(backend="h3"), "http://127.0.0.1:1",
+                                       runner_main=lambda *a, **k: 0)
 
 
 class RegionToolTests(unittest.TestCase):

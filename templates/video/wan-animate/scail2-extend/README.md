@@ -1,6 +1,6 @@
 # video/wan-animate/scail2-extend
 
-**SCAIL-2 角色替換／動畫（兩段串接 61 幀）**（v1.0.0，technical_pass）
+**SCAIL-2 角色替換／動畫（兩段串接 61 幀）**（v1.0.2，technical_pass）
 
 用參考圖驅動角色跟著來源影片動，或把來源影片裡的人換成參考角色；SAM3 依文字追蹤人物並以彩色遮罩綁定身份。
 
@@ -10,4 +10,4 @@
 - 固定參數：16 FPS、每段 33 幀、DPO LoRA 1.0＋LightX2V 0.8、shift 5、6 steps、CFG 1、euler/simple、text encoder 在 CPU、negative prompt 空字串、SAM3 門檻 0.5、max_objects 4；第二段去掉前 5 幀重疊並以 reinhard_lab 色彩校正
 - 平台：windows-cuda technical_pass、macos-mps untested
 
-完整欄位用 `python tools_src/gameart.py run show video/wan-animate/scail2-extend` 查看。操作契約與實測紀錄見 [scail2.md](../../../../skills/comfyui-wan-animate/references/scail2.md)。
+完整欄位用 `python tools_src/gameart.py run show video/wan-animate/scail2-extend` 查看。操作契約與實測紀錄見 [scail2.md](../../../../skills/comfyui-run/references/comfyui-wan-animate/references/scail2.md)。

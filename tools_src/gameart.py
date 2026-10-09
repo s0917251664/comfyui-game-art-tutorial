@@ -13,7 +13,7 @@ HERE = Path(__file__).resolve().parent
 # 工具名 -> (腳本檔, 一行說明)
 TOOLS = {
     "gen": ("generate.py", "圖片/影片生成 pipeline(concept、inpaint、video 等任務)"),
-    "design": ("comfyui_design.py", "ComfyUI 設計稿/版面相關工具"),
+    "design": ("comfyui_design.py", "本機 Pillow 物件場景、檢視表與圖樣重複"),
     "edit": ("image_edit_tools.py", "本地圖片編輯工具(遮罩、裁切、合成等)"),
     "face-swap": ("face_swap.py", "影片換臉 preflight / swap"),
     "video-layers": ("video_layers.py", "影片分層 preflight / run"),
@@ -31,13 +31,14 @@ TOOLS = {
     "doctor": ("doctor.py", "檢查三份機器快照是否過期;--refresh 重跑 detector"),
     "deploy": ("deploy.py", "把 repo 的 tools_src/ 部署到 ComfyUI(預設 dry run;--yes 寫入,含備份/驗證/自動還原)"),
     "smoke": ("smoke.py", "固定煙霧測試套件:跑固定 task 並寫技術驗證報告(--record 存入 repo;`smoke record` 事後記錄)"),
-    "run": ("run_template.py", "固定 API graph template:run list／run show <id>／run <id> --dry-run(實際送出在 2.3)"),
+    "run": ("run_template.py", "固定 API graph template:run list／run show <id>／run <id> --dry-run／--preflight／實際執行(寫 run.result.json)"),
+    "recipe": ("run_recipe.py", "多步驟 recipe:list／show <id>／run <id> --dry-run／run 到確認點停下／resume [--confirm];_drafts 要 --draft"),
     "validation": ("validation.py", "驗證證據升格:propose 列出、approve(僅使用者決定)寫入 profile、status 看 task×平台"),
     "verify-install": ("verify_portable_install.py", "驗證可攜式安裝與部署副本是否同步"),
     "benchmark-birefnet": ("benchmark_birefnet.py", "BiRefNet 各版本 A/B 基準測試"),
 }
 # 只能從 repo 的 tools_src/ 執行的工具(需要 repo 原始碼作比對基準,部署端可能只留有舊副本)
-REPO_ONLY = {"deploy", "validation", "verify-install", "benchmark-birefnet", "run"}
+REPO_ONLY = {"deploy", "validation", "verify-install", "benchmark-birefnet", "run", "recipe"}
 
 
 def _print_tools(stream):

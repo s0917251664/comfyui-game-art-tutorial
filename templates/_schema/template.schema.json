@@ -12,6 +12,8 @@
     "title",
     "summary",
     "status",
+    "min_comfyui_version",
+    "requires_custom_nodes",
     "graph",
     "provenance",
     "slots",
@@ -52,6 +54,37 @@
     "status_note": {
       "type": "string"
     },
+    "min_comfyui_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "對應官方範本的 minComfyUIVersion。preflight 讀 /system_stats 的 comfyui_version,較低就擋下,讀不到只提醒。目前寫實測通過的版本;要放寬必須在較舊版本實測"
+    },
+    "requires_custom_nodes": {
+      "type": "array",
+      "description": "對應官方範本的 requiresCustomNodes:graph 用到的非 core 節點所屬套件。只用 core 節點時寫 []",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "source"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$",
+            "description": "source=registry 時是 Comfy registry id(套件 pyproject.toml 的 project.name)"
+          },
+          "source": {
+            "enum": [
+              "registry",
+              "repo"
+            ],
+            "description": "repo＝這個 repo 自己的 custom node(tools_src/ 底下)"
+          }
+        }
+      }
+    },
     "graph": {
       "type": "object",
       "additionalProperties": false,
@@ -85,12 +118,59 @@
       "additionalProperties": false,
       "required": [
         "derived_from",
+        "upstream",
         "tested_source_sha256",
         "evidence"
       ],
       "properties": {
         "derived_from": {
           "type": "string"
+        },
+        "upstream": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "name",
+            "blob",
+            "comfyui_version"
+          ],
+          "description": "對應的官方來源。kind=none 時 name、blob、comfyui_version 都是 null,並在 note 說明原因",
+          "properties": {
+            "kind": {
+              "enum": [
+                "workflow_templates",
+                "core_blueprint",
+                "none"
+              ]
+            },
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "workflow_templates:範本名稱,不含 .json(例如 video_wan_vace_inpainting);core_blueprint:ComfyUI blueprints/ 裡的檔名,含 .json"
+            },
+            "blob": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "pattern": "^[0-9a-f]{40}$",
+              "description": "派生時那份官方檔案的 git blob sha(git hash-object --no-filters)"
+            },
+            "comfyui_version": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "pattern": "^\\d+\\.\\d+\\.\\d+$",
+              "description": "派生／比對時使用的 ComfyUI 版本"
+            },
+            "note": {
+              "type": "string"
+            }
+          }
         },
         "tested_source_sha256": {
           "type": [
@@ -167,7 +247,7 @@
       "items": {
         "$ref": "#/$defs/step"
       },
-      "description": "送出前步驟;2.1 只驗證格式,實作在 2.3"
+      "description": "送出前步驟(檢查輸入、產生工作檔、上傳);清單外的步驟一律拒絕"
     },
     "post": {
       "type": "array",
@@ -210,9 +290,16 @@
           ]
         },
         "time_alignment": {
-          "enum": [
-            "source_from_frame_0",
-            "per_source_frame"
+          "anyOf": [
+            {
+              "enum": [
+                "source_from_frame_0",
+                "per_source_frame"
+              ]
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "continuity": {
@@ -366,15 +453,17 @@
             "image",
             "video",
             "mask_image",
+            "path",
             "output_prefix"
-          ]
+          ],
+          "description": "path 是本機檔案或資料夾(例如遮罩 PNG 資料夾或 layers.zip),只給 pre／post 步驟讀,不上傳、不寫進 graph。image／video／mask_image 有 upload 時上傳到 ComfyUI;沒有 upload 時也是本機輸入"
         },
         "targets": {
           "type": "array",
-          "minItems": 1,
           "items": {
             "$ref": "#/$defs/target"
-          }
+          },
+          "description": "一般必須至少一個;本機輸入(path、沒有 upload 的檔案)一定是 [];int／float／string／text／bool 寫 [] 時只給步驟用,必須被某個 pre／post 步驟引用"
         },
         "default": {},
         "default_from": {
@@ -384,7 +473,17 @@
           "type": "boolean"
         },
         "upload": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "只能用在 image／video／mask_image;true 時必須剛好出現在一個 upload 步驟"
+        },
+        "generated": {
+          "type": "boolean",
+          "description": "PR 3.3:上傳檔由 pre 步驟產生(例如 vace_work_area 的 control／mask),使用者不能指定;產生它的步驟要排在 upload 步驟之前"
+        },
+        "from_pre": {
+          "type": "string",
+          "pattern": "^\\{pre\\.[a-z0-9_]+\\.[a-z0-9_]+\\}$",
+          "description": "PR 3.3:值來自 pre 步驟的結果,例如 {pre.vace_work_area.width}。dry-run／preflight 時 graph 顯示 <pre:步驟.欄位>;graph 目標可以是占位"
         },
         "validate": {
           "type": "object"
@@ -450,7 +549,8 @@
         "step": {
           "type": "string"
         }
-      }
+      },
+      "description": "可用步驟與參數以 tools_src/comfyui_pipeline/runner/steps.py 的 STEPS 為準。包含 vace_work_area、paste_back、qa_outside_mask_unchanged、extract_last_frame、camera_end_still"
     },
     "model": {
       "type": "object",
@@ -461,9 +561,11 @@
         "input",
         "filename",
         "path",
+        "directory",
         "size_bytes",
         "sha256",
-        "source"
+        "source",
+        "url"
       ],
       "properties": {
         "role": {
@@ -484,6 +586,13 @@
             "null"
           ]
         },
+        "directory": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "對應官方 properties.models[].directory。path 在 models/ 底下時必須是 models/<directory>/<filename>;不在 models/ 底下(custom node 自己的 ckpts)時寫 null"
+        },
         "size_bytes": {
           "type": [
             "integer",
@@ -500,7 +609,64 @@
           "type": [
             "object",
             "null"
-          ]
+          ],
+          "additionalProperties": false,
+          "required": [
+            "repo",
+            "revision",
+            "file"
+          ],
+          "properties": {
+            "repo": {
+              "type": "string"
+            },
+            "revision": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{40}$"
+            },
+            "file": {
+              "type": "string"
+            }
+          },
+          "description": "Hugging Face repo、固定 commit 與檔案路徑"
+        },
+        "url": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "對應官方 properties.models[].url,必須等於 https://huggingface.co/<repo>/resolve/<revision>/<file>;沒有 source 時是 null"
+        },
+        "platforms": {
+          "type": "object",
+          "description": "選用。同一份 graph 的每平台 pin，不另做 variant graph。有寫就必須含 windows-cuda，而且 filename、sha256、size_bytes 等於頂層。預檢仍檢查頂層 pin。不要為沒有另一組檔名的平台編造項目。",
+          "minProperties": 1,
+          "propertyNames": {
+            "pattern": "^[a-z0-9]+-[a-z0-9]+$"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "filename",
+              "sha256",
+              "size_bytes"
+            ],
+            "properties": {
+              "filename": {
+                "type": "string",
+                "minLength": 1
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "size_bytes": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
         },
         "notes": {
           "type": "string"

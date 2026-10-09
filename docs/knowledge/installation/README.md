@@ -13,4 +13,4 @@
 
 專案知識庫及上游技能的支援範圍見[Obsidian 整合說明](../maintenance/obsidian-integration.md)。知識庫以既有 Markdown 與一般檔案操作維護，與模型、ComfyUI 節點及圖片／影片能力無關。
 
-Wan Animate 為獨立的固定 template 路線（`gameart.py run`），未接入 `generate.py` task/backend；安裝與歷史測試見[安裝紀錄](../video/wan-animate-install.md)，目前操作以[專用技能](../../../skills/comfyui-wan-animate/SKILL.md)為準。此能力不由 H3/Wan 5B detector 判定。
+Wan Animate 為獨立的固定 template 路線（`gameart.py run`），未接入 `generate.py` task/backend；安裝與歷史測試見[安裝紀錄](../video/wan-animate-install.md)，目前操作以[專用技能](../../../skills/comfyui-run/references/comfyui-wan-animate/README.md)為準。此能力不由 H3/Wan 5B detector 判定。

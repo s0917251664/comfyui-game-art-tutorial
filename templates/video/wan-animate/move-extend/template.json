@@ -1,10 +1,17 @@
 {
   "schema_version": 1,
   "id": "video/wan-animate/move-extend",
-  "version": "1.1.0",
+  "version": "1.1.2",
   "title": "Wan Animate Move（兩段串接 61 幀）",
   "summary": "參考角色跟著來源影片的動作動起來（背景由參考圖與 prompt 決定）；兩段 33＋28＝61 幀",
   "status": "technical_pass",
+  "min_comfyui_version": "0.34.0",
+  "requires_custom_nodes": [
+    {
+      "id": "comfyui_controlnet_aux",
+      "source": "registry"
+    }
+  ],
   "graph": {
     "file": "graph.api.json",
     "format": "comfyui-api",
@@ -13,10 +20,17 @@
   },
   "provenance": {
     "derived_from": "move + 官方 Video Extend subgraph",
+    "upstream": {
+      "kind": "workflow_templates",
+      "name": "video_wan2_2_14B_animate",
+      "blob": "ee96a29cbac97c89d961ba7a95f219b2326c2063",
+      "comfyui_version": "0.34.0",
+      "note": "Move 加同一份範本裡的 Video Extend subgraph"
+    },
     "tested_source_sha256": "781809176fc7ec4b313bdf3808731043c46ab30e7462b8534fdececfd33856f0",
     "evidence": [
       {
-        "path": "skills/comfyui-wan-animate/references/comfyui-api.md",
+        "path": "skills/comfyui-run/references/comfyui-wan-animate/references/comfyui-api.md",
         "note": "2026-10-06 Move61（prompt aa2550ec…）"
       },
       {
@@ -236,13 +250,15 @@
       "input": "unet_name",
       "filename": "Wan2_2-Animate-14B_fp8_e4m3fn_scaled_KJ.safetensors",
       "path": "models/diffusion_models/Wan2_2-Animate-14B_fp8_e4m3fn_scaled_KJ.safetensors",
+      "directory": "diffusion_models",
       "size_bytes": 18401760586,
       "sha256": "2936b31473a967e7a429a6646bba60e7862d0938e178b58b2a140f391dd5b8e6",
       "source": {
         "repo": "Kijai/WanVideo_comfy_fp8_scaled",
         "revision": "033a4e487f60220b3d6e469599a6aebc46e13cee",
         "file": "Wan22Animate/Wan2_2-Animate-14B_fp8_e4m3fn_scaled_KJ.safetensors"
-      }
+      },
+      "url": "https://huggingface.co/Kijai/WanVideo_comfy_fp8_scaled/resolve/033a4e487f60220b3d6e469599a6aebc46e13cee/Wan22Animate/Wan2_2-Animate-14B_fp8_e4m3fn_scaled_KJ.safetensors"
     },
     {
       "role": "lora_distill",
@@ -250,13 +266,15 @@
       "input": "lora_name",
       "filename": "lightx2v_I2V_14B_480p_cfg_step_distill_rank64_bf16.safetensors",
       "path": "models/loras/lightx2v_I2V_14B_480p_cfg_step_distill_rank64_bf16.safetensors",
+      "directory": "loras",
       "size_bytes": 738005744,
       "sha256": "85c4a61c30e0497aa44b91d93a893b624708461a56fe5485183b28fa07e2dfb3",
       "source": {
         "repo": "Kijai/WanVideo_comfy",
         "revision": "8260d429d19fd7a72304cad059160b95d843913f",
         "file": "Lightx2v/lightx2v_I2V_14B_480p_cfg_step_distill_rank64_bf16.safetensors"
-      }
+      },
+      "url": "https://huggingface.co/Kijai/WanVideo_comfy/resolve/8260d429d19fd7a72304cad059160b95d843913f/Lightx2v/lightx2v_I2V_14B_480p_cfg_step_distill_rank64_bf16.safetensors"
     },
     {
       "role": "text_encoder",
@@ -264,10 +282,16 @@
       "input": "clip_name",
       "filename": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
       "path": "models/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      "directory": "text_encoders",
       "size_bytes": 6735906897,
       "sha256": "c3355d30191f1f066b26d93fba017ae9809dce6c627dda5f6a66eaa651204f68",
-      "source": null,
-      "notes": "沿用機器上既有的檔案；舊 manifest 只記錄路徑、大小與 sha256，沒有來源 revision"
+      "source": {
+        "repo": "Comfy-Org/Wan_2.1_ComfyUI_repackaged",
+        "revision": "123acf1cc74bccbb9bfff8ac1ee72edc08c2341d",
+        "file": "split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors"
+      },
+      "url": "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/123acf1cc74bccbb9bfff8ac1ee72edc08c2341d/split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      "notes": "沿用機器上既有的檔案；來源在 PR 3.2 補上：Hugging Face 這個 revision 的 LFS sha256 與大小和 pin 一致"
     },
     {
       "role": "vae",
@@ -275,13 +299,15 @@
       "input": "vae_name",
       "filename": "wan_2.1_vae.safetensors",
       "path": "models/vae/wan_2.1_vae.safetensors",
+      "directory": "vae",
       "size_bytes": 253815318,
       "sha256": "2fc39d31359a4b0a64f55876d8ff7fa8d780956ae2cb13463b0223e15148976b",
       "source": {
         "repo": "Comfy-Org/Wan_2.1_ComfyUI_repackaged",
         "revision": "123acf1cc74bccbb9bfff8ac1ee72edc08c2341d",
         "file": "split_files/vae/wan_2.1_vae.safetensors"
-      }
+      },
+      "url": "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/123acf1cc74bccbb9bfff8ac1ee72edc08c2341d/split_files/vae/wan_2.1_vae.safetensors"
     },
     {
       "role": "clip_vision",
@@ -289,13 +315,15 @@
       "input": "clip_name",
       "filename": "clip_vision_h.safetensors",
       "path": "models/clip_vision/clip_vision_h.safetensors",
+      "directory": "clip_vision",
       "size_bytes": 1264219396,
       "sha256": "64a7ef761bfccbadbaa3da77366aac4185a6c58fa5de5f589b42a65bcc21f161",
       "source": {
         "repo": "Comfy-Org/Wan_2.1_ComfyUI_repackaged",
         "revision": "123acf1cc74bccbb9bfff8ac1ee72edc08c2341d",
         "file": "split_files/clip_vision/clip_vision_h.safetensors"
-      }
+      },
+      "url": "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/123acf1cc74bccbb9bfff8ac1ee72edc08c2341d/split_files/clip_vision/clip_vision_h.safetensors"
     },
     {
       "role": "pose_bbox",
@@ -303,6 +331,7 @@
       "input": "bbox_detector",
       "filename": "yolox_l.onnx",
       "path": "custom_nodes/comfyui_controlnet_aux/ckpts/yzd-v/DWPose/yolox_l.onnx",
+      "directory": null,
       "size_bytes": 216746733,
       "sha256": "7860ae79de6c89a3c1eb72ae9a2756c0ccfbe04b7791bb5880afabd97855a411",
       "source": {
@@ -310,6 +339,7 @@
         "revision": "1a7144101628d69ee7a3768d1ee3a094070dc388",
         "file": "yolox_l.onnx"
       },
+      "url": "https://huggingface.co/yzd-v/DWPose/resolve/1a7144101628d69ee7a3768d1ee3a094070dc388/yolox_l.onnx",
       "notes": "node 101 用同一個檔案；DWPreprocessor 缺檔時會自動下載，所以 preflight 一定要確認檔案已在本機",
       "auto_download": true
     },
@@ -319,6 +349,7 @@
       "input": "pose_estimator",
       "filename": "dw-ll_ucoco_384.onnx",
       "path": "custom_nodes/comfyui_controlnet_aux/ckpts/yzd-v/DWPose/dw-ll_ucoco_384.onnx",
+      "directory": null,
       "size_bytes": 134399116,
       "sha256": "724f4ff2439ed61afb86fb8a1951ec39c6220682803b4a8bd4f598cd913b1843",
       "source": {
@@ -326,6 +357,7 @@
         "revision": "1a7144101628d69ee7a3768d1ee3a094070dc388",
         "file": "dw-ll_ucoco_384.onnx"
       },
+      "url": "https://huggingface.co/yzd-v/DWPose/resolve/1a7144101628d69ee7a3768d1ee3a094070dc388/dw-ll_ucoco_384.onnx",
       "notes": "node 101 用同一個檔案。2026-10-08 Windows 實機確認路徑、大小與 sha256，和 Hugging Face yzd-v/DWPose 該 revision 的 LFS sha256 一致",
       "auto_download": true
     }

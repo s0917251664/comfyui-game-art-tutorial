@@ -43,7 +43,7 @@
 | `windows-cuda` | `verified`（全部 10 個 task） | 16GB（RTX 4080） | `docs/tested-versions.md` |
 | 其他平台（含 `macos-mps`、`linux-cuda`） | 沒有紀錄 → `unverified` | — | — |
 
-可用記憶體低於 16000 MB 的 `windows-cuda` 機器（例如 8–12GB 卡）也會降為 `unverified`，直到補上該級距的實測紀錄。補紀錄的流程見 `skills/comfyui-new-tool-checklist/SKILL.md`「情境 C」。
+可用記憶體低於 16000 MB 的 `windows-cuda` 機器（例如 8–12GB 卡）也會降為 `unverified`，直到補上該級距的實測紀錄。補紀錄的流程見 `skills/comfyui-extend/references/comfyui-new-tool-checklist/README.md`「情境 C」。
 
 ## `macos-mps` 實測發現（尚未寫入 `validation`）
 

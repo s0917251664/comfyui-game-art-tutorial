@@ -1,0 +1,306 @@
+{
+  "schema_version": 1,
+  "id": "video/h3/pose-drive-depth",
+  "version": "0.1.0",
+  "title": "MiniMax H3 動作驅動（depth）",
+  "summary": "MiniMax H3 Ref2VA，靜幀加 depth 前處理後的動作片。graph 由 build_pose_drive_h3（video_config=None）產生。變數是 placeholder，seed 是 -1。status draft，平台未實測。",
+  "status": "draft",
+  "status_note": "新 template；windows-cuda 實機執行前維持 draft",
+  "min_comfyui_version": "0.34.0",
+  "requires_custom_nodes": [
+    {
+      "id": "comfyui_controlnet_aux",
+      "source": "registry"
+    }
+  ],
+  "graph": {
+    "file": "graph.api.json",
+    "format": "comfyui-api",
+    "sha256": "c1a995b34841c92513a3ad668cd91276182c2701804c0a3f0acfd050bdc77a84",
+    "canonical_sha256": "b4d089b9b71b579b14bb6911bc7b3a5b22a5df1274ee158965694bfbc5f7667b"
+  },
+  "provenance": {
+    "derived_from": "build_pose_drive_h3（tools_src/comfyui_pipeline/video_builders.py），video_config=None",
+    "upstream": {
+      "kind": "none",
+      "name": null,
+      "blob": null,
+      "comfyui_version": null,
+      "note": "官方沒有對得上的 MiniMaxH3ReferenceToVideo 加 LoadVideo／前處理節點的 API graph。video_minimax_h3_r2v 是參考圖範本，不是動作片前處理。"
+    },
+    "tested_source_sha256": null,
+    "evidence": [
+      {
+        "path": "docs/knowledge/decisions/2026-10-08-video-model-pins.md",
+        "note": "一份 graph，不按平台複製"
+      },
+      {
+        "path": "docs/knowledge/video/design.md",
+        "note": "影片 task 與 backend 契約"
+      },
+      {
+        "path": "docs/knowledge/installation/models-and-sources.md",
+        "note": "模型檔名與下載來源；沒有固定 revision 的 source/url 維持 null"
+      }
+    ]
+  },
+  "slots": {
+    "start_image": {
+      "type": "image",
+      "upload": true,
+      "required": true,
+      "targets": [
+        {
+          "node": "56",
+          "input": "image",
+          "placeholder": "__START_IMAGE__"
+        }
+      ],
+      "help": "第一幀或角色靜幀"
+    },
+    "motion_video": {
+      "type": "video",
+      "upload": true,
+      "required": true,
+      "targets": [
+        {
+          "node": "80",
+          "input": "file",
+          "placeholder": "__MOTION_VIDEO__"
+        }
+      ],
+      "help": "動作參考影片。前處理節點讀它的影格"
+    },
+    "prompt": {
+      "type": "text",
+      "required": true,
+      "validate": {
+        "min_length": 1
+      },
+      "targets": [
+        {
+          "node": "104",
+          "input": "prompt",
+          "placeholder": "__PROMPT__"
+        }
+      ],
+      "help": "寫進 graph 的 prompt。builder 在沒有 <Picture 或 <Video 時會先補前綴；這份 template 不改寫，slot 要填最終進 graph 的文字。"
+    },
+    "width": {
+      "type": "int",
+      "default": 768,
+      "validate": {
+        "min": 8,
+        "multiple_of": 8
+      },
+      "targets": [
+        {
+          "node": "104",
+          "input": "width"
+        }
+      ],
+      "help": "輸出寬。預設是這份 builder 的代表值"
+    },
+    "height": {
+      "type": "int",
+      "default": 768,
+      "validate": {
+        "min": 8,
+        "multiple_of": 8
+      },
+      "targets": [
+        {
+          "node": "104",
+          "input": "height"
+        }
+      ],
+      "help": "輸出高。預設是這份 builder 的代表值"
+    },
+    "length": {
+      "type": "int",
+      "default": 56,
+      "validate": {
+        "min": 1,
+        "max": 10000
+      },
+      "targets": [
+        {
+          "node": "104",
+          "input": "length"
+        }
+      ],
+      "help": "影格數。預設是 duration 2 秒時 builder 算出的長度；案例要改長度時直接設這個 slot"
+    },
+    "seed": {
+      "type": "seed",
+      "default": "auto",
+      "targets": [
+        {
+          "node": "15",
+          "input": "noise_seed"
+        }
+      ],
+      "help": "亂數種子。auto 由 runner 產生；graph 裡的 -1 會被換掉"
+    },
+    "filename_prefix": {
+      "type": "string",
+      "default": "pose_drive",
+      "validate": {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$",
+        "max_length": 96
+      },
+      "targets": [
+        {
+          "node": "92",
+          "input": "filename_prefix"
+        }
+      ],
+      "help": "SaveVideo 的 filename_prefix。預設是 builder 的預設值，不是 output_prefix"
+    }
+  },
+  "pre": [
+    {
+      "step": "check_image",
+      "slot": "start_image"
+    },
+    {
+      "step": "check_video",
+      "slot": "motion_video",
+      "fps": 24,
+      "cfr": true
+    },
+    {
+      "step": "upload",
+      "slots": [
+        "start_image",
+        "motion_video"
+      ]
+    }
+  ],
+  "post": [
+    {
+      "step": "check_video_output",
+      "output": "video",
+      "width": "{width}",
+      "height": "{height}",
+      "frames": "{length}",
+      "fps": 24,
+      "audio": true
+    }
+  ],
+  "frame_anchoring": {
+    "first": "none",
+    "last": "none",
+    "reference_role": "identity",
+    "time_alignment": "per_source_frame",
+    "continuity": null
+  },
+  "models": [
+    {
+      "role": "diffusion",
+      "node": "6",
+      "input": "unet_name",
+      "filename": "minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+      "path": "models/diffusion_models/minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+      "directory": "diffusion_models",
+      "size_bytes": 20970379616,
+      "sha256": "9255f52b6677845ad238f20dfaafa94727053694127ab7f255c048f0f9365779",
+      "source": null,
+      "url": null,
+      "platforms": {
+        "windows-cuda": {
+          "filename": "minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+          "sha256": "9255f52b6677845ad238f20dfaafa94727053694127ab7f255c048f0f9365779",
+          "size_bytes": 20970379616
+        }
+      },
+      "notes": "models-and-sources.md 沒有固定 git revision，source 與 url 是 null。platforms.windows-cuda 記同一份檔。"
+    },
+    {
+      "role": "text_encoder",
+      "node": "13",
+      "input": "clip_name",
+      "filename": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+      "path": "models/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+      "directory": "text_encoders",
+      "size_bytes": 15687142551,
+      "sha256": "35a88d51044231fe332301d7a62aa81e3f2cba62febeb446e2c1e3e0ef76f2c6",
+      "source": null,
+      "url": null,
+      "platforms": {
+        "windows-cuda": {
+          "filename": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+          "sha256": "35a88d51044231fe332301d7a62aa81e3f2cba62febeb446e2c1e3e0ef76f2c6",
+          "size_bytes": 15687142551
+        }
+      },
+      "notes": "models-and-sources.md 沒有固定 git revision，source 與 url 是 null。platforms.windows-cuda 記同一份檔。"
+    },
+    {
+      "role": "vae",
+      "node": "11",
+      "input": "vae_name",
+      "filename": "minimax_h3_video_vae_fp16.safetensors",
+      "path": "models/vae/minimax_h3_video_vae_fp16.safetensors",
+      "directory": "vae",
+      "size_bytes": 5207808496,
+      "sha256": "7c1f131492e7eddacaac9069a61b81bdd39de5cc96561e677c5eab1cdce5e522",
+      "source": null,
+      "url": null,
+      "platforms": {
+        "windows-cuda": {
+          "filename": "minimax_h3_video_vae_fp16.safetensors",
+          "sha256": "7c1f131492e7eddacaac9069a61b81bdd39de5cc96561e677c5eab1cdce5e522",
+          "size_bytes": 5207808496
+        }
+      },
+      "notes": "models-and-sources.md 沒有固定 git revision，source 與 url 是 null。platforms.windows-cuda 記同一份檔。"
+    },
+    {
+      "role": "audio_vae",
+      "node": "24",
+      "input": "vae_name",
+      "filename": "minimax_h3_audio_vae_fp32.safetensors",
+      "path": "models/vae/minimax_h3_audio_vae_fp32.safetensors",
+      "directory": "vae",
+      "size_bytes": 605254808,
+      "sha256": "8e505d95dd1561d47abd43d4238fd40d9bb1ae9e147ed0a4cba778d76ae4db48",
+      "source": null,
+      "url": null,
+      "platforms": {
+        "windows-cuda": {
+          "filename": "minimax_h3_audio_vae_fp32.safetensors",
+          "sha256": "8e505d95dd1561d47abd43d4238fd40d9bb1ae9e147ed0a4cba778d76ae4db48",
+          "size_bytes": 605254808
+        }
+      },
+      "notes": "models-and-sources.md 沒有固定 git revision，source 與 url 是 null。platforms.windows-cuda 記同一份檔。"
+    }
+  ],
+  "capability_gate": {
+    "nodes": "from_graph",
+    "selectors": "from_models",
+    "files": "from_models",
+    "platforms": {
+      "windows-cuda": {
+        "status": "untested",
+        "notes": "尚未實機執行"
+      },
+      "macos-mps": {
+        "status": "untested",
+        "notes": "沒有另一組模型檔名，也尚未實測"
+      }
+    },
+    "min_memory_mb": null,
+    "capability": "control_video"
+  },
+  "outputs": [
+    {
+      "id": "video",
+      "node": "92",
+      "kind": "video",
+      "role": "candidate"
+    }
+  ],
+  "fixed_notes": "取樣、FPS 與節點連接以 builder 為準。template 不改寫 prompt 前綴。執行路徑仍在 tasks/video.py，留到第 6.3 階段。"
+}

@@ -1,0 +1,313 @@
+{
+  "args": {
+    "character_ref": [
+      "ref1.png",
+      "ref2.png",
+      "ref3.png",
+      "ref4.png",
+      "ref5.png",
+      "ref6.png",
+      "ref7.png",
+      "ref8.png",
+      "ref9.png"
+    ],
+    "image": null,
+    "prompt": "the character spins around"
+  },
+  "backend": "h3",
+  "builder": {
+    "args": [
+      "the character spins around",
+      [
+        "golden/ref1.png",
+        "golden/ref2.png",
+        "golden/ref3.png",
+        "golden/ref4.png",
+        "golden/ref5.png",
+        "golden/ref6.png",
+        "golden/ref7.png",
+        "golden/ref8.png",
+        "golden/ref9.png"
+      ]
+    ],
+    "kwargs": {
+      "duration": 2.0,
+      "filename_prefix": "character_video",
+      "height": 448,
+      "seed": 20261008,
+      "width": 768
+    },
+    "name": "build_character_video_h3"
+  },
+  "case": "nine_refs_max",
+  "graph": {
+    "10": {
+      "class_type": "VAEDecode",
+      "inputs": {
+        "samples": [
+          "14",
+          0
+        ],
+        "vae": [
+          "11",
+          0
+        ]
+      }
+    },
+    "104": {
+      "class_type": "MiniMaxH3ReferenceToVideo",
+      "inputs": {
+        "audio_vae": [
+          "24",
+          0
+        ],
+        "clip": [
+          "13",
+          0
+        ],
+        "height": 448,
+        "length": 56,
+        "prompt": "<Picture 1>, <Picture 2>, <Picture 3>, <Picture 4>, <Picture 5>, <Picture 6>, <Picture 7>, <Picture 8>, <Picture 9> are identity references of the same character. The video shows this same character in a new shot, not a copy of those stills. the character spins around",
+        "ref_image_size": "match",
+        "ref_images.ref_image_0": [
+          "56r0",
+          0
+        ],
+        "ref_images.ref_image_1": [
+          "56r1",
+          0
+        ],
+        "ref_images.ref_image_2": [
+          "56r2",
+          0
+        ],
+        "ref_images.ref_image_3": [
+          "56r3",
+          0
+        ],
+        "ref_images.ref_image_4": [
+          "56r4",
+          0
+        ],
+        "ref_images.ref_image_5": [
+          "56r5",
+          0
+        ],
+        "ref_images.ref_image_6": [
+          "56r6",
+          0
+        ],
+        "ref_images.ref_image_7": [
+          "56r7",
+          0
+        ],
+        "ref_images.ref_image_8": [
+          "56r8",
+          0
+        ],
+        "vae": [
+          "11",
+          0
+        ],
+        "width": 768
+      }
+    },
+    "11": {
+      "class_type": "VAELoader",
+      "inputs": {
+        "vae_name": "minimax_h3_video_vae_fp16.safetensors"
+      }
+    },
+    "13": {
+      "class_type": "CLIPLoader",
+      "inputs": {
+        "clip_name": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+        "device": "default",
+        "type": "minimax"
+      }
+    },
+    "14": {
+      "class_type": "SamplerCustomAdvanced",
+      "inputs": {
+        "guider": [
+          "16",
+          0
+        ],
+        "latent_image": [
+          "104",
+          1
+        ],
+        "noise": [
+          "15",
+          0
+        ],
+        "sampler": [
+          "17",
+          0
+        ],
+        "sigmas": [
+          "9",
+          0
+        ]
+      }
+    },
+    "15": {
+      "class_type": "RandomNoise",
+      "inputs": {
+        "noise_seed": 20261008
+      }
+    },
+    "16": {
+      "class_type": "BasicGuider",
+      "inputs": {
+        "conditioning": [
+          "104",
+          0
+        ],
+        "model": [
+          "shift",
+          0
+        ]
+      }
+    },
+    "17": {
+      "class_type": "KSamplerSelect",
+      "inputs": {
+        "sampler_name": "res_multistep"
+      }
+    },
+    "23": {
+      "class_type": "VAEDecodeAudio",
+      "inputs": {
+        "samples": [
+          "14",
+          0
+        ],
+        "vae": [
+          "24",
+          0
+        ]
+      }
+    },
+    "24": {
+      "class_type": "VAELoader",
+      "inputs": {
+        "vae_name": "minimax_h3_audio_vae_fp32.safetensors"
+      }
+    },
+    "56r0": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "golden/ref1.png"
+      }
+    },
+    "56r1": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "golden/ref2.png"
+      }
+    },
+    "56r2": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "golden/ref3.png"
+      }
+    },
+    "56r3": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "golden/ref4.png"
+      }
+    },
+    "56r4": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "golden/ref5.png"
+      }
+    },
+    "56r5": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "golden/ref6.png"
+      }
+    },
+    "56r6": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "golden/ref7.png"
+      }
+    },
+    "56r7": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "golden/ref8.png"
+      }
+    },
+    "56r8": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "golden/ref9.png"
+      }
+    },
+    "6": {
+      "class_type": "UNETLoader",
+      "inputs": {
+        "unet_name": "minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+        "weight_dtype": "default"
+      }
+    },
+    "9": {
+      "class_type": "BasicScheduler",
+      "inputs": {
+        "denoise": 1.0,
+        "model": [
+          "shift",
+          0
+        ],
+        "scheduler": "simple",
+        "steps": 20
+      }
+    },
+    "91": {
+      "class_type": "CreateVideo",
+      "inputs": {
+        "audio": [
+          "23",
+          0
+        ],
+        "bit_depth": 8,
+        "fps": 24.0,
+        "images": [
+          "10",
+          0
+        ]
+      }
+    },
+    "92": {
+      "class_type": "SaveVideo",
+      "inputs": {
+        "codec": "h264",
+        "filename_prefix": "character_video",
+        "format": "mp4",
+        "video": [
+          "91",
+          0
+        ]
+      }
+    },
+    "shift": {
+      "class_type": "MiniMaxH3SigmaShift",
+      "inputs": {
+        "model": [
+          "6",
+          0
+        ],
+        "shift_audio": 3.0,
+        "shift_video": 12.0
+      }
+    }
+  },
+  "graph_sha256": "c412982f8a90bd29cc8154c6b7fdd10f538bb1aa110bd823314a6772ad61957c",
+  "output_node": "92",
+  "task": "character_video"
+}

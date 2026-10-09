@@ -4,7 +4,7 @@ status: active
 ---
 # ComfyUI server-side Video Layers
 
-Video Layers 是固定 `GameArtVideoLayers` ComfyUI server node + 薄 client 的獨立工具；不是 `generate.py` task 或影片 backend。Server 執行解碼、SAM mask propagation、2D affine、合成、音訊與嚴格輸出驗證，client 做 preflight、queue 和 download。技能入口：[comfyui-video-layers](../../../skills/comfyui-video-layers/SKILL.md)；plan、CLI、部署契約與實測：[local-tool.md](../../../skills/comfyui-video-layers/references/local-tool.md)。
+Video Layers 是固定 `GameArtVideoLayers` ComfyUI server node + 薄 client 的獨立工具；不是 `generate.py` task 或影片 backend。Server 執行解碼、SAM mask propagation、2D affine、合成、音訊與嚴格輸出驗證，client 做 preflight、queue 和 download。技能入口：[comfyui-video-layers](../../../skills/comfyui-run/references/comfyui-video-layers/README.md)；plan、CLI、部署契約與實測：[local-tool.md](../../../skills/comfyui-run/references/comfyui-video-layers/references/local-tool.md)。
 
 ## 契約與安裝界線
 

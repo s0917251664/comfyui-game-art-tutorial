@@ -4,11 +4,11 @@ status: current
 ---
 # 重構交接：第 3–8 階段
 
+2026-10-08 的實作中斷點在[重構進度 2026-10-08](restructure-progress-2026-10-08.md)。給人讀的交付說明在[重構交付脈絡 2026-10-08](restructure-delivery-2026-10-08.md)。下一個 agent 先讀進度頁。這一頁保留規則、流程和原始計畫。進度頁和這一頁衝突時，規則以這一頁為準，做到哪裡以進度頁為準。兩者都讓路給已經生效的[決策](../DECISIONS.md)。
+
 從 2026-10-08 起，第 3–8 階段由 **Windows 本機 agent**（CUDA 機器，已經知道 repo 和 ComfyUI 安裝的位置）自己實作，並做到端到端驗證。分工如下：
 - 審核端：只依這份計畫審 PR。
 - 使用者：在審核後合併。
-
-這一頁是交接的唯一依據。如果和其他文件衝突，以實作與[生效中決策](../DECISIONS.md)為準，並在 PR 裡指出衝突的地方。
 
 ## 1. 現況（develop `2dbdeeb`）
 
@@ -38,7 +38,7 @@ status: current
 
 1. **R2／D8：固定 graph 一律走 runner。** 新的固定 graph 先做成 template，再用 `gameart.py run` 執行（[R2](../rules/fixed-graphs.md)）。手動打 HTTP 只能用來除錯 runner，結果不能當證據。
 2. **技術通過不等於美術接受。** `content_review` 永遠是 `pending`，由使用者用 `review accept|reject` 決定（[R1](../rules/candidate-review.md)）。agent 不 accept、不 reject，也不 approve validation。
-3. **不寫特定人名。** 審核者寫「美術審核者」，使用者的決定寫「使用者確認」。[`test_neutral_wording`](../../../tests/test_neutral_wording.py) 會擋；舊 custom node 名稱只留在 `contracts.py` 的 `LEGACY_*` 常數與改名頁。
+3. **不寫特定人名。** 審核者寫「美術審核者」，使用者的決定寫「使用者確認」。[`test_neutral_wording`](../../../tests/test_neutral_wording.py) 會擋。舊 class 名稱的拼法只留在[改名紀錄](custom-node-renames.md)。PR 8.2 已刪掉 `contracts.py` 的 `LEGACY_*` 常數，其他檔案不要再寫那些拼法。
 4. **位元組與 hash：**
    - 有 hash 紀錄的檔案（`templates/**`、validation、smoke suites 等）在 [`.gitattributes`](../../../.gitattributes) 設 `-text`。新增這類檔案時，要同一個 PR 補上規則，並用 `git check-attr text <檔案>` 確認。
    - `graph.api.json` 的位元組 sha256 和 canonical sha256 都要和 `template.json` 一致。
@@ -117,9 +117,9 @@ status: current
 
 | PR | 範圍 | 驗收 | 實機驗證 |
 |---|---|---|---|
-| **6′.1** `refactor/phase6p.1-dedupe` | 重複實作各留一份：色相旋轉（`vfx_alpha_tools.masked_hue_rotate` 和 `image_edit_tools.recolor`）、`read_masks`（vfx 和 `video_edit_media`）、遮罩貼回、影片讀寫 | `test_vfx_alpha_tools`、`test_image_edit_tools`、`test_video_inpaint` 全過；`prop-paste` 輸出和研究 master 逐 byte 相同 | 實跑一次 `vfx prop-paste`，和舊輸出比對 hash |
+| **6′.1** `refactor/phase6p.1-dedupe` | 重複實作各留一份：色相旋轉（`vfx_alpha_tools.masked_hue_rotate` 和 `image_edit_tools.recolor`）、`read_masks`（vfx 和 `runner/vace_media`，PR 3.3 前在 `video_edit_media`）、遮罩貼回、影片讀寫 | `test_vfx_alpha_tools`、`test_image_edit_tools`、`test_video_inpaint` 全過；`prop-paste` 輸出和研究 master 逐 byte 相同 | 實跑一次 `vfx prop-paste`，和舊輸出比對 hash |
 | **6′.2** `refactor/phase6p.2-split-vfx` | `vfx_alpha_tools.py`（1,020 行）拆成 pixel／mask／media／qa 模組，`gameart.py vfx` 的介面不變；`deploy_manifest` 同步 | 同上；部署 dry run 清單正確 | `deploy --yes` 後另外跑 `verify-install`，回報通過數 |
-| **6′.3**（待決） | `comfyui_design.py` 改寫成純 Pillow；`vfx birefnet-alpha` 的部署處理 | 等使用者決定後才開 | — |
+| **6′.3** | `comfyui_design.py` 已改純 Pillow；`vfx birefnet-alpha` 維持 repo 內 `benchmark_birefnet`，不進部署 | 見 [ADR](../decisions/2026-10-08-local-design-and-birefnet.md) | 不部署 |
 
 ### 第 7 階段：catalog、技能收斂、擴充協議
 
@@ -135,7 +135,7 @@ status: current
 | PR | 範圍 | 驗收 | 實機驗證 |
 |---|---|---|---|
 | **8.1** `docs/phase8.1-node-alias-exit` | 唯讀掃描各機器 `user/default/workflows/` 裡的舊節點名稱。評估三個方案：ComfyUI core 的 Node Replacement API、直接移除別名、繼續保留。要回答四件事：① 套件是 V1 寫法（有 `NODE_CLASS_MAPPINGS` 時，core 不會用 `comfy_entrypoint`），要怎麼註冊；② face-swap 舊 socket 型別能不能用 input/output mapping 表達；③ 舊名稱還在 `NODE_CLASS_MAPPINGS` 時，replacement 不會觸發；④ 沒有 `_meta` 的 API prompt 會不會出錯。寫成 ADR 草稿，**需要使用者決定** | 評估附上實測（Windows，用暫存的測試 workflow，不改使用者的檔案） | 掃描結果與測試紀錄 |
-| **8.2** `refactor/phase8.2-remove-aliases` | 依 8.1 的決定處理舊名稱：刪 `LEGACY_*`；同步 `test_neutral_wording` 的例外清單和改名頁 | 完整測試；部署 dry run | 部署並重啟後，新節點正常；用舊名稱的測試 workflow，行為符合 8.1 的方案 |
+| **8.2** `refactor/phase8.2-remove-aliases` | 依 8.1 的決定處理舊名稱：刪 `LEGACY_*`；同步 `test_neutral_wording` 的例外清單和改名頁 | 完整測試。本階段不部署、不重啟 | 部署與重啟留到 8.4，且 queue 必須為空。舊名稱 workflow 的行為見[退場決定](../decisions/2026-10-08-node-alias-exit.md) |
 | **8.3** `refactor/phase8.3-remove-builders` | 刪掉已被 template 取代的 builder、`VideoPlan.finalize` 專用路徑，以及還被程式引用的 5 個 stub（先改引用處） | 完整測試；golden 改由 template 維護 | smoke 一輪 |
 | **8.4** `feat/phase8.4-deploy-templates` | `deploy_manifest`、`verify_portable_install` 納入 `templates/`；決定 `run` 是否仍然只能從 repo 執行；把第三方 custom node 的 commit 記錄到 `docs/tested-versions.md` | 部署測試；verify-install 數字更新 | 部署 dry run → `deploy --yes` → 另外跑 `verify-install` |
 
@@ -143,12 +143,15 @@ status: current
 
 | 項目 | 狀態 |
 |---|---|
-| `face_swap.py`、`video_layers.py` 印出誤導的 device_config 提醒 | 3.1 修 |
-| `comfyui_design.py` 改寫成純 Pillow | 建議改寫；**等使用者決定**（6′.3） |
+| `face_swap.py`、`video_layers.py` 印出誤導的 device_config 提醒 | PR 3.1 修正：兩支工具改從 `comfyui_pipeline.client` 取 HTTP client，不再載入 `image_graphs` |
+| `comfyui_design.py` 改寫成純 Pillow | 已落地（6′.3）；BiRefNet benchmark 仍不部署 |
 | Mix node 108 寫死 `device=cuda` | 非 CUDA 平台由 preflight 擋下；等 Mac 實測後才決定要不要宣告平台覆寫（D6） |
 | `extra_model_paths.yaml` | 不支援，模型只在 `<comfyui_path>/<path>` 找。要支援必須另外提案 |
 | 上傳到 `input/<run_id>/` 的檔案不會自動清理 | 目前要手動清理（[templates/README](../../../templates/README.md)）；要不要自動清理，**等使用者決定** |
 | macos-mps | 所有 template 都還沒實測，維持 `untested` |
+| 被握住的物件：手部（遮擋物）保護遮罩 | **待開發**（2026-10-09）：局部重繪會把握住物件的手一起重畫。一次性做法與提案方向見[第 3–8 階段總結](restructure-summary-phase3-8.md) |
+| review 只能選原始輸出，選不到 `derived_outputs` | **待開發**（2026-10-09），見[第 3–8 階段總結](restructure-summary-phase3-8.md) |
+| SD1.5 template | **暫不做**（使用者 2026-10-09 決定）；圖片 builder 保留為 SD1.5 退路 |
 
 ## 6. Windows／PowerShell 5.1 經驗
 

@@ -26,14 +26,20 @@ TEMPLATE_FILE = "template.json"
 GRAPH_FORMAT = "comfyui-api"
 SCHEMA_DIR = "_schema"
 
-REQUIRED_FIELDS = ("schema_version", "id", "version", "title", "summary", "status", "graph", "provenance",
-                   "slots", "pre", "post", "frame_anchoring", "models", "capability_gate", "outputs")
+REQUIRED_FIELDS = ("schema_version", "id", "version", "title", "summary", "status", "min_comfyui_version",
+                   "requires_custom_nodes", "graph", "provenance", "slots", "pre", "post", "frame_anchoring", "models",
+                   "capability_gate", "outputs")
 OPTIONAL_FIELDS = ("status_note", "options", "constraints", "fixed_notes")
 STATUSES = ("draft", "technical_pass", "retired")
 PLATFORM_STATUSES = ("technical_pass", "untested", "unsupported")
 SLOT_TYPES = ("text", "string", "int", "float", "bool", "seed", "points", "image", "video", "mask_image",
-              "output_prefix")
+              "path", "output_prefix")
 UPLOAD_TYPES = frozenset({"image", "video", "mask_image"})
+# 本機輸入:只給 pre／post 步驟讀,不上傳、不寫進 graph(targets 是 [])。
+# path 是檔案或資料夾(例如遮罩 PNG 資料夾或 layers.zip);image／video／mask_image 沒有 upload 時也是本機檔。
+FILE_TYPES = UPLOAD_TYPES | {"path"}
+FROM_PRE_TYPES = frozenset({"text", "string", "int", "float", "bool"})
+PRE_MARK = "<pre:{}>"
 VALIDATE_KEYS = {
     "text": {"min_length", "max_length"},
     "string": {"pattern", "enum", "min_length", "max_length"},
@@ -41,21 +47,32 @@ VALIDATE_KEYS = {
     "float": {"min", "max", "enum"},
     "points": {"min_items", "max_items"},
 }
-SLOT_KEYS = {"type", "targets", "default", "required", "validate", "tested_values", "help", "upload", "default_from"}
+SLOT_KEYS = {"type", "targets", "default", "required", "validate", "tested_values", "help", "upload", "default_from",
+             "generated", "from_pre"}
 TARGET_KEYS = {"node", "input", "placeholder"}
 OPTION_OPS = ("set_link", "set_value")
 CONSTRAINT_RULES = ("points_within",)
 ANCHOR_VALUES = ("image", "conditioning", "same_as_first", "none")
 REFERENCE_ROLES = ("identity", "selection", "none")
-TIME_ALIGNMENTS = ("source_from_frame_0", "per_source_frame")
+TIME_ALIGNMENTS = ("source_from_frame_0", "per_source_frame", None)
 OUTPUT_KINDS = ("video", "image", "image_sequence")
 OUTPUT_ROLES = ("candidate", "mask", "preview")
-MODEL_KEYS = {"role", "node", "input", "filename", "path", "size_bytes", "sha256", "source", "notes", "pin_status",
-              "auto_download"}
+MODEL_KEYS = {"role", "node", "input", "filename", "path", "directory", "url", "size_bytes", "sha256", "source",
+              "notes", "pin_status", "auto_download", "platforms"}
+# platforms 裡每個平台的 pin。windows-cuda 必須和頂層 filename 相同；預檢仍只看頂層 pin。
+PLATFORM_PIN_KEYS = frozenset({"filename", "sha256", "size_bytes"})
+SOURCE_KEYS = {"repo", "revision", "file"}
+# 對齊官方範本 properties.models[].url(Hugging Face 下載網址);我們固定 revision,不用 main。
+MODEL_URL = "https://huggingface.co/{repo}/resolve/{revision}/{file}"
+CUSTOM_NODE_SOURCES = ("registry", "repo")
+UPSTREAM_KINDS = ("workflow_templates", "core_blueprint", "none")
+UPSTREAM_KEYS = {"kind", "name", "blob", "comfyui_version", "note"}
 
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*(/[a-z0-9][a-z0-9_-]*)+$")
 SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+$")
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+GIT_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
+REGISTRY_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 PLATFORM_RE = re.compile(r"^[a-z0-9]+-[a-z0-9]+$")
 PLACEHOLDER_RE = re.compile(r"^__[A-Z0-9_]+__$")
 SEED_INPUTS = ("seed", "noise_seed")
@@ -131,7 +148,11 @@ class Template:
         return self.data.get("options") or {}
 
     def upload_slots(self):
-        return [name for name, slot in self.slots.items() if slot["type"] in UPLOAD_TYPES]
+        return [name for name, slot in self.slots.items() if slot.get("upload")]
+
+    def deferred_slots(self):
+        """值由 pre 步驟決定的 slot:``generated``(pre 產生的上傳檔)與 ``from_pre``(pre 量到的值)。"""
+        return [name for name, slot in self.slots.items() if slot.get("generated") or slot.get("from_pre")]
 
     def declared_targets(self, enabled_options=()):
         """slot 與已啟用 option 會寫入的 (node, input) 集合。"""
@@ -226,6 +247,9 @@ def _check_header(data, template_id):
         problems.append("version 必須是 semver(例如 1.0.0)")
     if data["status"] not in STATUSES:
         problems.append(f"status 必須是 {', '.join(STATUSES)} 之一")
+    if not isinstance(data["min_comfyui_version"], str) or not SEMVER_RE.match(data["min_comfyui_version"]):
+        problems.append("min_comfyui_version 必須是 X.Y.Z(例如 0.34.0)")
+    problems.extend(_check_custom_nodes(data["requires_custom_nodes"]))
     graph = data["graph"]
     if not isinstance(graph, dict) or set(graph) != {"file", "format", "sha256", "canonical_sha256"}:
         problems.append("graph 必須剛好有 file、format、sha256、canonical_sha256")
@@ -238,6 +262,33 @@ def _check_header(data, template_id):
             if not isinstance(graph[key], str) or not SHA256_RE.match(graph[key]):
                 problems.append(f"graph.{key} 必須是 64 位小寫十六進位")
     return problems
+
+
+def _check_custom_nodes(nodes):
+    """requires_custom_nodes:[{id, source}]。source=registry 時 id 是 Comfy registry id;repo 是這個 repo 的套件。"""
+    if not isinstance(nodes, list):
+        return ["requires_custom_nodes 必須是陣列(不需要 custom node 時寫 [])"]
+    problems, seen = [], set()
+    for index, node in enumerate(nodes):
+        where = f"requires_custom_nodes[{index}]"
+        if not isinstance(node, dict) or set(node) != {"id", "source"}:
+            problems.append(f"{where}: 必須剛好有 id、source")
+            continue
+        if not isinstance(node["id"], str) or not REGISTRY_ID_RE.match(node["id"]):
+            problems.append(f"{where}: id 格式不對: {node['id']!r}")
+        elif node["id"] in seen:
+            problems.append(f"{where}: id {node['id']} 重複")
+        else:
+            seen.add(node["id"])
+        if node["source"] not in CUSTOM_NODE_SOURCES:
+            problems.append(f"{where}: source 必須是 {'／'.join(CUSTOM_NODE_SOURCES)} 之一")
+    return problems
+
+
+def parse_version(text):
+    """``0.34.0``、``v0.34.0``、``0.34.0-dev`` → (0, 34, 0);認不出來回傳 None。"""
+    match = re.match(r"^v?(\d+)\.(\d+)\.(\d+)", text.strip()) if isinstance(text, str) else None
+    return tuple(int(part) for part in match.groups()) if match else None
 
 
 # ---------- 驗證 ----------
@@ -282,8 +333,19 @@ def validate_template(template, repo_root=None):
         if kind not in SLOT_TYPES:
             problems.append(f"{where}: type 必須是 {', '.join(SLOT_TYPES)} 之一")
             continue
-        if bool(slot.get("upload")) != (kind in UPLOAD_TYPES):
-            problems.append(f"{where}: upload 只能(而且必須)用在 image／video／mask_image")
+        upload = slot.get("upload", False)
+        if not isinstance(upload, bool) or upload and kind not in UPLOAD_TYPES:
+            problems.append(f"{where}: upload 只能用在 image／video／mask_image(true/false)")
+        local_file = kind in FILE_TYPES and not upload
+        generated, from_pre = slot.get("generated", False), slot.get("from_pre")
+        if not isinstance(generated, bool) or generated and not upload:
+            problems.append(f"{where}: generated 只能用在 upload 的 slot(值是 pre 步驟產生的檔案)")
+        if from_pre is not None:
+            if kind not in FROM_PRE_TYPES:
+                problems.append(f"{where}: from_pre 只能用在 {'／'.join(sorted(FROM_PRE_TYPES))}")
+            elif not _steps.is_step_result_ref(from_pre):
+                problems.append(f"{where}: from_pre 要寫成 {{pre.<步驟>.<欄位>}},可用: "
+                                + "、".join(f"{s}.{f}" for s, fields in _steps.STEP_RESULTS.items() for f in fields))
         rules = slot.get("validate") or {}
         bad_rules = set(rules) - VALIDATE_KEYS.get(kind, set())
         if bad_rules:
@@ -294,7 +356,13 @@ def validate_template(template, repo_root=None):
             except re.error as exc:
                 problems.append(f"{where}: pattern 不是合法正規表示式: {exc}")
         targets = slot.get("targets")
-        if not isinstance(targets, list) or not targets:
+        if not isinstance(targets, list):
+            problems.append(f"{where}: targets 必須是陣列")
+            continue
+        if local_file and targets:
+            problems.append(f"{where}: 本機輸入(path 或沒有 upload 的 {kind})不寫進 graph,targets 要是 []")
+            continue
+        if not targets and not local_file and (upload or kind in ("seed", "points", "output_prefix") or from_pre):
             problems.append(f"{where}: targets 必須是非空陣列")
             continue
         for target in targets:
@@ -313,12 +381,13 @@ def validate_template(template, repo_root=None):
                 problems.append(f"{where}: {node}.{field} 目前是 {current!r},不是宣告的占位 {target['placeholder']!r}")
             if isinstance(current, str) and PLACEHOLDER_RE.match(current) and target.get("placeholder") != current:
                 problems.append(f"{where}: {node}.{field} 是占位 {current!r},target 要寫 placeholder")
-            problems.extend(_type_matches_graph(where, kind, node, field, current))
+            if not (from_pre and isinstance(current, str) and PLACEHOLDER_RE.match(current)):
+                problems.extend(_type_matches_graph(where, kind, node, field, current))
             claimed.setdefault((node, field), []).append(name)
         has_default = "default" in slot or "default_from" in slot
-        if kind == "output_prefix":
+        if kind == "output_prefix" or generated or from_pre:
             if has_default or slot.get("required"):
-                problems.append(f"{where}: output_prefix 由 runner 產生,不能有 default 或 required")
+                problems.append(f"{where}: 值由 runner 或 pre 步驟決定,不能有 default 或 required")
         elif not slot.get("required") and not has_default:
             problems.append(f"{where}: 不是 required 就必須有 default 或 default_from")
         elif slot.get("required") and has_default:
@@ -428,8 +497,9 @@ def validate_template(template, repo_root=None):
         if uploaded.count(name) != 1:
             problems.append(f"slot {name}: 必須剛好出現在一個 upload 步驟")
     for name in uploaded:
-        if name in slots and slots[name].get("type") not in UPLOAD_TYPES:
-            problems.append(f"upload 步驟列了非上傳類型的 slot {name}")
+        if name in slots and not slots[name].get("upload"):
+            problems.append(f"upload 步驟列了沒有 upload 的 slot {name}")
+    problems.extend(_steps.validate_step_slots(data["pre"], data["post"], slots))
 
     problems.extend(_validate_anchoring(data["frame_anchoring"]))
     problems.extend(_validate_models(data["models"], graph, data["status"]))
@@ -464,7 +534,8 @@ def _validate_anchoring(anchor):
     if anchor["reference_role"] not in REFERENCE_ROLES:
         problems.append(f"frame_anchoring.reference_role 必須是 {', '.join(REFERENCE_ROLES)} 之一")
     if anchor["time_alignment"] not in TIME_ALIGNMENTS:
-        problems.append(f"frame_anchoring.time_alignment 必須是 {', '.join(TIME_ALIGNMENTS)} 之一")
+        names = ", ".join("null" if item is None else item for item in TIME_ALIGNMENTS)
+        problems.append(f"frame_anchoring.time_alignment 必須是 {names} 之一")
     cont = anchor["continuity"]
     if cont is not None:
         if not isinstance(cont, dict) or set(cont) != {"segments", "overlap_frames", "seam_frames", "manual_check"} \
@@ -511,8 +582,74 @@ def _validate_models(models, graph, status):
         path = model.get("path")
         if isinstance(path, str) and (path.startswith(("/", "\\")) or ":" in path or ".." in path.split("/")):
             problems.append(f"{where}: path 必須是相對 comfyui_path 的路徑(正斜線,不能有 ..)")
+        problems.extend(_check_model_location(where, model))
+        problems.extend(_check_model_platforms(where, model))
     if missing_pin and status == "technical_pass":
         problems.append("有模型 pin 尚未補齊(sha256 為 null),status 不能是 technical_pass")
+    return problems
+
+
+def _check_model_location(where, model):
+    """directory／url 對齊官方 properties.models,必須和 path、source 一致。兩個欄位都必填(不適用時寫 null)。"""
+    problems = [f"{where}: 缺少 {key}(不適用時寫 null)" for key in ("directory", "url") if key not in model]
+    directory, path, filename = model.get("directory"), model.get("path"), model.get("filename")
+    if directory is not None and (not isinstance(directory, str) or not directory
+                                  or directory.startswith("/") or ".." in directory.split("/")):
+        problems.append(f"{where}: directory 必須是 models/ 底下的資料夾名稱(例如 diffusion_models)或 null")
+    elif isinstance(path, str) and isinstance(filename, str):
+        if path.startswith("models/"):
+            if path != f"models/{directory}/{filename}":
+                problems.append(f"{where}: directory {directory!r} 和 path {path!r} 不一致"
+                                "(path 在 models/ 底下時必須是 models/<directory>/<filename>)")
+        elif directory is not None:
+            problems.append(f"{where}: path {path!r} 不在 models/ 底下(例如 custom node 自己的 ckpts),"
+                            "directory 要寫 null")
+    source, url = model.get("source"), model.get("url")
+    if source is not None:
+        if not isinstance(source, dict) or set(source) != SOURCE_KEYS or \
+                not all(isinstance(source[k], str) and source[k] for k in SOURCE_KEYS):
+            return problems + [f"{where}: source 必須是 null 或剛好有 repo、revision、file"]
+        if not GIT_SHA_RE.match(source["revision"]):
+            problems.append(f"{where}: source.revision 必須是 40 位 commit sha(固定版本,不能用 main)")
+        if url != MODEL_URL.format(**source):
+            problems.append(f"{where}: url 和 source 不一致,應該是 {MODEL_URL.format(**source)}")
+    elif url is not None:
+        problems.append(f"{where}: 沒有 source 時 url 必須是 null")
+    return problems
+
+
+def _check_model_platforms(where, model):
+    """選用的 platforms：有寫就必須含 windows-cuda，而且 filename（以及 sha256、size_bytes）等於頂層 pin。"""
+    if "platforms" not in model:
+        return []
+    platforms = model["platforms"]
+    if not isinstance(platforms, dict) or not platforms:
+        return [f"{where}: platforms 必須是非空 object"]
+    problems = []
+    if "windows-cuda" not in platforms:
+        problems.append(f"{where}: 有 platforms 時必須有 windows-cuda，且 filename 等於頂層 filename")
+    for key, entry in platforms.items():
+        if not isinstance(key, str) or not PLATFORM_RE.match(key):
+            problems.append(f"{where}: platforms 的平台名稱 {key!r} 格式不對(例如 windows-cuda)")
+            continue
+        if not isinstance(entry, dict) or set(entry) != PLATFORM_PIN_KEYS:
+            problems.append(f"{where}: platforms.{key} 必須剛好有 filename、sha256、size_bytes")
+            continue
+        filename = entry["filename"]
+        if not isinstance(filename, str) or not filename:
+            problems.append(f"{where}: platforms.{key}.filename 必填")
+        elif key == "windows-cuda" and filename != model.get("filename"):
+            problems.append(f"{where}: platforms.windows-cuda.filename 必須等於頂層 filename {model.get('filename')!r}")
+        sha = entry["sha256"]
+        if not isinstance(sha, str) or not SHA256_RE.match(sha):
+            problems.append(f"{where}: platforms.{key}.sha256 必須是 64 位小寫十六進位")
+        elif key == "windows-cuda" and sha != model.get("sha256"):
+            problems.append(f"{where}: platforms.windows-cuda.sha256 必須等於頂層 sha256")
+        size = entry["size_bytes"]
+        if not _is_int(size) or size < 0:
+            problems.append(f"{where}: platforms.{key}.size_bytes 必須是非負整數")
+        elif key == "windows-cuda" and size != model.get("size_bytes"):
+            problems.append(f"{where}: platforms.windows-cuda.size_bytes 必須等於頂層 size_bytes")
     return problems
 
 
@@ -548,9 +685,9 @@ def _validate_gate(gate):
 
 
 def _validate_provenance(prov, repo_root):
-    if not isinstance(prov, dict) or set(prov) != {"derived_from", "tested_source_sha256", "evidence"}:
-        return ["provenance 必須剛好有 derived_from、tested_source_sha256、evidence"]
-    problems = []
+    if not isinstance(prov, dict) or set(prov) != {"derived_from", "tested_source_sha256", "evidence", "upstream"}:
+        return ["provenance 必須剛好有 derived_from、tested_source_sha256、evidence、upstream"]
+    problems = _validate_upstream(prov["upstream"])
     if not isinstance(prov["derived_from"], str) or not prov["derived_from"]:
         problems.append("provenance.derived_from 必填")
     sha = prov["tested_source_sha256"]
@@ -564,10 +701,42 @@ def _validate_provenance(prov, repo_root):
         if not isinstance(item, dict) or not isinstance(item.get("path"), str) or set(item) - {"path", "note"}:
             problems.append(f"provenance.evidence[{index}] 必須是 {{path, note}}")
             continue
-        if repo_root is not None:
+        # 證據文件只在 repo 裡檢查;部署到 <ComfyUI>/tools/templates 的副本沒有 docs/(PR 8.4)
+        if repo_root is not None and (Path(repo_root) / "docs").is_dir():
             rel = item["path"].split("#", 1)[0]
             if not (Path(repo_root) / rel).exists():
                 problems.append(f"provenance.evidence[{index}]: repo 裡沒有 {rel}")
+    return problems
+
+
+def _validate_upstream(upstream):
+    """provenance.upstream:對應的官方範本或 core blueprint。沒有對應時 kind=none,並在 note 說明。"""
+    if not isinstance(upstream, dict) or not {"kind", "name", "blob", "comfyui_version"} <= set(upstream) \
+            or set(upstream) - UPSTREAM_KEYS:
+        return ["provenance.upstream 必須有 kind、name、blob、comfyui_version(可另加 note)"]
+    kind, note = upstream["kind"], upstream.get("note")
+    if kind not in UPSTREAM_KINDS:
+        return [f"provenance.upstream.kind 必須是 {'／'.join(UPSTREAM_KINDS)} 之一"]
+    problems = []
+    if "note" in upstream and (not isinstance(note, str) or not note):
+        problems.append("provenance.upstream.note 必須是非空字串")
+    if kind == "none":
+        if any(upstream[key] is not None for key in ("name", "blob", "comfyui_version")):
+            problems.append("provenance.upstream.kind 是 none 時,name、blob、comfyui_version 都要是 null")
+        if not note:
+            problems.append("provenance.upstream.kind 是 none 時要在 note 說明為什麼沒有對應的官方來源")
+        return problems
+    name = upstream["name"]
+    if not isinstance(name, str) or not name:
+        problems.append("provenance.upstream.name 必填")
+    elif kind == "workflow_templates" and (name.endswith(".json") or not re.match(r"^[A-Za-z0-9_.-]+$", name)):
+        problems.append("provenance.upstream.name 是官方範本名稱,不含 .json(例如 video_wan_vace_inpainting)")
+    elif kind == "core_blueprint" and not name.endswith(".json"):
+        problems.append("provenance.upstream.name 是 ComfyUI blueprints/ 裡的檔名,要含 .json")
+    if not isinstance(upstream["blob"], str) or not GIT_SHA_RE.match(upstream["blob"]):
+        problems.append("provenance.upstream.blob 必須是 40 位 git blob sha(git hash-object 的結果)")
+    if not isinstance(upstream["comfyui_version"], str) or not SEMVER_RE.match(upstream["comfyui_version"]):
+        problems.append("provenance.upstream.comfyui_version 必須是 X.Y.Z")
     return problems
 
 
@@ -660,7 +829,7 @@ def validate_value(name, slot, value):
             raise TemplateError(f"{where}: 至少要 {rules['min_items']} 個點")
         if "max_items" in rules and len(value) > rules["max_items"]:
             raise TemplateError(f"{where}: 最多 {rules['max_items']} 個點")
-    elif kind in UPLOAD_TYPES:
+    elif kind in FILE_TYPES:
         if not isinstance(value, str) or not value:
             raise TemplateError(f"{where}: 需要檔案路徑")
 
@@ -700,6 +869,10 @@ def resolve(template, values=None, options=None, *, run_id, dry_run=False, rng=N
                     coerce(name, slot, values[name])
                 resolved[name] = output_prefix(template.id, run_id)
                 continue
+            if slot.get("generated") or slot.get("from_pre"):
+                if name in values:
+                    raise TemplateError(f"slot {name}: 值由 pre 步驟產生,不能指定")
+                continue
             if name in values:
                 value = coerce(name, slot, values[name])
                 source = "explicit"
@@ -708,7 +881,7 @@ def resolve(template, values=None, options=None, *, run_id, dry_run=False, rng=N
                 continue
             elif "default" in slot:
                 value, source = copy.deepcopy(slot["default"]), "default"
-            elif kind in UPLOAD_TYPES and dry_run:
+            elif kind in FILE_TYPES and dry_run:
                 warnings.append(f"slot {name} 沒有提供檔案;graph 以 {UPLOAD_MARK.format(name)} 代替")
                 continue
             elif allow_missing:
@@ -723,7 +896,7 @@ def resolve(template, values=None, options=None, *, run_id, dry_run=False, rng=N
         except TemplateError as exc:
             problems.extend(exc.problems)
             continue
-        if kind in UPLOAD_TYPES:
+        if kind in FILE_TYPES:
             inputs[name] = value
             continue
         resolved[name] = value
@@ -768,6 +941,29 @@ def resolve(template, values=None, options=None, *, run_id, dry_run=False, rng=N
             "warnings": warnings, "missing": missing}
 
 
+def fill_from_pre(template, resolution, pre_results):
+    """實際執行時,pre 步驟跑完後填入 ``from_pre`` slot 的值(就地更新 resolution)並驗證。回傳填了哪些。"""
+    problems, filled = [], []
+    for name, slot in template.slots.items():
+        if not slot.get("from_pre"):
+            continue
+        try:
+            value = _steps.resolve_param(slot["from_pre"], resolution["slot_values"], resolution["options"],
+                                         pre_results)
+            validate_value(name, slot, value)
+        except KeyError as exc:
+            problems.append(f"slot {name}: {exc.args[0] if exc.args else exc}")
+            continue
+        except TemplateError as exc:
+            problems.extend(exc.problems)
+            continue
+        resolution["slot_values"][name] = value
+        filled.append(name)
+    if problems:
+        raise TemplateError(problems, template.id)
+    return filled
+
+
 # ---------- patch ----------
 
 def _encode(slot, value):
@@ -787,7 +983,7 @@ def patch(template, resolution, upload_paths=None, *, require_uploads=True):
     values = resolution["slot_values"]
     missing = []
     for name, slot in template.slots.items():
-        if slot["type"] in UPLOAD_TYPES:
+        if slot.get("upload"):
             if name in upload_paths:
                 value = upload_paths[name]
             elif require_uploads:
@@ -795,8 +991,12 @@ def patch(template, resolution, upload_paths=None, *, require_uploads=True):
                 continue
             else:
                 value = UPLOAD_MARK.format(name)
+        elif slot["type"] in FILE_TYPES:
+            continue  # 本機輸入,不寫進 graph
         elif name in values:
             value = _encode(slot, values[name])
+        elif slot.get("from_pre") and not require_uploads:
+            value = PRE_MARK.format(slot["from_pre"][len("{pre."):-1])  # dry-run／preflight:pre 步驟還沒跑
         else:
             missing.append(name)
             continue
@@ -844,6 +1044,8 @@ def check_patched(template, graph, enabled_options=(), *, allow_upload_marks=Fal
                 problems.append(f"{node_id}.{field} 還是占位 {value}")
             if isinstance(value, str) and value.startswith("<upload:") and not allow_upload_marks:
                 problems.append(f"{node_id}.{field} 還沒有上傳路徑")
+            if isinstance(value, str) and value.startswith("<pre:") and not allow_upload_marks:
+                problems.append(f"{node_id}.{field} 還沒有 pre 步驟的值")
             if field in SEED_INPUTS and value == -1:
                 problems.append(f"{node_id}.{field} 還是 -1")
     changed, structural = graph_changes(template.graph, graph)

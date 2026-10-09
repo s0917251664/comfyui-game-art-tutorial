@@ -36,7 +36,7 @@ class PipelineIndependenceTests(unittest.TestCase):
             import sys
             from types import SimpleNamespace
             sys.path.insert(0, {TOOLS_SRC!r})
-            from comfyui_pipeline import tasks, video_builders
+            from comfyui_pipeline import tasks
             from comfyui_pipeline.context import RunContext
             assert "generate" not in sys.modules
 
@@ -55,11 +55,7 @@ class PipelineIndependenceTests(unittest.TestCase):
             graph2, _ = tasks.build_image_task_graph(other, args, None, lambda p: p)
             assert graph2["1"]["inputs"]["ckpt_name"] == "other.safetensors"
 
-            # 影片 builder 的模型檔名來自明確傳入的 capability config
-            config = {{"backends": {{"wan": {{"models": {{
-                "i2v_unet": "cfg-unet.safetensors", "clip": "cfg-clip.safetensors", "vae": "cfg-vae.safetensors"}}}}}}}}
-            video_graph, _ = video_builders.build_img2video_wan("p", "in.png", seed=1, video_config=config)
-            assert video_graph["37"]["inputs"]["unet_name"] == "cfg-unet.safetensors"
+            # 影片 builder 已在 PR 8.3 刪除;影片 graph 由 templates/ 填值(模型檔名是 template 的 pin)
             print("ok")
         """)
         self.assertEqual(0, result.returncode, result.stderr)

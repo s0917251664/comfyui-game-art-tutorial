@@ -171,3 +171,40 @@ def mask_preview(video_path, mask_paths, dest_path):
     os.makedirs(os.path.dirname(dest_path) or ".", exist_ok=True)
     vat.mask_overlay_strip(frames, masks, picks, dest_path)
     return dest_path
+
+
+# ---------- VACE 局部重繪(PR 3.3;實作在 vace_media.py) ----------
+
+def _vace_call(function, *args, **kwargs):
+    from . import vace_media
+    try:
+        return getattr(vace_media, function)(*args, **kwargs)
+    except ImportError as exc:
+        raise MediaDependencyError(
+            f"VACE 前後處理需要 numpy、PyAV 與 Pillow,目前的 Python 缺少 {exc.name or exc};"
+            "請用 ComfyUI 的 Python(local_config.json 的 python_exe)執行 gameart.py run") from exc
+
+
+def vace_work_area(video, masks, out_dir, **kwargs):
+    """回傳 (info, state);見 vace_media.prepare_work_area。"""
+    return _vace_call("prepare_work_area", video, masks, out_dir, **kwargs)
+
+
+def vace_composite(state, raw_video, out_dir, feather=4):
+    return _vace_call("composite", state, raw_video, out_dir, feather=feather)
+
+
+def vace_outside_changes(state, frame_paths, feather=4):
+    return _vace_call("outside_mask_changes", state, frame_paths, feather)
+
+
+def extract_last_frame(video_path, dest_path):
+    """上一鏡最後一幀 PNG。實作在 video_media.extract_last_frame（延遲 import，避免載入 image_graphs）。"""
+    from ..video_media import extract_last_frame as impl
+    return impl(video_path, dest_path)
+
+
+def camera_end_still(image_path, camera, width, height, dest_path):
+    """運鏡終點靜幀。orbit 時既有函式回傳 None，不寫檔。"""
+    from ..video_graphs import build_camera_end_still
+    return build_camera_end_still(image_path, camera, width, height, dest_path)

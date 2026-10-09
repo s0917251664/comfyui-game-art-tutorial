@@ -55,8 +55,11 @@ class DeployTests(unittest.TestCase):
         dsts = {e.dst.as_posix() for e in manifest}
         for required in ("tools/mask_session.py", "tools/mask_refine.py", "tools/simple_mask_tool/core.py",
                          "custom_nodes/comfyui-simple-mask-tool/comfyui_plugin/web/index.html",
-                         "tools/comfyui_pipeline/profiles/sdxl_standard.json", "tools/gameart.py"):
+                         "tools/comfyui_pipeline/profiles/sdxl_standard.json", "tools/gameart.py",
+                         "tools/vfx_alpha_tools.py", "tools/vfx_alpha/__init__.py", "tools/vfx_alpha/pixel.py",
+                         "tools/vfx_alpha/mask.py", "tools/vfx_alpha/media.py", "tools/vfx_alpha/qa.py"):
             self.assertIn(required, dsts)
+        self.assertFalse(any("vfx_alpha" in e.dst.as_posix() and e.dst.parts[0] == "custom_nodes" for e in manifest))
         # verify 與 deploy 用同一個函式,不另存清單
         self.assertIs(verify.deploy_manifest, deploy_manifest.deploy_manifest)
         self.assertFalse(hasattr(verify, "SYNC_SOURCE_FILES"))

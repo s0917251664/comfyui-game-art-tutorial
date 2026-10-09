@@ -8,7 +8,7 @@ import comfy.model_management as management
 # Reuse the deployed, already tested CFR/audio primitives, not ReActor itself.
 sys.path.insert(0, str(Path(folder_paths.base_path) / 'tools'))
 from . import media
-from .contracts import LEGACY_NODE_NAMES, NODE_NAME, PACKAGE_FILES, record
+from .contracts import NODE_NAME, PACKAGE_FILES, record
 LOADED_HASHES = {n: record(Path(__file__).parent / n)['sha256'] for n in PACKAGE_FILES}
 
 
@@ -46,14 +46,5 @@ class GameArtVideoLayers:
                        'text': [json.dumps({'actual': manifest['actual'], 'technical_status': manifest['technical_status'], 'server_manifest': str(dest / 'manifest.json')})]}}
 
 
-def legacy_alias(cls, name):
-    """Same node under its old class name. DEPRECATED hides it from the node
-    search/library (ComfyUI reports `deprecated: true`); old workflows still run."""
-    return type(name, (cls,), {'DEPRECATED': True, '__module__': cls.__module__})
-
-
 NODE_CLASS_MAPPINGS = {NODE_NAME: GameArtVideoLayers}
 NODE_DISPLAY_NAME_MAPPINGS = {NODE_NAME: 'GameArt · SAM Video Masks / Ordered Layers'}
-for _new, _old in LEGACY_NODE_NAMES.items():
-    NODE_CLASS_MAPPINGS[_old] = legacy_alias(NODE_CLASS_MAPPINGS[_new], _old)
-    NODE_DISPLAY_NAME_MAPPINGS[_old] = 'SAM Video Masks / Ordered Layers (legacy node name)'

@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "id": "idle-anchored-action",
+  "version": "0.1.0",
+  "title": "回到 Idle 的動作（首尾同一張）",
+  "summary": "依 R3（docs/knowledge/rules/idle-anchoring.md）：要回到 Idle 的動作必須鎖住首幀和尾幀，而且是同一張已驗收的 Idle。選 H3 img2video 的 last frame。Wan img2video 沒有 last frame，標 unsupported。確認點在送出生成之前。草稿。轉正要另開變更且要使用者核准。",
+  "status": "draft",
+  "status_note": "草稿，放在 _drafts。轉正要另開變更且要使用者核准。尾幀對到已登記的 video/h3/img2video-last，這一步 executable 仍是 false，dry-run 標 described，不會送出。Wan img2video 沒有尾幀，標 unsupported。",
+  "inputs": {
+    "idle": {
+      "type": "path",
+      "required": true,
+      "help": "已驗收的 Idle 圖。要先補邊到和生成畫布相同比例（長邊 768、對齊 32）"
+    },
+    "prompt": {
+      "type": "text",
+      "required": true,
+      "help": "中段動作，並寫明回到完全相同的站姿與位置、鏡頭不動"
+    },
+    "seed": {
+      "type": "seed",
+      "required": false,
+      "default": "auto",
+      "help": "生成 seed"
+    }
+  },
+  "steps": [
+    {
+      "id": "review_idle",
+      "kind": "confirm",
+      "message": "送出生成之前請確認：這張 Idle 已驗收，而且首幀和尾幀會用同一張。比例已補邊到生成畫布（長邊 768、對齊 32）。沒有確認就不會送出。",
+      "look_at": "{inputs.idle}"
+    },
+    {
+      "id": "h3_img2video",
+      "kind": "template",
+      "template": "video/h3/img2video-last",
+      "executable": false,
+      "support": "planned",
+      "text": "選已登記的 video/h3/img2video-last，首幀 start_image 與尾幀 last_image 都是同一張 Idle。這一步仍是草稿描述，不會執行。",
+      "frame_anchoring": {
+        "first": "start_image",
+        "last": "last_image",
+        "note": "首幀與 last frame 都是同一張 Idle"
+      },
+      "slots": {
+        "start_image": "{inputs.idle}",
+        "last_image": "{inputs.idle}",
+        "prompt": "{inputs.prompt}",
+        "seed": "{inputs.seed}"
+      }
+    },
+    {
+      "id": "wan_img2video",
+      "kind": "note",
+      "template": "video/wan/img2video",
+      "support": "unsupported",
+      "text": "Wan img2video 沒有 last frame（wan 路徑不接 last image），不能鎖尾幀。依 R3 不用這條。標 unsupported，不會執行。"
+    }
+  ]
+}

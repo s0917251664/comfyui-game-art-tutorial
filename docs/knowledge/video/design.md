@@ -6,11 +6,11 @@ status: mixed-implemented-and-planned
 # 影片產線設計稿
 
 > **狀態:第一波 CLI 已上線並實測。** 對外契約是 **task 名 + `--backend`**,不是模型名。`img2video` / `fx_loop` / `transition` / `clip_extend` / `video_concat` / `video_composite` / `character_video` / `camera_move` / `pose_drive` 都在 `generate.py`。目前 backend/runtime 契約見 [`README.md`](README.md)。
-> 實際操作走 repo 的 `skills/comfyui-video-gen/SKILL.md`（由 [工具總表](../TOOLS.md) 路由），不要臨場組節點（[R2](../rules/fixed-graphs.md)）或自動播放成品。
+> 實際操作走 repo 的 `skills/comfyui-run/references/comfyui-video-gen/README.md`（由 [工具總表](../TOOLS.md) 路由），不要臨場組節點（[R2](../rules/fixed-graphs.md)；新的固定 graph 走[擴充協議](../maintenance/extension-protocol.md)）或自動播放成品。
 >
 > 初稿日期:2026-08-26；文件契約校對:2026-09-15（未新增實機驗證）。本文保留歷史設計；尚未接入的構想不能作為可執行選項。
 > 分支:`feature/video-pipeline`
-> 對齊對象:現有靜態圖產線(`skills/comfyui-art-gen/SKILL.md` + `tools_src/generate.py`)
+> 對齊對象:現有靜態圖產線(`skills/comfyui-run/references/comfyui-art-gen/README.md` + `tools_src/generate.py`)
 
 ---
 
@@ -118,7 +118,7 @@ status: mixed-implemented-and-planned
 
 > **歷史設計註記(2026-08-26):** 當時原本預期首尾幀畫質可能要靠 14B,且尚未把 A→B `transition` 寫進操作手冊。
 
-目前 `transition` CLI 已上線，H3 backend 可用首尾靜幀；5B/16GB 的畫質與穩定度仍受素材與 backend 影響，14B 仍只是有需求時的選用升級，不是預設依賴。操作契約以 `skills/comfyui-video-gen/SKILL.md` 與 [影片知識總覽的 backend 段](README.md#backend模型與-runtime) 為準。
+目前 `transition` CLI 已上線，H3 backend 可用首尾靜幀；5B/16GB 的畫質與穩定度仍受素材與 backend 影響，14B 仍只是有需求時的選用升級，不是預設依賴。操作契約以 `skills/comfyui-run/references/comfyui-video-gen/README.md` 與 [影片知識總覽的 backend 段](README.md#backend模型與-runtime) 為準。
 
 ### 3.4 使用者沒點名、但影視工程師會立刻補上的方向
 
@@ -148,11 +148,11 @@ status: mixed-implemented-and-planned
 跟 `AGENTS.md`、`generate.py` 開頭註解同一套:
 
 - 每個 task 對應一組**鎖死大部分參數**的 ComfyUI graph,只留必要欄位可調
-- 不靠 LLM 每次臨場組節點
+- 不靠 LLM 每次臨場組節點。真的要新的固定 graph，走[擴充協議](../maintenance/extension-protocol.md)
 - 上層 skill 只把自然語言收成結構化參數
 - 目前沒預算,本機免費模型;之後有預算走 ComfyUI 內建 API 節點(Kling 等),**不重建產線**
 - 換機器至少重跑 `detect_device.py`,不要假設影片 checkpoint 檔名跟這台一樣
-- 新能力上線走 `skills/comfyui-new-tool-checklist/SKILL.md`，依能力類型勾選適用的安裝、程式碼、實測與文件；不因為「先做最小可用」就跳過適用項目，也不把不相關流程強加進來
+- 新能力上線走 `skills/comfyui-extend/references/comfyui-new-tool-checklist/README.md`，依能力類型勾選適用的安裝、程式碼、實測與文件；不因為「先做最小可用」就跳過適用項目，也不把不相關流程強加進來
 
 額外為影片加上的硬規則:
 
@@ -184,7 +184,7 @@ status: mixed-implemented-and-planned
 | `video_inpaint` | 清理組 | 影片 + 時間遮罩 | — | 不做第一波 |
 | `video_upscale` | 成片放大 | 已定稿短片 | — | 不做第一波 |
 
-目前 `fx_loop` 與 `img2video` 共用 I2V builder，但對外仍分成兩個 task，因為**驗收標準不同**:`img2video` 驗「還是不是這張圖、動作是不是使用者要的」;`fx_loop` 驗「最後一幀接回第一幀能不能看、進引擎抽幀後循環是否成立」。`img2video` 預設不抽幀，`fx_loop` 預設抽幀；兩者都可用旗標明確改變這個輸出包裝行為。
+目前 `fx_loop` 與 `img2video` 共用同一組 I2V template（Wan 是 `video/wan/img2video`；H3 沒有尾幀是 `video/h3/img2video`，有尾幀是 `video/h3/img2video-last`），但對外仍分成兩個 task，因為**驗收標準不同**:`img2video` 驗「還是不是這張圖、動作是不是使用者要的」;`fx_loop` 驗「最後一幀接回第一幀能不能看、進引擎抽幀後循環是否成立」。`img2video` 預設不抽幀，`fx_loop` 預設抽幀；兩者都可用旗標明確改變這個輸出包裝行為。
 
 ### 5.2 編導流程(skill 層,不是 generate.py task)
 
@@ -202,7 +202,7 @@ status: mixed-implemented-and-planned
 
 這份鏡頭表是影片版的必要輸入整理，對應 `comfyui-video-gen/SKILL.md` 裡每個 task 的必要資訊。
 
-> **歷史設計註記(2026-08-26):** 原稿曾要求等第一個 task 實作後才寫操作 skill。現況是影片 CLI 與 `skills/comfyui-video-gen/SKILL.md` 已上線；使用者要求做一部片時仍先出鏡頭表，再逐鏡呼叫 task，最後視需要用 `video_concat` 做基本串接。
+> **歷史設計註記(2026-08-26):** 原稿曾要求等第一個 task 實作後才寫操作 skill。現況是影片 CLI 與 `skills/comfyui-run/references/comfyui-video-gen/README.md` 已上線；使用者要求做一部片時仍先出鏡頭表，再逐鏡呼叫 task，最後視需要用 `video_concat` 做基本串接。
 
 ---
 
@@ -241,7 +241,7 @@ status: mixed-implemented-and-planned
 
 網路上「Wan 2.5 ComfyUI workflow」大多數是 Partner Node 或代跑平台,不是你可以下載進 `models/diffusion_models/` 的 checkpoint。另外 **LTX 2.5** 是 Lightricks 的另一個本機模型,名字容易跟 Wan 2.5 混,不是同一個東西。
 
-產線預留的位置仍然是:**task 名稱不變(`img2video` 等),有預算時加雲端 backend。** 本機 backend 由每台機器的 capability config 決定；不要為了追版本號把本機產線改成必須刷卡才能跑。如果哪天 Wan 真的再出一版開源權重,走 `comfyui-pipeline-review` 核准再換,跟圖片產線換底模同一套紀律。
+產線預留的位置仍然是:**task 名稱不變(`img2video` 等),有預算時加雲端 backend。** 本機 backend 由每台機器的 capability config 決定；不要為了追版本號把本機產線改成必須刷卡才能跑。如果哪天 Wan 真的再出一版開源權重,走 `comfyui-extend`（comfyui-pipeline-review reference）核准再換,跟圖片產線換底模同一套紀律。
 
 ### 2026-08-26 本機開源 bake-off(這台 4080 16GB)
 

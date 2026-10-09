@@ -39,7 +39,7 @@ class TaskRegistryTests(unittest.TestCase):
     def test_each_task_has_exactly_one_runner(self):
         for task in self.tasks.TASK_ORDER:
             module = self.tasks.owner(task)
-            runners = [name for name in ("build_graph", "prepare", "run_local") if hasattr(module, name)]
+            runners = [name for name in ("build_graph", "prepare", "run_local", "run_with_runner") if hasattr(module, name)]
             self.assertTrue(runners, task)
             self.assertIn(task, module.TASKS)
 

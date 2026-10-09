@@ -1,6 +1,6 @@
 # 模型設定檔（model profile）設計與實作紀錄
 
-本文保留 `feature/model-profiles` 的設計與階段紀錄；其中「第 1 階段」「第 2 階段」描述的是當時狀態，不是目前操作規則。第 1–4 階段已完成；實機驗證範圍以各設定檔 JSON 的 `validation` 與 `docs/tested-versions.md` 為準。Mac 的部分 smoke 發現另記於 `skills/comfyui-art-gen/reference/profiles/sdxl_standard.md`，尚未完成 manifest capture，不能升格為平台已驗證。
+本文保留 `feature/model-profiles` 的設計與階段紀錄；其中「第 1 階段」「第 2 階段」描述的是當時狀態，不是目前操作規則。第 1–4 階段已完成；實機驗證範圍以各設定檔 JSON 的 `validation` 與 `docs/tested-versions.md` 為準。Mac 的部分 smoke 發現另記於 `skills/comfyui-run/references/comfyui-art-gen/reference/profiles/sdxl_standard.md`，尚未完成 manifest capture，不能升格為平台已驗證。
 
 **目前已實作的界線（2026-09-15 文件校對）：**
 
@@ -33,7 +33,7 @@
 - `comfyui-video-gen`、`comfyui-character-animation-workflow`：規劃鏡頭表／動作表之前先確認圖片與影片能力，缺關鍵能力在規劃階段就停下告知。
 - `comfyui-install`：新增步驟 4b（下載模型前列出符合平台的設定檔與驗證狀態讓使用者選）、步驟 8 依設定檔安裝、收尾分三層回報、smoke 後依情境 C 補平台驗證紀錄。
 - `comfyui-new-tool-checklist`：新增「情境 B：新增模型設定檔」「情境 C：在新平台或新記憶體級距驗證既有設定檔」。
-- 調校經驗集中到 `skills/comfyui-art-gen/reference/profiles/<id>.md`，設定檔 `notes_ref` 指過去（測試確認檔案存在）；`models.md` 的使用眉角改為連結。
+- 調校經驗集中到 `skills/comfyui-run/references/comfyui-art-gen/reference/profiles/<id>.md`，設定檔 `notes_ref` 指過去（測試確認檔案存在）；`models.md` 的使用眉角改為連結。
 
 ## 1. 要解決的問題
 
@@ -165,7 +165,7 @@ tier 不刪除，降格成「這台最多建議到哪個設定檔」的提示，
     "style_lock": {"requires": ["checkpoint", "ipadapter", "clip_vision"], "nodes": ["IPAdapterModelLoader"]}
   },
 
-  "notes_ref": "skills/comfyui-art-gen/reference/profiles/sdxl_standard.md",
+  "notes_ref": "skills/comfyui-run/references/comfyui-art-gen/reference/profiles/sdxl_standard.md",
 
   "validation": {
     "windows-cuda": {"status": "verified", "tasks": ["concept", "pose_only", "style_lock"], "min_verified_memory_mb": 16000, "evidence": "docs/tested-versions.md#xu-nano-pc-manifest"},

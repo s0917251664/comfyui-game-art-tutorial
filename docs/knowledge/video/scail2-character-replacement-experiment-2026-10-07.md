@@ -31,6 +31,6 @@ last_updated: 2026-10-07
 
 ## 連結
 
-- [SCAIL-2 reference](../../../skills/comfyui-wan-animate/references/scail2.md)
+- [SCAIL-2 reference](../../../skills/comfyui-run/references/comfyui-wan-animate/references/scail2.md)
 - [2026-10-06 實驗紀錄](wan-animate-scail2-experiments-2026-10-06.md)
-- [換臉技能](../../../skills/comfyui-face-swap-workflow/SKILL.md)
+- [換臉技能](../../../skills/comfyui-run/references/comfyui-face-swap-workflow/README.md)

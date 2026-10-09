@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "id": "prop-swap",
+  "version": "0.1.0",
+  "title": "換道具：母版靜幀、貼回、再套原片動作",
+  "summary": "母版靜幀用既有圖片編修（不在這條 recipe 呼叫新 graph）→ gameart.py vfx prop-paste → H3 pose_drive（canny）。草稿。轉正要另開變更且要使用者核准。",
+  "status": "draft",
+  "status_note": "草稿，放在 _drafts。轉正要另開變更且要使用者核准。video/h3/pose-drive-canny 已登記，slot 對到 start_image 與 motion_video。這一步 executable 仍是 false，dry-run 標 described，不會執行。",
+  "inputs": {
+    "source_still": {
+      "type": "path",
+      "required": true,
+      "help": "第 0 幀原圖（綠幕）"
+    },
+    "edited_still": {
+      "type": "path",
+      "required": true,
+      "help": "已選好的圖片編修結果（例如 flux2_edit）。不是這條 recipe 產生的"
+    },
+    "mask": {
+      "type": "path",
+      "required": true,
+      "help": "手繪道具遮罩，白色＝道具"
+    },
+    "motion_ref": {
+      "type": "path",
+      "required": true,
+      "help": "原片，給 pose_drive 當動作參考"
+    },
+    "prompt": {
+      "type": "text",
+      "required": true,
+      "help": "新道具與動作描述"
+    }
+  },
+  "steps": [
+    {
+      "id": "master_still",
+      "kind": "note",
+      "text": "母版靜幀用既有圖片編修（例如 flux2_edit）做好並由人挑過。這一步不在這條 recipe 裡呼叫新 graph，也不會送 ComfyUI。"
+    },
+    {
+      "id": "prop_paste",
+      "kind": "local",
+      "command": "gameart.py vfx prop-paste",
+      "args": {
+        "--source": "{inputs.source_still}",
+        "--edited": "{inputs.edited_still}",
+        "--mask": "{inputs.mask}"
+      },
+      "outputs": [
+        "composited"
+      ],
+      "text": "本機把新道具貼回原圖綠幕，不呼叫 ComfyUI。產物 composited.png 才是母版。"
+    },
+    {
+      "id": "review_master",
+      "kind": "confirm",
+      "message": "請看 prop-paste 產物的 composited.png。這張才是要拿去套動作的母版，母版要使用者看過。沒有確認就不會做下一步。",
+      "look_at": "{steps.prop_paste.outputs.composited}"
+    },
+    {
+      "id": "pose_drive",
+      "kind": "template",
+      "template": "video/h3/pose-drive-canny",
+      "executable": false,
+      "support": "planned",
+      "text": "預計用已登記的 video/h3/pose-drive-canny（control 為 canny），把母版套上原片動作。slot 是 start_image、motion_video、prompt。這一步仍是草稿描述，不會執行。",
+      "slots": {
+        "start_image": "{steps.prop_paste.outputs.composited}",
+        "motion_video": "{inputs.motion_ref}",
+        "prompt": "{inputs.prompt}"
+      }
+    }
+  ]
+}

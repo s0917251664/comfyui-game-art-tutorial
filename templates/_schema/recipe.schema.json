@@ -1,0 +1,267 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "templates/_schema/recipe.schema.json",
+  "title": "gameart recipe(recipe.json)",
+  "description": "文件用途的結構說明。實際驗證以 tools_src/comfyui_pipeline/runner/recipe.py 為準(只用標準庫,不讀這份 schema)。recipe 不是 template:檔名必須是 recipe.json,不能叫 template.json。templates/recipes/_drafts/ 要 --draft 才會被 list/run 看到。草稿轉正要另開變更且要使用者核准。確認點沒有確認就不能做它後面的步驟。content_review 一律 pending,不寫 accept。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "version",
+    "title",
+    "summary",
+    "status",
+    "inputs",
+    "steps"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$",
+      "description": "等於 templates/recipes/ 或 templates/recipes/_drafts/ 底下的資料夾名"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "title": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "draft",
+        "technical_pass",
+        "retired"
+      ]
+    },
+    "status_note": {
+      "type": "string"
+    },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/input"
+      }
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "oneOf": [
+          {
+            "$ref": "#/$defs/templateStep"
+          },
+          {
+            "$ref": "#/$defs/confirmStep"
+          },
+          {
+            "$ref": "#/$defs/localStep"
+          },
+          {
+            "$ref": "#/$defs/noteStep"
+          }
+        ]
+      }
+    }
+  },
+  "$defs": {
+    "support": {
+      "enum": [
+        "planned",
+        "unsupported",
+        "ready"
+      ]
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "text",
+            "string",
+            "int",
+            "float",
+            "bool",
+            "seed",
+            "path"
+          ]
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "default": {},
+        "help": {
+          "type": "string"
+        },
+        "enum": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "templateStep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "template",
+        "slots"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "const": "template"
+        },
+        "template": {
+          "type": "string",
+          "description": "已登記或預計的 template id。檔案不在時 show 仍成功,dry-run 標 unresolved"
+        },
+        "slots": {
+          "type": "object",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "對到 template.json 的 slot。可用 {inputs.名稱} 或 {steps.步驟.outputs.名稱}。不要填 output_prefix、generated、from_pre"
+        },
+        "executable": {
+          "type": "boolean",
+          "description": "false 表示尚未執行、只做 dry-run 描述"
+        },
+        "frame_anchoring": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "first": {
+              "type": "string"
+            },
+            "last": {
+              "type": "string"
+            },
+            "note": {
+              "type": "string"
+            }
+          }
+        },
+        "support": {
+          "$ref": "#/$defs/support"
+        },
+        "text": {
+          "type": "string"
+        }
+      }
+    },
+    "confirmStep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "message"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "const": "confirm"
+        },
+        "message": {
+          "type": "string",
+          "description": "沒有確認就停。要寫清楚使用者該看什麼"
+        },
+        "look_at": {
+          "type": "string",
+          "description": "確認時要看的路徑。可以是整段參考，或把 {steps.步驟.dir} 嵌在路徑裡。執行到確認點才展開。"
+        }
+      }
+    },
+    "localStep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "command"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "const": "local"
+        },
+        "command": {
+          "type": "string",
+          "description": "本機指令,例如 gameart.py vfx luma-alpha。可嵌 {inputs.名稱}。執行時展開;dry-run 仍顯示來源。不呼叫 ComfyUI"
+        },
+        "args": {
+          "type": "object",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          }
+        },
+        "outputs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "text": {
+          "type": "string"
+        }
+      }
+    },
+    "noteStep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "text"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "const": "note"
+        },
+        "text": {
+          "type": "string",
+          "description": "只描述、不執行。可註明這一步不在 recipe 裡呼叫新 graph"
+        },
+        "template": {
+          "type": "string",
+          "description": "預計或明確不採用的 template id"
+        },
+        "support": {
+          "$ref": "#/$defs/support"
+        }
+      }
+    }
+  }
+}

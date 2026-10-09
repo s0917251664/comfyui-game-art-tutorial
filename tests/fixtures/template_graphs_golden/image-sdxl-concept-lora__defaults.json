@@ -1,0 +1,124 @@
+{
+  "template": "image/sdxl/concept-lora",
+  "case": "defaults",
+  "template_version": "0.1.0",
+  "graph_canonical_sha256": "44ea924b6d32310a9f622ca7da234d767090953841e5d79b3543591c6d006acb",
+  "values": {
+    "prompt": "p",
+    "seed": 20261006,
+    "lora_name": "test_lora.safetensors",
+    "lora_strength": 0.6
+  },
+  "options": {},
+  "uploads": {},
+  "changed": {
+    "1b.lora_name": "test_lora.safetensors",
+    "1b.strength_clip": 0.6,
+    "1b.strength_model": 0.6,
+    "2.text": "p",
+    "5.seed": 20261006
+  },
+  "patched_graph_sha256": "3b87691b764213eb4e945fb0235ea48aedbb209497320862e9cecd0e125aefc8",
+  "graph": {
+    "1": {
+      "class_type": "CheckpointLoaderSimple",
+      "inputs": {
+        "ckpt_name": "sd_xl_base_1.0.safetensors"
+      }
+    },
+    "1b": {
+      "class_type": "LoraLoader",
+      "inputs": {
+        "model": [
+          "1",
+          0
+        ],
+        "clip": [
+          "1",
+          1
+        ],
+        "lora_name": "test_lora.safetensors",
+        "strength_model": 0.6,
+        "strength_clip": 0.6
+      }
+    },
+    "2": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "text": "p",
+        "clip": [
+          "1b",
+          1
+        ]
+      }
+    },
+    "3": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "text": "blurry, low quality, extra fingers, deformed, watermark",
+        "clip": [
+          "1b",
+          1
+        ]
+      }
+    },
+    "4": {
+      "class_type": "EmptyLatentImage",
+      "inputs": {
+        "width": 1024,
+        "height": 1024,
+        "batch_size": 1
+      }
+    },
+    "5": {
+      "class_type": "KSampler",
+      "inputs": {
+        "model": [
+          "1b",
+          0
+        ],
+        "positive": [
+          "2",
+          0
+        ],
+        "negative": [
+          "3",
+          0
+        ],
+        "latent_image": [
+          "4",
+          0
+        ],
+        "seed": 20261006,
+        "steps": 25,
+        "cfg": 7.0,
+        "sampler_name": "euler",
+        "scheduler": "normal",
+        "denoise": 1.0
+      }
+    },
+    "6": {
+      "class_type": "VAEDecode",
+      "inputs": {
+        "samples": [
+          "5",
+          0
+        ],
+        "vae": [
+          "1",
+          2
+        ]
+      }
+    },
+    "7": {
+      "class_type": "SaveImage",
+      "inputs": {
+        "images": [
+          "6",
+          0
+        ],
+        "filename_prefix": "concept"
+      }
+    }
+  }
+}

@@ -22,6 +22,8 @@ import urllib.request
 import numpy as np
 from PIL import Image, ImageDraw, ImageOps
 
+import local_pixels
+
 
 COMMON = {"prompt", "negative", "seed", "style", "rating"}
 TASK_FIELDS = {
@@ -131,7 +133,8 @@ def recolor(source, mask, output_dir, from_hue, to_hue, hue_range=45, min_satura
     a = load_image(source)
     preserve = np.asarray(load_mask(mask, a.size))
     rgba = np.asarray(a)
-    hsv = np.asarray(a.convert("RGB").convert("HSV")).copy()
+    # float64 度數。vfx 的 masked_hue_rotate 用 float32,不能共用同一條公式。
+    hsv = local_pixels.rgb_to_hsv(rgba)
     degrees = hsv[:, :, 0].astype(float) * (360 / 255)
     distance = np.abs((degrees - from_hue + 180) % 360 - 180)
     selected = (preserve < 255) & (rgba[:, :, 3] > 0) & (distance <= hue_range) & (hsv[:, :, 1] / 255 >= min_saturation)
@@ -140,7 +143,7 @@ def recolor(source, mask, output_dir, from_hue, to_hue, hue_range=45, min_satura
     # Only matching pixels undergo the HSV round trip; all others retain exact bytes.
     shifted = np.round(((degrees + to_hue - from_hue) % 360) * (255 / 360)).astype(np.uint8)
     hsv[:, :, 0][selected] = shifted[selected]
-    rgb = np.asarray(Image.frombytes("HSV", a.size, hsv.tobytes()).convert("RGB"))
+    rgb = local_pixels.hsv_to_rgb_frombytes(hsv)
     edited = rgba.copy()
     edited[:, :, :3][selected] = rgb[selected]
     result = Image.composite(a, Image.fromarray(edited), Image.fromarray(preserve))

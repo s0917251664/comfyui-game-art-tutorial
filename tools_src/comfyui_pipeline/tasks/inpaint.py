@@ -1,5 +1,5 @@
 """局部重繪圖片 task:inpaint、guided_inpaint(可選結構鎖定/外觀參考)。"""
-from .. import image_runtime
+from .. import image_from_template, image_runtime
 from ..image_graphs import validate_unit_interval
 
 TASKS = ("inpaint", "guided_inpaint")
@@ -57,13 +57,21 @@ def check_capabilities(ctx, args):
 
 
 def build_graph(ctx, args, style_checkpoint, upload):
-    """組圖片 task 的 graph;``upload`` 回傳 ComfyUI 端檔名。"""
+    """組圖片 task 的 graph;``upload`` 回傳 ComfyUI 端檔名。
+
+    sdxl 走 template。sd15 的 template 目錄不存在時沿用 builder，graph 不變。
+    """
+    if args.task not in TASKS:
+        raise ValueError(f"不是這個模組的圖片 task: {args.task}")
+    built = image_from_template.graph_from_template(ctx, args, style_checkpoint, upload)
+    if built is not None:
+        return built
     if args.task == "inpaint":
         img_fn = upload(args.image)
         mask_fn = upload(args.mask)
         prompt, out_id = image_runtime.build_inpaint(ctx, args.prompt, img_fn, mask_fn, args.negative,
                                         denoise=args.denoise, seed=args.seed, checkpoint=style_checkpoint)
-    elif args.task == "guided_inpaint":
+    else:
         img_fn = upload(args.image)
         mask_fn = upload(args.mask)
         control_fn = None
@@ -76,6 +84,4 @@ def build_graph(ctx, args, style_checkpoint, upload):
             appearance_ref_filename=appearance_fn, appearance_weight=args.appearance_weight,
             denoise=args.denoise, seed=args.seed, checkpoint=style_checkpoint,
         )
-    else:
-        raise ValueError(f"不是這個模組的圖片 task: {args.task}")
     return prompt, out_id

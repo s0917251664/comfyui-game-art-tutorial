@@ -1,0 +1,281 @@
+{
+  "schema_version": 1,
+  "id": "image/sdxl/pose-only-depth",
+  "version": "0.1.0",
+  "title": "姿勢控制（SDXL、depth）",
+  "summary": "姿勢控制（SDXL、depth）。固定 API graph，runner 只填 slot。",
+  "status": "draft",
+  "status_note": "尚未實機執行。windows-cuda 與 macos-mps 都是 untested。",
+  "min_comfyui_version": "0.34.0",
+  "requires_custom_nodes": [
+    {
+      "id": "comfyui_controlnet_aux",
+      "source": "registry"
+    }
+  ],
+  "graph": {
+    "file": "graph.api.json",
+    "format": "comfyui-api",
+    "sha256": "eb91d0061ba7626dbec96f7f5dcd47df83079aafb42927c521f7b3771f6e443b",
+    "canonical_sha256": "712efdd89f479eeac98aece63a72709bb9a270204c798e27e48d1b5e9c1f3197"
+  },
+  "provenance": {
+    "derived_from": "comfyui_pipeline.image_graphs.build_pose_only；離線產生器 tools_src/maintenance/build_image_templates.py",
+    "upstream": {
+      "kind": "none",
+      "name": null,
+      "blob": null,
+      "comfyui_version": null,
+      "note": "graph 由 image_graphs builder 產生，不是從官方 workflow template 派生。ComfyUI 0.34.0 內建的官方範本是 UI workflow，對不上這份 API graph，所以 kind 是 none。"
+    },
+    "tested_source_sha256": null,
+    "evidence": [
+      {
+        "path": "tools_src/comfyui_pipeline/image_graphs.py",
+        "note": "graph 的 builder"
+      },
+      {
+        "path": "tests/fixtures/image_graphs_golden/sdxl.json",
+        "note": "圖片 golden graph"
+      },
+      {
+        "path": "docs/knowledge/decisions/2026-10-08-image-template-variants.md",
+        "note": "方案 A 與家族對應的決定"
+      }
+    ]
+  },
+  "slots": {
+    "prompt": {
+      "type": "text",
+      "targets": [
+        {
+          "node": "2",
+          "input": "text",
+          "placeholder": "__PROMPT__"
+        }
+      ],
+      "required": true,
+      "validate": {
+        "min_length": 1
+      },
+      "help": "正向提示詞"
+    },
+    "negative": {
+      "type": "text",
+      "targets": [
+        {
+          "node": "3",
+          "input": "text"
+        }
+      ],
+      "default": "blurry, low quality, extra fingers, deformed, watermark",
+      "help": "負向提示詞"
+    },
+    "width": {
+      "type": "int",
+      "targets": [
+        {
+          "node": "8",
+          "input": "width"
+        }
+      ],
+      "default": 1024,
+      "validate": {
+        "min": 64,
+        "max": 4096,
+        "multiple_of": 8
+      },
+      "help": "寬度。用 tier 預設解析度的 task 由呼叫端傳入；template 預設是家族原生尺寸。"
+    },
+    "height": {
+      "type": "int",
+      "targets": [
+        {
+          "node": "8",
+          "input": "height"
+        }
+      ],
+      "default": 1024,
+      "validate": {
+        "min": 64,
+        "max": 4096,
+        "multiple_of": 8
+      },
+      "help": "高度。用 tier 預設解析度的 task 由呼叫端傳入；template 預設是家族原生尺寸。"
+    },
+    "batch_size": {
+      "type": "int",
+      "targets": [
+        {
+          "node": "8",
+          "input": "batch_size"
+        }
+      ],
+      "default": 1,
+      "validate": {
+        "min": 1,
+        "max": 16
+      },
+      "help": "EmptyLatentImage 的張數"
+    },
+    "seed": {
+      "type": "seed",
+      "targets": [
+        {
+          "node": "9",
+          "input": "seed"
+        }
+      ],
+      "default": "auto",
+      "help": "亂數種子。auto 由 runner 抽一個非負整數。"
+    },
+    "steps": {
+      "type": "int",
+      "targets": [
+        {
+          "node": "9",
+          "input": "steps"
+        }
+      ],
+      "default": 25,
+      "validate": {
+        "min": 1,
+        "max": 150
+      },
+      "help": "KSampler 步數"
+    },
+    "cfg": {
+      "type": "float",
+      "targets": [
+        {
+          "node": "9",
+          "input": "cfg"
+        }
+      ],
+      "default": 7.0,
+      "validate": {
+        "min": 0,
+        "max": 30
+      },
+      "help": "KSampler CFG"
+    },
+    "checkpoint": {
+      "type": "string",
+      "targets": [
+        {
+          "node": "1",
+          "input": "ckpt_name"
+        }
+      ],
+      "default": "sd_xl_base_1.0.safetensors",
+      "help": "底模檔名。預設是這個家族的底模；--style 換檔時由呼叫端傳入。"
+    },
+    "pose_strength": {
+      "type": "float",
+      "targets": [
+        {
+          "node": "7",
+          "input": "strength"
+        }
+      ],
+      "default": 1.0,
+      "validate": {
+        "min": 0,
+        "max": 1
+      },
+      "help": "ControlNet 強度"
+    },
+    "pose_ref": {
+      "type": "image",
+      "targets": [
+        {
+          "node": "4",
+          "input": "image",
+          "placeholder": "__POSE_REF__"
+        }
+      ],
+      "upload": true,
+      "required": true,
+      "help": "姿勢或結構參考圖"
+    },
+    "filename_prefix": {
+      "type": "string",
+      "targets": [
+        {
+          "node": "11",
+          "input": "filename_prefix"
+        }
+      ],
+      "default": "pose_only",
+      "help": "存檔前綴，預設沿用 builder。不用 output_prefix，避免被改成 gameart/..."
+    }
+  },
+  "options": {},
+  "fixed_notes": "filename_prefix 維持 builder 的前綴，不用 output_prefix。tier 只影響呼叫端傳入的寬高；template 預設是家族原生尺寸。",
+  "pre": [
+    {
+      "step": "upload",
+      "slots": [
+        "pose_ref"
+      ]
+    }
+  ],
+  "post": [],
+  "frame_anchoring": {
+    "first": "none",
+    "last": "none",
+    "reference_role": "none",
+    "time_alignment": null,
+    "continuity": null
+  },
+  "models": [
+    {
+      "role": "checkpoint",
+      "node": "1",
+      "input": "ckpt_name",
+      "filename": "sd_xl_base_1.0.safetensors",
+      "path": "models/checkpoints/sd_xl_base_1.0.safetensors",
+      "directory": "checkpoints",
+      "size_bytes": 6938078334,
+      "sha256": "31e35c80fc4829d14f90153f4c74cd59c90b779f6afe05a74cd6120b893f7e5b",
+      "source": null,
+      "url": null
+    },
+    {
+      "role": "controlnet",
+      "node": "6",
+      "input": "control_net_name",
+      "filename": "controlnet-depth-sdxl-1.0.safetensors",
+      "path": "models/controlnet/controlnet-depth-sdxl-1.0.safetensors",
+      "directory": "controlnet",
+      "size_bytes": 2502139104,
+      "sha256": "8ba4dfaa1958f1f68e5dc7f9839f9ef4e153aef0d330291e5cf966c925f97477",
+      "source": null,
+      "url": null
+    }
+  ],
+  "capability_gate": {
+    "nodes": "from_graph",
+    "selectors": "from_models",
+    "files": "from_models",
+    "extra_nodes": [],
+    "platforms": {
+      "windows-cuda": {
+        "status": "untested"
+      },
+      "macos-mps": {
+        "status": "untested"
+      }
+    },
+    "min_memory_mb": null,
+    "capability": "image_generation"
+  },
+  "outputs": [
+    {
+      "id": "image",
+      "node": "11",
+      "kind": "image",
+      "role": "candidate"
+    }
+  ]
+}

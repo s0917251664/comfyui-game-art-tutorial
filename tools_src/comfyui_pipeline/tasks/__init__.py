@@ -18,7 +18,7 @@
 from .. import image_runtime
 from ..client import DEFAULT_HTTP_TIMEOUT, _fetch_comfy_object_info
 from ..image_capabilities import PREFLIGHT_IMAGE_PLACEHOLDER, check_image_graph_against_object_info
-from ..image_graphs import attach_bg_removal
+from ..image_from_template import background_removal_output
 from . import control, flux2, image_basic, inpaint, layer, upscale, video, video_edit, video_local
 
 MODULES = (image_basic, flux2, control, inpaint, upscale, layer, video, video_edit, video_local)
@@ -39,7 +39,9 @@ for _module in MODULES:
 assert set(_OWNERS) == set(TASK_ORDER), "TASK_ORDER 與各模組 TASKS 不一致"
 
 IMAGE_TASKS = frozenset(task for task, module in _OWNERS.items() if hasattr(module, "build_graph"))
-VIDEO_TASKS = frozenset(task for task, module in _OWNERS.items() if hasattr(module, "prepare"))
+# 影片 task:prepare() 回傳 VideoPlan,或 run_with_runner() 整個交給 template runner(video_inpaint,PR 8.3b)
+VIDEO_TASKS = frozenset(task for task, module in _OWNERS.items()
+                        if hasattr(module, "prepare") or hasattr(module, "run_with_runner"))
 LOCAL_TASKS = frozenset(task for task, module in _OWNERS.items() if hasattr(module, "run_local"))
 
 
@@ -93,7 +95,7 @@ def preflight_image_task(ctx, args, style_checkpoint, comfy_url, request_timeout
         ctx, args, style_checkpoint, lambda _path: PREFLIGHT_IMAGE_PLACEHOLDER,
     )
     if args.task == "icon_asset" or getattr(args, "remove_bg", False):
-        attach_bg_removal(graph, out_id)
+        background_removal_output(graph, out_id)
     payload = _fetch_comfy_object_info(comfy_url, request_timeout=request_timeout)
     missing_nodes, missing_models = check_image_graph_against_object_info(graph, payload)
     if not missing_nodes and not missing_models:

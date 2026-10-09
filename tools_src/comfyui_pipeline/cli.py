@@ -21,8 +21,9 @@ from .client import (
 from .image_capabilities import (
     IMAGE_GRAPH_TASKS, IMAGE_PROFILE_TASKS, load_image_capabilities, resolve_image_profile,
 )
+from .image_from_template import background_removal_output
 from .image_graphs import (
-    DEVICE_CONFIG_PATH, RATING_TAGS, STYLE_CHECKPOINTS, attach_bg_removal, seed_or_random,
+    DEVICE_CONFIG_PATH, RATING_TAGS, STYLE_CHECKPOINTS, seed_or_random,
 )
 from .image_runtime import sync_image_runtime
 from .video_catalog import DEFAULT_VIDEO_TIMEOUT, VIDEO_TASK_CAPS
@@ -295,6 +296,13 @@ def run(argv=None, context=None):
     if args.task in tasks.VIDEO_TASKS:
         args.seed = seed_or_random(getattr(args, "seed", None))
 
+    runner_task = getattr(tasks.owner(args.task), "run_with_runner", None) if args.task in tasks.VIDEO_TASKS else None
+    if runner_task is not None:
+        code = runner_task(ctx, args, comfy_url)
+        if code:
+            raise SystemExit(code)
+        return
+
     video_started = (
         time.monotonic()
         if args.task in tasks.VIDEO_TASKS or args.task in tasks.LOCAL_TASKS
@@ -357,7 +365,8 @@ def run(argv=None, context=None):
 
     target_output_id = None
     if args.task == "icon_asset" or getattr(args, "remove_bg", False):
-        target_output_id = attach_bg_removal(prompt, out_id)
+        # -transparent template 已經含去背；sd15 builder 路徑才在這裡接上。
+        target_output_id = background_removal_output(prompt, out_id)
 
     print(f"[送出] task={args.task}")
     try:
@@ -392,5 +401,3 @@ def run(argv=None, context=None):
         print(f"[完成] {p}")
         if p.lower().endswith(".mp4") and plan is not None:
             _verify_video_output(ctx, args, plan, p, history, video_started, video_prompt, video_negative)
-            if plan.finalize is not None:
-                plan.finalize(p)

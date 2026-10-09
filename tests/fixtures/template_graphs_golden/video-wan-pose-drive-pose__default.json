@@ -1,0 +1,197 @@
+{
+  "template": "video/wan/pose-drive-pose",
+  "case": "default",
+  "template_version": "0.1.0",
+  "graph_canonical_sha256": "55dd174d76820445262410cb7f7e512e08db905dcdb1093985ed3bccbd15a2f4",
+  "values": {
+    "prompt": "the character breathes slowly in an idle stance",
+    "seed": 20261006
+  },
+  "options": {},
+  "uploads": {
+    "start_image": "run/start.png",
+    "motion_video": "run/motion.mp4"
+  },
+  "changed": {
+    "3.seed": 20261006,
+    "56.image": "run/start.png",
+    "6.text": "the character breathes slowly in an idle stance",
+    "7.text": "blurry, low quality, morphing face, extra limbs, camera movement, zoom, pan, text, watermark, still image, frozen",
+    "80.file": "run/motion.mp4"
+  },
+  "patched_graph_sha256": "c3b84a7b784d698e89eea5be220d8d9f787599df94dcd4af825f6b90bb8329ef",
+  "graph": {
+    "37": {
+      "class_type": "UNETLoader",
+      "inputs": {
+        "unet_name": "wan2.2_fun_control_5B_bf16.safetensors",
+        "weight_dtype": "default"
+      }
+    },
+    "38": {
+      "class_type": "CLIPLoader",
+      "inputs": {
+        "clip_name": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+        "type": "wan",
+        "device": "default"
+      }
+    },
+    "39": {
+      "class_type": "VAELoader",
+      "inputs": {
+        "vae_name": "wan2.2_vae.safetensors"
+      }
+    },
+    "48": {
+      "class_type": "ModelSamplingSD3",
+      "inputs": {
+        "model": [
+          "37",
+          0
+        ],
+        "shift": 8.0
+      }
+    },
+    "6": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "text": "the character breathes slowly in an idle stance",
+        "clip": [
+          "38",
+          0
+        ]
+      }
+    },
+    "7": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "text": "blurry, low quality, morphing face, extra limbs, camera movement, zoom, pan, text, watermark, still image, frozen",
+        "clip": [
+          "38",
+          0
+        ]
+      }
+    },
+    "56": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "run/start.png"
+      }
+    },
+    "80": {
+      "class_type": "LoadVideo",
+      "inputs": {
+        "file": "run/motion.mp4"
+      }
+    },
+    "81": {
+      "class_type": "GetVideoComponents",
+      "inputs": {
+        "video": [
+          "80",
+          0
+        ]
+      }
+    },
+    "82": {
+      "class_type": "OpenposePreprocessor",
+      "inputs": {
+        "image": [
+          "81",
+          0
+        ]
+      }
+    },
+    "55": {
+      "class_type": "Wan22FunControlToVideo",
+      "inputs": {
+        "positive": [
+          "6",
+          0
+        ],
+        "negative": [
+          "7",
+          0
+        ],
+        "vae": [
+          "39",
+          0
+        ],
+        "width": 768,
+        "height": 768,
+        "length": 49,
+        "batch_size": 1,
+        "ref_image": [
+          "56",
+          0
+        ],
+        "control_video": [
+          "82",
+          0
+        ]
+      }
+    },
+    "3": {
+      "class_type": "KSampler",
+      "inputs": {
+        "model": [
+          "48",
+          0
+        ],
+        "positive": [
+          "55",
+          0
+        ],
+        "negative": [
+          "55",
+          1
+        ],
+        "latent_image": [
+          "55",
+          2
+        ],
+        "seed": 20261006,
+        "steps": 20,
+        "cfg": 5.0,
+        "sampler_name": "uni_pc",
+        "scheduler": "simple",
+        "denoise": 1.0
+      }
+    },
+    "8": {
+      "class_type": "VAEDecode",
+      "inputs": {
+        "samples": [
+          "3",
+          0
+        ],
+        "vae": [
+          "39",
+          0
+        ]
+      }
+    },
+    "57": {
+      "class_type": "CreateVideo",
+      "inputs": {
+        "images": [
+          "8",
+          0
+        ],
+        "fps": 24.0
+      }
+    },
+    "58": {
+      "class_type": "SaveVideo",
+      "inputs": {
+        "video": [
+          "57",
+          0
+        ],
+        "filename_prefix": "pose_drive",
+        "format": "mp4",
+        "codec": "h264"
+      }
+    }
+  }
+}

@@ -1,5 +1,5 @@
 """基本圖片 task:concept(文生圖)、icon_asset(去背小圖示)、refine(圖生圖精修)。"""
-from .. import image_runtime
+from .. import image_from_template, image_runtime
 from ..image_graphs import validate_unit_interval
 from ._common import validate_explore_args
 
@@ -19,7 +19,7 @@ def _add_icon_asset(sub, parents):
     p_icon.add_argument("--prompt", required=True)
     p_icon.add_argument("--width", type=int, default=None)
     p_icon.add_argument("--height", type=int, default=None)
-    p_icon.add_argument("--structure-ref", help="這個圖示的結構/色塊配置已經有明確答案、不該讓 AI 自己瞎猜時用(例如放射狀精準等分):給一張範本圖路徑,用 img2img + Canny ControlNet 把結構跟顏色配置都鎖住,SDXL 只負責疊材質/光澤;不給就跟以前一樣純靠文字描述。範本圖從哪來見 skills/comfyui-art-gen/reference/structure-ref.md")
+    p_icon.add_argument("--structure-ref", help="這個圖示的結構/色塊配置已經有明確答案、不該讓 AI 自己瞎猜時用(例如放射狀精準等分):給一張範本圖路徑,用 img2img + Canny ControlNet 把結構跟顏色配置都鎖住,SDXL 只負責疊材質/光澤;不給就跟以前一樣純靠文字描述。範本圖從哪來見 docs/knowledge/art/structure-ref.md")
     p_icon.add_argument("--appearance-ref", help="外觀參考圖路徑(選用,例如使用者提供的一張成品圖,想讓畫面材質/質感偏向那張圖)——用 IPAdapter,不給就純靠文字描述外觀,原則同 guided_inpaint 的 --appearance-ref")
     p_icon.add_argument("--appearance-weight", type=float, default=0.8, help="外觀參考圖的貼合強度,原則同 --ip-weight")
 
@@ -61,7 +61,13 @@ def check_capabilities(ctx, args):
 
 
 def build_graph(ctx, args, style_checkpoint, upload):
-    """組圖片 task 的 graph;``upload`` 回傳 ComfyUI 端檔名。"""
+    """組圖片 task 的 graph;``upload`` 回傳 ComfyUI 端檔名。
+
+    sdxl 走 template。sd15 的 template 目錄不存在時沿用下面的 builder，graph 不變。
+    """
+    built = image_from_template.graph_from_template(ctx, args, style_checkpoint, upload)
+    if built is not None:
+        return built
     if args.task == "concept":
         prompt, out_id = image_runtime.build_concept(ctx, args.prompt, args.negative, args.width, args.height, args.seed,
                                         batch_size=args.batch, lora_name=args.lora, lora_strength=args.lora_strength,

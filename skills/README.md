@@ -4,26 +4,16 @@
 
 ## A. 遊戲美術產線技能（本專案核心，路由見 [`AGENTS.md`](../AGENTS.md)）
 
-| 技能 | 用途 |
-|---|---|
-| `game-art-initialize` | 新使用者初始化、選路線 |
-| `game-art-workflow` | 共用 brief、參考用途、版本與美術驗收 |
-| `game-art-edit-brief` | 編修 brief 相容入口 |
-| `platform-image-gen` | 平台圖片工具路線 |
-| `comfyui-art-gen` | ComfyUI 圖片生成與編修 |
-| `comfyui-object-design` | 物件系列、展示背景、檢視表、圖樣重複 |
-| `local-image-edit-tools` | 本機像素操作（Pillow／NumPy） |
-| `comfyui-image-sweep` | 有限參數比較 |
-| `comfyui-video-gen` | 影片生成 |
-| `comfyui-character-animation-workflow` | 角色動作組編排 |
-| `comfyui-film-workflow` | 劇情多鏡、聲音、Animatic |
-| `comfyui-face-swap-workflow` | 影片換臉 |
-| `comfyui-video-layers` | 影片物件遮罩（SAM3 固定 graph 為預設、SAM2 為備援）／ordered video layers |
-| `comfyui-wan-animate` | Wan Animate（Mix／Move、延伸段、音訊、寬高）與 SCAIL-2 固定 template（`gameart.py run`） |
-| `comfyui-install` | 安裝與依賴補齊 |
-| `comfyui-new-tool-checklist` | 新增／擴充能力檢查表 |
-| `comfyui-pipeline-review` | 技能庫、架構審視 |
-| `project-knowledge` | 專案知識庫（`docs/knowledge/`）按需讀寫 |
+PR 7.3（2026-10-08）把 18 個技能收成 6 個。技能入口只寫怎麼選、怎麼判斷；舊技能的完整內容搬到新技能的 `references/<舊名>/`，對照表見 [技能收斂對照](../docs/knowledge/maintenance/skills-6-mapping.md)。
+
+| 技能 | 用途 | 收進來的舊技能 |
+|---|---|---|
+| [`game-art-brief`](game-art-brief/SKILL.md) | 需求盤點、選路線、brief 與驗收規劃、編修需求映射、專案知識庫 | game-art-workflow、game-art-edit-brief、game-art-initialize、project-knowledge |
+| [`platform-image-gen`](platform-image-gen/SKILL.md) | 平台本身提供的圖片工具 | （不變） |
+| [`comfyui-run`](comfyui-run/SKILL.md) | 本機 ComfyUI：圖片／影片 task、固定 template、recipe、換臉、影片分層、物件系列、參數比較 | comfyui-art-gen、comfyui-object-design、comfyui-video-gen、comfyui-character-animation-workflow、comfyui-film-workflow、comfyui-face-swap-workflow、comfyui-video-layers、comfyui-wan-animate、comfyui-image-sweep |
+| [`local-media-tools`](local-media-tools/SKILL.md) | 不用模型的本機像素與媒體處理（合成、換色、比較、去背、打包） | local-image-edit-tools |
+| [`comfyui-extend`](comfyui-extend/SKILL.md) | 缺能力時照擴充協議提案；技能庫與架構審視 | comfyui-new-tool-checklist、comfyui-pipeline-review |
+| [`comfyui-install`](comfyui-install/SKILL.md) | 安裝、部署與依賴補齊 | （不變） |
 
 ## B. Obsidian 上游技能（不在本資料夾）
 
@@ -31,4 +21,4 @@
 
 `autoresearch`、`canvas`、`defuddle`、`obsidian-bases`、`obsidian-markdown`、`save`、`think`、`wiki`、`wiki-cli`、`wiki-fold`、`wiki-ingest`、`wiki-lint`、`wiki-mode`、`wiki-query`、`wiki-retrieve`
 
-產線工作和專案知識庫（`docs/knowledge/`）的讀寫都不需要這一組；知識庫依 A 段的 `project-knowledge` 用一般 Markdown 檔案工具讀寫。
+產線工作和專案知識庫（`docs/knowledge/`）的讀寫都不需要這一組；知識庫依 A 段 `game-art-brief` 裡的 project-knowledge reference 用一般 Markdown 檔案工具讀寫。

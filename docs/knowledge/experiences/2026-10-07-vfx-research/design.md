@@ -176,9 +176,9 @@ H3 鎖首尾的機制（`nodes_minimax_h3.py`、`comfy/ldm/minimax/model.py`）�
 
 | 檔案 | 建議 |
 |---|---|
-| `skills/comfyui-character-animation-workflow/SKILL.md` | 加入「Idle 錨定」規則（上面 1–4），並說明哪些 task 不能保證首幀；驗收加入 `loop-metrics`，並註明只是輔助指標 |
+| `skills/comfyui-run/references/comfyui-character-animation-workflow/README.md` | 加入「Idle 錨定」規則（上面 1–4），並說明哪些 task 不能保證首幀；驗收加入 `loop-metrics`，並註明只是輔助指標 |
 | `docs/knowledge/animation/workflow.md` 第 24 行動作表 | Idle 改成 `fx_loop`（H3，首尾鎖 Idle）；新增 Attack／Win／Fail 改用 `transition` Idle→Idle；`pose_drive` 標注不鎖首幀 |
-| `skills/comfyui-video-gen/SKILL.md` | task 路由表加一欄「首／尾幀是否鎖住」；更正 `fx_loop` 的說明（H3 會鎖尾幀＝首幀，不只加 prompt）；第 72 行在去背工具接入後改寫 |
+| `skills/comfyui-run/references/comfyui-video-gen/README.md` | task 路由表加一欄「首／尾幀是否鎖住」；更正 `fx_loop` 的說明（H3 會鎖尾幀＝首幀，不只加 prompt）；第 72 行在去背工具接入後改寫 |
 | `tools_src/comfyui_pipeline/tasks/video.py` | `fx_loop` 的 help 補上「H3 會把同一張圖當尾幀」；可考慮在 `transition` 加 `--return-to-start`（end＝start）語法糖；`pose_drive`／`character_video` 的 help 註明首幀不鎖 |
 | `tools_src/comfyui_pipeline/video_media.py` `video_canvas` | 可選：輸入比例和畫布不同時提示，或提供補邊選項 |
 

@@ -1,6 +1,7 @@
 """PR 2.2:template preflight(平台閘門、/object_info、模型檔、sha256 快取、cuda 節點);PR 2.3 的修正也在這裡。
+PR 3.2:ComfyUI 版本(/system_stats 與 min_comfyui_version)。
 
-用假的 ComfyUI(本機 HTTP server 只回 /object_info)和暫存的小模型檔;Windows 路徑用 ntpath 模擬。
+用假的 ComfyUI(本機 HTTP server 只回 /object_info 與 /system_stats)和暫存的小模型檔;Windows 路徑用 ntpath 模擬。
 """
 import hashlib
 import io
@@ -53,10 +54,14 @@ def object_info_for(template, combo_style="list", drop_classes=(), drop_options=
 
 
 class FakeComfy:
-    """只回 GET /object_info 的本機 server;記錄所有請求,確認 preflight 沒有上傳或 queue。"""
+    """只回 GET /object_info 與 /system_stats 的本機 server;記錄所有請求,確認 preflight 沒有上傳或 queue。
 
-    def __init__(self, payload):
+    ``version=None`` 時 /system_stats 回 404(模擬讀不到版本)。
+    """
+
+    def __init__(self, payload, version="0.34.0"):
         self.payload = payload
+        self.stats = {"system": {"comfyui_version": version}} if version is not None else None
         self.requests = []
         outer = self
 
@@ -66,8 +71,9 @@ class FakeComfy:
 
             def _reply(self):
                 outer.requests.append((self.command, self.path))
-                if self.command == "GET" and self.path == "/object_info":
-                    body = json.dumps(outer.payload).encode("utf-8")
+                bodies = {"/object_info": outer.payload, "/system_stats": outer.stats}
+                if self.command == "GET" and bodies.get(self.path) is not None:
+                    body = json.dumps(bodies[self.path]).encode("utf-8")
                     self.send_response(200)
                     self.send_header("Content-Type", "application/json")
                     self.send_header("Content-Length", str(len(body)))
@@ -127,8 +133,8 @@ class PreflightFixture:
         (folder / "template.json").write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
         return T.load_template(self.root, template_id, repo_root=ROOT)
 
-    def server(self, template, **kwargs):
-        server = FakeComfy(object_info_for(template, **kwargs))
+    def server(self, template, version="0.34.0", **kwargs):
+        server = FakeComfy(object_info_for(template, **kwargs), version=version)
         self.servers.append(server)
         return server
 
@@ -156,12 +162,13 @@ class PreflightFixture:
 
 
 class PreflightChecksTests(PreflightFixture, unittest.TestCase):
-    def test_all_checks_pass_and_only_object_info_is_requested(self):
+    def test_all_checks_pass_and_only_reads_object_info_and_system_stats(self):
         template = self.install("video/sam3/track-mask")
         server = self.server(template)
         report = self.preflight(template, server.url)
         self.assertEqual(P.PASS, report["status"], report["problems"])
-        self.assertEqual([("GET", "/object_info")], server.requests)
+        self.assertEqual([("GET", "/object_info"), ("GET", "/system_stats")], server.requests)
+        self.assertEqual({"required": "0.34.0", "actual": "0.34.0", "result": "ok"}, report["checks"]["comfyui_version"])
         self.assertEqual("ok", report["checks"]["object_info"]["selectors"][0]["result"])
         self.assertEqual("skipped", report["checks"]["models"][0]["sha256"])
 
@@ -397,6 +404,48 @@ class SettingsTests(unittest.TestCase):
             self.assertEqual(("http://127.0.0.1:8188", "config"), (settings["comfy_url"], settings["comfy_url_source"]))
 
 
+class ComfyuiVersionTests(PreflightFixture, unittest.TestCase):
+    def version_report(self, version):
+        if not hasattr(self, "template"):
+            self.template = self.install("video/sam3/track-text")
+        return self.preflight(self.template, self.server(self.template, version=version).url)
+
+    def test_older_comfyui_blocks(self):
+        report = self.version_report("0.33.9")
+        self.assertEqual(P.BLOCKED, report["status"])
+        self.assertEqual("too_old", report["checks"]["comfyui_version"]["result"])
+        self.assertTrue(any("min_comfyui_version" in p for p in report["problems"]), report["problems"])
+
+    def test_newer_and_suffixed_versions_pass(self):
+        for version in ("0.34.0", "0.34.1", "v0.35.0", "1.0.0-dev"):
+            with self.subTest(version=version):
+                report = self.version_report(version)
+                self.assertEqual(P.PASS, report["status"], report["problems"])
+                self.assertEqual("ok", report["checks"]["comfyui_version"]["result"])
+
+    def test_unreadable_version_only_warns(self):
+        for version in (None, "nightly"):
+            with self.subTest(version=version):
+                report = self.version_report(version)
+                self.assertEqual(P.PASS, report["status"], report["problems"])
+                self.assertEqual("unknown", report["checks"]["comfyui_version"]["result"])
+                self.assertTrue(any("無法確認 ComfyUI 版本" in w for w in report["warnings"]), report["warnings"])
+
+    def test_version_compare_is_numeric_not_text(self):
+        def need(data):
+            data["min_comfyui_version"] = "0.9.0"
+        template = self.install("video/sam3/track-mask", edit=need)
+        report = self.preflight(template, self.server(template, version="0.10.0").url)
+        self.assertEqual("ok", report["checks"]["comfyui_version"]["result"])
+
+    def test_injected_stats_fetcher(self):
+        template = self.install("video/sam3/track-mask")
+        server = self.server(template)
+        report = P.run_preflight(template, self.settings(server.url),
+                                 fetch_stats=lambda url: {"system": {"comfyui_version": "0.3.0"}})
+        self.assertEqual("too_old", report["checks"]["comfyui_version"]["result"])
+
+
 class PreflightCliTests(PreflightFixture, unittest.TestCase):
     def test_preflight_cli_pass_without_slots_and_writes_report(self):
         template = self.install("video/wan-animate/move")
@@ -411,7 +460,8 @@ class PreflightCliTests(PreflightFixture, unittest.TestCase):
         report = json.loads((target / cli.PREFLIGHT_FILE).read_text(encoding="utf-8"))
         self.assertEqual(("pass", "windows-cuda"), (report["status"], report["settings"]["platform_key"]))
         self.assertFalse((target / cli.DRYRUN_GRAPH).exists())  # slot 沒給齊就不產生 graph
-        self.assertEqual([("GET", "/object_info")], server.requests)
+        self.assertEqual([("GET", "/object_info"), ("GET", "/system_stats")], server.requests)
+        self.assertIn("ComfyUI 版本: 0.34.0(需要 0.34.0 以上)", out)
 
     def test_preflight_cli_with_slots_writes_graph_and_json(self):
         template = self.install("video/sam3/track-text")
@@ -436,6 +486,18 @@ class PreflightCliTests(PreflightFixture, unittest.TestCase):
         self.assertEqual(1, code)
         self.assertIn("macos-mps", out)
         self.assertIn("node 108", out)
+
+    def test_fake_high_min_version_blocks_exit_1(self):
+        # 3.2 驗收:假的高版本需求一定擋下;版本相符的同一份 template 照常通過
+        def need_future(data):
+            data["min_comfyui_version"] = "99.0.0"
+        template = self.install("video/sam3/track-mask", edit=need_future)
+        server = self.server(template)
+        config = self.write_config()
+        code, out, _ = self.run_cli("video/sam3/track-mask", "--preflight", "--config", str(config),
+                                    "--comfy-url", server.url)
+        self.assertEqual(1, code, out)
+        self.assertIn("ComfyUI 版本 0.34.0 低於 template 需要的 99.0.0", out)
 
     def test_unreachable_url_exit_1(self):
         self.install("video/sam3/track-mask")
@@ -530,6 +592,13 @@ class PreflightCliTests(PreflightFixture, unittest.TestCase):
         self.assertEqual(["out", "err"], [e[0] for e in events[:2]], events)
 
 
+# 新增後還沒有實機證據的 template 放這裡,狀態維持 draft。有實機技術通過後移出。
+# video/wan-vace/inpaint 已在 2026-10-08 windows-cuda 通過,不再列在這裡。
+DRAFT_UNTIL_LIVE_RUN = set(golden.VIDEO_TEMPLATE_IDS) | {
+    template_id for template_id in T.discover(TEMPLATES) if template_id.startswith("image/")
+}
+
+
 class RealTemplatePinsTests(unittest.TestCase):
     def test_every_model_is_pinned_and_wan_templates_promoted(self):
         for template_id in T.discover(TEMPLATES):
@@ -538,6 +607,9 @@ class RealTemplatePinsTests(unittest.TestCase):
                 for model in template.data["models"]:
                     self.assertRegex(model["sha256"] or "", r"^[0-9a-f]{64}$", model["filename"])
                     self.assertIsInstance(model["size_bytes"], int)
+                if template_id in DRAFT_UNTIL_LIVE_RUN:
+                    self.assertEqual("draft", template.data["status"])
+                    continue
                 self.assertEqual("technical_pass", template.data["status"])
                 self.assertNotIn("status_note", template.data)
 

@@ -14,6 +14,8 @@
 5. 模型檔:``<comfyui_path>/<path>`` 存在且大小相符(D5);``--verify-hashes`` 才完整計算 sha256,
    以 (路徑, 大小, mtime) 快取。``auto_download: true`` 的模型(SAM2 下載器、DWPose)缺檔時節點會自己下載,
    所以一定要先確認檔案已在本機。
+6. ComfyUI 版本(PR 3.2):``/system_stats`` 的 ``system.comfyui_version`` 低於 template 的
+   ``min_comfyui_version`` 就擋下;讀不到或認不出版本只提醒,不擋。
 
 結果的 ``status`` 是 ``pass`` 或 ``blocked``;``problems`` 是擋下的原因(每條都寫檢查了哪個路徑、怎麼修),
 ``warnings`` 不擋。實際執行(run.py)會先呼叫 :func:`run_preflight`,通過才上傳。
@@ -21,6 +23,7 @@
 import json
 import os
 import time
+import urllib.request
 
 from .. import client as _client
 from .. import runtime_config as rc
@@ -30,6 +33,7 @@ PASS = "pass"
 BLOCKED = "blocked"
 HASH_CACHE_NAME = ".hash-cache.json"
 OBJECT_INFO_TIMEOUT = 15.0
+SYSTEM_STATS_TIMEOUT = 10.0
 ALLOW_FLAG = "--allow-unverified-platform"
 
 
@@ -239,6 +243,33 @@ def check_object_info(template, payload):
                                 "selectors": selectors}
 
 
+# ---------- ComfyUI 版本 ----------
+
+def fetch_system_stats(url):
+    """GET /system_stats;失敗時丟例外(由 check 轉成提醒)。"""
+    with urllib.request.urlopen(f"{url.rstrip('/')}/system_stats", timeout=SYSTEM_STATS_TIMEOUT) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
+def check_comfyui_version(template, stats, error=None):
+    """回傳 (problems, warnings, info)。版本低於 min_comfyui_version 擋下;讀不到只提醒。"""
+    required = template.data["min_comfyui_version"]
+    system = stats.get("system") if isinstance(stats, dict) else None
+    actual = system.get("comfyui_version") if isinstance(system, dict) else None
+    info = {"required": required, "actual": actual, "result": None}
+    parsed = T.parse_version(actual)
+    if parsed is None:
+        info["result"] = "unknown"
+        reason = f"讀取 /system_stats 失敗:{error}" if error else f"/system_stats 沒有可辨識的 comfyui_version({actual!r})"
+        return [], [f"無法確認 ComfyUI 版本({reason});template 需要 {required} 以上,這次不擋"], info
+    if parsed < T.parse_version(required):
+        info["result"] = "too_old"
+        return [f"ComfyUI 版本 {actual} 低於 template 需要的 {required}(min_comfyui_version);"
+                "graph 用到的節點或參數可能不存在或行為不同。請更新 ComfyUI,或改用支援這個版本的 template"], [], info
+    info["result"] = "ok"
+    return [], [], info
+
+
 # ---------- 模型檔 ----------
 
 def model_file_path(comfyui_path, relative, pathmod=os.path):
@@ -347,10 +378,11 @@ def check_models(template, comfyui_path, verify_hashes=False, cache=None, progre
 # ---------- 整合 ----------
 
 def run_preflight(template, settings, *, verify_hashes=False, allow_unverified=False, hash_cache_path=None,
-                  fetch_object_info=None, progress=None):
+                  fetch_object_info=None, fetch_stats=None, progress=None):
     """依序執行所有檢查,回傳報告 dict(``status`` 為 pass／blocked)。不會在第一個問題就停,方便一次修完。"""
     fetch_object_info = fetch_object_info or (
         lambda url: _client._fetch_comfy_object_info(url, request_timeout=OBJECT_INFO_TIMEOUT))
+    fetch_stats = fetch_stats or fetch_system_stats
     problems, warnings, checks = [], [], {}
 
     p, w, checks["platform"] = check_platform(template, settings, allow_unverified)
@@ -374,6 +406,13 @@ def run_preflight(template, settings, *, verify_hashes=False, allow_unverified=F
         p, w, checks["object_info"] = check_object_info(template, payload)
         problems += p
         warnings += w
+    try:
+        stats, stats_error = fetch_stats(url), None
+    except Exception as exc:  # noqa: BLE001 - 讀不到版本只提醒
+        stats, stats_error = None, exc.__cause__ or exc
+    p, w, checks["comfyui_version"] = check_comfyui_version(template, stats, stats_error)
+    problems += p
+    warnings += w
 
     cache = HashCache(hash_cache_path) if verify_hashes and hash_cache_path else None
     p, w, checks["models"] = check_models(template, settings.get("comfyui_path"), verify_hashes, cache, progress)
@@ -410,6 +449,9 @@ def summary_lines(report):
              f" → template 狀態 {c['platform'].get('status') or '-'}"]
     if s.get("device_platform_key") and s["device_platform_key"] != s["platform_key"]:
         lines[-1] += f"  [機器快照記錄的是 {s['device_platform_key']}]"
+    version = c.get("comfyui_version")
+    if version:
+        lines.append(f"[preflight] ComfyUI 版本: {version['actual'] or '(未知)'}(需要 {version['required']} 以上)")
     if "object_info" in c:
         info = c["object_info"]
         ok = sum(1 for row in info["selectors"] if row["result"] in ("ok", "not_a_list"))

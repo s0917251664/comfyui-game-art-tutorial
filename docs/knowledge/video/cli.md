@@ -5,7 +5,7 @@ status: active
 
 # 影片 CLI
 
-先由技能 `skills/comfyui-video-gen/SKILL.md` 核對需求與能力；這頁保存既有 task 的 CLI 寫法。生成影片使用本機 capability 支援的 backend；config 有 `default_backend` 才可省 `--backend`。一般 timeout 建議 1800 秒。每個生成 task 明確帶 `--config` 或 `--comfy-url`、可選 `--video-config` 與 `--output-dir`。不要為單次需求改 graph 或臆造旗標。
+先由技能 `skills/comfyui-run/references/comfyui-video-gen/README.md` 核對需求與能力；這頁保存既有 task 的 CLI 寫法。生成影片使用本機 capability 支援的 backend；config 有 `default_backend` 才可省 `--backend`。一般 timeout 建議 1800 秒。每個生成 task 明確帶 `--config` 或 `--comfy-url`、可選 `--video-config` 與 `--output-dir`。不要為單次需求改 graph 或臆造旗標。
 
 ## `img2video`
 
@@ -61,7 +61,7 @@ status: active
 <python_exe> <generate_script> video_inpaint --config <local_config.json> [--video-config <video_capabilities.json>] --backend wan --timeout 1800 --video <src.mp4> --masks <masks_dir|layers.zip> [--mask-object 1] --mode keep|replace --prompt "..." [--seed N] [--grow 8] [--feather 4] [--pad 48] [--crop x0,y0,x1,y1] [--name <name>] --output-dir <output_dir>
 ```
 
-遮罩為白色＝重畫的灰階 PNG（L，或 R=G=B 的 RGB）。預設由 SAM3 固定 graph（[sam3-track](../../../skills/comfyui-video-layers/references/sam3-track.md)）產生；SAM3 不可用時，才用 SAM2 備援路線 `gameart.py vfx segment-plan` → `video_layers.py run` → `vfx unpack-masks`（`--masks` 也可直接給 `layers.zip`）。輸出原始工作區 MP4＋sidecar，以及 `<stem>_composited/`（無損 PNG 主檔、H.264 預覽、`result.json`）。完整流程與限制見 [`vfx-tools.md`](vfx-tools.md)。
+遮罩為白色＝重畫的灰階 PNG（L，或 R=G=B 的 RGB）。預設由 SAM3 固定 graph（[sam3-track](../../../skills/comfyui-run/references/comfyui-video-layers/references/sam3-track.md)）產生；SAM3 不可用時，才用 SAM2 備援路線 `gameart.py vfx segment-plan` → `video_layers.py run` → `vfx unpack-masks`（`--masks` 也可直接給 `layers.zip`）。指令與旗標不變（`--resume` 除外，見下）。PR 8.3b 起整個交給 template runner 執行 `video/wan-vace/inpaint`（[R2](../rules/fixed-graphs.md)；先 preflight，平台不是 `technical_pass` 就擋下）。輸出在 `<output-dir>/<名稱>_run/`（`--name`／`--shot-id` 決定名稱）：runner 的 `run.result.json`、`outputs/raw/`（工作區原始 MP4）、`composited/`（無損 PNG 主檔、H.264 預覽，以及和舊版欄位相同的 `result.json`）。不再寫影片 sidecar；`--resume` 不支援（runner 不會重送，失敗時看 `run.result.json`，用新的 `--name` 重跑）。部署端要先用 `gameart.py deploy` 部署 `templates/`。完整流程與限制見 [`vfx-tools.md`](vfx-tools.md)。
 
 ## `video_concat`（本機）
 

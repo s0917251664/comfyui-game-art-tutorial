@@ -1,0 +1,63 @@
+{
+  "template": "image/layer-split",
+  "case": "defaults",
+  "template_version": "0.1.0",
+  "graph_canonical_sha256": "86c8c0240aac0a9a0eaadb990db0ad4d0f3f20ebbdabb18727fa86264fb05557",
+  "values": {},
+  "options": {},
+  "uploads": {
+    "image": "run/image.png",
+    "mask": "run/mask.png"
+  },
+  "changed": {
+    "1.image": "run/image.png",
+    "2.image": "run/mask.png"
+  },
+  "patched_graph_sha256": "414e5e68cd7bd4fabef989e3477ddfc0bc4b92dfc4e1b0cf27733bc99bf897d8",
+  "graph": {
+    "1": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "run/image.png"
+      }
+    },
+    "2": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "run/mask.png"
+      }
+    },
+    "3": {
+      "class_type": "InvertMask",
+      "inputs": {
+        "mask": [
+          "2",
+          1
+        ]
+      }
+    },
+    "4": {
+      "class_type": "JoinImageWithAlpha",
+      "inputs": {
+        "image": [
+          "1",
+          0
+        ],
+        "alpha": [
+          "3",
+          0
+        ]
+      }
+    },
+    "5": {
+      "class_type": "SaveImage",
+      "inputs": {
+        "images": [
+          "4",
+          0
+        ],
+        "filename_prefix": "layer_frame"
+      }
+    }
+  }
+}

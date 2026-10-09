@@ -1,0 +1,4683 @@
+{
+  "schema_version": 1,
+  "note": "自動產生，勿手改。改 template.json 後重跑 tools_src/maintenance/build_catalog.py。",
+  "generated_by": "tools_src/maintenance/build_catalog.py",
+  "templates": [
+    {
+      "id": "image/flux2/concept",
+      "version": "0.1.0",
+      "title": "FLUX.2 文字概念圖",
+      "summary": "FLUX.2 文字概念圖。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "unet",
+          "filename": "flux-2-klein-4b-fp8.safetensors",
+          "directory": "diffusion_models"
+        },
+        {
+          "role": "clip",
+          "filename": "qwen_3_4b.safetensors",
+          "directory": "text_encoders"
+        },
+        {
+          "role": "vae",
+          "filename": "flux2-vae.safetensors",
+          "directory": "vae"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/flux2/edit",
+      "version": "0.1.0",
+      "title": "FLUX.2 參考圖編修",
+      "summary": "FLUX.2 參考圖編修。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "unet",
+          "filename": "flux-2-klein-base-4b-fp8.safetensors",
+          "directory": "diffusion_models"
+        },
+        {
+          "role": "clip",
+          "filename": "qwen_3_4b.safetensors",
+          "directory": "text_encoders"
+        },
+        {
+          "role": "vae",
+          "filename": "flux2-vae.safetensors",
+          "directory": "vae"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/layer-split",
+      "version": "0.1.0",
+      "title": "遮罩拆層",
+      "summary": "遮罩拆層。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/character-action-canny",
+      "version": "0.1.0",
+      "title": "角色動作（SDXL、canny）",
+      "summary": "角色動作（SDXL、canny）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_ipadapter_plus",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "clip_vision",
+          "filename": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors",
+          "directory": "clip_vision"
+        },
+        {
+          "role": "ipadapter",
+          "filename": "ip-adapter-plus_sdxl_vit-h.safetensors",
+          "directory": "ipadapter"
+        },
+        {
+          "role": "controlnet",
+          "filename": "controlnet-canny-sdxl-1.0.safetensors",
+          "directory": "controlnet"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/character-action-canny-lora",
+      "version": "0.1.0",
+      "title": "角色動作（SDXL、canny、LoRA）",
+      "summary": "角色動作（SDXL、canny、LoRA）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_ipadapter_plus",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "clip_vision",
+          "filename": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors",
+          "directory": "clip_vision"
+        },
+        {
+          "role": "ipadapter",
+          "filename": "ip-adapter-plus_sdxl_vit-h.safetensors",
+          "directory": "ipadapter"
+        },
+        {
+          "role": "controlnet",
+          "filename": "controlnet-canny-sdxl-1.0.safetensors",
+          "directory": "controlnet"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/character-action-canny-lora-transparent",
+      "version": "0.1.0",
+      "title": "角色動作（SDXL、canny、LoRA、去背）",
+      "summary": "角色動作（SDXL、canny、LoRA、去背）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_ipadapter_plus",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "clip_vision",
+          "filename": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors",
+          "directory": "clip_vision"
+        },
+        {
+          "role": "ipadapter",
+          "filename": "ip-adapter-plus_sdxl_vit-h.safetensors",
+          "directory": "ipadapter"
+        },
+        {
+          "role": "controlnet",
+          "filename": "controlnet-canny-sdxl-1.0.safetensors",
+          "directory": "controlnet"
+        },
+        {
+          "role": "bg_removal",
+          "filename": "birefnet.safetensors",
+          "directory": "background_removal"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/character-action-canny-transparent",
+      "version": "0.1.0",
+      "title": "角色動作（SDXL、canny、去背）",
+      "summary": "角色動作（SDXL、canny、去背）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_ipadapter_plus",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "clip_vision",
+          "filename": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors",
+          "directory": "clip_vision"
+        },
+        {
+          "role": "ipadapter",
+          "filename": "ip-adapter-plus_sdxl_vit-h.safetensors",
+          "directory": "ipadapter"
+        },
+        {
+          "role": "controlnet",
+          "filename": "controlnet-canny-sdxl-1.0.safetensors",
+          "directory": "controlnet"
+        },
+        {
+          "role": "bg_removal",
+          "filename": "birefnet.safetensors",
+          "directory": "background_removal"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/character-action-depth",
+      "version": "0.1.0",
+      "title": "角色動作（SDXL、depth）",
+      "summary": "角色動作（SDXL、depth）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_controlnet_aux",
+          "source": "registry"
+        },
+        {
+          "id": "comfyui_ipadapter_plus",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "clip_vision",
+          "filename": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors",
+          "directory": "clip_vision"
+        },
+        {
+          "role": "ipadapter",
+          "filename": "ip-adapter-plus_sdxl_vit-h.safetensors",
+          "directory": "ipadapter"
+        },
+        {
+          "role": "controlnet",
+          "filename": "controlnet-depth-sdxl-1.0.safetensors",
+          "directory": "controlnet"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/character-action-depth-lora",
+      "version": "0.1.0",
+      "title": "角色動作（SDXL、depth、LoRA）",
+      "summary": "角色動作（SDXL、depth、LoRA）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_controlnet_aux",
+          "source": "registry"
+        },
+        {
+          "id": "comfyui_ipadapter_plus",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "clip_vision",
+          "filename": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors",
+          "directory": "clip_vision"
+        },
+        {
+          "role": "ipadapter",
+          "filename": "ip-adapter-plus_sdxl_vit-h.safetensors",
+          "directory": "ipadapter"
+        },
+        {
+          "role": "controlnet",
+          "filename": "controlnet-depth-sdxl-1.0.safetensors",
+          "directory": "controlnet"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/character-action-depth-lora-transparent",
+      "version": "0.1.0",
+      "title": "角色動作（SDXL、depth、LoRA、去背）",
+      "summary": "角色動作（SDXL、depth、LoRA、去背）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_controlnet_aux",
+          "source": "registry"
+        },
+        {
+          "id": "comfyui_ipadapter_plus",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "clip_vision",
+          "filename": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors",
+          "directory": "clip_vision"
+        },
+        {
+          "role": "ipadapter",
+          "filename": "ip-adapter-plus_sdxl_vit-h.safetensors",
+          "directory": "ipadapter"
+        },
+        {
+          "role": "controlnet",
+          "filename": "controlnet-depth-sdxl-1.0.safetensors",
+          "directory": "controlnet"
+        },
+        {
+          "role": "bg_removal",
+          "filename": "birefnet.safetensors",
+          "directory": "background_removal"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/character-action-depth-transparent",
+      "version": "0.1.0",
+      "title": "角色動作（SDXL、depth、去背）",
+      "summary": "角色動作（SDXL、depth、去背）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_controlnet_aux",
+          "source": "registry"
+        },
+        {
+          "id": "comfyui_ipadapter_plus",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "clip_vision",
+          "filename": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors",
+          "directory": "clip_vision"
+        },
+        {
+          "role": "ipadapter",
+          "filename": "ip-adapter-plus_sdxl_vit-h.safetensors",
+          "directory": "ipadapter"
+        },
+        {
+          "role": "controlnet",
+          "filename": "controlnet-depth-sdxl-1.0.safetensors",
+          "directory": "controlnet"
+        },
+        {
+          "role": "bg_removal",
+          "filename": "birefnet.safetensors",
+          "directory": "background_removal"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/character-action-pose",
+      "version": "0.1.0",
+      "title": "角色動作（SDXL、pose）",
+      "summary": "角色動作（SDXL、pose）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_controlnet_aux",
+          "source": "registry"
+        },
+        {
+          "id": "comfyui_ipadapter_plus",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "clip_vision",
+          "filename": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors",
+          "directory": "clip_vision"
+        },
+        {
+          "role": "ipadapter",
+          "filename": "ip-adapter-plus_sdxl_vit-h.safetensors",
+          "directory": "ipadapter"
+        },
+        {
+          "role": "controlnet",
+          "filename": "controlnet-openpose-sdxl-1.0.safetensors",
+          "directory": "controlnet"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/character-action-pose-lora",
+      "version": "0.1.0",
+      "title": "角色動作（SDXL、pose、LoRA）",
+      "summary": "角色動作（SDXL、pose、LoRA）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_controlnet_aux",
+          "source": "registry"
+        },
+        {
+          "id": "comfyui_ipadapter_plus",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "clip_vision",
+          "filename": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors",
+          "directory": "clip_vision"
+        },
+        {
+          "role": "ipadapter",
+          "filename": "ip-adapter-plus_sdxl_vit-h.safetensors",
+          "directory": "ipadapter"
+        },
+        {
+          "role": "controlnet",
+          "filename": "controlnet-openpose-sdxl-1.0.safetensors",
+          "directory": "controlnet"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/character-action-pose-lora-transparent",
+      "version": "0.1.0",
+      "title": "角色動作（SDXL、pose、LoRA、去背）",
+      "summary": "角色動作（SDXL、pose、LoRA、去背）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_controlnet_aux",
+          "source": "registry"
+        },
+        {
+          "id": "comfyui_ipadapter_plus",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "clip_vision",
+          "filename": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors",
+          "directory": "clip_vision"
+        },
+        {
+          "role": "ipadapter",
+          "filename": "ip-adapter-plus_sdxl_vit-h.safetensors",
+          "directory": "ipadapter"
+        },
+        {
+          "role": "controlnet",
+          "filename": "controlnet-openpose-sdxl-1.0.safetensors",
+          "directory": "controlnet"
+        },
+        {
+          "role": "bg_removal",
+          "filename": "birefnet.safetensors",
+          "directory": "background_removal"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/character-action-pose-transparent",
+      "version": "0.1.0",
+      "title": "角色動作（SDXL、pose、去背）",
+      "summary": "角色動作（SDXL、pose、去背）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_controlnet_aux",
+          "source": "registry"
+        },
+        {
+          "id": "comfyui_ipadapter_plus",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "clip_vision",
+          "filename": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors",
+          "directory": "clip_vision"
+        },
+        {
+          "role": "ipadapter",
+          "filename": "ip-adapter-plus_sdxl_vit-h.safetensors",
+          "directory": "ipadapter"
+        },
+        {
+          "role": "controlnet",
+          "filename": "controlnet-openpose-sdxl-1.0.safetensors",
+          "directory": "controlnet"
+        },
+        {
+          "role": "bg_removal",
+          "filename": "birefnet.safetensors",
+          "directory": "background_removal"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/concept",
+      "version": "0.1.0",
+      "title": "文字概念圖（SDXL）",
+      "summary": "文字概念圖（SDXL）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/concept-lora",
+      "version": "0.1.0",
+      "title": "文字概念圖（SDXL、LoRA）",
+      "summary": "文字概念圖（SDXL、LoRA）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/concept-lora-transparent",
+      "version": "0.1.0",
+      "title": "文字概念圖（SDXL、LoRA、去背）",
+      "summary": "文字概念圖（SDXL、LoRA、去背）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "bg_removal",
+          "filename": "birefnet.safetensors",
+          "directory": "background_removal"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/concept-transparent",
+      "version": "0.1.0",
+      "title": "文字概念圖（SDXL、去背）",
+      "summary": "文字概念圖（SDXL、去背）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "bg_removal",
+          "filename": "birefnet.safetensors",
+          "directory": "background_removal"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/guided-inpaint",
+      "version": "0.1.0",
+      "title": "有錨點的局部重繪（SDXL）",
+      "summary": "有錨點的局部重繪（SDXL）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/guided-inpaint-appearance",
+      "version": "0.1.0",
+      "title": "有錨點的局部重繪（SDXL、外觀參考）",
+      "summary": "有錨點的局部重繪（SDXL、外觀參考）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_ipadapter_plus",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "clip_vision",
+          "filename": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors",
+          "directory": "clip_vision"
+        },
+        {
+          "role": "ipadapter",
+          "filename": "ip-adapter-plus_sdxl_vit-h.safetensors",
+          "directory": "ipadapter"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/guided-inpaint-canny",
+      "version": "0.1.0",
+      "title": "有錨點的局部重繪（SDXL、canny）",
+      "summary": "有錨點的局部重繪（SDXL、canny）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "controlnet",
+          "filename": "controlnet-canny-sdxl-1.0.safetensors",
+          "directory": "controlnet"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/guided-inpaint-canny-appearance",
+      "version": "0.1.0",
+      "title": "有錨點的局部重繪（SDXL、canny、外觀參考）",
+      "summary": "有錨點的局部重繪（SDXL、canny、外觀參考）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_ipadapter_plus",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "clip_vision",
+          "filename": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors",
+          "directory": "clip_vision"
+        },
+        {
+          "role": "ipadapter",
+          "filename": "ip-adapter-plus_sdxl_vit-h.safetensors",
+          "directory": "ipadapter"
+        },
+        {
+          "role": "controlnet",
+          "filename": "controlnet-canny-sdxl-1.0.safetensors",
+          "directory": "controlnet"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/guided-inpaint-depth",
+      "version": "0.1.0",
+      "title": "有錨點的局部重繪（SDXL、depth）",
+      "summary": "有錨點的局部重繪（SDXL、depth）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_controlnet_aux",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "controlnet",
+          "filename": "controlnet-depth-sdxl-1.0.safetensors",
+          "directory": "controlnet"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/guided-inpaint-depth-appearance",
+      "version": "0.1.0",
+      "title": "有錨點的局部重繪（SDXL、depth、外觀參考）",
+      "summary": "有錨點的局部重繪（SDXL、depth、外觀參考）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_controlnet_aux",
+          "source": "registry"
+        },
+        {
+          "id": "comfyui_ipadapter_plus",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "clip_vision",
+          "filename": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors",
+          "directory": "clip_vision"
+        },
+        {
+          "role": "ipadapter",
+          "filename": "ip-adapter-plus_sdxl_vit-h.safetensors",
+          "directory": "ipadapter"
+        },
+        {
+          "role": "controlnet",
+          "filename": "controlnet-depth-sdxl-1.0.safetensors",
+          "directory": "controlnet"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/guided-inpaint-pose",
+      "version": "0.1.0",
+      "title": "有錨點的局部重繪（SDXL、pose）",
+      "summary": "有錨點的局部重繪（SDXL、pose）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_controlnet_aux",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "controlnet",
+          "filename": "controlnet-openpose-sdxl-1.0.safetensors",
+          "directory": "controlnet"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/guided-inpaint-pose-appearance",
+      "version": "0.1.0",
+      "title": "有錨點的局部重繪（SDXL、pose、外觀參考）",
+      "summary": "有錨點的局部重繪（SDXL、pose、外觀參考）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_controlnet_aux",
+          "source": "registry"
+        },
+        {
+          "id": "comfyui_ipadapter_plus",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "clip_vision",
+          "filename": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors",
+          "directory": "clip_vision"
+        },
+        {
+          "role": "ipadapter",
+          "filename": "ip-adapter-plus_sdxl_vit-h.safetensors",
+          "directory": "ipadapter"
+        },
+        {
+          "role": "controlnet",
+          "filename": "controlnet-openpose-sdxl-1.0.safetensors",
+          "directory": "controlnet"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/icon-asset",
+      "version": "0.1.0",
+      "title": "圖示素材（SDXL）",
+      "summary": "圖示素材（SDXL）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/icon-asset-appearance",
+      "version": "0.1.0",
+      "title": "圖示素材（SDXL、外觀參考）",
+      "summary": "圖示素材（SDXL、外觀參考）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_ipadapter_plus",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "clip_vision",
+          "filename": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors",
+          "directory": "clip_vision"
+        },
+        {
+          "role": "ipadapter",
+          "filename": "ip-adapter-plus_sdxl_vit-h.safetensors",
+          "directory": "ipadapter"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/icon-asset-appearance-lora",
+      "version": "0.1.0",
+      "title": "圖示素材（SDXL、外觀參考、LoRA）",
+      "summary": "圖示素材（SDXL、外觀參考、LoRA）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_ipadapter_plus",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "clip_vision",
+          "filename": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors",
+          "directory": "clip_vision"
+        },
+        {
+          "role": "ipadapter",
+          "filename": "ip-adapter-plus_sdxl_vit-h.safetensors",
+          "directory": "ipadapter"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/icon-asset-appearance-lora-transparent",
+      "version": "0.1.0",
+      "title": "圖示素材（SDXL、外觀參考、LoRA、去背）",
+      "summary": "圖示素材（SDXL、外觀參考、LoRA、去背）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_ipadapter_plus",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "clip_vision",
+          "filename": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors",
+          "directory": "clip_vision"
+        },
+        {
+          "role": "ipadapter",
+          "filename": "ip-adapter-plus_sdxl_vit-h.safetensors",
+          "directory": "ipadapter"
+        },
+        {
+          "role": "bg_removal",
+          "filename": "birefnet.safetensors",
+          "directory": "background_removal"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/icon-asset-appearance-transparent",
+      "version": "0.1.0",
+      "title": "圖示素材（SDXL、外觀參考、去背）",
+      "summary": "圖示素材（SDXL、外觀參考、去背）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_ipadapter_plus",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "clip_vision",
+          "filename": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors",
+          "directory": "clip_vision"
+        },
+        {
+          "role": "ipadapter",
+          "filename": "ip-adapter-plus_sdxl_vit-h.safetensors",
+          "directory": "ipadapter"
+        },
+        {
+          "role": "bg_removal",
+          "filename": "birefnet.safetensors",
+          "directory": "background_removal"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/icon-asset-lora",
+      "version": "0.1.0",
+      "title": "圖示素材（SDXL、LoRA）",
+      "summary": "圖示素材（SDXL、LoRA）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/icon-asset-lora-transparent",
+      "version": "0.1.0",
+      "title": "圖示素材（SDXL、LoRA、去背）",
+      "summary": "圖示素材（SDXL、LoRA、去背）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "bg_removal",
+          "filename": "birefnet.safetensors",
+          "directory": "background_removal"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/icon-asset-structure",
+      "version": "0.1.0",
+      "title": "圖示素材（SDXL、結構參考）",
+      "summary": "圖示素材（SDXL、結構參考）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "controlnet",
+          "filename": "controlnet-canny-sdxl-1.0.safetensors",
+          "directory": "controlnet"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/icon-asset-structure-appearance",
+      "version": "0.1.0",
+      "title": "圖示素材（SDXL、結構參考、外觀參考）",
+      "summary": "圖示素材（SDXL、結構參考、外觀參考）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_ipadapter_plus",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "clip_vision",
+          "filename": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors",
+          "directory": "clip_vision"
+        },
+        {
+          "role": "ipadapter",
+          "filename": "ip-adapter-plus_sdxl_vit-h.safetensors",
+          "directory": "ipadapter"
+        },
+        {
+          "role": "controlnet",
+          "filename": "controlnet-canny-sdxl-1.0.safetensors",
+          "directory": "controlnet"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/icon-asset-structure-appearance-lora",
+      "version": "0.1.0",
+      "title": "圖示素材（SDXL、結構參考、外觀參考、LoRA）",
+      "summary": "圖示素材（SDXL、結構參考、外觀參考、LoRA）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_ipadapter_plus",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "clip_vision",
+          "filename": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors",
+          "directory": "clip_vision"
+        },
+        {
+          "role": "ipadapter",
+          "filename": "ip-adapter-plus_sdxl_vit-h.safetensors",
+          "directory": "ipadapter"
+        },
+        {
+          "role": "controlnet",
+          "filename": "controlnet-canny-sdxl-1.0.safetensors",
+          "directory": "controlnet"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/icon-asset-structure-appearance-lora-transparent",
+      "version": "0.1.0",
+      "title": "圖示素材（SDXL、結構參考、外觀參考、LoRA、去背）",
+      "summary": "圖示素材（SDXL、結構參考、外觀參考、LoRA、去背）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_ipadapter_plus",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "clip_vision",
+          "filename": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors",
+          "directory": "clip_vision"
+        },
+        {
+          "role": "ipadapter",
+          "filename": "ip-adapter-plus_sdxl_vit-h.safetensors",
+          "directory": "ipadapter"
+        },
+        {
+          "role": "controlnet",
+          "filename": "controlnet-canny-sdxl-1.0.safetensors",
+          "directory": "controlnet"
+        },
+        {
+          "role": "bg_removal",
+          "filename": "birefnet.safetensors",
+          "directory": "background_removal"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/icon-asset-structure-appearance-transparent",
+      "version": "0.1.0",
+      "title": "圖示素材（SDXL、結構參考、外觀參考、去背）",
+      "summary": "圖示素材（SDXL、結構參考、外觀參考、去背）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_ipadapter_plus",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "clip_vision",
+          "filename": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors",
+          "directory": "clip_vision"
+        },
+        {
+          "role": "ipadapter",
+          "filename": "ip-adapter-plus_sdxl_vit-h.safetensors",
+          "directory": "ipadapter"
+        },
+        {
+          "role": "controlnet",
+          "filename": "controlnet-canny-sdxl-1.0.safetensors",
+          "directory": "controlnet"
+        },
+        {
+          "role": "bg_removal",
+          "filename": "birefnet.safetensors",
+          "directory": "background_removal"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/icon-asset-structure-lora",
+      "version": "0.1.0",
+      "title": "圖示素材（SDXL、結構參考、LoRA）",
+      "summary": "圖示素材（SDXL、結構參考、LoRA）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "controlnet",
+          "filename": "controlnet-canny-sdxl-1.0.safetensors",
+          "directory": "controlnet"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/icon-asset-structure-lora-transparent",
+      "version": "0.1.0",
+      "title": "圖示素材（SDXL、結構參考、LoRA、去背）",
+      "summary": "圖示素材（SDXL、結構參考、LoRA、去背）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "controlnet",
+          "filename": "controlnet-canny-sdxl-1.0.safetensors",
+          "directory": "controlnet"
+        },
+        {
+          "role": "bg_removal",
+          "filename": "birefnet.safetensors",
+          "directory": "background_removal"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/icon-asset-structure-transparent",
+      "version": "0.1.0",
+      "title": "圖示素材（SDXL、結構參考、去背）",
+      "summary": "圖示素材（SDXL、結構參考、去背）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "controlnet",
+          "filename": "controlnet-canny-sdxl-1.0.safetensors",
+          "directory": "controlnet"
+        },
+        {
+          "role": "bg_removal",
+          "filename": "birefnet.safetensors",
+          "directory": "background_removal"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/icon-asset-transparent",
+      "version": "0.1.0",
+      "title": "圖示素材（SDXL、去背）",
+      "summary": "圖示素材（SDXL、去背）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "bg_removal",
+          "filename": "birefnet.safetensors",
+          "directory": "background_removal"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/inpaint",
+      "version": "0.1.0",
+      "title": "局部重繪（SDXL）",
+      "summary": "局部重繪（SDXL）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/pose-only-canny",
+      "version": "0.1.0",
+      "title": "姿勢控制（SDXL、canny）",
+      "summary": "姿勢控制（SDXL、canny）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "controlnet",
+          "filename": "controlnet-canny-sdxl-1.0.safetensors",
+          "directory": "controlnet"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/pose-only-canny-lora",
+      "version": "0.1.0",
+      "title": "姿勢控制（SDXL、canny、LoRA）",
+      "summary": "姿勢控制（SDXL、canny、LoRA）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "controlnet",
+          "filename": "controlnet-canny-sdxl-1.0.safetensors",
+          "directory": "controlnet"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/pose-only-canny-lora-transparent",
+      "version": "0.1.0",
+      "title": "姿勢控制（SDXL、canny、LoRA、去背）",
+      "summary": "姿勢控制（SDXL、canny、LoRA、去背）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "controlnet",
+          "filename": "controlnet-canny-sdxl-1.0.safetensors",
+          "directory": "controlnet"
+        },
+        {
+          "role": "bg_removal",
+          "filename": "birefnet.safetensors",
+          "directory": "background_removal"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/pose-only-canny-transparent",
+      "version": "0.1.0",
+      "title": "姿勢控制（SDXL、canny、去背）",
+      "summary": "姿勢控制（SDXL、canny、去背）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "controlnet",
+          "filename": "controlnet-canny-sdxl-1.0.safetensors",
+          "directory": "controlnet"
+        },
+        {
+          "role": "bg_removal",
+          "filename": "birefnet.safetensors",
+          "directory": "background_removal"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/pose-only-depth",
+      "version": "0.1.0",
+      "title": "姿勢控制（SDXL、depth）",
+      "summary": "姿勢控制（SDXL、depth）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_controlnet_aux",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "controlnet",
+          "filename": "controlnet-depth-sdxl-1.0.safetensors",
+          "directory": "controlnet"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/pose-only-depth-lora",
+      "version": "0.1.0",
+      "title": "姿勢控制（SDXL、depth、LoRA）",
+      "summary": "姿勢控制（SDXL、depth、LoRA）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_controlnet_aux",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "controlnet",
+          "filename": "controlnet-depth-sdxl-1.0.safetensors",
+          "directory": "controlnet"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/pose-only-depth-lora-transparent",
+      "version": "0.1.0",
+      "title": "姿勢控制（SDXL、depth、LoRA、去背）",
+      "summary": "姿勢控制（SDXL、depth、LoRA、去背）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_controlnet_aux",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "controlnet",
+          "filename": "controlnet-depth-sdxl-1.0.safetensors",
+          "directory": "controlnet"
+        },
+        {
+          "role": "bg_removal",
+          "filename": "birefnet.safetensors",
+          "directory": "background_removal"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/pose-only-depth-transparent",
+      "version": "0.1.0",
+      "title": "姿勢控制（SDXL、depth、去背）",
+      "summary": "姿勢控制（SDXL、depth、去背）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_controlnet_aux",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "controlnet",
+          "filename": "controlnet-depth-sdxl-1.0.safetensors",
+          "directory": "controlnet"
+        },
+        {
+          "role": "bg_removal",
+          "filename": "birefnet.safetensors",
+          "directory": "background_removal"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/pose-only-pose",
+      "version": "0.1.0",
+      "title": "姿勢控制（SDXL、pose）",
+      "summary": "姿勢控制（SDXL、pose）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_controlnet_aux",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "controlnet",
+          "filename": "controlnet-openpose-sdxl-1.0.safetensors",
+          "directory": "controlnet"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/pose-only-pose-lora",
+      "version": "0.1.0",
+      "title": "姿勢控制（SDXL、pose、LoRA）",
+      "summary": "姿勢控制（SDXL、pose、LoRA）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_controlnet_aux",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "controlnet",
+          "filename": "controlnet-openpose-sdxl-1.0.safetensors",
+          "directory": "controlnet"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/pose-only-pose-lora-transparent",
+      "version": "0.1.0",
+      "title": "姿勢控制（SDXL、pose、LoRA、去背）",
+      "summary": "姿勢控制（SDXL、pose、LoRA、去背）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_controlnet_aux",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "controlnet",
+          "filename": "controlnet-openpose-sdxl-1.0.safetensors",
+          "directory": "controlnet"
+        },
+        {
+          "role": "bg_removal",
+          "filename": "birefnet.safetensors",
+          "directory": "background_removal"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/pose-only-pose-transparent",
+      "version": "0.1.0",
+      "title": "姿勢控制（SDXL、pose、去背）",
+      "summary": "姿勢控制（SDXL、pose、去背）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_controlnet_aux",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "controlnet",
+          "filename": "controlnet-openpose-sdxl-1.0.safetensors",
+          "directory": "controlnet"
+        },
+        {
+          "role": "bg_removal",
+          "filename": "birefnet.safetensors",
+          "directory": "background_removal"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/pose-only-union-canny",
+      "version": "0.1.0",
+      "title": "姿勢控制（SDXL、Union、canny）",
+      "summary": "姿勢控制（SDXL、Union、canny）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "controlnet",
+          "filename": "xinsir-controlnet-union-sdxl-1.0-promax.safetensors",
+          "directory": "controlnet"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/pose-only-union-canny-lora",
+      "version": "0.1.0",
+      "title": "姿勢控制（SDXL、Union、canny、LoRA）",
+      "summary": "姿勢控制（SDXL、Union、canny、LoRA）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "controlnet",
+          "filename": "xinsir-controlnet-union-sdxl-1.0-promax.safetensors",
+          "directory": "controlnet"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/pose-only-union-canny-lora-transparent",
+      "version": "0.1.0",
+      "title": "姿勢控制（SDXL、Union、canny、LoRA、去背）",
+      "summary": "姿勢控制（SDXL、Union、canny、LoRA、去背）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "controlnet",
+          "filename": "xinsir-controlnet-union-sdxl-1.0-promax.safetensors",
+          "directory": "controlnet"
+        },
+        {
+          "role": "bg_removal",
+          "filename": "birefnet.safetensors",
+          "directory": "background_removal"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/pose-only-union-canny-transparent",
+      "version": "0.1.0",
+      "title": "姿勢控制（SDXL、Union、canny、去背）",
+      "summary": "姿勢控制（SDXL、Union、canny、去背）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "controlnet",
+          "filename": "xinsir-controlnet-union-sdxl-1.0-promax.safetensors",
+          "directory": "controlnet"
+        },
+        {
+          "role": "bg_removal",
+          "filename": "birefnet.safetensors",
+          "directory": "background_removal"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/pose-only-union-depth",
+      "version": "0.1.0",
+      "title": "姿勢控制（SDXL、Union、depth）",
+      "summary": "姿勢控制（SDXL、Union、depth）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_controlnet_aux",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "controlnet",
+          "filename": "xinsir-controlnet-union-sdxl-1.0-promax.safetensors",
+          "directory": "controlnet"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/pose-only-union-depth-lora",
+      "version": "0.1.0",
+      "title": "姿勢控制（SDXL、Union、depth、LoRA）",
+      "summary": "姿勢控制（SDXL、Union、depth、LoRA）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_controlnet_aux",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "controlnet",
+          "filename": "xinsir-controlnet-union-sdxl-1.0-promax.safetensors",
+          "directory": "controlnet"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/pose-only-union-depth-lora-transparent",
+      "version": "0.1.0",
+      "title": "姿勢控制（SDXL、Union、depth、LoRA、去背）",
+      "summary": "姿勢控制（SDXL、Union、depth、LoRA、去背）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_controlnet_aux",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "controlnet",
+          "filename": "xinsir-controlnet-union-sdxl-1.0-promax.safetensors",
+          "directory": "controlnet"
+        },
+        {
+          "role": "bg_removal",
+          "filename": "birefnet.safetensors",
+          "directory": "background_removal"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/pose-only-union-depth-transparent",
+      "version": "0.1.0",
+      "title": "姿勢控制（SDXL、Union、depth、去背）",
+      "summary": "姿勢控制（SDXL、Union、depth、去背）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_controlnet_aux",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "controlnet",
+          "filename": "xinsir-controlnet-union-sdxl-1.0-promax.safetensors",
+          "directory": "controlnet"
+        },
+        {
+          "role": "bg_removal",
+          "filename": "birefnet.safetensors",
+          "directory": "background_removal"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/pose-only-union-pose",
+      "version": "0.1.0",
+      "title": "姿勢控制（SDXL、Union、pose）",
+      "summary": "姿勢控制（SDXL、Union、pose）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_controlnet_aux",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "controlnet",
+          "filename": "xinsir-controlnet-union-sdxl-1.0-promax.safetensors",
+          "directory": "controlnet"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/pose-only-union-pose-lora",
+      "version": "0.1.0",
+      "title": "姿勢控制（SDXL、Union、pose、LoRA）",
+      "summary": "姿勢控制（SDXL、Union、pose、LoRA）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_controlnet_aux",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "controlnet",
+          "filename": "xinsir-controlnet-union-sdxl-1.0-promax.safetensors",
+          "directory": "controlnet"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/pose-only-union-pose-lora-transparent",
+      "version": "0.1.0",
+      "title": "姿勢控制（SDXL、Union、pose、LoRA、去背）",
+      "summary": "姿勢控制（SDXL、Union、pose、LoRA、去背）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_controlnet_aux",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "controlnet",
+          "filename": "xinsir-controlnet-union-sdxl-1.0-promax.safetensors",
+          "directory": "controlnet"
+        },
+        {
+          "role": "bg_removal",
+          "filename": "birefnet.safetensors",
+          "directory": "background_removal"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/pose-only-union-pose-transparent",
+      "version": "0.1.0",
+      "title": "姿勢控制（SDXL、Union、pose、去背）",
+      "summary": "姿勢控制（SDXL、Union、pose、去背）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_controlnet_aux",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "controlnet",
+          "filename": "xinsir-controlnet-union-sdxl-1.0-promax.safetensors",
+          "directory": "controlnet"
+        },
+        {
+          "role": "bg_removal",
+          "filename": "birefnet.safetensors",
+          "directory": "background_removal"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/refine",
+      "version": "0.1.0",
+      "title": "圖生圖精修（SDXL）",
+      "summary": "圖生圖精修（SDXL）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/refine-transparent",
+      "version": "0.1.0",
+      "title": "圖生圖精修（SDXL、去背）",
+      "summary": "圖生圖精修（SDXL、去背）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "bg_removal",
+          "filename": "birefnet.safetensors",
+          "directory": "background_removal"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/style-lock",
+      "version": "0.1.0",
+      "title": "外觀鎖定（SDXL）",
+      "summary": "外觀鎖定（SDXL）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_ipadapter_plus",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "clip_vision",
+          "filename": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors",
+          "directory": "clip_vision"
+        },
+        {
+          "role": "ipadapter",
+          "filename": "ip-adapter-plus_sdxl_vit-h.safetensors",
+          "directory": "ipadapter"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/style-lock-lora",
+      "version": "0.1.0",
+      "title": "外觀鎖定（SDXL、LoRA）",
+      "summary": "外觀鎖定（SDXL、LoRA）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_ipadapter_plus",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "clip_vision",
+          "filename": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors",
+          "directory": "clip_vision"
+        },
+        {
+          "role": "ipadapter",
+          "filename": "ip-adapter-plus_sdxl_vit-h.safetensors",
+          "directory": "ipadapter"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/style-lock-lora-transparent",
+      "version": "0.1.0",
+      "title": "外觀鎖定（SDXL、LoRA、去背）",
+      "summary": "外觀鎖定（SDXL、LoRA、去背）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_ipadapter_plus",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "clip_vision",
+          "filename": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors",
+          "directory": "clip_vision"
+        },
+        {
+          "role": "ipadapter",
+          "filename": "ip-adapter-plus_sdxl_vit-h.safetensors",
+          "directory": "ipadapter"
+        },
+        {
+          "role": "bg_removal",
+          "filename": "birefnet.safetensors",
+          "directory": "background_removal"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/style-lock-transparent",
+      "version": "0.1.0",
+      "title": "外觀鎖定（SDXL、去背）",
+      "summary": "外觀鎖定（SDXL、去背）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_ipadapter_plus",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "clip_vision",
+          "filename": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors",
+          "directory": "clip_vision"
+        },
+        {
+          "role": "ipadapter",
+          "filename": "ip-adapter-plus_sdxl_vit-h.safetensors",
+          "directory": "ipadapter"
+        },
+        {
+          "role": "bg_removal",
+          "filename": "birefnet.safetensors",
+          "directory": "background_removal"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "image/sdxl/upscale",
+      "version": "0.1.0",
+      "title": "放大精修（SDXL）",
+      "summary": "放大精修（SDXL）。固定 API graph，runner 只填 slot。",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "checkpoint",
+          "filename": "sd_xl_base_1.0.safetensors",
+          "directory": "checkpoints"
+        },
+        {
+          "role": "upscale",
+          "filename": "4x-UltraSharp.pth",
+          "directory": "upscale_models"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "video/h3/character-video-1",
+      "version": "0.1.0",
+      "title": "MiniMax H3 角色參考影片（1 張）",
+      "summary": "MiniMax H3 Ref2VA，1 張參考圖各一個 LoadImage。上限讀 CHARACTER_REF_MAX（9）。變數是 placeholder，seed 是 -1。status draft，平台未實測。",
+      "media": "video",
+      "capability": "character_ref",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "identity",
+        "time_alignment": "source_from_frame_0",
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "diffusion",
+          "filename": "minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+          "directory": "diffusion_models"
+        },
+        {
+          "role": "text_encoder",
+          "filename": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+          "directory": "text_encoders"
+        },
+        {
+          "role": "vae",
+          "filename": "minimax_h3_video_vae_fp16.safetensors",
+          "directory": "vae"
+        },
+        {
+          "role": "audio_vae",
+          "filename": "minimax_h3_audio_vae_fp32.safetensors",
+          "directory": "vae"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "video/h3/character-video-2",
+      "version": "0.1.0",
+      "title": "MiniMax H3 角色參考影片（2 張）",
+      "summary": "MiniMax H3 Ref2VA，2 張參考圖各一個 LoadImage。上限讀 CHARACTER_REF_MAX（9）。變數是 placeholder，seed 是 -1。status draft，平台未實測。",
+      "media": "video",
+      "capability": "character_ref",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "identity",
+        "time_alignment": "source_from_frame_0",
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "diffusion",
+          "filename": "minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+          "directory": "diffusion_models"
+        },
+        {
+          "role": "text_encoder",
+          "filename": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+          "directory": "text_encoders"
+        },
+        {
+          "role": "vae",
+          "filename": "minimax_h3_video_vae_fp16.safetensors",
+          "directory": "vae"
+        },
+        {
+          "role": "audio_vae",
+          "filename": "minimax_h3_audio_vae_fp32.safetensors",
+          "directory": "vae"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "video/h3/character-video-3",
+      "version": "0.1.0",
+      "title": "MiniMax H3 角色參考影片（3 張）",
+      "summary": "MiniMax H3 Ref2VA，3 張參考圖各一個 LoadImage。上限讀 CHARACTER_REF_MAX（9）。變數是 placeholder，seed 是 -1。status draft，平台未實測。",
+      "media": "video",
+      "capability": "character_ref",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "identity",
+        "time_alignment": "source_from_frame_0",
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "diffusion",
+          "filename": "minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+          "directory": "diffusion_models"
+        },
+        {
+          "role": "text_encoder",
+          "filename": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+          "directory": "text_encoders"
+        },
+        {
+          "role": "vae",
+          "filename": "minimax_h3_video_vae_fp16.safetensors",
+          "directory": "vae"
+        },
+        {
+          "role": "audio_vae",
+          "filename": "minimax_h3_audio_vae_fp32.safetensors",
+          "directory": "vae"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "video/h3/character-video-4",
+      "version": "0.1.0",
+      "title": "MiniMax H3 角色參考影片（4 張）",
+      "summary": "MiniMax H3 Ref2VA，4 張參考圖各一個 LoadImage。上限讀 CHARACTER_REF_MAX（9）。變數是 placeholder，seed 是 -1。status draft，平台未實測。",
+      "media": "video",
+      "capability": "character_ref",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "identity",
+        "time_alignment": "source_from_frame_0",
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "diffusion",
+          "filename": "minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+          "directory": "diffusion_models"
+        },
+        {
+          "role": "text_encoder",
+          "filename": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+          "directory": "text_encoders"
+        },
+        {
+          "role": "vae",
+          "filename": "minimax_h3_video_vae_fp16.safetensors",
+          "directory": "vae"
+        },
+        {
+          "role": "audio_vae",
+          "filename": "minimax_h3_audio_vae_fp32.safetensors",
+          "directory": "vae"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "video/h3/character-video-5",
+      "version": "0.1.0",
+      "title": "MiniMax H3 角色參考影片（5 張）",
+      "summary": "MiniMax H3 Ref2VA，5 張參考圖各一個 LoadImage。上限讀 CHARACTER_REF_MAX（9）。變數是 placeholder，seed 是 -1。status draft，平台未實測。",
+      "media": "video",
+      "capability": "character_ref",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "identity",
+        "time_alignment": "source_from_frame_0",
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "diffusion",
+          "filename": "minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+          "directory": "diffusion_models"
+        },
+        {
+          "role": "text_encoder",
+          "filename": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+          "directory": "text_encoders"
+        },
+        {
+          "role": "vae",
+          "filename": "minimax_h3_video_vae_fp16.safetensors",
+          "directory": "vae"
+        },
+        {
+          "role": "audio_vae",
+          "filename": "minimax_h3_audio_vae_fp32.safetensors",
+          "directory": "vae"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "video/h3/character-video-6",
+      "version": "0.1.0",
+      "title": "MiniMax H3 角色參考影片（6 張）",
+      "summary": "MiniMax H3 Ref2VA，6 張參考圖各一個 LoadImage。上限讀 CHARACTER_REF_MAX（9）。變數是 placeholder，seed 是 -1。status draft，平台未實測。",
+      "media": "video",
+      "capability": "character_ref",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "identity",
+        "time_alignment": "source_from_frame_0",
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "diffusion",
+          "filename": "minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+          "directory": "diffusion_models"
+        },
+        {
+          "role": "text_encoder",
+          "filename": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+          "directory": "text_encoders"
+        },
+        {
+          "role": "vae",
+          "filename": "minimax_h3_video_vae_fp16.safetensors",
+          "directory": "vae"
+        },
+        {
+          "role": "audio_vae",
+          "filename": "minimax_h3_audio_vae_fp32.safetensors",
+          "directory": "vae"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "video/h3/character-video-7",
+      "version": "0.1.0",
+      "title": "MiniMax H3 角色參考影片（7 張）",
+      "summary": "MiniMax H3 Ref2VA，7 張參考圖各一個 LoadImage。上限讀 CHARACTER_REF_MAX（9）。變數是 placeholder，seed 是 -1。status draft，平台未實測。",
+      "media": "video",
+      "capability": "character_ref",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "identity",
+        "time_alignment": "source_from_frame_0",
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "diffusion",
+          "filename": "minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+          "directory": "diffusion_models"
+        },
+        {
+          "role": "text_encoder",
+          "filename": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+          "directory": "text_encoders"
+        },
+        {
+          "role": "vae",
+          "filename": "minimax_h3_video_vae_fp16.safetensors",
+          "directory": "vae"
+        },
+        {
+          "role": "audio_vae",
+          "filename": "minimax_h3_audio_vae_fp32.safetensors",
+          "directory": "vae"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "video/h3/character-video-8",
+      "version": "0.1.0",
+      "title": "MiniMax H3 角色參考影片（8 張）",
+      "summary": "MiniMax H3 Ref2VA，8 張參考圖各一個 LoadImage。上限讀 CHARACTER_REF_MAX（9）。變數是 placeholder，seed 是 -1。status draft，平台未實測。",
+      "media": "video",
+      "capability": "character_ref",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "identity",
+        "time_alignment": "source_from_frame_0",
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "diffusion",
+          "filename": "minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+          "directory": "diffusion_models"
+        },
+        {
+          "role": "text_encoder",
+          "filename": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+          "directory": "text_encoders"
+        },
+        {
+          "role": "vae",
+          "filename": "minimax_h3_video_vae_fp16.safetensors",
+          "directory": "vae"
+        },
+        {
+          "role": "audio_vae",
+          "filename": "minimax_h3_audio_vae_fp32.safetensors",
+          "directory": "vae"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "video/h3/character-video-9",
+      "version": "0.1.0",
+      "title": "MiniMax H3 角色參考影片（9 張）",
+      "summary": "MiniMax H3 Ref2VA，9 張參考圖各一個 LoadImage。上限讀 CHARACTER_REF_MAX（9）。變數是 placeholder，seed 是 -1。status draft，平台未實測。",
+      "media": "video",
+      "capability": "character_ref",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "identity",
+        "time_alignment": "source_from_frame_0",
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "diffusion",
+          "filename": "minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+          "directory": "diffusion_models"
+        },
+        {
+          "role": "text_encoder",
+          "filename": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+          "directory": "text_encoders"
+        },
+        {
+          "role": "vae",
+          "filename": "minimax_h3_video_vae_fp16.safetensors",
+          "directory": "vae"
+        },
+        {
+          "role": "audio_vae",
+          "filename": "minimax_h3_audio_vae_fp32.safetensors",
+          "directory": "vae"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "video/h3/img2video",
+      "version": "0.1.0",
+      "title": "MiniMax H3 圖生影片",
+      "summary": "MiniMax H3 圖生影片，沒有尾幀。graph 由 build_img2video_h3（video_config=None）產生。變數是 placeholder，seed 是 -1。status draft，平台未實測。",
+      "media": "video",
+      "capability": "i2v",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "image",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": "source_from_frame_0",
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "diffusion",
+          "filename": "minimax_h3_fl2va_pruned_int8_convrot.safetensors",
+          "directory": "diffusion_models"
+        },
+        {
+          "role": "text_encoder",
+          "filename": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+          "directory": "text_encoders"
+        },
+        {
+          "role": "vae",
+          "filename": "minimax_h3_video_vae_fp16.safetensors",
+          "directory": "vae"
+        },
+        {
+          "role": "audio_vae",
+          "filename": "minimax_h3_audio_vae_fp32.safetensors",
+          "directory": "vae"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "video/h3/img2video-last",
+      "version": "0.1.0",
+      "title": "MiniMax H3 圖生影片（含尾幀）",
+      "summary": "MiniMax H3 圖生影片，含尾幀 LoadImage。fx_loop、transition、有終點靜幀的 camera_move 用這份。變數是 placeholder，seed 是 -1。status draft，平台未實測。",
+      "media": "video",
+      "capability": "i2v",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "image",
+        "last": "image",
+        "reference_role": "none",
+        "time_alignment": "source_from_frame_0",
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "diffusion",
+          "filename": "minimax_h3_fl2va_pruned_int8_convrot.safetensors",
+          "directory": "diffusion_models"
+        },
+        {
+          "role": "text_encoder",
+          "filename": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+          "directory": "text_encoders"
+        },
+        {
+          "role": "vae",
+          "filename": "minimax_h3_video_vae_fp16.safetensors",
+          "directory": "vae"
+        },
+        {
+          "role": "audio_vae",
+          "filename": "minimax_h3_audio_vae_fp32.safetensors",
+          "directory": "vae"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "video/h3/pose-drive-canny",
+      "version": "0.1.0",
+      "title": "MiniMax H3 動作驅動（canny）",
+      "summary": "MiniMax H3 Ref2VA，靜幀加 canny 前處理後的動作片。graph 由 build_pose_drive_h3（video_config=None）產生。變數是 placeholder，seed 是 -1。status draft，平台未實測。",
+      "media": "video",
+      "capability": "control_video",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "identity",
+        "time_alignment": "per_source_frame",
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "diffusion",
+          "filename": "minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+          "directory": "diffusion_models"
+        },
+        {
+          "role": "text_encoder",
+          "filename": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+          "directory": "text_encoders"
+        },
+        {
+          "role": "vae",
+          "filename": "minimax_h3_video_vae_fp16.safetensors",
+          "directory": "vae"
+        },
+        {
+          "role": "audio_vae",
+          "filename": "minimax_h3_audio_vae_fp32.safetensors",
+          "directory": "vae"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "video/h3/pose-drive-depth",
+      "version": "0.1.0",
+      "title": "MiniMax H3 動作驅動（depth）",
+      "summary": "MiniMax H3 Ref2VA，靜幀加 depth 前處理後的動作片。graph 由 build_pose_drive_h3（video_config=None）產生。變數是 placeholder，seed 是 -1。status draft，平台未實測。",
+      "media": "video",
+      "capability": "control_video",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_controlnet_aux",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "identity",
+        "time_alignment": "per_source_frame",
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "diffusion",
+          "filename": "minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+          "directory": "diffusion_models"
+        },
+        {
+          "role": "text_encoder",
+          "filename": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+          "directory": "text_encoders"
+        },
+        {
+          "role": "vae",
+          "filename": "minimax_h3_video_vae_fp16.safetensors",
+          "directory": "vae"
+        },
+        {
+          "role": "audio_vae",
+          "filename": "minimax_h3_audio_vae_fp32.safetensors",
+          "directory": "vae"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "video/h3/pose-drive-pose",
+      "version": "0.1.0",
+      "title": "MiniMax H3 動作驅動（pose）",
+      "summary": "MiniMax H3 Ref2VA，靜幀加 pose 前處理後的動作片。graph 由 build_pose_drive_h3（video_config=None）產生。變數是 placeholder，seed 是 -1。status draft，平台未實測。",
+      "media": "video",
+      "capability": "control_video",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_controlnet_aux",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "identity",
+        "time_alignment": "per_source_frame",
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "diffusion",
+          "filename": "minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+          "directory": "diffusion_models"
+        },
+        {
+          "role": "text_encoder",
+          "filename": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+          "directory": "text_encoders"
+        },
+        {
+          "role": "vae",
+          "filename": "minimax_h3_video_vae_fp16.safetensors",
+          "directory": "vae"
+        },
+        {
+          "role": "audio_vae",
+          "filename": "minimax_h3_audio_vae_fp32.safetensors",
+          "directory": "vae"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "video/sam3/track-mask",
+      "version": "1.0.2",
+      "title": "SAM3 影片物件追蹤（第 0 幀手繪遮罩起手）",
+      "summary": "以第 0 幀遮罩指定一個物件，SAM3 追蹤整支影片，輸出逐幀灰階遮罩（白色＝選取）",
+      "media": "video",
+      "capability": "object_track",
+      "status": "technical_pass",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "technical_pass",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "selection",
+        "time_alignment": "per_source_frame",
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "sam3",
+          "filename": "sam3.1_multiplex_fp16.safetensors",
+          "directory": "checkpoints"
+        }
+      ],
+      "upstream_kind": "workflow_templates",
+      "upstream_name": "video_wan21_scail2_character_replacement"
+    },
+    {
+      "id": "video/sam3/track-text",
+      "version": "1.0.2",
+      "title": "SAM3 影片物件追蹤（英文文字起手）",
+      "summary": "以英文名詞指定物件，SAM3 追蹤整支影片，輸出逐幀灰階遮罩（白色＝選取）",
+      "media": "video",
+      "capability": "object_track",
+      "status": "technical_pass",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "technical_pass",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": "per_source_frame",
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "sam3",
+          "filename": "sam3.1_multiplex_fp16.safetensors",
+          "directory": "checkpoints"
+        }
+      ],
+      "upstream_kind": "workflow_templates",
+      "upstream_name": "video_wan21_scail2_character_replacement"
+    },
+    {
+      "id": "video/wan-animate/mix",
+      "version": "1.1.2",
+      "title": "Wan Animate Mix（單段 17／33 幀）",
+      "summary": "把參考角色置入來源影片（保留來源背景），以 SAM2 點位決定替換範圍",
+      "media": "video",
+      "capability": "wan_animate_mix",
+      "status": "technical_pass",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_controlnet_aux",
+          "source": "registry"
+        },
+        {
+          "id": "comfyui-kjnodes",
+          "source": "registry"
+        },
+        {
+          "id": "comfyui-segment-anything-2",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "technical_pass",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "identity",
+        "time_alignment": "source_from_frame_0",
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "diffusion",
+          "filename": "Wan2_2-Animate-14B_fp8_e4m3fn_scaled_KJ.safetensors",
+          "directory": "diffusion_models"
+        },
+        {
+          "role": "lora_distill",
+          "filename": "lightx2v_I2V_14B_480p_cfg_step_distill_rank64_bf16.safetensors",
+          "directory": "loras"
+        },
+        {
+          "role": "lora_relight",
+          "filename": "WanAnimate_relight_lora_fp16.safetensors",
+          "directory": "loras"
+        },
+        {
+          "role": "text_encoder",
+          "filename": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+          "directory": "text_encoders"
+        },
+        {
+          "role": "vae",
+          "filename": "wan_2.1_vae.safetensors",
+          "directory": "vae"
+        },
+        {
+          "role": "clip_vision",
+          "filename": "clip_vision_h.safetensors",
+          "directory": "clip_vision"
+        },
+        {
+          "role": "pose_bbox",
+          "filename": "yolox_l.onnx",
+          "directory": null
+        },
+        {
+          "role": "pose_estimator",
+          "filename": "dw-ll_ucoco_384.onnx",
+          "directory": null
+        },
+        {
+          "role": "sam2",
+          "filename": "sam2_hiera_base_plus.safetensors",
+          "directory": "sam2"
+        }
+      ],
+      "upstream_kind": "workflow_templates",
+      "upstream_name": "video_wan2_2_14B_animate"
+    },
+    {
+      "id": "video/wan-animate/mix-extend",
+      "version": "1.1.2",
+      "title": "Wan Animate Mix（兩段串接 61 幀）",
+      "summary": "把參考角色置入來源影片（保留來源背景），以 SAM2 點位決定替換範圍；兩段 33＋28＝61 幀",
+      "media": "video",
+      "capability": "wan_animate_mix",
+      "status": "technical_pass",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_controlnet_aux",
+          "source": "registry"
+        },
+        {
+          "id": "comfyui-kjnodes",
+          "source": "registry"
+        },
+        {
+          "id": "comfyui-segment-anything-2",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "technical_pass",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "identity",
+        "time_alignment": "source_from_frame_0",
+        "continuity": {
+          "segments": 2,
+          "overlap_frames": 5,
+          "seam_frames": [
+            32,
+            33
+          ],
+          "manual_check": "seam"
+        }
+      },
+      "models": [
+        {
+          "role": "diffusion",
+          "filename": "Wan2_2-Animate-14B_fp8_e4m3fn_scaled_KJ.safetensors",
+          "directory": "diffusion_models"
+        },
+        {
+          "role": "lora_distill",
+          "filename": "lightx2v_I2V_14B_480p_cfg_step_distill_rank64_bf16.safetensors",
+          "directory": "loras"
+        },
+        {
+          "role": "lora_relight",
+          "filename": "WanAnimate_relight_lora_fp16.safetensors",
+          "directory": "loras"
+        },
+        {
+          "role": "text_encoder",
+          "filename": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+          "directory": "text_encoders"
+        },
+        {
+          "role": "vae",
+          "filename": "wan_2.1_vae.safetensors",
+          "directory": "vae"
+        },
+        {
+          "role": "clip_vision",
+          "filename": "clip_vision_h.safetensors",
+          "directory": "clip_vision"
+        },
+        {
+          "role": "pose_bbox",
+          "filename": "yolox_l.onnx",
+          "directory": null
+        },
+        {
+          "role": "pose_estimator",
+          "filename": "dw-ll_ucoco_384.onnx",
+          "directory": null
+        },
+        {
+          "role": "sam2",
+          "filename": "sam2_hiera_base_plus.safetensors",
+          "directory": "sam2"
+        }
+      ],
+      "upstream_kind": "workflow_templates",
+      "upstream_name": "video_wan2_2_14B_animate"
+    },
+    {
+      "id": "video/wan-animate/move",
+      "version": "1.1.2",
+      "title": "Wan Animate Move（單段 17／33 幀）",
+      "summary": "參考角色跟著來源影片的動作動起來（背景由參考圖與 prompt 決定）",
+      "media": "video",
+      "capability": "wan_animate_move",
+      "status": "technical_pass",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_controlnet_aux",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "technical_pass",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "identity",
+        "time_alignment": "source_from_frame_0",
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "diffusion",
+          "filename": "Wan2_2-Animate-14B_fp8_e4m3fn_scaled_KJ.safetensors",
+          "directory": "diffusion_models"
+        },
+        {
+          "role": "lora_distill",
+          "filename": "lightx2v_I2V_14B_480p_cfg_step_distill_rank64_bf16.safetensors",
+          "directory": "loras"
+        },
+        {
+          "role": "text_encoder",
+          "filename": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+          "directory": "text_encoders"
+        },
+        {
+          "role": "vae",
+          "filename": "wan_2.1_vae.safetensors",
+          "directory": "vae"
+        },
+        {
+          "role": "clip_vision",
+          "filename": "clip_vision_h.safetensors",
+          "directory": "clip_vision"
+        },
+        {
+          "role": "pose_bbox",
+          "filename": "yolox_l.onnx",
+          "directory": null
+        },
+        {
+          "role": "pose_estimator",
+          "filename": "dw-ll_ucoco_384.onnx",
+          "directory": null
+        }
+      ],
+      "upstream_kind": "workflow_templates",
+      "upstream_name": "video_wan2_2_14B_animate"
+    },
+    {
+      "id": "video/wan-animate/move-extend",
+      "version": "1.1.2",
+      "title": "Wan Animate Move（兩段串接 61 幀）",
+      "summary": "參考角色跟著來源影片的動作動起來（背景由參考圖與 prompt 決定）；兩段 33＋28＝61 幀",
+      "media": "video",
+      "capability": "wan_animate_move",
+      "status": "technical_pass",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_controlnet_aux",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "technical_pass",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "identity",
+        "time_alignment": "source_from_frame_0",
+        "continuity": {
+          "segments": 2,
+          "overlap_frames": 5,
+          "seam_frames": [
+            32,
+            33
+          ],
+          "manual_check": "seam"
+        }
+      },
+      "models": [
+        {
+          "role": "diffusion",
+          "filename": "Wan2_2-Animate-14B_fp8_e4m3fn_scaled_KJ.safetensors",
+          "directory": "diffusion_models"
+        },
+        {
+          "role": "lora_distill",
+          "filename": "lightx2v_I2V_14B_480p_cfg_step_distill_rank64_bf16.safetensors",
+          "directory": "loras"
+        },
+        {
+          "role": "text_encoder",
+          "filename": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+          "directory": "text_encoders"
+        },
+        {
+          "role": "vae",
+          "filename": "wan_2.1_vae.safetensors",
+          "directory": "vae"
+        },
+        {
+          "role": "clip_vision",
+          "filename": "clip_vision_h.safetensors",
+          "directory": "clip_vision"
+        },
+        {
+          "role": "pose_bbox",
+          "filename": "yolox_l.onnx",
+          "directory": null
+        },
+        {
+          "role": "pose_estimator",
+          "filename": "dw-ll_ucoco_384.onnx",
+          "directory": null
+        }
+      ],
+      "upstream_kind": "workflow_templates",
+      "upstream_name": "video_wan2_2_14B_animate"
+    },
+    {
+      "id": "video/wan-animate/scail2",
+      "version": "1.0.2",
+      "title": "SCAIL-2 角色替換／動畫（單段 33 幀）",
+      "summary": "用參考圖驅動角色跟著來源影片動，或把來源影片裡的人換成參考角色；SAM3 依文字追蹤人物並以彩色遮罩綁定身份",
+      "media": "video",
+      "capability": "scail2",
+      "status": "technical_pass",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "technical_pass",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "identity",
+        "time_alignment": "source_from_frame_0",
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "diffusion",
+          "filename": "wan2.1_14B_SCAIL_2_fp8_scaled.safetensors",
+          "directory": "diffusion_models"
+        },
+        {
+          "role": "lora_dpo",
+          "filename": "wan2.1_SCAIL_2_DPO_lora_bf16.safetensors",
+          "directory": "loras"
+        },
+        {
+          "role": "lora_distill",
+          "filename": "lightx2v_I2V_14B_480p_cfg_step_distill_rank64_bf16.safetensors",
+          "directory": "loras"
+        },
+        {
+          "role": "text_encoder",
+          "filename": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+          "directory": "text_encoders"
+        },
+        {
+          "role": "vae",
+          "filename": "wan_2.1_vae.safetensors",
+          "directory": "vae"
+        },
+        {
+          "role": "clip_vision",
+          "filename": "clip_vision_h.safetensors",
+          "directory": "clip_vision"
+        },
+        {
+          "role": "sam3",
+          "filename": "sam3.1_multiplex_fp16.safetensors",
+          "directory": "checkpoints"
+        }
+      ],
+      "upstream_kind": "workflow_templates",
+      "upstream_name": "video_wan21_scail2_character_replacement"
+    },
+    {
+      "id": "video/wan-animate/scail2-extend",
+      "version": "1.0.2",
+      "title": "SCAIL-2 角色替換／動畫（兩段串接 61 幀）",
+      "summary": "用參考圖驅動角色跟著來源影片動，或把來源影片裡的人換成參考角色；SAM3 依文字追蹤人物並以彩色遮罩綁定身份",
+      "media": "video",
+      "capability": "scail2",
+      "status": "technical_pass",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "technical_pass",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "identity",
+        "time_alignment": "source_from_frame_0",
+        "continuity": {
+          "segments": 2,
+          "overlap_frames": 5,
+          "seam_frames": [
+            32,
+            33
+          ],
+          "manual_check": "seam"
+        }
+      },
+      "models": [
+        {
+          "role": "diffusion",
+          "filename": "wan2.1_14B_SCAIL_2_fp8_scaled.safetensors",
+          "directory": "diffusion_models"
+        },
+        {
+          "role": "lora_dpo",
+          "filename": "wan2.1_SCAIL_2_DPO_lora_bf16.safetensors",
+          "directory": "loras"
+        },
+        {
+          "role": "lora_distill",
+          "filename": "lightx2v_I2V_14B_480p_cfg_step_distill_rank64_bf16.safetensors",
+          "directory": "loras"
+        },
+        {
+          "role": "text_encoder",
+          "filename": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+          "directory": "text_encoders"
+        },
+        {
+          "role": "vae",
+          "filename": "wan_2.1_vae.safetensors",
+          "directory": "vae"
+        },
+        {
+          "role": "clip_vision",
+          "filename": "clip_vision_h.safetensors",
+          "directory": "clip_vision"
+        },
+        {
+          "role": "sam3",
+          "filename": "sam3.1_multiplex_fp16.safetensors",
+          "directory": "checkpoints"
+        }
+      ],
+      "upstream_kind": "workflow_templates",
+      "upstream_name": "video_wan21_scail2_character_replacement"
+    },
+    {
+      "id": "video/wan-vace/inpaint",
+      "version": "0.1.1",
+      "title": "Wan2.1 VACE 影片局部重繪（遮罩內重畫、貼回原片）",
+      "summary": "只重畫遮罩內（白色＝重畫），遮罩外貼回原片並逐 byte 檢查不變；和 generate.py video_inpaint 同一個 graph 與前後處理",
+      "media": "video",
+      "capability": "masked_edit",
+      "status": "technical_pass",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "technical_pass",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": "per_source_frame",
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "vace_unet",
+          "filename": "wan2.1_vace_1.3B_fp16.safetensors",
+          "directory": "diffusion_models"
+        },
+        {
+          "role": "text_encoder",
+          "filename": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+          "directory": "text_encoders"
+        },
+        {
+          "role": "vae",
+          "filename": "wan_2.1_vae.safetensors",
+          "directory": "vae"
+        }
+      ],
+      "upstream_kind": "workflow_templates",
+      "upstream_name": "video_wan_vace_inpainting"
+    },
+    {
+      "id": "video/wan/img2video",
+      "version": "0.1.0",
+      "title": "Wan 2.2 5B 圖生影片",
+      "summary": "Wan 2.2 5B 圖生影片，沒有尾幀。graph 由 build_img2video_wan（video_config=None）產生。變數是 placeholder，seed 是 -1。status draft，平台未實測。",
+      "media": "video",
+      "capability": "i2v",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "image",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": "source_from_frame_0",
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "diffusion",
+          "filename": "wan2.2_ti2v_5B_fp16.safetensors",
+          "directory": "diffusion_models"
+        },
+        {
+          "role": "text_encoder",
+          "filename": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+          "directory": "text_encoders"
+        },
+        {
+          "role": "vae",
+          "filename": "wan2.2_vae.safetensors",
+          "directory": "vae"
+        }
+      ],
+      "upstream_kind": "workflow_templates",
+      "upstream_name": "video_wan2_2_5B_ti2v"
+    },
+    {
+      "id": "video/wan/pose-drive-canny",
+      "version": "0.1.0",
+      "title": "Wan Fun Control 動作驅動（canny）",
+      "summary": "Wan Fun Control 5B，動作片前處理是 canny。graph 由 build_pose_drive_wan（video_config=None）產生。變數是 placeholder，seed 是 -1。status draft，平台未實測。",
+      "media": "video",
+      "capability": "control_video",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "identity",
+        "time_alignment": "per_source_frame",
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "diffusion",
+          "filename": "wan2.2_fun_control_5B_bf16.safetensors",
+          "directory": "diffusion_models"
+        },
+        {
+          "role": "text_encoder",
+          "filename": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+          "directory": "text_encoders"
+        },
+        {
+          "role": "vae",
+          "filename": "wan2.2_vae.safetensors",
+          "directory": "vae"
+        }
+      ],
+      "upstream_kind": "workflow_templates",
+      "upstream_name": "video_wan2_2_5B_fun_control"
+    },
+    {
+      "id": "video/wan/pose-drive-depth",
+      "version": "0.1.0",
+      "title": "Wan Fun Control 動作驅動（depth）",
+      "summary": "Wan Fun Control 5B，動作片前處理是 depth。graph 由 build_pose_drive_wan（video_config=None）產生。變數是 placeholder，seed 是 -1。status draft，平台未實測。",
+      "media": "video",
+      "capability": "control_video",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_controlnet_aux",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "identity",
+        "time_alignment": "per_source_frame",
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "diffusion",
+          "filename": "wan2.2_fun_control_5B_bf16.safetensors",
+          "directory": "diffusion_models"
+        },
+        {
+          "role": "text_encoder",
+          "filename": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+          "directory": "text_encoders"
+        },
+        {
+          "role": "vae",
+          "filename": "wan2.2_vae.safetensors",
+          "directory": "vae"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
+      "id": "video/wan/pose-drive-pose",
+      "version": "0.1.0",
+      "title": "Wan Fun Control 動作驅動（pose）",
+      "summary": "Wan Fun Control 5B，動作片前處理是 pose。graph 由 build_pose_drive_wan（video_config=None）產生。變數是 placeholder，seed 是 -1。status draft，平台未實測。",
+      "media": "video",
+      "capability": "control_video",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [
+        {
+          "id": "comfyui_controlnet_aux",
+          "source": "registry"
+        }
+      ],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "identity",
+        "time_alignment": "per_source_frame",
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "diffusion",
+          "filename": "wan2.2_fun_control_5B_bf16.safetensors",
+          "directory": "diffusion_models"
+        },
+        {
+          "role": "text_encoder",
+          "filename": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+          "directory": "text_encoders"
+        },
+        {
+          "role": "vae",
+          "filename": "wan2.2_vae.safetensors",
+          "directory": "vae"
+        }
+      ],
+      "upstream_kind": "none",
+      "upstream_name": null
+    }
+  ]
+}

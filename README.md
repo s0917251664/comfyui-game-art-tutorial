@@ -8,29 +8,29 @@
 
 1. **說明要做的事**：例如從文字做概念圖、修改一張既有圖片、製作同系列物件、做短動態特效，或處理本機圖片檔。
 2. **說明來源與保留項**：指出哪張是編修目標，其他圖各自提供角色、姿勢、材質、結構或背景資訊；列出本輪要改什麼、哪些細節要保留，以及如何判斷結果可用。
-3. **選執行路線**：初次使用或尚未選引擎時，先依[初始化技能](skills/game-art-initialize/SKILL.md)整理需求並盤點能力；不由舊預設推定安裝意圖。若明確選 ComfyUI，已配置專案的日常工作沿用該引擎，按 task 核對其能力 gate；若選平台原生圖片工具，只使用當下會話實際提供的功能與欄位，不需本機 GPU 或 ComfyUI 設定。兩者不能互相代替實測結果。
+3. **選執行路線**：初次使用或尚未選引擎時，先依[初始化技能](skills/game-art-brief/references/game-art-initialize/README.md)整理需求並盤點能力；不由舊預設推定安裝意圖。若明確選 ComfyUI，已配置專案的日常工作沿用該引擎，按 task 核對其能力 gate；若選平台原生圖片工具，只使用當下會話實際提供的功能與欄位，不需本機 GPU 或 ComfyUI 設定。兩者不能互相代替實測結果。
 4. **逐項檢查並選版本**：確認內容、格式和素材規格，再由美術決定接受、退回修改或停止。[技術檢查通過不等於美術接受](docs/knowledge/rules/candidate-review.md)。
 
 | 工作情境 | 共用方法 | 執行路線與界線 |
 |---|---|---|
-| 概念圖、道具、圖示、角色圖 | 釐清用途、主體、參考來源與交付條件 | 初次使用或尚未選引擎先走[初始化技能](skills/game-art-initialize/SKILL.md)；已選／已配置路線依其 gate 執行。平台圖片能力依當下工具 schema 確認，不需本機 GPU/config。 |
-| 編修既有圖片、多參考圖、指定局部或保留角色結構 | 標示每張參考圖職責，寫清修改與保留項及版本 | 先讀[共用工作流程](skills/game-art-workflow/SKILL.md)，再選 [ComfyUI 圖片技能](skills/comfyui-art-gen/SKILL.md)或[平台圖片技能](skills/platform-image-gen/SKILL.md)。工具不支援的輸入要列明，不能只靠提示文字假裝可控。 |
-| 物件系列、展示圖、檢視表或重複圖樣 | 先驗收單件，再依規則擴展系列；`scene`、`sheet`、`pattern` 是不同展示目的 | 製作方法見[共用 production reference](skills/game-art-workflow/references/production.md)；現有 `comfyui_design.py` 是依賴 ComfyUI Core 的固定合成 helper，不生成物件，輸出為不透明 RGB。 |
+| 概念圖、道具、圖示、角色圖 | 釐清用途、主體、參考來源與交付條件 | 初次使用或尚未選引擎先走[初始化技能](skills/game-art-brief/references/game-art-initialize/README.md)；已選／已配置路線依其 gate 執行。平台圖片能力依當下工具 schema 確認，不需本機 GPU/config。 |
+| 編修既有圖片、多參考圖、指定局部或保留角色結構 | 標示每張參考圖職責，寫清修改與保留項及版本 | 先讀[共用工作流程](skills/game-art-brief/references/game-art-workflow/README.md)，再選 [ComfyUI 圖片技能](skills/comfyui-run/references/comfyui-art-gen/README.md)或[平台圖片技能](skills/platform-image-gen/SKILL.md)。工具不支援的輸入要列明，不能只靠提示文字假裝可控。 |
+| 物件系列、展示圖、檢視表或重複圖樣 | 先驗收單件，再依規則擴展系列；`scene`、`sheet`、`pattern` 是不同展示目的 | 製作方法見[共用 production reference](skills/game-art-brief/references/game-art-workflow/references/production.md)；現有 `comfyui_design.py` 是本機 Pillow 合成 helper，不生成物件、不組 ComfyUI graph，輸出為不透明 RGB。 |
 | 本機 PNG 素材處理 | 對齊尺寸和遮罩契約，保留來源並人工檢查輸出 | `image_edit_tools.py` 的 `composite`、`recolor`、`compare`、`reference-board`、`asset-audit` 五個操作使用 Pillow／NumPy，不需 GPU、ComfyUI server 或 `local_config.json`；需要可執行 Python 並取得實際圖片檔。 |
-| 固定來源的有限參數比較 | 來源、prompt、seed 和參考固定，只比較事先列明的參數 | 由[ComfyUI sweep 技能](skills/comfyui-image-sweep/SKILL.md)處理；它呼叫既有 `image_edit_tools.py sweep`，需 ComfyUI task 與本機能力 gate，不是一般重試功能。 |
-| 靜態或短動態特效、角色動作集合 | 先定效果外觀、起訖／循環條件或角色母圖與代表動作，再逐支驗收 | 共用製作方法見 [production reference](skills/game-art-workflow/references/production.md)；ComfyUI 影片技能只使用已接入 task。平台影片生成目前未整合，圖片工具不能代替影片工具。影片驅動角色或影片角色替換可用[Wan Animate／SCAIL-2 技能](skills/comfyui-wan-animate/SKILL.md)，固定 template，以 `gameart.py run` 執行。 |
+| 固定來源的有限參數比較 | 來源、prompt、seed 和參考固定，只比較事先列明的參數 | 由[ComfyUI sweep 技能](skills/comfyui-run/references/comfyui-image-sweep/README.md)處理；它呼叫既有 `image_edit_tools.py sweep`，需 ComfyUI task 與本機能力 gate，不是一般重試功能。 |
+| 靜態或短動態特效、角色動作集合 | 先定效果外觀、起訖／循環條件或角色母圖與代表動作，再逐支驗收 | 共用製作方法見 [production reference](skills/game-art-brief/references/game-art-workflow/references/production.md)；ComfyUI 影片技能只使用已接入 task。平台影片生成目前未整合，圖片工具不能代替影片工具。影片驅動角色或影片角色替換可用[Wan Animate／SCAIL-2 技能](skills/comfyui-run/references/comfyui-wan-animate/README.md)，固定 template，以 `gameart.py run` 執行。 |
 
 平台原生圖片工具和外部付費 API／CLI 是不同路線。本專案尚未接入外部付費 API／CLI；不會因為有平台圖片工具，就假定可安裝客戶端、取得 API key 或呼叫付費服務。
 
 ## 新增技能導覽
 
-- [本專案初始化與路線選擇](skills/game-art-initialize/SKILL.md)：初次使用先整理需求與盤點能力；不預設安裝或啟動生成。
-- [遊戲美術共用工作流程](skills/game-art-workflow/SKILL.md)：共用需求、參考用途、修改／保留、分階段、版本和驗收規則，不執行生成。
-- [職責盤點](skills/game-art-workflow/references/responsibilities.md)：按需查看 ComfyUI task、本機工具、平台路線、影片處理的職責與依賴。
-- [製作方法](skills/game-art-workflow/references/production.md)：物件系列、靜態／短動態 VFX、角色動作編排的共用工作方法。
+- [本專案初始化與路線選擇](skills/game-art-brief/references/game-art-initialize/README.md)：初次使用先整理需求與盤點能力；不預設安裝或啟動生成。
+- [遊戲美術共用工作流程](skills/game-art-brief/references/game-art-workflow/README.md)：共用需求、參考用途、修改／保留、分階段、版本和驗收規則，不執行生成。
+- [職責盤點](skills/game-art-brief/references/game-art-workflow/references/responsibilities.md)：按需查看 ComfyUI task、本機工具、平台路線、影片處理的職責與依賴。
+- [製作方法](skills/game-art-brief/references/game-art-workflow/references/production.md)：物件系列、靜態／短動態 VFX、角色動作編排的共用工作方法。
 - [平台圖片生成](skills/platform-image-gen/SKILL.md)：本次會話原生圖片工具的獨立執行指引；按需檢查工具欄位，能力未知時交回 brief。
-- [ComfyUI 圖片 sweep](skills/comfyui-image-sweep/SKILL.md)：既有 task 的固定輸入有限比較，依 ComfyUI 能力 gate 執行。
-- [遊戲圖片編修 brief](skills/game-art-edit-brief/SKILL.md)：專案相容入口，保留 ComfyUI task 輸入映射；共用 brief 規則由共用工作流程維護。
+- [ComfyUI 圖片 sweep](skills/comfyui-run/references/comfyui-image-sweep/README.md)：既有 task 的固定輸入有限比較，依 ComfyUI 能力 gate 執行。
+- [遊戲圖片編修 brief](skills/game-art-brief/references/game-art-edit-brief/README.md)：專案相容入口，保留 ComfyUI task 輸入映射；共用 brief 規則由共用工作流程維護。
 
 ## 平台圖片工具的實測範圍
 
@@ -90,11 +90,11 @@ python -m pytest
 |---|---|
 | [`教學.md`](教學.md) | 完整建置紀錄、功能地圖、設備選型 |
 | [`AGENTS.md`](AGENTS.md) | agent 入口、原則與工具職責 |
-| [產圖技能](skills/comfyui-art-gen/SKILL.md) / [task 參數](docs/knowledge/art-parameters.md) | ComfyUI 圖片 task、輸入、能力 gate 與限制 |
-| [產影片技能](skills/comfyui-video-gen/SKILL.md) / [單角色動畫](skills/comfyui-character-animation-workflow/SKILL.md) | ComfyUI 影片 task、backend 與角色動作交付 |
+| [產圖技能](skills/comfyui-run/references/comfyui-art-gen/README.md) / [task 參數](docs/knowledge/art-parameters.md) | ComfyUI 圖片 task、輸入、能力 gate 與限制 |
+| [產影片技能](skills/comfyui-run/references/comfyui-video-gen/README.md) / [單角色動畫](skills/comfyui-run/references/comfyui-character-animation-workflow/README.md) | ComfyUI 影片 task、backend 與角色動作交付 |
 | [安裝流程](skills/comfyui-install/SKILL.md) / [模型清單](docs/knowledge/installation/models-and-sources.md) | 新機器環境與模型準備 |
 | [模型設定檔設計](docs/model-profiles-design.md) | SDXL／SD1.5 設定檔與平台驗證狀態 |
-| [本機圖片工具](skills/local-image-edit-tools/SKILL.md) / [物件組裝](skills/comfyui-object-design/SKILL.md) / [工具總表](docs/knowledge/TOOLS.md) | 本機像素操作、固定 Core 組裝與能力入口 |
+| [本機圖片工具](skills/local-media-tools/references/local-image-edit-tools/README.md) / [物件組裝](skills/comfyui-run/references/comfyui-object-design/README.md) / [工具總表](docs/knowledge/TOOLS.md) | 本機像素操作、Pillow 物件組裝與能力入口 |
 | [單一物件換色紀錄](docs/knowledge/art/single-object-color.md) | HSV 色相旋轉案例與限制 |
 | [已驗證版本](docs/tested-versions.md) | commit、套件版本、模型 SHA-256 與 smoke test 紀錄 |
 
@@ -102,7 +102,7 @@ python -m pytest
 
 | 要確認的事情 | 依據 |
 |---|---|
-| 共用需求及驗收方式 | `skills/game-art-workflow/` 與對應 executor 技能 |
+| 共用需求及驗收方式 | `skills/game-art-brief/references/game-art-workflow/` 與對應 executor 技能 |
 | CLI 真正接受的參數、輸出與錯誤處理 | `tools_src/` parser 與實作；reference 應與它一致 |
 | SDXL／SD1.5 模型、預設參數與平台驗證狀態 | `tools_src/comfyui_pipeline/profiles/*.json` |
 | 當前機器的路徑與已安裝能力 | 本機 config／capability 快照及執行時 preflight |

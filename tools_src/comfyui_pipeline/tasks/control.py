@@ -1,5 +1,5 @@
 """角色/姿勢控制圖片 task:character_action(角色參考 + 姿勢)、pose_only(只控姿勢)、style_lock(只鎖角色/風格)。"""
-from .. import image_runtime
+from .. import image_from_template, image_runtime
 from ..image_capabilities import validate_controlnet_union_capability
 from ..image_graphs import validate_unit_interval
 from ._common import validate_explore_args
@@ -82,34 +82,10 @@ def preflight(args, comfy_url, request_timeout):
 
 
 def build_graph(ctx, args, style_checkpoint, upload):
-    """組圖片 task 的 graph;``upload`` 回傳 ComfyUI 端檔名。"""
-    if args.task == "character_action":
-        char_fn = upload(args.character_ref)
-        pose_fn = upload(args.pose_ref)
-        prompt, out_id = image_runtime.build_character_action(ctx,
-            args.prompt, char_fn, pose_fn, args.negative,
-            width=args.width, height=args.height,
-            seed=args.seed, ip_weight=args.ip_weight, pose_strength=args.pose_strength,
-            batch_size=args.batch, control_type=args.control_type,
-            lora_name=args.lora, lora_strength=args.lora_strength, checkpoint=style_checkpoint,
-        )
-    elif args.task == "pose_only":
-        pose_fn = upload(args.pose_ref)
-        prompt, out_id = image_runtime.build_pose_only(ctx, args.prompt, pose_fn, args.negative,
-                                          width=args.width, height=args.height,
-                                          seed=args.seed, pose_strength=args.pose_strength,
-                                          batch_size=args.batch, control_type=args.control_type,
-                                          lora_name=args.lora, lora_strength=args.lora_strength,
-                                          checkpoint=style_checkpoint,
-                                          control_backend=args.control_backend)
-    elif args.task == "style_lock":
-        char_fn = upload(args.character_ref)
-        prompt, out_id = image_runtime.build_style_lock(ctx, args.prompt, char_fn, args.negative,
-                                           width=args.width, height=args.height,
-                                           seed=args.seed, ip_weight=args.ip_weight,
-                                           batch_size=args.batch,
-                                           lora_name=args.lora, lora_strength=args.lora_strength,
-                                           checkpoint=style_checkpoint)
-    else:
+    """組圖片 task 的 graph;``upload`` 回傳 ComfyUI 端檔名。
+
+    這三個 task 沒有 sd15 版，一律走 template。builder 留在 image_graphs，第 8.3 階段才刪。
+    """
+    if args.task not in TASKS:
         raise ValueError(f"不是這個模組的圖片 task: {args.task}")
-    return prompt, out_id
+    return image_from_template.graph_from_template(ctx, args, style_checkpoint, upload)

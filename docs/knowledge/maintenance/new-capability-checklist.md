@@ -35,7 +35,7 @@ last_updated: 2026-10-06
 
 ### C. 固定 graph template（`gameart.py run`）
 
-用於有穩定 workflow、但不需要新 Python wrapper、`generate.py` task 或 backend 的能力。固定 graph 一律做成 `templates/<id>/`（`graph.api.json`＋`template.json`＋`README.md`），由 `gameart.py run` 執行（[R2](../rules/fixed-graphs.md)）；不要在技能文件寫一套手動 HTTP 送出步驟。格式與修改規則見 [templates/README](../../../templates/README.md)。
+用於有穩定 workflow、但不需要新 Python wrapper、`generate.py` task 或 backend 的能力。固定 graph 一律做成 `templates/<id>/`（`graph.api.json`＋`template.json`＋`README.md`），由 `gameart.py run` 執行（[R2](../rules/fixed-graphs.md)）。新增時走 [擴充協議](extension-protocol.md)：使用者確認後，優先從官方範本或 core blueprint 派生，不要臨場組節點。不要在技能文件寫一套手動 HTTP 送出步驟。格式與修改規則見 [templates/README](../../../templates/README.md)。
 
 - [ ] 固定且版控 API-format graph JSON；`template.json` 記錄來源、版本／hash、slot（可替換欄位與規則）、option、模型 pin、平台狀態與 pre／post 檢查，其餘參數不允許變動。UI-format JSON 不能未轉換就當 API-format。
 - [ ] runner 的 preflight 要能擋下：以目前 server `GET /object_info` 核對所有 node classes、input schema、模型 selectors，並檢查模型檔大小（`--verify-hashes` 核對 sha256）。缺失即停止，不用同類名稱猜相容。
