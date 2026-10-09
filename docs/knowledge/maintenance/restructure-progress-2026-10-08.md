@@ -39,7 +39,9 @@ status: current
 
 **SD1.5 暫不做（使用者 2026-10-09 決定）：** `sd15_light` 只給可用記憶體低於 8 GB 的機器當備援，這台 RTX 4080 用不到，近期也沒有低階機器要跑。所以 4.3 的 SD1.5 template 不做、不下載 `dreamshaper_8.safetensors`；圖片 builder（`image_graphs.build_*`）保留，只當 SD1.5 沒有 template 時的退路。等真的有低記憶體的機器要跑時，再確認模型來源與授權、補 SD1.5 template，然後刪圖片 builder。這兩項不算第 3–8 階段未完成。
 
-還沒做的（都要使用者處理）：6.4 recipe 的人工確認點（遮罩預覽）、美術接受與驗證升格。
+**6.4 recipe 實機跑完（2026-10-09）：** 使用者在遮罩工具手繪第 0 幀（只塗槌子），`object-mark-inpaint` 用它跑 SAM3 追蹤 56 幀，停在確認點；使用者看過預覽後確認，`recipe resume --confirm` 跑完局部重繪。工作區 crop [138,206,666,766]、528×560、57 幀，`paste_back` 與 `qa_outside_mask_unchanged` 遮罩外變動都是 0（本機證據：`output/verify-20261009-6.4/recipe3/`）。第一次用 10-07 實驗留下的第 0 幀遮罩時，尾巴也被選到，改成使用者手繪後就沒有。recipe 狀態仍是 draft，轉正要另外經使用者同意；內容審查 pending。
+
+還沒做的（都要使用者處理）：美術接受與驗證升格；recipe 轉正。
 
 審查方式改了：使用者在 2026-10-08 要求不再用 grok 審核，改由實作的 agent 自己 review（範圍、正確性、測試、第 2 節規則），結果寫進 commit 或證據資料夾。
 
