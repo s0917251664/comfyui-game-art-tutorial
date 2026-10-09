@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": "image/layer-split",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "title": "遮罩拆層",
   "summary": "遮罩拆層。固定 API graph，runner 只填 slot。",
   "status": "draft",
@@ -27,7 +27,7 @@
     "evidence": [
       {
         "path": "tools_src/comfyui_pipeline/image_graphs.py",
-        "note": "graph 的 builder"
+        "note": "graph 原本的 Python builder（2026-10-09 已移除，templates/ 為唯一來源）"
       },
       {
         "path": "tests/fixtures/image_graphs_golden/sdxl.json",
@@ -75,11 +75,11 @@
         }
       ],
       "default": "layer_frame",
-      "help": "存檔前綴，預設沿用 builder。不用 output_prefix，避免被改成 gameart/..."
+      "help": "存檔前綴，預設是固定前綴。不用 output_prefix，避免被改成 gameart/..."
     }
   },
   "options": {},
-  "fixed_notes": "filename_prefix 維持 builder 的前綴，不用 output_prefix。filename_prefix 預設是 layer_frame。",
+  "fixed_notes": "filename_prefix 維持固定前綴，不用 output_prefix。filename_prefix 預設是 layer_frame。",
   "pre": [
     {
       "step": "upload",

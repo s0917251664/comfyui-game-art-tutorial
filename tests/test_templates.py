@@ -146,15 +146,14 @@ class LoadTemplatesTests(unittest.TestCase):
             for phrase in stale:
                 self.assertNotIn(phrase, text, f"{path}: {phrase}")
         for path in ("docs/knowledge/rules/fixed-graphs.md",
-                     "skills/comfyui-run/references/comfyui-wan-animate/README.md",
-                     "skills/comfyui-run/references/comfyui-wan-animate/references/comfyui-api.md",
-                     "skills/comfyui-run/references/comfyui-wan-animate/references/scail2.md",
-                     "skills/comfyui-run/references/comfyui-video-layers/references/sam3-track.md"):
+                     "skills/comfyui-run/SKILL.md",
+                     "docs/knowledge/video/wan-animate-choice.md",
+                     "docs/knowledge/video/sam3-tracking.md"):
             text = (ROOT / path).read_text(encoding="utf-8")
             self.assertIn("gameart.py run", text, path)
-        for path in ("skills/comfyui-run/references/comfyui-wan-animate/README.md",
-                     "skills/comfyui-run/references/comfyui-wan-animate/references/comfyui-api.md",
-                     "skills/comfyui-run/references/comfyui-video-layers/references/sam3-track.md"):
+        for path in ("skills/comfyui-run/SKILL.md",
+                     "docs/knowledge/video/wan-animate-choice.md",
+                     "docs/knowledge/video/sam3-tracking.md"):
             self.assertIn("--preflight", (ROOT / path).read_text(encoding="utf-8"), path)
 
     def test_schema_required_matches_loader(self):
@@ -414,10 +413,10 @@ class RealTemplateOfficialFieldsTests(unittest.TestCase):
     """8 份 template 的 3.2 欄位值(graph hash 不變由 LoadTemplatesTests 確認)。"""
 
     # PR 3.2 各升 patch；PR 7.3 evidence 路徑跟著技能搬家，再升一次 patch
-    EXPECTED_VERSION = {"video/sam3/track-mask": "1.0.2", "video/sam3/track-text": "1.0.2",
-                        "video/wan-animate/mix": "1.1.2", "video/wan-animate/mix-extend": "1.1.2",
-                        "video/wan-animate/move": "1.1.2", "video/wan-animate/move-extend": "1.1.2",
-                        "video/wan-animate/scail2": "1.0.2", "video/wan-animate/scail2-extend": "1.0.2"}
+    EXPECTED_VERSION = {"video/sam3/track-mask": "1.0.3", "video/sam3/track-text": "1.0.3",
+                        "video/wan-animate/mix": "1.1.3", "video/wan-animate/mix-extend": "1.1.3",
+                        "video/wan-animate/move": "1.1.3", "video/wan-animate/move-extend": "1.1.3",
+                        "video/wan-animate/scail2": "1.0.3", "video/wan-animate/scail2-extend": "1.0.3"}
     CUSTOM = {"mix": {"comfyui_controlnet_aux", "comfyui-kjnodes", "comfyui-segment-anything-2"},
               "move": {"comfyui_controlnet_aux"}}
 

@@ -5,7 +5,7 @@ status: active
 
 # 單角色遊戲動畫工作流程
 
-本頁維護單角色動作組的 ComfyUI task 映射、技術 gate、抽幀與本機交付；repo 入口技能為 `skills/comfyui-run/references/comfyui-character-animation-workflow/README.md`（由 [TOOLS.md](../TOOLS.md) 路由）。角色母圖、代表動作、逐支選版與內容驗收方法統一由[共用製作流程](../../../skills/game-art-brief/references/game-art-workflow/references/production.md#同一角色的動作集合)維護，不增加生成能力，也不把平台圖片工具當成影片工具。
+本頁維護單角色動作組的 ComfyUI task 映射、技術 gate、抽幀與本機交付；入口技能是 [comfyui-run](../../../skills/comfyui-run/SKILL.md)（由 [TOOLS.md](../TOOLS.md) 路由）。角色母圖、代表動作、逐支選版與內容驗收方法統一由[共用製作流程](../art/brief-and-acceptance.md)維護，不增加生成能力，也不把平台圖片工具當成影片工具。
 
 ## 決策前確認
 
@@ -24,7 +24,7 @@ status: active
 | Idle | 等待狀態 | 是 | 使用者指定 | 已驗收 Idle 圖 | `fx_loop`（H3，首＝尾＝Idle） | `h3` | MP4；需要時 PNG frames |
 | Attack／Win／Fail 等回到 Idle 的動作 | 依用途 | 否 | 使用者指定 | 已驗收 Idle 圖（首尾） | `transition --start <Idle> --end <Idle>` | `h3` | MP4；需要時 PNG frames |
 
-所有動作第一幀用已驗收 Idle 圖；哪些 task 會鎖首／尾幀、補邊與驗收量測依 [R3 Idle 錨定](../rules/idle-anchoring.md)。`img2video` 適用原構圖 idle/展示與只出不回的動作，`fx_loop` 用於明確需要無縫循環的元素，`character_video` 適用換場景/新表演且首幀可變，`pose_drive` 使用動作參考片，`camera_move` 主體不動只運鏡。不要為整組一致而把所有動作塞進同一 task。需要更貼近動作影片的表情與手勢、或把影片中人物換成角色時，可改走獨立的 [Wan Animate／SCAIL-2 技能](../../../skills/comfyui-run/references/comfyui-wan-animate/README.md)（固定 template，用 `gameart.py run` 執行，另有自己的 preflight，不在 video_capabilities.json）。
+所有動作第一幀用已驗收 Idle 圖；哪些 task 會鎖首／尾幀、補邊與驗收量測依 [R3 Idle 錨定](../rules/idle-anchoring.md)。`img2video` 適用原構圖 idle/展示與只出不回的動作，`fx_loop` 用於明確需要無縫循環的元素，`character_video` 適用換場景/新表演且首幀可變，`pose_drive` 使用動作參考片，`camera_move` 主體不動只運鏡。不要為整組一致而把所有動作塞進同一 task。需要更貼近動作影片的表情與手勢、或把影片中人物換成角色時，可改走獨立的 [Wan Animate／SCAIL-2 技能](../video/wan-animate-choice.md)（固定 template，用 `gameart.py run` 執行，另有自己的 preflight，不在 video_capabilities.json）。
 
 ## 製作與驗收
 
@@ -46,11 +46,7 @@ status: active
 
 支援 `--extract-frames` 的 task 可在生成時準備候選影格；`fx_loop` 預設抽幀。影格未隨 MP4 人工驗收之前，仍是候選，不作正式交付或合成來源。已接受 MP4 若尚未抽幀，從該 MP4 呼叫既有 `extract_video_frames(video_path, output_dir)`，不得為抽幀重生成。helper 會在 `<output_dir>/<stem>_frames/` 寫 staging，完整解碼且至少一幀才替換舊目錄；失敗保留舊影格。核對幀數與已驗收 sidecar 的實際 frame count。它不建新 CLI task、不重建 sidecar，也不接受 `--resume` / `--overwrite`。
 
-依 `local_config.json` 的 `python_exe`、`generate_script` 所在資料夾、已接受 MP4 與輸出根目錄執行：
-
-```text
-<python_exe> -c "import sys; from pathlib import Path; sys.path.insert(0, str(Path(sys.argv[1]))); from generate import extract_video_frames; extract_video_frames(sys.argv[2], sys.argv[3])" "<generate_script 資料夾>" "<accepted.mp4>" "<output_dir>"
-```
+沒有獨立的抽幀 CLI。需要時把一支小 `.py` 腳本寫在暫存目錄（不要用 `python -c`），用 `local_config.json` 的 `python_exe` 執行，從部署的 `tools/` 匯入 `comfyui_pipeline.video_media.extract_video_frames(video_path, output_dir)`，輸入已接受的 MP4 與輸出根目錄。
 
 依 shell 正確引用路徑；PowerShell 對帶引號的執行檔使用 `&`。抽幀或 `video_composite` 後，仍要再核對尺寸、FPS、影格數、音訊政策與畫面。綠幕合成是背景合成，不是透明序列；透明 PNG 序列、APNG、sprite sheet 用 `gameart.py vfx chroma-alpha`／`pack` 從已接受 MP4 產生。後製不能修復角色變形、重心錯誤或動作理解錯誤。
 

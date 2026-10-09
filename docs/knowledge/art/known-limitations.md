@@ -1,9 +1,10 @@
 # 已知限制
 
-`skills/comfyui-run/references/comfyui-art-gen/README.md` 指向這裡——如實告知使用者,不要假裝能做到。
+被問「能不能做到」或遇到看起來像已知限制的失敗時查這裡——如實告知使用者,不要假裝能做到。
 
-- 歷史上在既有安裝機器完成過實機端到端驗證的主產線是 SDXL；這不代表目前 clean clone／本次分支已完成版本 manifest 與 smoke test。Logo/中文字排版品質不會好。`sd15` 的基礎 graph 雖已具備程式路徑，但仍缺實機模型載入與輸出驗收，不能把離線測試當成已驗證品質
-- **SD1.5 只開放不依賴 SDXL add-on 的基礎路徑。** `concept`、`refine`、一般 `inpaint`、`upscale`，以及不帶 `--structure-ref`/`--appearance-ref` 的 `icon_asset` 可建立 SD1.5 graph；`character_action`、`style_lock`、`pose_only` 與其他使用 ControlNet/IPAdapter 的組合目前不支援。`generate.py` 會在上傳參考圖或排隊前 fail-fast（提早拒絕），不會再把 SDXL 模型硬送進 SD1.5 graph 等到 shape mismatch。若要開通這些 add-on，必須在 `tools_src/comfyui_pipeline/profiles/sd15_light.json` 補上 SD1.5 對應模型與 task、更新 capability gate 並做實機 smoke test
+- 實機驗證過的主線是 SDXL（Windows／CUDA）；Logo 與中文字排版品質不會好。其他平台的狀態以能力快照為準，離線測試不能當成已驗證品質。
+- `--lora` 與 `--style` 同時使用的效果沒有驗證過；LoRA 觸發詞單獨使用不穩定（訓練只練 U-Net），要搭配幾個特徵詞。
+
 - **`macos-mps`(Apple Silicon)上 `upscale` 輸出 2048×2048 會在最後一步失敗。** 2026-09-14 M3 Max 實測:取樣跑完 626 秒後,VAEDecode 報 `MPSGraph does not support tensor dims larger than INT_MAX`(SDXL VAE 的 attention 在 MPS 上撐不住這個尺寸)。送出前檢查攔不到,因為模型與 node 都齊全。在 Mac 上要放大時先告知使用者這個風險,不要直接排 2048 的 upscale;較小的 `--scale` 能不能過在 MPS 上也還沒實測,要試就明講是實驗,否則改在 Windows/CUDA 機器上做。修法(MPS 大圖改用 `VAEDecodeTiled`)尚未實作與驗證
 - 需要角色/姿勢一致性的 task,沒有對應參考圖就不要硬做,結果不會有一致性
 - `refine` 的顏色/材質改變幅度受 `--denoise` 影響很大,denoise 太低時強烈的顏色指令可能蓋不過原圖(這是參數特性,不是 bug,提醒使用者可以調高再試)
@@ -14,10 +15,7 @@
 - **`icon_asset` 的 `--structure-ref` 搭配「木質環狀外框」這種 prompt(`--style realistic`/Juggernaut XL)時,外框環容易在同一側斷裂成沒閉合的缺口,換 seed 重跑會在同個位置重複出現,不是隨機瑕疵。** 2026-08-26 實測(輪盤木框案例):兩次不同 seed 都在右側斷裂,推測是這個 checkpoint 對「木質環形物件」的訓練資料傾向畫成有開口的手鐲/掛環,不是密封的圓盤邊框。**不要靠換 seed 硬解**,改用 `inpaint` 只補斷裂的那段弧形區域(遮罩用 `ImageDraw.pieslice` 畫出涵蓋缺口角度範圍的環狀扇形,prompt 描述「跟周圍木紋一致、無縫接續」),比重新生成整張更省成本;`inpaint` 輸出不含 alpha 通道,補完後要用已知的圓形幾何自己重新產生透明背景(不能指望 `--remove-bg`,`inpaint` 沒有這個旗標)
 - **`icon_asset` 的 `--structure-ref` 能鎖住結構/顏色配置,但鎖不住精細裝飾細節(鑲花雕紋這類需要額外邊緣線條的裝飾)。** 2026-08-19 實測(轉盤放射狀等分圖示):denoise 從 0.55 調到 0.85,結構/顏色始終穩定,質感也持續提升(從平面到有光澤球面感),但雕花/雕紋這類細節不管怎麼調都沒有明顯出現——推測是 Canny ControlNet 鎖邊緣的同時也壓抑了「多畫額外線條」,是這個做法的結構性限制,不是 denoise 沒調好,不要跟使用者保證「結構鎖住又能有精細雕花」兩者都要,細節見 [structure-ref.md](structure-ref.md)
 - **SAM 2.1 可以自動提出候選遮罩，但不能保證完成語意正確的動畫拆件。** `sam_segment.py` 會產生多個無名稱候選；`layer_split` 本身仍只依賴 `--mask` 裁切，不會自行判斷候選代表哪個部位。尾巴、靴子、耳朵等獨立輪廓實測可用，眼睛、手指、交疊瀏海仍可能需要手動畫遮罩。見 [sam-segmentation.md](sam-segmentation.md)。
-- **`--style` 只在使用 `sdxl_standard` 設定檔時生效(原 `sdxl_high`/`sdxl`/`sdxl_light` tier),`sd15_light` 會在上傳前報錯拒絕執行。** 三個風格候選(Juggernaut XL/Illustrious XL/Pony Diffusion V6 XL)都是 SDXL 架構,跟 `sd15` 的 ControlNet/IPAdapter 對不上,不像預設 `CKPT` 那樣有 sd15 對應版本
 - **`--rating` 只在 `--style anime`/`illustration` 時有效,`--style realistic` 或沒給 `--style` 會直接報錯拒絕執行。** Juggernaut XL(`realistic`)跟預設底模沒有分級標籤訓練慣例,給了 `--rating` 也不會有任何效果,所以直接擋下來,不要讓它靜默沒作用
-- **`--style` + `--lora` 同時使用時,LoRA 觸發效果沒有實測驗證過會不會打折。** 這個專案訓練 LoRA 用的底模是裝機時鎖定的預設 checkpoint(見 `教學.md` 第 8 章),`--lora` 的權重是針對那顆底模的權重空間練的——換成 `--style` 指定的其他 SDXL 微調版後,LoRA 觸發詞/特徵還原效果可能跟著變化,如實告知使用者這個組合還沒驗證過,不要假設兩者疊加一定跟平常一樣穩
-- **`--lora` 的觸發詞可靠度取決於訓練方式,不要假設「打觸發詞就一定觸發」。** 這個專案的訓練流程用 SDXL 官方建議的 `--network_train_unet_only`(只練 U-Net),實測發現單獨丟觸發詞、不搭配任何特徵描述詞時,效果不穩定;請使用者生圖時觸發詞旁邊還是搭配幾個關鍵特徵詞一起下,不要只丟一個詞賭它記得(細節見 `教學.md` 第 8 章)
 - **`icon_asset` 的內容是文字/字母/數字時,純靠文字 prompt 幾乎不可能畫出正確筆畫,一定要搭配 `--structure-ref` 自己畫的字形範本圖鎖住結構**(見 [structure-ref.md](structure-ref.md))。2026-08-24 實測(撲克牌花色 A/K/Q/J/10):純文字 prompt 描述「letter A」,結果不是整張畫成抽象紋理蓋掉字母,就是字母形狀完全跑掉、底部還冒出亂碼假文字——這跟 Logo 文字排版是同一種先天弱項,差別只在於這裡連「單一字母的正確外形」都保不住
 - **裝飾字型(花體/書法體)當 `--structure-ref` 的字形範本骨架時,複雜字母(例如英文大寫 K、J)辨識度會大幅下降,一般人幾乎認不出原本的字母。** 實測 Vivaldi 花體:A/Q/10 還可以辨認,K 看起來像抽象迴圈、J 像問號尾巴——這是這類字體家族本身的設計傾向(裝飾性大於辨識性),不是範本畫錯或生成參數沒調好。**如果使用者要「有連筆流動感但要能辨識」,改用系統內建的圓潤手寫體(例如 Windows 的 `segoeprb.ttf` Segoe Print Bold)當範本骨架**,實測辨識度跟原本的大寫字母外形接近,同時保留連筆圓潤的動態感,是辨識度與風格化之間比較穩的折衷
 - **prompt 裡帶「circuit」「circuit lines」這類詞,搭配賽博龐克/科技風格描述時,容易讓 SDXL/Illustrious 把整張圖畫成滿版電路板紋理,蓋掉原本要畫的主體(字母、動物、角色都會中招)。** 改用「armor plating」「wire tufts」「mechanical parts」這類描述機械細節的詞彙,同樣能傳達科技感,但不會觸發滿版紋理的失控結果

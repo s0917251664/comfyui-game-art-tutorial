@@ -1,4 +1,4 @@
-"""face_swap.py／video_layers.py 不載入 image_graphs,所以缺 device_config.json 時不印誤導的提醒(PR 3.1)。
+"""video_layers.py 不載入 image_graphs,所以缺 device_config.json 時不印誤導的提醒(PR 3.1)。
 
 圖片 task 在真的缺快照時仍要提醒:image_graphs 本身的行為不變。
 每個案例都在全新的 Python process 執行,並把 GAMEART_SNAPSHOT_DIR 指到空資料夾,模擬沒有快照的機器。
@@ -14,7 +14,7 @@ import unittest
 
 TOOLS_SRC = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tools_src")
 WARNING = re.compile(r"找不到.*device_config")
-TOOLS = ("face_swap", "video_layers")
+TOOLS = ("video_layers",)
 
 
 class DeviceConfigWarningTests(unittest.TestCase):
@@ -49,8 +49,7 @@ class DeviceConfigWarningTests(unittest.TestCase):
         config = os.path.join(self.root, "config.json")
         with open(config, "w", encoding="utf-8") as f:
             json.dump({"comfyui_path": self.root, "comfyui_url": "https://example.com"}, f)
-        calls = {"face_swap": f"face_swap.preflight({config!r})",
-                 "video_layers": f"video_layers.preflight({config!r}, 'compose')"}
+        calls = {"video_layers": f"video_layers.preflight({config!r}, 'compose')"}
         for tool in TOOLS:
             with self.subTest(tool=tool):
                 result = self.run_code(f"""

@@ -18,7 +18,7 @@
 - 每個 slot／option／model 指到的節點與 input 都必須存在；graph 裡每個 `__XXX__` 占位與每個 `seed`／`noise_seed = -1` 都要有 slot 認領；兩個 slot 不能寫同一個目標（`default_from` 例外）。
 - patch 後的 graph 和原 graph 只能在「slot 目標＋已啟用 option 的目標」不同，不能新增或刪除節點，也不能改 class_type。
 - 任何 model 沒有 sha256 pin 時，template 狀態不能是 `technical_pass`。Wan Animate、SAM3 與 `video/wan-vace/inpaint` 的模型都已 pin，狀態都是 `technical_pass`。VACE 的 macos-mps 仍是 `untested`。
-- 對齊官方範本的欄位（PR 3.2，見 [ADR 2026-10-08](../docs/knowledge/decisions/2026-10-08-official-comfy-tooling.md)）：
+- 對齊官方範本的欄位（見 [ADR 2026-10-08](../docs/knowledge/decisions/2026-10-08-official-comfy-tooling.md)）：
   - `min_comfyui_version`（對應 `minComfyUIVersion`）：目前寫實測通過的版本 0.34.0。要放寬，必須先在較舊的版本實測。
   - `requires_custom_nodes`（對應 `requiresCustomNodes`）：`[{id, source}]`，列出 graph 用到的非 core 節點所屬套件。`source` 是 `registry`（id 用 Comfy registry id，也就是套件 `pyproject.toml` 的 `project.name`）或 `repo`（這個 repo 自己的 custom node）。只用 core 節點時寫 `[]`。
   - `models[].directory`（對應官方的 `directory`）：`path` 在 `models/` 底下時，必須剛好是 `models/<directory>/<filename>`；不在 `models/` 底下（例如 DWPose 放在 custom node 自己的 `ckpts/`）時寫 `null`。
@@ -37,18 +37,18 @@ python tools_src/gameart.py run video/sam3/track-mask --set source_video=clip.mp
 
 `--dry-run` 輸出要送出的 graph（上傳欄位顯示為 `<upload:slot>`），不連線、不上傳、不 queue。
 
-`--preflight`（PR 2.2）只讀，不上傳、不 queue，結束碼 0＝通過、1＝擋下、2＝參數或設定錯誤：
+`--preflight`只讀，不上傳、不 queue，結束碼 0＝通過、1＝擋下、2＝參數或設定錯誤：
 
 - 設定：`--config` 相對路徑以 repo 根目錄解析，從 repo 執行時預設用 `<repo>/local_config.json`；URL 優先順序是 `--comfy-url` > `COMFY_URL`/`COMFYUI_URL` > 設定檔。
 - 平台（D6）：讀 `<comfyui_path>/tools/device_config.json` 的 `platform_key`（或 `--platform-key`；和快照不同時會提醒，preflight.json／run.result.json 兩個值都記錄）。template 對這個平台不是 `technical_pass`（含沒列出的平台）就擋下，加 `--allow-unverified-platform` 才放行；`unsupported` 一律擋下。
 - graph 寫死 `device: "cuda"` 的節點（Mix 的 node 108）在非 CUDA 平台擋下，`--allow-unverified-platform` 時降為警告；graph 不改。
 - ComfyUI `/object_info` 要有 graph 用到的每個 node class，模型 input 的選項清單要有 template 寫的檔名。
-- ComfyUI 版本（PR 3.2）：讀 `/system_stats` 的 `system.comfyui_version`，比 template 的 `min_comfyui_version` 低就擋下；讀不到或認不出版本時只提醒，不擋。
+- ComfyUI 版本：讀 `/system_stats` 的 `system.comfyui_version`，比 template 的 `min_comfyui_version` 低就擋下；讀不到或認不出版本時只提醒，不擋。
 - 模型檔 `<comfyui_path>/<path>` 存在且大小相符（D5，摘要分開列「存在」與「大小相符」）；`--verify-hashes` 才完整算 sha256，快取在 `<output-dir>/../.hash-cache.json`（沒給 `--output-dir` 時是 `<repo>/output/runs/.hash-cache.json`）。`auto_download: true` 的模型（SAM2 下載器、DWPose 的兩個 onnx）缺檔時節點會自己下載，runner 不允許，所以缺檔一定擋下。
 - slot 沒給齊時只檢查環境；給齊時另外寫出 `workflow_api.dryrun.json`。`--output-dir` 會寫 `preflight.json`。
 - 已知限制：不讀 ComfyUI 的 `extra_model_paths.yaml`，模型檔只在 `<comfyui_path>/<path>` 找。模型放在其他資料夾時 preflight 會回報找不到（`/object_info` 的選項檢查仍然有效）。
 
-不加 `--dry-run`／`--preflight` 就是實際執行（PR 2.3），結束碼 0＝完成且技術檢查通過、1＝preflight 擋下或執行失敗、2＝參數或設定錯誤：
+不加 `--dry-run`／`--preflight` 就是實際執行，結束碼 0＝完成且技術檢查通過、1＝preflight 擋下或執行失敗、2＝參數或設定錯誤：
 
 1. 先跑同樣的 preflight，擋下就停（不上傳）。
 2. pre 步驟讀本機輸入（影片用 PyAV、圖片用 Pillow，所以要用 ComfyUI 的 Python，也就是 `local_config.json` 的 `python_exe`）：FPS、CFR、幀數範圍、遮罩尺寸與是否全黑。
@@ -60,7 +60,7 @@ python tools_src/gameart.py run video/sam3/track-mask --set source_video=clip.mp
 
 `run.result.json` 的 kind 是 `template_run_result`：記錄 template 版本與 hash、prompt_id、client_id、run_id、seed、送出 graph 的 sha256、模型、slot 值、輸入檔與上傳位置、輸出檔 sha256 與量測值、平台、ComfyUI 版本、時間（`timing.execution_seconds` 是 ComfyUI history 記錄的執行時間）、每一項檢查結果。影片的 `fps` 是數字（整數幀率記成 `16`，非整數記成小數），分數形式另外記在 `fps_rational`（例如 `"16/1"`、`"30000/1001"`）。任何一步失敗都會寫 `status: failed` 和 `failure`（步驟、prompt_id、錯誤），已下載的檔案保留。技術檢查通過不等於美術接受：`content_review` 一律是 `pending`，接受與否由使用者決定後用 `gameart.py review list|accept|reject` 記錄（failed 的結果不能 accept）。延伸段 template 會提醒「延伸段接縫（第 32/33 幀前後）需要人工檢查」，也寫進 manifest 的 warnings。
 
-### 本機輸入、pre 產生的上傳檔與 VACE 步驟（PR 3.3）
+### 本機輸入、pre 產生的上傳檔與 VACE 步驟
 
 有些 graph 需要先在本機處理輸入，再把處理結果上傳（例如 VACE 局部重繪要先裁工作區、編成無損片段）。`template.json` 用下面的寫法宣告，runner 依序執行，graph 仍然只在宣告的 slot 目標上改值：
 
@@ -79,11 +79,11 @@ VACE 的三個步驟（實作在 `tools_src/comfyui_pipeline/runner/vace_media.p
 
 清單外的步驟一律拒絕；`paste_back` 需要 pre 有 `vace_work_area`，`qa_outside_mask_unchanged` 需要排在 `paste_back` 之後。
 
-### 抽尾幀、運鏡終點靜幀與模型 platforms（第 6.2 階段）
+### 抽尾幀、運鏡終點靜幀與模型 platforms
 
 `extract_last_frame`（pre）從 `{video}` 抽出最後一幀 PNG，寫進 generated image slot，之後照一般 `upload` 上傳。實作是 `video_media.extract_last_frame`。
 
-`camera_end_still`（pre）呼叫 `video_graphs.build_camera_end_still`。orbit 沒有終點靜幀，步驟失敗且不產生檔案。參數只接受字面值或 `{slot}` 引用，不能放任意程式。
+`camera_end_still`（pre）產生運鏡終點靜幀。orbit 沒有終點靜幀，步驟失敗且不產生檔案。參數只接受字面值或 `{slot}` 引用，不能放任意程式。
 
 這兩個步驟沒有接上 `templates/video/wan/**` 與 `templates/video/h3/**` 的 `pre`：同一份 graph 也要能吃使用者自己的圖（例如 transition 的尾幀），`generated` 會擋住使用者上傳。`tasks/video.py` 用 runner 填 template、不跑這段 pre 上傳：Wan 的 img2video／fx_loop／transition／clip_extend／camera_move 是 `video/wan/img2video`；H3 沒有尾幀是 `video/h3/img2video`，有尾幀是 `video/h3/img2video-last`；pose_drive 是 `video/{backend}/pose-drive-{canny|pose|depth}`；character_video 是 `video/h3/character-video-{張數}`。
 
@@ -97,11 +97,11 @@ runner 不會刪除上傳的檔案：每次執行的輸入留在 `<comfyui_path>
 2. 只刪那個 run 的子資料夾，例如 PowerShell：`Remove-Item -LiteralPath "<comfyui_path>\input\<run_id>" -Recurse`；macOS：`rm -r "<comfyui_path>/input/<run_id>"`。不要清空整個 `input/`，裡面可能有其他工作的檔案。
 3. 刪掉之後就不能用同一份 `workflow_api.json` 在 ComfyUI 重跑；要重跑請重新 `gameart.py run`。repo 裡的 run 資料夾（輸出與 manifest）不受影響。
 
-`--set NAME=@檔案` 從 UTF-8 檔讀值（可帶 BOM，結尾換行會去掉）；`--values FILE.json` 一次給多個值；dry-run 的 `--output-dir` 寫出 `workflow_api.dryrun.json` 與 `dryrun.json`。`run` 只能從 repo 執行。PR 8.4 起 `deploy` 會把 `image/`、`video/` 底下的 `template.json` 與 `graph.api.json` 複製到 `<ComfyUI>/tools/templates/`（位元組不變），給部署端的 `generate.py` 圖片／影片 task 填 graph；部署副本不檢查 `provenance.evidence`（沒有 `docs/`）。
+`--set NAME=@檔案` 從 UTF-8 檔讀值（可帶 BOM，結尾換行會去掉）；`--values FILE.json` 一次給多個值；dry-run 的 `--output-dir` 寫出 `workflow_api.dryrun.json` 與 `dryrun.json`。`run` 只能從 repo 執行。`deploy` 會把 `image/`、`video/` 底下的 `template.json` 與 `graph.api.json` 複製到 `<ComfyUI>/tools/templates/`（位元組不變），給部署端的 `generate.py` 圖片／影片 task 填 graph；部署副本不檢查 `provenance.evidence`（沒有 `docs/`）。
 
 ## 修改
 
-改 graph 或 template.json 都要升版本（graph 改動升 major），更新兩個 sha256，並重跑 `python tests/golden_template_graphs.py --write` 後檢查 golden diff。`template.json` 是這些 graph 唯一的權威來源；舊的 `skills/comfyui-wan-animate/assets/template-manifest.json` 已在 PR 2.4 刪除（見[轉址檔索引](../docs/knowledge/archive/redirect-stubs.md)）。
+改 graph 或 template.json 都要升版本（graph 改動升 major），更新兩個 sha256，並重跑 `python tests/golden_template_graphs.py --write` 後檢查 golden diff。`template.json` 是這些 graph 唯一的權威來源。
 
 ## recipe：多步驟流程
 

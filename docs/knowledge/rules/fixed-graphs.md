@@ -20,4 +20,4 @@ status: current
 
 ## 適用範圍
 
-所有 ComfyUI 路線（圖片、影片、Wan Animate／SCAIL-2、SAM3 追蹤、換臉、Video Layers）。平台原生圖片工具與本機像素工具不組 ComfyUI graph，不受第 1、2 點限制，但同樣適用第 3 點。
+所有 ComfyUI 路線（圖片、影片、Wan Animate／SCAIL-2、SAM3 追蹤、Video Layers）。平台原生圖片工具與本機像素工具不組 ComfyUI graph，不受第 1、2 點限制，但同樣適用第 3 點。

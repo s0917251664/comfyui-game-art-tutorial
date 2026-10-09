@@ -6,7 +6,7 @@ last_updated: 2026-10-07
 
 # 特效去背、物件標記局部重繪與 Idle 首尾量測
 
-這頁是 `vfx_alpha_tools.py`（`gameart.py vfx`）與 `generate.py video_inpaint` 的操作契約和證據入口。研究過程與完整數據見 [`experiences/2026-10-07-vfx-research/`](../experiences/2026-10-07-vfx-research/design.md)。所有輸出都是 candidate（[R1](../rules/candidate-review.md)）。
+這頁是 `vfx_alpha_tools.py`（`gameart.py vfx`）與 `generate.py video_inpaint` 的操作契約和證據入口。研究過程與完整數據見 [`experiences/2026-10-07-vfx-research/`](../archive/experiments/2026-10-07-vfx-research/design.md)。所有輸出都是 candidate（[R1](../rules/candidate-review.md)）。
 
 ## 1. 特效去背輸出
 
@@ -24,7 +24,7 @@ last_updated: 2026-10-07
 
 ### 2.1 指定物件並追蹤整支影片
 
-**預設：SAM3 固定 template（`gameart.py run`）**，詳見 [sam3-track reference](../../../skills/comfyui-run/references/comfyui-video-layers/references/sam3-track.md)。
+**預設：SAM3 固定 template（`gameart.py run`）**，詳見 [sam3-track reference](sam3-tracking.md)。
 
 ```text
 gameart.py vfx keyframes --video <src.mp4> --frames 0 --output-dir <dir>/keyframes      # 抽第 0 幀
@@ -67,13 +67,13 @@ gameart.py vfx unpack-masks --segment-dir <dir>/segment --video <src.mp4> --outp
 - 輸入：來源片必須是 24 FPS、5–81 幀；遮罩是白色＝重畫的 L PNG（幀數和尺寸要和來源一致），或 video_layers 的 `layers.zip`。圖片 inpaint 的 alpha 遮罩方向相反，會被拒絕。
 - 模式：`keep` 會保留遮罩內的原內容當引導，適合改光效、材質或顏色，造型比較保得住；`replace` 會清空遮罩內再重畫（官方模板做法），適合換成新物件，每個 seed 的設計都不同。
 - 處理流程：遮罩先擴張 `--grow`，依遮罩自動算工作區（再加 `--pad`，對齊 16），超過 832×480 像素時縮小處理；控制片段和遮罩編成無損 FFV1 mkv 上傳。送出的 graph 由 runner 填固定 template `video/wan-vace/inpaint`（和 `gameart.py run` 同一份）。取樣參數照官方模板 `video_wan_vace_inpainting.json` 的非 turbo 分支（shift 5、20 步、cfg 6、uni_pc/simple）。模型檔名用 template 的 pin，不跟 `video_capabilities.json` 的檔名走。
-- 輸出（PR 8.3b 起整個由 template runner 執行，和 `gameart.py run video/wan-vace/inpaint` 相同）：在 `<output-dir>/<name>_run/`
+- 輸出（整個由 template runner 執行，和 `gameart.py run video/wan-vace/inpaint` 相同）：在 `<output-dir>/<name>_run/`
   - `run.result.json`：runner 的技術紀錄（kind `template_run_result`），含每個檢查步驟的結果。
   - `outputs/raw/*.mp4`：工作區原始結果，`fps`／`frames`（4k+1）／尺寸／無音軌都會檢查。
   - `composited/`：
     - `frames/*.png`：貼回後的無損主檔，遮罩（擴張＋羽化範圍）外逐 byte 等於來源解碼結果，貼回時檢查一次，`qa_outside_mask_unchanged` 再重讀 PNG 檢查一次。
     - `composited.mp4`：H.264 重新編碼，不是無損。
-    - `result.json`：和 PR 8.3b 之前相同的欄位（工作區、處理尺寸、模式、seed、遮罩外變動數），另加 `template_run_result` 指回 `run.result.json`。
+    - `result.json`：和舊版相同的欄位（工作區、處理尺寸、模式、seed、遮罩外變動數），另加 `template_run_result` 指回 `run.result.json`。
   - 不再寫影片 sidecar，`--resume` 不支援。音軌會丟掉。
 - 實測（RTX 4080，Skye 召槌 FINAL 1024²×56 幀）：
   - 研究跑了 6 組（2 模式 × 3 seed），每組約 88 秒；遮罩外貼回前的差異約 4.4（Fun Control 整片重畫是 63.8），貼回後是 0；遮罩內相鄰幀差和原片相近。
@@ -149,4 +149,4 @@ gameart.py vfx unpack-masks --segment-dir <dir>/segment --video <src.mp4> --outp
 | SAM3 用第 0 幀手繪遮罩（`SAM3_VideoTrack.initial_mask`，不給文字） | 塗多少就追多少，從頭到尾不會自己修正；使用者實際手繪的遮罩只追到槌頭和槌柄，握把、手、尾巴都沒被選進去，7.4 秒 |
 | SAM3 用隨手框的方塊當第 0 幀遮罩 | 前段把背景和整個角色都選進去，不可用 |
 
-SAM3 追蹤已做成固定 template（`templates/video/sam3/track-{mask,text}/`，2026-10-07 前放在 `skills/comfyui-video-layers/assets/`），以 `gameart.py run` 執行。2026-10-07 runner 出現前的直接 HTTP smoke：遮罩版 56 幀，和實驗遮罩平均 IoU 0.998；文字版 `mallet` 56 幀，IoU 1.0（`output/experiments/vfx-sam3-graph-smoke-20261007/smoke.json`）。研究用腳本放在 [`experiences/2026-10-07-vfx-research/scripts/`](../experiences/2026-10-07-vfx-research/scripts/README.md)，不是產線入口。2026-10-08 Windows 以 runner 跑 track-mask（同一支 56 幀）：GPU 7.896 秒、56 張 1024² 遮罩，技術檢查通過。
+SAM3 追蹤已做成固定 template（`templates/video/sam3/track-{mask,text}/`，2026-10-07 前放在 `skills/comfyui-video-layers/assets/`），以 `gameart.py run` 執行。2026-10-07 runner 出現前的直接 HTTP smoke：遮罩版 56 幀，和實驗遮罩平均 IoU 0.998；文字版 `mallet` 56 幀，IoU 1.0（`output/experiments/vfx-sam3-graph-smoke-20261007/smoke.json`）。研究用腳本放在 [`experiences/2026-10-07-vfx-research/scripts/`](../archive/experiments/2026-10-07-vfx-research/scripts/README.md)，不是產線入口。2026-10-08 Windows 以 runner 跑 track-mask（同一支 56 幀）：GPU 7.896 秒、56 張 1024² 遮罩，技術檢查通過。

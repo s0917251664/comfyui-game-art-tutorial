@@ -131,12 +131,5 @@
         "upstream_prefix_exact": true
       }
     ]
-  },
-  "project_knowledge_skill": {
-    "name": "project-knowledge",
-    "source_type": "project-authored",
-    "description": "Standard Markdown guidance, repository scoped; no dedicated CLI or vault runtime.",
-    "project_skill_sha256": "067fd2d7be1aeda45b578f8cc110ac3a77287c53c8d31b045dea542b25c8a8c0",
-    "project_binding_sha256": "822d2779163b838e585c9ef4e388ceb7d21599ba2234cb42d0a39c0f758b82f9"
   }
 }

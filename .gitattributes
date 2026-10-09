@@ -5,7 +5,6 @@
 # 15 個改編技能與 project-knowledge 的 hash 記在 third_party/claude-obsidian-source.json。
 third_party/claude-obsidian/** -text
 third_party/claude-obsidian-skills/** -text
-skills/game-art-brief/references/project-knowledge/** -text
 
 # 固定 ComfyUI API graph（D1）：每份 template.json 記錄 graph.api.json 的位元組 sha256 與 canonical sha256。
 templates/** -text

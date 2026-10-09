@@ -1,12 +1,10 @@
-"""圖片 task 送出的 graph 與 builder 逐欄相同。
+"""圖片 task 的 template 轉接測試。
 
-第 5.1：concept、icon_asset、refine、character_action、pose_only、style_lock。
-第 5.2：inpaint、guided_inpaint、upscale、layer_split、flux2_concept、flux2_edit。
-sampler／scheduler 烤在 template 裡，目前設定檔是 euler／normal。
-checkpoint、尺寸、seed、steps、cfg、filename_prefix 都是 slot（沒有該軸的 task 除外）。
-這些案例在 patch 之後不需要再改任何欄位才對得上 builder 與 golden。
-sd15 的 template 目錄不存在時，concept／icon_asset／refine／inpaint／
-guided_inpaint／upscale 仍走 builder。SDXL、layer_split、FLUX.2 找不到就停止。
+第 5.1 階段：concept、icon_asset、refine、character_action、pose_only、style_lock。
+第 5.2 階段：inpaint、guided_inpaint、upscale、layer_split、flux2_concept、flux2_edit。
+送出的 graph 與 tests/fixtures/image_graphs_golden/ 凍結的 graph（舊 Python builder 的最後輸出）逐欄相同;
+builder 已移除，fixture 不再重新產生。沒有凍結案例的組合只檢查結構（去背輸出、前綴、manifest）。
+templates/ 是唯一來源:找不到 template 就停止，不退回其他路徑。
 """
 import os
 import sys
@@ -18,7 +16,7 @@ from unittest import mock
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import golden_image_graphs as image_golden  # noqa: E402
 
-from comfyui_pipeline import image_from_template, image_graphs, image_results, image_runtime, tasks  # noqa: E402
+from comfyui_pipeline import image_from_template, image_graphs, image_results, tasks  # noqa: E402
 from comfyui_pipeline.context import RunContext  # noqa: E402
 from comfyui_pipeline.tasks import control, flux2, image_basic, inpaint, layer, upscale  # noqa: E402
 
@@ -123,81 +121,10 @@ def _flux_edit(**kwargs):
     return _ns(**values)
 
 
-def _builder(ig, args, style_checkpoint):
-    """舊路徑：image_graphs builder。icon 與 --remove-bg 再接一次去背，跟 CLI 送出的相同。"""
-    task = args.task
-    if task == "concept":
-        graph, image_node = ig.build_concept(
-            args.prompt, args.negative, args.width, args.height, args.seed,
-            batch_size=args.batch, lora_name=args.lora, lora_strength=args.lora_strength,
-            checkpoint=style_checkpoint)
-    elif task == "icon_asset":
-        graph, image_node = ig.build_icon_asset(
-            args.prompt, args.negative, args.width, args.height, args.seed,
-            batch_size=args.batch, lora_name=args.lora, lora_strength=args.lora_strength,
-            structure_ref_filename=args.structure_ref, checkpoint=style_checkpoint,
-            appearance_ref_filename=args.appearance_ref, appearance_weight=args.appearance_weight)
-    elif task == "refine":
-        graph, image_node = ig.build_refine(
-            args.prompt, args.image, args.negative, denoise=args.denoise,
-            seed=args.seed, checkpoint=style_checkpoint)
-    elif task == "character_action":
-        graph, image_node = ig.build_character_action(
-            args.prompt, args.character_ref, args.pose_ref, args.negative,
-            args.width, args.height, args.seed, ip_weight=args.ip_weight,
-            pose_strength=args.pose_strength, batch_size=args.batch, control_type=args.control_type,
-            lora_name=args.lora, lora_strength=args.lora_strength, checkpoint=style_checkpoint)
-    elif task == "pose_only":
-        graph, image_node = ig.build_pose_only(
-            args.prompt, args.pose_ref, args.negative, args.width, args.height, args.seed,
-            pose_strength=args.pose_strength, batch_size=args.batch, control_type=args.control_type,
-            lora_name=args.lora, lora_strength=args.lora_strength, checkpoint=style_checkpoint,
-            control_backend=args.control_backend)
-    elif task == "style_lock":
-        graph, image_node = ig.build_style_lock(
-            args.prompt, args.character_ref, args.negative, args.width, args.height, args.seed,
-            ip_weight=args.ip_weight, batch_size=args.batch, lora_name=args.lora,
-            lora_strength=args.lora_strength, checkpoint=style_checkpoint)
-    elif task == "inpaint":
-        graph, image_node = ig.build_inpaint(
-            args.prompt, args.image, args.mask, args.negative, denoise=args.denoise,
-            seed=args.seed, checkpoint=style_checkpoint)
-    elif task == "guided_inpaint":
-        control_fn = None
-        if args.control_type:
-            control_fn = args.control_ref or args.image
-        graph, image_node = ig.build_guided_inpaint(
-            args.prompt, args.image, args.mask, args.negative,
-            control_ref_filename=control_fn, control_type=args.control_type,
-            control_strength=args.control_strength,
-            appearance_ref_filename=args.appearance_ref, appearance_weight=args.appearance_weight,
-            denoise=args.denoise, seed=args.seed, checkpoint=style_checkpoint)
-    elif task == "upscale":
-        graph, image_node = ig.build_upscale(
-            args.prompt, args.image, args.negative, scale=args.scale, denoise=args.denoise,
-            seed=args.seed, checkpoint=style_checkpoint)
-    elif task == "layer_split":
-        graph, image_node = ig.build_layer_split(args.image, args.mask, args.layer_name)
-    elif task == "flux2_concept":
-        graph, image_node = ig.build_flux2_concept(
-            args.prompt, width=args.width, height=args.height, seed=args.seed)
-    elif task == "flux2_edit":
-        graph, image_node = ig.build_flux2_edit(args.prompt, args.image, seed=args.seed)
-    else:
-        raise AssertionError(task)
-    return graph, image_node
-
-
-def _sync(ig, ctx):
-    ig.DEVICE = ctx.device
-    ig.CKPT = ctx.device.get("checkpoint", ig.CKPT)
-    ig.ACTIVE_PROFILE_ID = ctx.active_image_profile
-
-
 class ImageTaskTemplateTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.ig = image_golden.load_image_graphs()
+        cls.ig = image_graphs
         cls.fixture = image_golden.load_fixture()
 
     def tearDown(self):
@@ -214,11 +141,7 @@ class ImageTaskTemplateTests(unittest.TestCase):
         return graph, image_node, download_id
 
     def _assert_same_submission(self, ctx, args, style_checkpoint=None, fixture=None):
-        _sync(self.ig, ctx)
-        expected, expected_node = _builder(self.ig, args, style_checkpoint)
         wants_bg = image_from_template.wants_background_removal(args)
-        attached_id = self.ig.attach_bg_removal(expected, expected_node) if wants_bg else None
-        _sync(self.ig, ctx)
         changed = []
         real_align = image_from_template._align_baked_sampling
 
@@ -230,13 +153,7 @@ class ImageTaskTemplateTests(unittest.TestCase):
         with mock.patch.object(image_from_template, "_align_baked_sampling", spy):
             graph, image_node, download_id = self._submit(ctx, args, style_checkpoint)
         # template 路徑才會對齊烤進去的 sampler。目前是空清單：euler／normal 已相同，不必再改欄位。
-        if changed:
-            self.assertEqual([[]], changed)
-        else:
-            self.assertEqual("sd15", self.ig._active_profile()["family"])
-        self.assertEqual(expected_node, image_node)
-        self.assertEqual(list(expected), list(graph))
-        self.assertEqual(expected, graph)
+        self.assertEqual([[]], changed)
         if wants_bg:
             transparent = [
                 node_id for node_id, node in graph.items()
@@ -244,7 +161,6 @@ class ImageTaskTemplateTests(unittest.TestCase):
                 and (node.get("inputs") or {}).get("filename_prefix") == "transparent"
             ]
             self.assertEqual([download_id], transparent)
-            self.assertEqual(attached_id, download_id)
             self.assertEqual(1, sum(1 for node in graph.values() if node.get("class_type") == "RemoveBackground"))
         else:
             self.assertIsNone(download_id)
@@ -262,14 +178,12 @@ class ImageTaskTemplateTests(unittest.TestCase):
             task=args.task, profile_id=ctx.active_image_profile, backend="cuda",
             prompt_id="prompt-1", inputs=[], outputs=[], args=args,
         )
-        left = image_results.make_manifest(graph=expected, **manifest_kwargs)
         right = image_results.make_manifest(graph=graph, **manifest_kwargs)
-        self.assertEqual(left, right)
         self.assertEqual("image_generation_result", right["kind"])
         self.assertEqual("pending", right["content_review"])
-        self.assertEqual(image_results.graph_sha256(expected), right["graph_sha256"])
+        self.assertEqual(image_results.graph_sha256(graph), right["graph_sha256"])
 
-    def test_sdxl_submissions_match_builder_and_golden(self):
+    def test_sdxl_submissions_match_golden(self):
         # patch 後的 graph 已與 builder 逐欄相同，不另改欄位。原因寫在這個測試的檔頭。
         device = image_golden.TIER_DEVICES["sdxl"]
         ctx = _ctx(device)
@@ -306,7 +220,7 @@ class ImageTaskTemplateTests(unittest.TestCase):
                               lora=args.lora, width=args.width, negative=args.negative):
                 self._assert_same_submission(ctx, args, None)
 
-    def test_omitted_seed_uses_builder_draw_once(self):
+    def test_omitted_seed_is_drawn_once(self):
         ctx = _ctx(image_golden.TIER_DEVICES["sdxl"])
         args = _concept(seed=None)
         with mock.patch.object(image_graphs, "seed_or_random", return_value=12345) as drawn:
@@ -319,7 +233,7 @@ class ImageTaskTemplateTests(unittest.TestCase):
         ]
         self.assertEqual([12345], seeds)
 
-    def test_seed_zero_and_partial_size_match_builder(self):
+    def test_seed_zero_and_partial_size(self):
         ctx = _ctx(image_golden.TIER_DEVICES["sdxl"])
         self._assert_same_submission(ctx, _concept(seed=0, width=640))
         self._assert_same_submission(ctx, _pose(seed=0, height=768))
@@ -336,32 +250,6 @@ class ImageTaskTemplateTests(unittest.TestCase):
         self.assertEqual((768, 768), (concept["4"]["inputs"]["width"], concept["4"]["inputs"]["height"]))
         latent = next(node for node in icon.values() if node["class_type"] == "EmptyLatentImage")
         self.assertEqual((1024, 1024), (latent["inputs"]["width"], latent["inputs"]["height"]))
-
-    def test_sd15_falls_back_to_builder_without_uploading(self):
-        device = image_golden.TIER_DEVICES["sd15"]
-        self.assertFalse(Path(image_golden.ROOT, "templates", "image", "sd15", "concept", "template.json").is_file())
-        for profile in (None, "sd15_light"):
-            ctx = _ctx(device, profile)
-            uploads = []
-
-            def upload(path, _uploads=uploads):
-                _uploads.append(path)
-                return path
-
-            concept_args = _concept(negative="n", width=832, height=1216, batch=2, lora=LORA, lora_strength=0.6)
-            self.assertIsNone(image_from_template.graph_from_template(ctx, concept_args, STYLE_CKPT, upload))
-            self.assertEqual([], uploads)
-            graph, image_node = image_basic.build_graph(ctx, concept_args, STYLE_CKPT, upload)
-            self.assertEqual([], uploads)
-            _sync(self.ig, ctx)
-            expected, expected_node = _builder(self.ig, concept_args, STYLE_CKPT)
-            self.assertEqual(expected_node, image_node)
-            self.assertEqual(expected, graph)
-            self.assertEqual(self.fixture["sd15"]["concept_lora_style_size"][0], graph)
-
-            for args in (_concept(remove_bg=True), _icon(), _icon(lora=LORA, lora_strength=0.6), _refine(remove_bg=True)):
-                with self.subTest(profile=profile, task=args.task, remove_bg=getattr(args, "remove_bg", False)):
-                    self._assert_same_submission(ctx, args)
 
     def test_missing_template_stops_instead_of_using_builder(self):
         ctx = _ctx(image_golden.TIER_DEVICES["sdxl"])
@@ -389,7 +277,7 @@ class ImageTaskTemplateTests(unittest.TestCase):
                         build(ctx, args, None, upload)
                     self.assertEqual([], uploads)
 
-    def test_phase52_submissions_match_builder_and_golden(self):
+    def test_phase52_submissions_match_golden(self):
         # 第 5.2 不再斷言這六個 task 會呼叫 image_runtime builder。
         # 送出的 graph 仍須與 builder(同等參數) 逐欄相同，所以舊斷言改成這件事。
         ctx = _ctx(image_golden.TIER_DEVICES["sdxl"])
@@ -426,22 +314,6 @@ class ImageTaskTemplateTests(unittest.TestCase):
                               control=getattr(args, "control_type", None),
                               width=getattr(args, "width", None)):
                 self._assert_same_submission(ctx, args, STYLE_CKPT if args.task != "layer_split" else None)
-
-    def test_phase52_does_not_call_builder_when_template_exists(self):
-        ctx = _ctx(image_golden.TIER_DEVICES["sdxl"])
-        paired = [
-            (_inpaint(), "build_inpaint"),
-            (_guided(control_type="canny"), "build_guided_inpaint"),
-            (_upscale(), "build_upscale"),
-            (_layer(layer_name="border"), "build_layer_split"),
-            (_flux_concept(), "build_flux2_concept"),
-            (_flux_edit(), "build_flux2_edit"),
-        ]
-        for args, name in paired:
-            with self.subTest(task=args.task):
-                with mock.patch.object(image_runtime, name) as spy:
-                    self._assert_same_submission(ctx, args)
-                self.assertFalse(spy.called)
 
     def test_none_seed_is_drawn_once(self):
         ctx = _ctx(image_golden.TIER_DEVICES["sdxl"])
@@ -512,14 +384,7 @@ class ImageTaskTemplateTests(unittest.TestCase):
         self.assertEqual("input/img.png", graph["4"]["inputs"]["image"])
         self.assertEqual("input/img.png", graph["8"]["inputs"]["image"])
         self.assertEqual("input/look.png", graph["7a"]["inputs"]["image"])
-        _sync(self.ig, ctx)
-        expected, expected_id = self.ig.build_guided_inpaint(
-            "p", "input/img.png", "input/mask.png", None,
-            control_ref_filename="input/img.png", control_type="canny", control_strength=1.0,
-            appearance_ref_filename="input/look.png", appearance_weight=0.8,
-            denoise=1.0, seed=SEED)
-        self.assertEqual(expected_id, out_id)
-        self.assertEqual(expected, graph)
+        self.assertEqual("13", out_id)
 
         calls.clear()
         plain = _guided(control_ref="ignored.png")
@@ -544,56 +409,6 @@ class ImageTaskTemplateTests(unittest.TestCase):
         self.assertEqual("4", out_id)
         self.assertEqual("layer_border", graph["5"]["inputs"]["filename_prefix"])
         self.assertEqual(["4", 0], graph["5"]["inputs"]["images"])
-        _sync(self.ig, ctx)
-        expected, expected_id = self.ig.build_layer_split("img.png", "mask.png", "border")
-        self.assertEqual(expected_id, out_id)
-        self.assertEqual(expected, graph)
-
-    def test_sd15_inpaint_group_falls_back_to_builder_without_uploading(self):
-        device = image_golden.TIER_DEVICES["sd15"]
-        root = Path(image_golden.ROOT)
-        for rel in (
-            ("image", "sd15", "inpaint"),
-            ("image", "sd15", "guided-inpaint"),
-            ("image", "sd15", "upscale"),
-        ):
-            self.assertFalse((root / "templates").joinpath(*rel, "template.json").is_file())
-        ctx = _ctx(device, "sd15_light")
-        probes = [
-            (_inpaint(negative="n", denoise=0.4), "build_inpaint"),
-            (_guided(), "build_guided_inpaint"),
-            (_upscale(scale=3.0, denoise=0.25, negative="n"), "build_upscale"),
-        ]
-        for args, builder_name in probes:
-            with self.subTest(task=args.task):
-                uploads = []
-
-                def upload(path, _uploads=uploads):
-                    _uploads.append(path)
-                    return path
-
-                self.assertIsNone(image_from_template.graph_from_template(ctx, args, STYLE_CKPT, upload))
-                self.assertEqual([], uploads)
-                with mock.patch.object(image_runtime, builder_name, wraps=getattr(image_runtime, builder_name)) as spy:
-                    self._assert_same_submission(ctx, args, STYLE_CKPT)
-                self.assertEqual(1, spy.call_count)
-
-        with self.assertRaises(RuntimeError):
-            inpaint.build_graph(ctx, _guided(control_type="canny"), None, lambda path: path)
-
-    def test_layer_split_and_flux2_stay_on_template_for_sd15_device(self):
-        ctx = _ctx(image_golden.TIER_DEVICES["sd15"], "sd15_light")
-        for args, builder_name in (
-            (_layer(layer_name="frame"), "build_layer_split"),
-            (_flux_concept(), "build_flux2_concept"),
-            (_flux_edit(), "build_flux2_edit"),
-        ):
-            with self.subTest(task=args.task):
-                with mock.patch.object(image_runtime, builder_name) as spy:
-                    self._assert_same_submission(ctx, args, None, self.fixture["sdxl"][
-                        "layer_split" if args.task == "layer_split" else args.task])
-                self.assertFalse(spy.called)
-
 
 if __name__ == "__main__":
     unittest.main()

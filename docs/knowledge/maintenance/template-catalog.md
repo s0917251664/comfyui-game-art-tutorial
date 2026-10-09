@@ -16,7 +16,7 @@ generated: true
 - 摘要：FLUX.2 文字概念圖。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda untested、macos-mps untested
@@ -30,7 +30,7 @@ generated: true
 - 摘要：FLUX.2 參考圖編修。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda untested、macos-mps untested
@@ -44,7 +44,7 @@ generated: true
 - 摘要：遮罩拆層。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda untested、macos-mps untested
@@ -58,7 +58,7 @@ generated: true
 - 摘要：角色動作（SDXL、canny）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_ipadapter_plus [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -72,7 +72,7 @@ generated: true
 - 摘要：角色動作（SDXL、canny、LoRA）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_ipadapter_plus [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -86,7 +86,7 @@ generated: true
 - 摘要：角色動作（SDXL、canny、LoRA、去背）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_ipadapter_plus [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -100,7 +100,7 @@ generated: true
 - 摘要：角色動作（SDXL、canny、去背）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_ipadapter_plus [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -114,7 +114,7 @@ generated: true
 - 摘要：角色動作（SDXL、depth）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_controlnet_aux [registry]、comfyui_ipadapter_plus [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -128,7 +128,7 @@ generated: true
 - 摘要：角色動作（SDXL、depth、LoRA）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_controlnet_aux [registry]、comfyui_ipadapter_plus [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -142,7 +142,7 @@ generated: true
 - 摘要：角色動作（SDXL、depth、LoRA、去背）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_controlnet_aux [registry]、comfyui_ipadapter_plus [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -156,7 +156,7 @@ generated: true
 - 摘要：角色動作（SDXL、depth、去背）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_controlnet_aux [registry]、comfyui_ipadapter_plus [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -170,7 +170,7 @@ generated: true
 - 摘要：角色動作（SDXL、pose）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_controlnet_aux [registry]、comfyui_ipadapter_plus [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -184,7 +184,7 @@ generated: true
 - 摘要：角色動作（SDXL、pose、LoRA）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_controlnet_aux [registry]、comfyui_ipadapter_plus [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -198,7 +198,7 @@ generated: true
 - 摘要：角色動作（SDXL、pose、LoRA、去背）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_controlnet_aux [registry]、comfyui_ipadapter_plus [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -212,7 +212,7 @@ generated: true
 - 摘要：角色動作（SDXL、pose、去背）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_controlnet_aux [registry]、comfyui_ipadapter_plus [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -226,7 +226,7 @@ generated: true
 - 摘要：文字概念圖（SDXL）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda untested、macos-mps untested
@@ -240,7 +240,7 @@ generated: true
 - 摘要：文字概念圖（SDXL、LoRA）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda untested、macos-mps untested
@@ -254,7 +254,7 @@ generated: true
 - 摘要：文字概念圖（SDXL、LoRA、去背）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda untested、macos-mps untested
@@ -268,7 +268,7 @@ generated: true
 - 摘要：文字概念圖（SDXL、去背）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda untested、macos-mps untested
@@ -282,7 +282,7 @@ generated: true
 - 摘要：有錨點的局部重繪（SDXL）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda untested、macos-mps untested
@@ -296,7 +296,7 @@ generated: true
 - 摘要：有錨點的局部重繪（SDXL、外觀參考）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_ipadapter_plus [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -310,7 +310,7 @@ generated: true
 - 摘要：有錨點的局部重繪（SDXL、canny）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda untested、macos-mps untested
@@ -324,7 +324,7 @@ generated: true
 - 摘要：有錨點的局部重繪（SDXL、canny、外觀參考）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_ipadapter_plus [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -338,7 +338,7 @@ generated: true
 - 摘要：有錨點的局部重繪（SDXL、depth）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_controlnet_aux [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -352,7 +352,7 @@ generated: true
 - 摘要：有錨點的局部重繪（SDXL、depth、外觀參考）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_controlnet_aux [registry]、comfyui_ipadapter_plus [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -366,7 +366,7 @@ generated: true
 - 摘要：有錨點的局部重繪（SDXL、pose）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_controlnet_aux [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -380,7 +380,7 @@ generated: true
 - 摘要：有錨點的局部重繪（SDXL、pose、外觀參考）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_controlnet_aux [registry]、comfyui_ipadapter_plus [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -394,7 +394,7 @@ generated: true
 - 摘要：圖示素材（SDXL）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda untested、macos-mps untested
@@ -408,7 +408,7 @@ generated: true
 - 摘要：圖示素材（SDXL、外觀參考）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_ipadapter_plus [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -422,7 +422,7 @@ generated: true
 - 摘要：圖示素材（SDXL、外觀參考、LoRA）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_ipadapter_plus [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -436,7 +436,7 @@ generated: true
 - 摘要：圖示素材（SDXL、外觀參考、LoRA、去背）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_ipadapter_plus [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -450,7 +450,7 @@ generated: true
 - 摘要：圖示素材（SDXL、外觀參考、去背）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_ipadapter_plus [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -464,7 +464,7 @@ generated: true
 - 摘要：圖示素材（SDXL、LoRA）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda untested、macos-mps untested
@@ -478,7 +478,7 @@ generated: true
 - 摘要：圖示素材（SDXL、LoRA、去背）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda untested、macos-mps untested
@@ -492,7 +492,7 @@ generated: true
 - 摘要：圖示素材（SDXL、結構參考）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda untested、macos-mps untested
@@ -506,7 +506,7 @@ generated: true
 - 摘要：圖示素材（SDXL、結構參考、外觀參考）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_ipadapter_plus [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -520,7 +520,7 @@ generated: true
 - 摘要：圖示素材（SDXL、結構參考、外觀參考、LoRA）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_ipadapter_plus [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -534,7 +534,7 @@ generated: true
 - 摘要：圖示素材（SDXL、結構參考、外觀參考、LoRA、去背）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_ipadapter_plus [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -548,7 +548,7 @@ generated: true
 - 摘要：圖示素材（SDXL、結構參考、外觀參考、去背）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_ipadapter_plus [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -562,7 +562,7 @@ generated: true
 - 摘要：圖示素材（SDXL、結構參考、LoRA）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda untested、macos-mps untested
@@ -576,7 +576,7 @@ generated: true
 - 摘要：圖示素材（SDXL、結構參考、LoRA、去背）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda untested、macos-mps untested
@@ -590,7 +590,7 @@ generated: true
 - 摘要：圖示素材（SDXL、結構參考、去背）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda untested、macos-mps untested
@@ -604,7 +604,7 @@ generated: true
 - 摘要：圖示素材（SDXL、去背）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda untested、macos-mps untested
@@ -618,7 +618,7 @@ generated: true
 - 摘要：局部重繪（SDXL）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda untested、macos-mps untested
@@ -632,7 +632,7 @@ generated: true
 - 摘要：姿勢控制（SDXL、canny）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda untested、macos-mps untested
@@ -646,7 +646,7 @@ generated: true
 - 摘要：姿勢控制（SDXL、canny、LoRA）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda untested、macos-mps untested
@@ -660,7 +660,7 @@ generated: true
 - 摘要：姿勢控制（SDXL、canny、LoRA、去背）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda untested、macos-mps untested
@@ -674,7 +674,7 @@ generated: true
 - 摘要：姿勢控制（SDXL、canny、去背）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda untested、macos-mps untested
@@ -688,7 +688,7 @@ generated: true
 - 摘要：姿勢控制（SDXL、depth）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_controlnet_aux [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -702,7 +702,7 @@ generated: true
 - 摘要：姿勢控制（SDXL、depth、LoRA）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_controlnet_aux [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -716,7 +716,7 @@ generated: true
 - 摘要：姿勢控制（SDXL、depth、LoRA、去背）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_controlnet_aux [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -730,7 +730,7 @@ generated: true
 - 摘要：姿勢控制（SDXL、depth、去背）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_controlnet_aux [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -744,7 +744,7 @@ generated: true
 - 摘要：姿勢控制（SDXL、pose）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_controlnet_aux [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -758,7 +758,7 @@ generated: true
 - 摘要：姿勢控制（SDXL、pose、LoRA）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_controlnet_aux [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -772,7 +772,7 @@ generated: true
 - 摘要：姿勢控制（SDXL、pose、LoRA、去背）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_controlnet_aux [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -786,7 +786,7 @@ generated: true
 - 摘要：姿勢控制（SDXL、pose、去背）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_controlnet_aux [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -800,7 +800,7 @@ generated: true
 - 摘要：姿勢控制（SDXL、Union、canny）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda untested、macos-mps untested
@@ -814,7 +814,7 @@ generated: true
 - 摘要：姿勢控制（SDXL、Union、canny、LoRA）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda untested、macos-mps untested
@@ -828,7 +828,7 @@ generated: true
 - 摘要：姿勢控制（SDXL、Union、canny、LoRA、去背）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda untested、macos-mps untested
@@ -842,7 +842,7 @@ generated: true
 - 摘要：姿勢控制（SDXL、Union、canny、去背）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda untested、macos-mps untested
@@ -856,7 +856,7 @@ generated: true
 - 摘要：姿勢控制（SDXL、Union、depth）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_controlnet_aux [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -870,7 +870,7 @@ generated: true
 - 摘要：姿勢控制（SDXL、Union、depth、LoRA）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_controlnet_aux [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -884,7 +884,7 @@ generated: true
 - 摘要：姿勢控制（SDXL、Union、depth、LoRA、去背）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_controlnet_aux [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -898,7 +898,7 @@ generated: true
 - 摘要：姿勢控制（SDXL、Union、depth、去背）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_controlnet_aux [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -912,7 +912,7 @@ generated: true
 - 摘要：姿勢控制（SDXL、Union、pose）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_controlnet_aux [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -926,7 +926,7 @@ generated: true
 - 摘要：姿勢控制（SDXL、Union、pose、LoRA）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_controlnet_aux [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -940,7 +940,7 @@ generated: true
 - 摘要：姿勢控制（SDXL、Union、pose、LoRA、去背）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_controlnet_aux [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -954,7 +954,7 @@ generated: true
 - 摘要：姿勢控制（SDXL、Union、pose、去背）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_controlnet_aux [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -968,7 +968,7 @@ generated: true
 - 摘要：圖生圖精修（SDXL）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda untested、macos-mps untested
@@ -982,7 +982,7 @@ generated: true
 - 摘要：圖生圖精修（SDXL、去背）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda untested、macos-mps untested
@@ -996,7 +996,7 @@ generated: true
 - 摘要：外觀鎖定（SDXL）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_ipadapter_plus [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -1010,7 +1010,7 @@ generated: true
 - 摘要：外觀鎖定（SDXL、LoRA）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_ipadapter_plus [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -1024,7 +1024,7 @@ generated: true
 - 摘要：外觀鎖定（SDXL、LoRA、去背）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_ipadapter_plus [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -1038,7 +1038,7 @@ generated: true
 - 摘要：外觀鎖定（SDXL、去背）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_ipadapter_plus [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -1052,7 +1052,7 @@ generated: true
 - 摘要：放大精修（SDXL）。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda untested、macos-mps untested
@@ -1066,7 +1066,7 @@ generated: true
 - 摘要：MiniMax H3 Ref2VA，1 張參考圖各一個 LoadImage。上限讀 CHARACTER_REF_MAX（9）。變數是 placeholder，seed 是 -1。status draft，平台未實測。
 - 媒體：video
 - 能力：character_ref
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda untested、macos-mps untested
@@ -1080,7 +1080,7 @@ generated: true
 - 摘要：MiniMax H3 Ref2VA，2 張參考圖各一個 LoadImage。上限讀 CHARACTER_REF_MAX（9）。變數是 placeholder，seed 是 -1。status draft，平台未實測。
 - 媒體：video
 - 能力：character_ref
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda untested、macos-mps untested
@@ -1094,7 +1094,7 @@ generated: true
 - 摘要：MiniMax H3 Ref2VA，3 張參考圖各一個 LoadImage。上限讀 CHARACTER_REF_MAX（9）。變數是 placeholder，seed 是 -1。status draft，平台未實測。
 - 媒體：video
 - 能力：character_ref
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda untested、macos-mps untested
@@ -1108,7 +1108,7 @@ generated: true
 - 摘要：MiniMax H3 Ref2VA，4 張參考圖各一個 LoadImage。上限讀 CHARACTER_REF_MAX（9）。變數是 placeholder，seed 是 -1。status draft，平台未實測。
 - 媒體：video
 - 能力：character_ref
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda untested、macos-mps untested
@@ -1122,7 +1122,7 @@ generated: true
 - 摘要：MiniMax H3 Ref2VA，5 張參考圖各一個 LoadImage。上限讀 CHARACTER_REF_MAX（9）。變數是 placeholder，seed 是 -1。status draft，平台未實測。
 - 媒體：video
 - 能力：character_ref
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda untested、macos-mps untested
@@ -1136,7 +1136,7 @@ generated: true
 - 摘要：MiniMax H3 Ref2VA，6 張參考圖各一個 LoadImage。上限讀 CHARACTER_REF_MAX（9）。變數是 placeholder，seed 是 -1。status draft，平台未實測。
 - 媒體：video
 - 能力：character_ref
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda untested、macos-mps untested
@@ -1150,7 +1150,7 @@ generated: true
 - 摘要：MiniMax H3 Ref2VA，7 張參考圖各一個 LoadImage。上限讀 CHARACTER_REF_MAX（9）。變數是 placeholder，seed 是 -1。status draft，平台未實測。
 - 媒體：video
 - 能力：character_ref
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda untested、macos-mps untested
@@ -1164,7 +1164,7 @@ generated: true
 - 摘要：MiniMax H3 Ref2VA，8 張參考圖各一個 LoadImage。上限讀 CHARACTER_REF_MAX（9）。變數是 placeholder，seed 是 -1。status draft，平台未實測。
 - 媒體：video
 - 能力：character_ref
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda untested、macos-mps untested
@@ -1178,7 +1178,7 @@ generated: true
 - 摘要：MiniMax H3 Ref2VA，9 張參考圖各一個 LoadImage。上限讀 CHARACTER_REF_MAX（9）。變數是 placeholder，seed 是 -1。status draft，平台未實測。
 - 媒體：video
 - 能力：character_ref
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda untested、macos-mps untested
@@ -1189,10 +1189,10 @@ generated: true
 ## `video/h3/img2video`
 
 - 用途：MiniMax H3 圖生影片
-- 摘要：MiniMax H3 圖生影片，沒有尾幀。graph 由 build_img2video_h3（video_config=None）產生。變數是 placeholder，seed 是 -1。status draft，平台未實測。
+- 摘要：MiniMax H3 圖生影片，沒有尾幀。變數是 placeholder，seed 是 -1。status draft，平台未實測。
 - 媒體：video
 - 能力：i2v
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda untested、macos-mps untested
@@ -1206,7 +1206,7 @@ generated: true
 - 摘要：MiniMax H3 圖生影片，含尾幀 LoadImage。fx_loop、transition、有終點靜幀的 camera_move 用這份。變數是 placeholder，seed 是 -1。status draft，平台未實測。
 - 媒體：video
 - 能力：i2v
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda untested、macos-mps untested
@@ -1217,10 +1217,10 @@ generated: true
 ## `video/h3/pose-drive-canny`
 
 - 用途：MiniMax H3 動作驅動（canny）
-- 摘要：MiniMax H3 Ref2VA，靜幀加 canny 前處理後的動作片。graph 由 build_pose_drive_h3（video_config=None）產生。變數是 placeholder，seed 是 -1。status draft，平台未實測。
+- 摘要：MiniMax H3 Ref2VA，靜幀加 canny 前處理後的動作片。變數是 placeholder，seed 是 -1。status draft，平台未實測。
 - 媒體：video
 - 能力：control_video
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda untested、macos-mps untested
@@ -1231,10 +1231,10 @@ generated: true
 ## `video/h3/pose-drive-depth`
 
 - 用途：MiniMax H3 動作驅動（depth）
-- 摘要：MiniMax H3 Ref2VA，靜幀加 depth 前處理後的動作片。graph 由 build_pose_drive_h3（video_config=None）產生。變數是 placeholder，seed 是 -1。status draft，平台未實測。
+- 摘要：MiniMax H3 Ref2VA，靜幀加 depth 前處理後的動作片。變數是 placeholder，seed 是 -1。status draft，平台未實測。
 - 媒體：video
 - 能力：control_video
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_controlnet_aux [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -1245,10 +1245,10 @@ generated: true
 ## `video/h3/pose-drive-pose`
 
 - 用途：MiniMax H3 動作驅動（pose）
-- 摘要：MiniMax H3 Ref2VA，靜幀加 pose 前處理後的動作片。graph 由 build_pose_drive_h3（video_config=None）產生。變數是 placeholder，seed 是 -1。status draft，平台未實測。
+- 摘要：MiniMax H3 Ref2VA，靜幀加 pose 前處理後的動作片。變數是 placeholder，seed 是 -1。status draft，平台未實測。
 - 媒體：video
 - 能力：control_video
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_controlnet_aux [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -1262,7 +1262,7 @@ generated: true
 - 摘要：以第 0 幀遮罩指定一個物件，SAM3 追蹤整支影片，輸出逐幀灰階遮罩（白色＝選取）
 - 媒體：video
 - 能力：object_track
-- 狀態：technical_pass（v1.0.2）
+- 狀態：technical_pass（v1.0.3）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda technical_pass、macos-mps untested
@@ -1276,7 +1276,7 @@ generated: true
 - 摘要：以英文名詞指定物件，SAM3 追蹤整支影片，輸出逐幀灰階遮罩（白色＝選取）
 - 媒體：video
 - 能力：object_track
-- 狀態：technical_pass（v1.0.2）
+- 狀態：technical_pass（v1.0.3）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda technical_pass、macos-mps untested
@@ -1290,7 +1290,7 @@ generated: true
 - 摘要：把參考角色置入來源影片（保留來源背景），以 SAM2 點位決定替換範圍
 - 媒體：video
 - 能力：wan_animate_mix
-- 狀態：technical_pass（v1.1.2）
+- 狀態：technical_pass（v1.1.3）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_controlnet_aux [registry]、comfyui-kjnodes [registry]、comfyui-segment-anything-2 [registry]
 - 平台：windows-cuda technical_pass、macos-mps untested
@@ -1304,7 +1304,7 @@ generated: true
 - 摘要：把參考角色置入來源影片（保留來源背景），以 SAM2 點位決定替換範圍；兩段 33＋28＝61 幀
 - 媒體：video
 - 能力：wan_animate_mix
-- 狀態：technical_pass（v1.1.2）
+- 狀態：technical_pass（v1.1.3）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_controlnet_aux [registry]、comfyui-kjnodes [registry]、comfyui-segment-anything-2 [registry]
 - 平台：windows-cuda technical_pass、macos-mps untested
@@ -1318,7 +1318,7 @@ generated: true
 - 摘要：參考角色跟著來源影片的動作動起來（背景由參考圖與 prompt 決定）
 - 媒體：video
 - 能力：wan_animate_move
-- 狀態：technical_pass（v1.1.2）
+- 狀態：technical_pass（v1.1.3）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_controlnet_aux [registry]
 - 平台：windows-cuda technical_pass、macos-mps untested
@@ -1332,7 +1332,7 @@ generated: true
 - 摘要：參考角色跟著來源影片的動作動起來（背景由參考圖與 prompt 決定）；兩段 33＋28＝61 幀
 - 媒體：video
 - 能力：wan_animate_move
-- 狀態：technical_pass（v1.1.2）
+- 狀態：technical_pass（v1.1.3）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_controlnet_aux [registry]
 - 平台：windows-cuda technical_pass、macos-mps untested
@@ -1346,7 +1346,7 @@ generated: true
 - 摘要：用參考圖驅動角色跟著來源影片動，或把來源影片裡的人換成參考角色；SAM3 依文字追蹤人物並以彩色遮罩綁定身份
 - 媒體：video
 - 能力：scail2
-- 狀態：technical_pass（v1.0.2）
+- 狀態：technical_pass（v1.0.3）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda technical_pass、macos-mps untested
@@ -1360,7 +1360,7 @@ generated: true
 - 摘要：用參考圖驅動角色跟著來源影片動，或把來源影片裡的人換成參考角色；SAM3 依文字追蹤人物並以彩色遮罩綁定身份
 - 媒體：video
 - 能力：scail2
-- 狀態：technical_pass（v1.0.2）
+- 狀態：technical_pass（v1.0.3）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda technical_pass、macos-mps untested
@@ -1374,7 +1374,7 @@ generated: true
 - 摘要：只重畫遮罩內（白色＝重畫），遮罩外貼回原片並逐 byte 檢查不變；和 generate.py video_inpaint 同一個 graph 與前後處理
 - 媒體：video
 - 能力：masked_edit
-- 狀態：technical_pass（v0.1.1）
+- 狀態：technical_pass（v0.1.2）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda technical_pass、macos-mps untested
@@ -1385,10 +1385,10 @@ generated: true
 ## `video/wan/img2video`
 
 - 用途：Wan 2.2 5B 圖生影片
-- 摘要：Wan 2.2 5B 圖生影片，沒有尾幀。graph 由 build_img2video_wan（video_config=None）產生。變數是 placeholder，seed 是 -1。status draft，平台未實測。
+- 摘要：Wan 2.2 5B 圖生影片，沒有尾幀。變數是 placeholder，seed 是 -1。status draft，平台未實測。
 - 媒體：video
 - 能力：i2v
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda untested、macos-mps untested
@@ -1399,10 +1399,10 @@ generated: true
 ## `video/wan/pose-drive-canny`
 
 - 用途：Wan Fun Control 動作驅動（canny）
-- 摘要：Wan Fun Control 5B，動作片前處理是 canny。graph 由 build_pose_drive_wan（video_config=None）產生。變數是 placeholder，seed 是 -1。status draft，平台未實測。
+- 摘要：Wan Fun Control 5B，動作片前處理是 canny。變數是 placeholder，seed 是 -1。status draft，平台未實測。
 - 媒體：video
 - 能力：control_video
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
 - 平台：windows-cuda untested、macos-mps untested
@@ -1413,10 +1413,10 @@ generated: true
 ## `video/wan/pose-drive-depth`
 
 - 用途：Wan Fun Control 動作驅動（depth）
-- 摘要：Wan Fun Control 5B，動作片前處理是 depth。graph 由 build_pose_drive_wan（video_config=None）產生。變數是 placeholder，seed 是 -1。status draft，平台未實測。
+- 摘要：Wan Fun Control 5B，動作片前處理是 depth。變數是 placeholder，seed 是 -1。status draft，平台未實測。
 - 媒體：video
 - 能力：control_video
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_controlnet_aux [registry]
 - 平台：windows-cuda untested、macos-mps untested
@@ -1427,10 +1427,10 @@ generated: true
 ## `video/wan/pose-drive-pose`
 
 - 用途：Wan Fun Control 動作驅動（pose）
-- 摘要：Wan Fun Control 5B，動作片前處理是 pose。graph 由 build_pose_drive_wan（video_config=None）產生。變數是 placeholder，seed 是 -1。status draft，平台未實測。
+- 摘要：Wan Fun Control 5B，動作片前處理是 pose。變數是 placeholder，seed 是 -1。status draft，平台未實測。
 - 媒體：video
 - 能力：control_video
-- 狀態：draft（v0.1.0）
+- 狀態：draft（v0.1.1）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：comfyui_controlnet_aux [registry]
 - 平台：windows-cuda untested、macos-mps untested

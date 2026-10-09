@@ -6,7 +6,7 @@ last_updated: 2026-10-06
 
 # 專案技能、執行路線與產線審視流程
 
-本流程涵蓋技能庫、使用者路由、ComfyUI／平台／本機工具分工及技術基準。審視本身以只讀盤點和具體建議為主，不自動產生素材、改檔、下載或替換模型。開始時先從[總工具庫](../TOOLS.md)找到目前路由；再用[技能庫路線與盤點](skill-library.md)辨認已實作／待評估路線。只按本次範圍讀必要技能、相關 source、案例和驗證紀錄。
+本流程涵蓋技能庫、使用者路由、ComfyUI／平台／本機工具分工及技術基準。審視本身以只讀盤點和具體建議為主，不自動產生素材、改檔、下載或替換模型。開始時先從[總工具庫](../TOOLS.md)找到目前路由；再用 [skills/README](../../../skills/README.md) 與 [新增能力清單](new-capability-checklist.md) 的執行路線辨認已實作／待評估路線。只按本次範圍讀必要技能、相關 source、案例和驗證紀錄。
 
 ## 選擇審視模式
 
@@ -45,4 +45,4 @@ last_updated: 2026-10-06
 - direct API／CLI／helper 哪些已實作，哪些只適合後續比較、哪些尚無證據；清楚寫明「未遷移」狀態。
 - 可選方案、變更範圍、所需 gate 和尚待證據；建議不得直接改寫 project defaults。
 
-對技能庫整體 review，引用[技能庫現況表](skill-library.md)並按任務需要深入，不複製全部文件進報告。若發現 metadata、AGENTS、TOOLS、INDEX 或跨技能 handoff 錯誤，只作為問題／具體差異記錄；除非使用者同一要求已授權文件修正，不自行改動。
+對技能庫整體 review，引用 [skills/README](../../../skills/README.md) 與 [TOOLS](../TOOLS.md) 並按任務需要深入，不複製全部文件進報告。若發現 metadata、AGENTS、TOOLS、INDEX 或跨技能 handoff 錯誤，只作為問題／具體差異記錄；除非使用者同一要求已授權文件修正，不自行改動。

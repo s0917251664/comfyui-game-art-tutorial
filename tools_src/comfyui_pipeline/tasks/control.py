@@ -84,7 +84,7 @@ def preflight(args, comfy_url, request_timeout):
 def build_graph(ctx, args, style_checkpoint, upload):
     """組圖片 task 的 graph;``upload`` 回傳 ComfyUI 端檔名。
 
-    這三個 task 沒有 sd15 版，一律走 template。builder 留在 image_graphs，第 8.3 階段才刪。
+    一律走 template（``templates/image/``，由 runner 填值）;找不到 template 就停止。
     """
     if args.task not in TASKS:
         raise ValueError(f"不是這個模組的圖片 task: {args.task}")

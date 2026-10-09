@@ -12,7 +12,7 @@ dependencies = []  # 核心流程只用標準庫;其餘依功能放在下列選�
 [project.optional-dependencies]
 # 本機像素工具(image_edit_tools、comfyui_design、mask_refine、sam_segment 等)
 image = ["pillow", "numpy"]
-# 影片/音訊處理(face_swap、film_audio、film_lipsync、video_layers)
+# 影片/音訊處理(film_audio、film_lipsync、video_layers)
 video = ["pillow", "numpy", "av", "opencv-python"]
 # ComfyUI 自訂節點與模型相關測試(通常已由 ComfyUI 的 venv 提供)
 nodes = ["torch"]

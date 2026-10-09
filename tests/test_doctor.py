@@ -127,7 +127,7 @@ class RefreshPreservesDefaultsTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as root:
             comfy, models, tools = make_env(root)
             Path(tools, fp.SNAPSHOT_FILES["image"]).write_text(
-                json.dumps({"default_profile": "sd15_light", "model_roots": [models]}), encoding="utf-8")
+                json.dumps({"default_profile": "sdxl_standard", "model_roots": [models]}), encoding="utf-8")
             Path(tools, fp.SNAPSHOT_FILES["video"]).write_text(
                 json.dumps({"default_backend": "h3"}), encoding="utf-8")
             calls = {}
@@ -142,7 +142,7 @@ class RefreshPreservesDefaultsTests(unittest.TestCase):
                     mock.patch.object(doctor.fp, "write_fingerprint"), \
                     contextlib.redirect_stderr(io.StringIO()):
                 self.assertEqual(0, doctor.refresh(args))
-            self.assertIn("sd15_light", calls["image"])
-            self.assertEqual(calls["image"][calls["image"].index("--default-profile") + 1], "sd15_light")
+            self.assertIn("sdxl_standard", calls["image"])
+            self.assertEqual(calls["image"][calls["image"].index("--default-profile") + 1], "sdxl_standard")
             self.assertEqual(calls["video"][calls["video"].index("--default-backend") + 1], "h3")
             self.assertNotIn("--default-backend", calls["image"])

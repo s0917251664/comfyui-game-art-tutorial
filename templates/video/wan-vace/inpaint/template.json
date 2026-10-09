@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": "video/wan-vace/inpaint",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "title": "Wan2.1 VACE 影片局部重繪（遮罩內重畫、貼回原片）",
   "summary": "只重畫遮罩內（白色＝重畫），遮罩外貼回原片並逐 byte 檢查不變；和 generate.py video_inpaint 同一個 graph 與前後處理",
   "status": "technical_pass",
@@ -25,7 +25,7 @@
     "tested_source_sha256": null,
     "evidence": [
       {
-        "path": "docs/knowledge/experiences/2026-10-07-vfx-research/results.md",
+        "path": "docs/knowledge/archive/experiments/2026-10-07-vfx-research/results.md",
         "note": "2026-10-07 VACE 研究（官方範本對照）"
       },
       {

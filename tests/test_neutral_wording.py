@@ -17,7 +17,7 @@ TEXT_SUFFIXES = (".py", ".md", ".json", ".html", ".js", ".ps1", ".txt", ".yaml",
 SKIP_PREFIXES = ("third_party/", "output/")
 MIGRATION_NOTE = "docs/knowledge/maintenance/custom-node-renames.md"
 THIS_FILE = "tests/test_neutral_wording.py"
-CONTRACT_FILES = ("tools_src/comfyui_video_layers/contracts.py", "tools_src/comfyui_face_swap_video/contracts.py")
+CONTRACT_FILES = ("tools_src/comfyui_video_layers/contracts.py",)
 
 
 def tracked_text_files():
@@ -48,8 +48,8 @@ class NeutralWordingTests(unittest.TestCase):
 
     def test_scan_covers_code_tests_and_docs(self):
         files = tracked_text_files()
-        for expected in ("tools_src/face_swap.py", "tests/test_face_swap.py", "AGENTS.md",
-                         "skills/comfyui-run/references/comfyui-video-layers/README.md", "docs/knowledge/video/layers.md"):
+        for expected in ("tools_src/video_layers.py", "tests/test_video_layers.py", "AGENTS.md",
+                         "skills/comfyui-run/SKILL.md", "docs/knowledge/video/layers.md"):
             self.assertIn(expected, files)
 
     def test_legacy_names_absent_from_contracts(self):

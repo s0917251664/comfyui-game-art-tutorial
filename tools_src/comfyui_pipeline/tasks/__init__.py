@@ -15,7 +15,6 @@
 ``generate.py`` 與 ``cli.py`` 不用改。``ctx`` 是 ``context.RunContext``(機器資料、選用的圖片設定檔 /
 影片 capability config),由 cli 建立後明確傳入,task 模組不讀任何模組層級的可變狀態。
 """
-from .. import image_runtime
 from ..client import DEFAULT_HTTP_TIMEOUT, _fetch_comfy_object_info
 from ..image_capabilities import PREFLIGHT_IMAGE_PLACEHOLDER, check_image_graph_against_object_info
 from ..image_from_template import background_removal_output

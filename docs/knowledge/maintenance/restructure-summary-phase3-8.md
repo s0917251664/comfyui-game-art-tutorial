@@ -4,9 +4,9 @@ status: current
 ---
 # 第 3–8 階段總結（2026-10-09 收尾）
 
-這一頁是第 3–8 階段的結案摘要：每一階段交了什麼、實機驗證到哪裡、留下哪些待開發與待決。分支 SHA 與操作細節以[進度頁](restructure-progress-2026-10-08.md)為準，交付脈絡見[交付頁](restructure-delivery-2026-10-08.md)，原始計畫與規則見[交接頁](restructure-handoff.md)。
+這一頁是第 3–8 階段的結案摘要：每一階段交了什麼、實機驗證到哪裡、留下哪些待開發與待決。分支 SHA 與操作細節以[進度頁](../archive/restructure-progress-2026-10-08.md)為準，交付脈絡見[交付頁](../archive/restructure-delivery-2026-10-08.md)，原始計畫與規則見[交接頁](../archive/restructure-handoff.md)。
 
-所有工作都還沒合併進 `develop`。要合併時，合併最上面那條分支 `refactor/phase8.3b-video-inpaint-runner` 即可，它疊在整合線 `integrate/phase3-8` 上，依序包含 7.3 → 8.3 → 8.4 → 8.3b。技術檢查通過不等於美術接受（[R1](../rules/candidate-review.md)）。
+第 3–8 階段已合併進 `develop`（merge commit `2a0fd57`）。技術檢查通過不等於美術接受（[R1](../rules/candidate-review.md)）。
 
 ## 各階段
 
@@ -23,7 +23,7 @@ status: current
 ## 使用者已做的決定
 
 - 不開 GitHub PR，改由實作者自行 review；合併由使用者做。
-- SD1.5 暫不做：圖片 builder 保留，只當 SD1.5 沒有 template 時的退路。
+- 低記憶體舊架構底模路線與影片人臉替換功能完全移除（前者不做 template，後者效果太差，改由模型直接產影片）；圖片與影片只走 template。
 - `object-mark-inpaint` 的一次實跑結果（握柄局部重繪，手部保留原片）：使用者表示「先這樣，可以用」，已用 `gameart.py review accept` 記錄。
 
 ## 待開發
@@ -33,7 +33,6 @@ status: current
 | 被握住的物件：手部（遮擋物）保護遮罩 | 第一次局部重繪把握柄上的手一起重畫、變形。這次用 SAM3 文字追蹤「glove」得到手的遮罩，從物件遮罩扣掉（手外留 5 像素）、局部重繪改用 grow 0 才保住手。扣遮罩是一次性腳本（本機證據：`output/verify-20261009-6.4/subtract_hands.py`），不是正式工具 | 照[擴充協議](extension-protocol.md)提案：在 `object-mark-inpaint` 加「保護遮罩」步驟（追蹤 → 確認 → 從物件遮罩扣掉），由 runner 的固定步驟實作，不臨場組 graph |
 | review 只能選原始輸出 | `run.result.json` 的 `outputs` 只有 VACE 原始輸出；貼回結果在 `derived_outputs`，`gameart.py review` 選不到 | 讓 `asset_review` 也能列出並記錄 `derived_outputs` |
 | recipe 的 local 步驟 | 實際執行器只執行 template 步驟；local 步驟（只有 `_drafts` 的 recipe 用到）會停下 | 草稿 recipe 轉正時一起實作 |
-| SD1.5 template | 暫不做（見上） | 有低記憶體機器要跑時，確認模型來源與授權後補 template，再刪圖片 builder |
 
 ## 待使用者決定
 

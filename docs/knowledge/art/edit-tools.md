@@ -4,7 +4,7 @@ status: current
 ---
 # 本機圖片編修工具
 
-`tools_src/image_edit_tools.py` 提供六種本機操作：Alpha 遮罩合成、遮罩內純色相調整、RGBA byte 差異檢視、固定輸入的有限參數 sweep、參考圖板與素材 Alpha 稽核。它不含生成模型、ComfyUI graph 或新的 `generate.py` task。操作入口是 [`skills/local-media-tools/references/local-image-edit-tools/README.md`](../../../skills/local-media-tools/references/local-image-edit-tools/README.md)，情境選擇見[圖片編修情境手冊](../../../skills/game-art-brief/references/game-art-edit-brief/references/scenarios.md)。
+`tools_src/image_edit_tools.py` 提供六種本機操作：Alpha 遮罩合成、遮罩內純色相調整、RGBA byte 差異檢視、固定輸入的有限參數 sweep、參考圖板與素材 Alpha 稽核。它不含生成模型、ComfyUI graph 或新的 `generate.py` task。操作入口是 [local-media-tools](../../../skills/local-media-tools/SKILL.md)，用法查 `gameart.py edit --help`，情境選擇見[圖片編修情境手冊](edit-scenarios.md)。
 
 ## 能力與契約
 
@@ -22,7 +22,7 @@ status: current
 
 ### 固定輸入參數 sweep
 
-`sweep --plan <plan.json> --config <runtime.json> --output-dir <new-dir> [--profile <id>] [--timeout 240] [--dry-run] [--allow-unverified]` 只包裝既有 `refine`、`inpaint`、`guided_inpaint`、`character_action`。參數 whitelist、plan schema、範例及中斷處理見 [`plan-format.md`](../../../skills/local-media-tools/references/local-image-edit-tools/reference/plan-format.md)。
+`sweep --plan <plan.json> --config <runtime.json> --output-dir <new-dir> [--profile <id>] [--timeout 240] [--dry-run] [--allow-unverified]` 只包裝既有 `refine`、`inpaint`、`guided_inpaint`、`character_action`。參數 whitelist、plan schema、範例及中斷處理見 [`plan-format.md`](edit-tools.md)。
 
 seed、prompt、來源與參考固定；只能在現有 task 白名單的 0–1 權重參數中建立笛卡兒積，最多 16 次，禁止重複值。空 `sweep` 代表固定輸入下單次執行。這用於使用者明確提出、事前界定的多組參數比較，不能取代一般任務的產後驗收或作為盲目重抽工具。`preserve_outside` 僅支援 `inpaint`、`guided_inpaint`，每次生成後另外用同一遮罩合成並產生 raw/final comparison。
 

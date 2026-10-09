@@ -1,5 +1,5 @@
 """放大精修圖片 task:upscale(放大模型 + 二次取樣補細節)。"""
-from .. import image_from_template, image_runtime
+from .. import image_from_template
 from ..image_graphs import validate_scale, validate_unit_interval
 
 TASKS = ("upscale",)
@@ -30,15 +30,8 @@ def validate(args):
 def build_graph(ctx, args, style_checkpoint, upload):
     """組圖片 task 的 graph;``upload`` 回傳 ComfyUI 端檔名。
 
-    sdxl 走 template。sd15 的 template 目錄不存在時沿用 builder，graph 不變。
+    一律走 template（``templates/image/``，由 runner 填值）;找不到 template 就停止。
     """
     if args.task != "upscale":
         raise ValueError(f"不是這個模組的圖片 task: {args.task}")
-    built = image_from_template.graph_from_template(ctx, args, style_checkpoint, upload)
-    if built is not None:
-        return built
-    img_fn = upload(args.image)
-    prompt, out_id = image_runtime.build_upscale(ctx, args.prompt, img_fn, args.negative,
-                                    scale=args.scale, denoise=args.denoise, seed=args.seed,
-                                    checkpoint=style_checkpoint)
-    return prompt, out_id
+    return image_from_template.graph_from_template(ctx, args, style_checkpoint, upload)

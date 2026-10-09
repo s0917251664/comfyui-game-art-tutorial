@@ -63,26 +63,8 @@ def check_capabilities(ctx, args):
 def build_graph(ctx, args, style_checkpoint, upload):
     """組圖片 task 的 graph;``upload`` 回傳 ComfyUI 端檔名。
 
-    sdxl 走 template。sd15 的 template 目錄不存在時沿用下面的 builder，graph 不變。
+    一律走 template（``templates/image/``，由 runner 填值）;找不到 template 就停止。
     """
-    built = image_from_template.graph_from_template(ctx, args, style_checkpoint, upload)
-    if built is not None:
-        return built
-    if args.task == "concept":
-        prompt, out_id = image_runtime.build_concept(ctx, args.prompt, args.negative, args.width, args.height, args.seed,
-                                        batch_size=args.batch, lora_name=args.lora, lora_strength=args.lora_strength,
-                                        checkpoint=style_checkpoint)
-    elif args.task == "icon_asset":
-        structure_fn = upload(args.structure_ref) if args.structure_ref else None
-        appearance_fn = upload(args.appearance_ref) if args.appearance_ref else None
-        prompt, out_id = image_runtime.build_icon_asset(ctx, args.prompt, args.negative, args.width, args.height, args.seed,
-                                           batch_size=args.batch, lora_name=args.lora, lora_strength=args.lora_strength,
-                                           structure_ref_filename=structure_fn, checkpoint=style_checkpoint,
-                                           appearance_ref_filename=appearance_fn, appearance_weight=args.appearance_weight)
-    elif args.task == "refine":
-        img_fn = upload(args.image)
-        prompt, out_id = image_runtime.build_refine(ctx, args.prompt, img_fn, args.negative,
-                                       denoise=args.denoise, seed=args.seed, checkpoint=style_checkpoint)
-    else:
+    if args.task not in TASKS:
         raise ValueError(f"不是這個模組的圖片 task: {args.task}")
-    return prompt, out_id
+    return image_from_template.graph_from_template(ctx, args, style_checkpoint, upload)

@@ -34,7 +34,7 @@ PR 8.3（2026-10-08）移除了最後 5 個還被程式引用的轉址檔（程�
 | `skills/comfyui-install/reference/models.md` | [`docs/knowledge/installation/models-and-sources.md`](../installation/models-and-sources.md) |
 | `skills/comfyui-art-gen/reference/masking.md` | [`docs/knowledge/art/masking.md`](../art/masking.md) |
 | `skills/comfyui-art-gen/reference/structure-ref.md` | [`docs/knowledge/art/structure-ref.md`](../art/structure-ref.md) |
-| `skills/comfyui-art-gen/reference/profiles/sd15_light.md` | [`docs/knowledge/art/profiles/sd15-light.md`](../art/profiles/sd15-light.md) |
+| `skills/comfyui-art-gen/reference/profiles/sd15_light.md` | `docs/knowledge/art/profiles/sd15-light.md`（已移除） |
 | `skills/comfyui-art-gen/reference/profiles/sdxl_standard.md` | [`docs/knowledge/art/profiles/sdxl-standard.md`](../art/profiles/sdxl-standard.md) |
 
 ## 已刪除的舊資產（第二階段）
@@ -51,7 +51,7 @@ PR 8.3（2026-10-08）移除了最後 5 個還被程式引用的轉址檔（程�
 
 | 轉址檔 | canonical 位置 | 引用來源 |
 |---|---|---|
-| `skills/comfyui-run/references/comfyui-art-gen/reference/profiles/sd15_light.md` | [`docs/knowledge/art/profiles/sd15-light.md`](../art/profiles/sd15-light.md) | `tools_src/comfyui_pipeline/profiles/sd15_light.json` 的 `notes_ref`，以及 `tests/test_image_profiles.py` 的 `test_profile_notes_ref_points_to_existing_document`。改 profile JSON 會改變 profile 內容雜湊，影響已記錄的驗證證據 |
+| `skills/comfyui-run/references/comfyui-art-gen/reference/profiles/sd15_light.md` | `docs/knowledge/art/profiles/sd15-light.md`（已移除） | `tools_src/comfyui_pipeline/profiles/sd15_light.json` 的 `notes_ref`，以及 `tests/test_image_profiles.py` 的 `test_profile_notes_ref_points_to_existing_document`。改 profile JSON 會改變 profile 內容雜湊，影響已記錄的驗證證據 |
 | `skills/comfyui-run/references/comfyui-art-gen/reference/profiles/sdxl_standard.md` | [`docs/knowledge/art/profiles/sdxl-standard.md`](../art/profiles/sdxl-standard.md) | `tools_src/comfyui_pipeline/profiles/sdxl_standard.json` 的 `notes_ref`＋同一個測試（理由同上） |
 | `skills/comfyui-install/reference/models.md` | [`docs/knowledge/installation/models-and-sources.md`](../installation/models-and-sources.md) | `tools_src/comfyui_pipeline/tasks/_common.py:58` 的錯誤訊息、`tools_src/comfyui_pipeline/image_graphs.py:97` 的註解 |
 | `skills/comfyui-run/references/comfyui-art-gen/reference/structure-ref.md` | [`docs/knowledge/art/structure-ref.md`](../art/structure-ref.md) | `tools_src/comfyui_pipeline/tasks/image_basic.py:22` 的 `--structure-ref` help 文字、`image_graphs.py:402` 的 docstring |
