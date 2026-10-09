@@ -24,7 +24,7 @@ ComfyUI API 是另一種呼叫既有 graph 的方式，不等於 API client 產�
 
 ## 新技能、能力與 discoverability
 
-新增或改技能時遵循[新增能力檢查清單](new-capability-checklist.md)。每個技能至少交代：
+新增或改技能時遵循[新增能力檢查清單](../maintenance/new-capability-checklist.md)。每個技能至少交代：
 
 1. **觸發與邊界：** 使用者說什麼會用；支援及不支援的輸入、輸出和工作。
 2. **依賴與版本：** 平台實際工具 schema、ComfyUI server／node/model pins、profile/backend、local packages 或 input asset versions；只列路線實際依賴。

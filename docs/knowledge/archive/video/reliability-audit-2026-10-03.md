@@ -32,7 +32,7 @@
 
 輸入引用共 102 筆，94 筆目前存在且 SHA-256 相符，8 筆路徑已失效，位於封存目錄；失效原因尚未確認。這項盤點沒有把失效自動解讀為輸入內容變更。
 
-[`docs/tested-versions.md`](../../tested-versions.md) 記有 2026-08-31 的歷史 smoke：H3 `transition`、`pose_drive`，以及 Wan `img2video`、`pose_drive`。這些紀錄不在本次 60 筆具輸出契約的 sidecar 集合內；Wan `transition` 不在這些歷史 smoke 範圍內。
+[`docs/tested-versions.md`](../../../tested-versions.md) 記有 2026-08-31 的歷史 smoke：H3 `transition`、`pose_drive`，以及 Wan `img2video`、`pose_drive`。這些紀錄不在本次 60 筆具輸出契約的 sidecar 集合內；Wan `transition` 不在這些歷史 smoke 範圍內。
 
 ## 代表性畫面抽樣
 
@@ -90,4 +90,4 @@
 - `output/video_reliability_20261003/capabilities_fixed.json`、`fingerprint_live.json`：修復後獨立 snapshot 與動態 upload 清單前後 fingerprint 檢查。
 - `output/video_reliability_20261003/capabilities_before_fix.json`：正式重掃前保存的舊影片能力快照。
 - `tests/test_generate.py`：66 項圖片與影片測試，包含 upload inventory fingerprint regression。
-- [`docs/tested-versions.md`](../../tested-versions.md)：包含 2026-08-31 的 H3 `transition`、`pose_drive`，以及 Wan `img2video`、`pose_drive` 歷史 smoke 紀錄。
+- [`docs/tested-versions.md`](../../../tested-versions.md)：包含 2026-08-31 的 H3 `transition`、`pose_drive`，以及 Wan `img2video`、`pose_drive` 歷史 smoke 紀錄。

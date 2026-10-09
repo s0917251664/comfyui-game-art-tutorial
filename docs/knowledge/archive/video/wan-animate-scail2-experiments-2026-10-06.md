@@ -120,9 +120,9 @@ last_updated: 2026-10-06
 - 測試素材準備與範本產生腳本：`output/wan-animate-extend/prepare_fixture.py`、`build_extend_templates.py`，`output/scail2-install/build_scail2_templates.py`、`download.sh`
 
 **參考文件**
-- [Wan Animate API 固定契約](../../../skills/comfyui-run/references/comfyui-wan-animate/references/comfyui-api.md)：延伸段、音訊保留、解析度操作規範
-- [SCAIL-2 API 固定契約](../../../skills/comfyui-run/references/comfyui-wan-animate/references/scail2.md)：模型、模式、動態欄位定義
-- [安裝記錄](wan-animate-install.md)：模型版本與 pins
+- Wan Animate API 固定契約（`skills/comfyui-run/references/comfyui-wan-animate/references/comfyui-api.md`，已移除）：延伸段、音訊保留、解析度操作規範
+- SCAIL-2 API 固定契約（`skills/comfyui-run/references/comfyui-wan-animate/references/scail2.md`，已移除）：模型、模式、動態欄位定義
+- [安裝記錄](../../video/wan-animate-install.md)：模型版本與 pins
 - [官方 SCAIL-2 workflow](https://github.com/Comfy-Org/workflow_templates/blob/main/templates/video_wan21_scail2_character_replacement.json)
 
 **SCAIL-2 下載記錄**（2026-10-06 使用者同意下載；逐檔核對 SHA-256）

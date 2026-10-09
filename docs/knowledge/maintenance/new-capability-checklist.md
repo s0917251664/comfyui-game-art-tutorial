@@ -6,7 +6,20 @@ last_updated: 2026-10-06
 
 # 新增能力與技能檢查清單
 
-此清單依執行路線檢查，而不是把 repo 現有 Python／ComfyUI 實作形式套用到每個新需求。先閱讀[技能庫路線與盤點](skill-library.md)，勾選本次適用路線；可以組合路線，但每項只核對實際受影響的層。
+此清單依執行路線檢查，而不是把 repo 現有 Python／ComfyUI 實作形式套用到每個新需求。先對照下面的「執行路線」，勾選本次適用路線；可以組合路線，但每項只核對實際受影響的層。
+
+## 執行路線
+
+| 路線 | 用途與必要檢查 | Runtime 要求 |
+|---|---|---|
+| Brief／需求流程 | 釐清來源、參考、修改／保留、交付、驗收；不執行生成 | 無 ComfyUI／Python 要求 |
+| 平台原生圖片工具 | 核對本次會話實際工具與即時 schema | 不讀 `local_config.json`，不推定影片、外部 API 或付費權限 |
+| 固定 template＋runner | `templates/<id>/` 的固定 API graph，一律由 `gameart.py run` 執行（[R2](../rules/fixed-graphs.md)）：preflight、上傳、送出、下載、輸出檢查、`run.result.json` | 不另寫 wrapper 或 backend；每次仍要 live preflight |
+| `generate.py` task | 依 task 與旗標選出 template id 交給 runner，沿用 image profile、影片 backend 與能力快照 | 保留 `comfyui_pipeline/`；新增 task 的程式放 `tasks/` |
+| 本機 Python 工具 | 需要 local file、批次或長片解碼、狀態、資料夾管理的工作（像素、音訊、媒體處理）；文件寫清楚它是本機工具，不硬套 template | 只保留契約所需的程式與套件 |
+| server custom node | server 端專用媒體演算法（例如 Video Layers） | 清楚區分 client／server 責任與部署 |
+
+ComfyUI API 只是呼叫既有 graph 的方式：prompt 與有限欄位足夠就做成 template，不讓 agent 手動呼叫 HTTP；還包含受控媒體前處理、批次或輸出整理時，再評估是否需要本機工具，不以「無 Python」為普遍要求。
 
 ## 每種能力共同要交代的內容
 
@@ -47,7 +60,7 @@ last_updated: 2026-10-06
 ### D. 既有 `generate.py` CLI、profile 或 capability catalog
 
 - [ ] 僅在能力屬於既有 `generate.py` task 時沿用它。圖片依相應 image profile／FLUX 獨立 gate；影片依 backend 與 `video_capabilities.json`。不混用圖片／影片 snapshot。
-- [ ] 新增或改 task 時改 `tools_src/comfyui_pipeline/tasks/` 的 task 模組（`add_parser`／`validate`／`build_graph` 或 `prepare`／`run_local`），並登記到 `tasks/__init__.py` 的 `MODULES` 與 `TASK_ORDER`；不要把 task 邏輯寫回 `generate.py`，它只做 `main()` 與唯讀 re-export。上傳／排隊／下載在 `client.py`，共用流程在 `cli.py`。協作者直接從定義它的模組 import（沒有 facade／`rt.`），機器相關狀態（device、選用 profile／影片 config）經 `RunContext` 明確傳入，task 的 `check_capabilities`／`build_graph`／`prepare` 第一個參數是 `ctx`；不要新增模組層級可變全域，也不要在 package 內 `import generate`。測試 patch 目標是「呼叫端模組」的名稱（例如 `comfyui_pipeline.cli.submit_and_wait`）。
+- [ ] 新增或改 task 時改 `tools_src/comfyui_pipeline/tasks/` 的 task 模組（`add_parser`／`validate`／`prepare` 等），並登記到 `tasks/__init__.py` 的 `MODULES` 與 `TASK_ORDER`；不要把 task 邏輯寫回 `generate.py`，它只做 `main()` 與唯讀 re-export。上傳／排隊／下載在 `client.py`，共用流程在 `cli.py`。協作者直接從定義它的模組 import（沒有 facade／`rt.`），機器相關狀態（device、選用 profile／影片 config）經 `RunContext` 明確傳入，task 的 `check_capabilities`／`prepare` 第一個參數是 `ctx`；不要新增模組層級可變全域，也不要在 package 內 `import generate`。測試 patch 目標是「呼叫端模組」的名稱（例如 `comfyui_pipeline.cli.submit_and_wait`）。
 - [ ] 模型名稱、取樣、tier、支援 task 依既有 profile／catalog 契約更動；profile 代表經相容性驗證的組合，不是只改檔名。
 - [ ] 程式有改動時按影響範圍檢查 code、既有 tests、portable deploy 和 fixtures；只有故意改固定 image graph 才更新 golden fixtures。
 - [ ] 實測實際呼叫新增／修改 task 與指定 profile/backend，檢查 metadata、畫面／影片技術契約和內容品質。沒有對應機器時保留未驗證狀態。
@@ -64,5 +77,5 @@ last_updated: 2026-10-06
 
 - [ ] `AGENTS.md` 補 repo 核心路由，`TOOLS.md` 說明現況與觸發，`INDEX.md` 導覽知識文件；只改與新增能力有關的入口。
 - [ ] 全域技能路由副本只應在使用者明確要其他 repo／全域也能發現時建立；全域副本指向唯一 canonical skill，不另維護第二份操作規則。
-- [ ] `教學.md` 或 install files 只在產品能力與使用者操作有實際變動時更新，狀態根據實測，不把 pending graph 說成正式支援。
+- [ ] 安裝文件與入口 只在產品能力與使用者操作有實際變動時更新，狀態根據實測，不把 pending graph 說成正式支援。
 - [ ] 使用者交付包含路線、檔案、執行證據、技術／內容狀態及仍未驗證事項。

@@ -4,16 +4,16 @@
 
 本次把六份技能入口改為漸進揭露路由，並將可重用的 task、參數、安裝、維護、影片、角色動畫、決策與經驗資料集中到 `docs/knowledge/`，作為可由 Obsidian 開啟的 vault。入口保留原有 skill name/description 與重要路由、能力 gate、平台限制、設定／URL／部署／輸出目錄契約、人工驗收和一次有理由修正。舊 art reference 頁保留標題與相容連結。知識頁按需載入；經驗不會自動改寫 profile 或生成規則。
 
-圖片結果 manifest 維持 opt-in：`--result-json` 記錄技術資訊，不改變既有 task 選擇或輸出策略，也不等同美術驗收。素材頁與人工驗收狀態以 `docs/knowledge/assets/*.md` 的標準 Markdown 記錄；技術測試候選必須維持 `candidate`，不得由技術檢查或遷移動作推定為 `accepted`。本次 `smoke-potion` 已由舊測試資料遷移到 [Markdown 素材頁](knowledge/assets/smoke-potion.md)，圖檔與 JSON manifest 留在 repo `output/` 內；遷移 hash 完整核對，沒有記錄美術審核者的 accepted 決定。舊 SQLite smoke database 已移除，原 PNG／JSON 證據保留。
+圖片結果 manifest 維持 opt-in：`--result-json` 記錄技術資訊，不改變既有 task 選擇或輸出策略，也不等同美術驗收。素材頁與人工驗收狀態以 `docs/knowledge/assets/*.md` 的標準 Markdown 記錄；技術測試候選必須維持 `candidate`，不得由技術檢查或遷移動作推定為 `accepted`。本次 `smoke-potion` 已由舊測試資料遷移到 [Markdown 素材頁](../assets/smoke-potion.md)，圖檔與 JSON manifest 留在 repo `output/` 內；遷移 hash 完整核對，沒有記錄美術審核者的 accepted 決定。舊 SQLite smoke database 已移除，原 PNG／JSON 證據保留。
 
 ## 主要文件
 
-- Vault 導覽與工具路由：[`INDEX.md`](knowledge/INDEX.md)、[`TOOLS.md`](knowledge/TOOLS.md)、[`DECISIONS.md`](knowledge/DECISIONS.md)。
-- 美術產圖 task 與參數：[`art-generation.md`](knowledge/art-generation.md)、[`art-parameters.md`](knowledge/art-parameters.md)、[`art/`](knowledge/art/)。
-- 結果 manifest 與 Markdown 素材紀錄：[`result-records.md`](knowledge/result-records.md)、[`assets/smoke-potion.md`](knowledge/assets/smoke-potion.md)。
-- 模型經驗及日期化決策：[`experiences/`](knowledge/experiences/)、[`decisions/`](knowledge/decisions/)。
-- 安裝、維護、影片、動畫知識分別置於 [`installation/`](knowledge/installation/)、[`maintenance/`](knowledge/maintenance/)、[`video/`](knowledge/video/)、[`animation/`](knowledge/animation/)。
-- 根目錄 [`AGENTS.md`](../AGENTS.md) 和 [`教學.md`](../教學.md) 提供技能與 vault 路由及資產紀錄的使用入口。
+- Vault 導覽與工具路由：[`INDEX.md`](../INDEX.md)、[`TOOLS.md`](../TOOLS.md)、[`DECISIONS.md`](../DECISIONS.md)。
+- 美術產圖 task 與參數：[`art-generation.md`](../art-generation.md)、[`art-parameters.md`](../art-parameters.md)、[`art/`](../art/)。
+- 結果 manifest 與 Markdown 素材紀錄：[`result-records.md`](../result-records.md)、[`assets/smoke-potion.md`](../assets/smoke-potion.md)。
+- 模型經驗及日期化決策：[`experiences/`](../experiences/)、[`decisions/`](../decisions/)。
+- 安裝、維護、影片、動畫知識分別置於 [`installation/`](../installation/)、[`maintenance/`](../maintenance/)、[`video/`](../video/)、[`animation/`](../animation/)。
+- 根目錄 [`AGENTS.md`](../../../AGENTS.md) 和 `教學.md`（已刪除） 提供技能與 vault 路由及資產紀錄的使用入口。
 
 在 Obsidian 中用 **Open folder as vault** 開啟 `docs/knowledge/`。本次提供最小 `.obsidian` 設定；沒有安裝 Obsidian 或社群外掛，也未做 GUI 開啟驗證。repo 的相對 Markdown 連結可由一般 Markdown 閱讀器使用；vault 內導覽連結指向 vault 內頁面。
 

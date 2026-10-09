@@ -19,7 +19,7 @@
 - 圖片需再執行 `detect_image_capabilities.py`，依選定 image profile 記錄模型／nodes 與平台驗證狀態；不得複製來源機的 `image_capabilities.json`。
 - 要使用影片時，每台目標機都必須重新執行 `detect_video_capabilities.py`；可用 backend 與 task capability 由該機現有模型、Python runtime 與 ComfyUI node schema 動態決定。不得複製來源機的 `video_capabilities.json`。
 - `local_config.json` 只記錄目標機的絕對路徑與 URL，也必須在目標機重建。`workflows/` 是不進版控的維護用視覺化參考；正式 task 由 `generate.py` 依上述 machine-specific config 組 graph，不靠人工逐台修改 workflow JSON。
-- 本頁的 XU-Nano-PC hash 是已驗證的 SDXL／影片基線。若目標硬體偵測到另一個 tier，只能使用該 tier 已明確支援並完成 smoke 的模型組；例如目前 `sd15` 的 SDXL add-on 路徑尚未實機驗證，不能為了追求「相同」而強制載入 SDXL 模型造成 OOM 或架構不相容。
+- 本頁的 XU-Nano-PC hash 是已驗證的 SDXL／影片基線。若目標硬體偵測到另一個 tier，只能使用該 tier 已明確支援並完成 smoke 的模型組；不能為了追求「相同」而強制載入不適合該平台的模型造成 OOM 或架構不相容。
 
 ## 擷取規則
 
@@ -71,8 +71,8 @@ Windows PowerShell 的基本擷取指令如下（把路徑換成該機器的實�
       comfyui_controlnet_aux:
         commit: e8b689a513c3e6b63edc44066560ca5919c0576e
         source: https://github.com/Fannovel16/comfyui_controlnet_aux.git
-      # PR 8.4（2026-10-09）補記：templates/ 的 requires_custom_nodes 用到的第三方節點，
-      # 以及換臉 gate 釘住的 ReActor。三個 checkout 都沒有本機修改（git status 乾淨）。
+      # PR 8.4（2026-10-09）補記：templates/ 的 requires_custom_nodes 用到的第三方節點。
+      # 兩個 checkout 都沒有本機修改（git status 乾淨）。
       ComfyUI-KJNodes:
         commit: d3cfe21625e5170126ce06fbfcfe1d88108688c3
         source: https://github.com/kijai/ComfyUI-KJNodes.git
@@ -81,9 +81,6 @@ Windows PowerShell 的基本擷取指令如下（把路徑換成該機器的實�
         commit: 0c35fff5f382803e2310103357b5e985f5437f32
         source: https://github.com/kijai/ComfyUI-segment-anything-2.git
         registry_id: comfyui-segment-anything-2
-      ComfyUI-ReActor:
-        commit: a12c5b19dcac9ae8b47e592da39c9711c8f8c756
-        source: https://github.com/Gourieff/ComfyUI-ReActor
     runtime:
       python: 3.13.9
       python_build: '3.13.9 | packaged by Anaconda, Inc. | (main, Oct 21 2025, 19:09:58) [MSC v.1929 64 bit (AMD64)]'
@@ -538,14 +535,14 @@ workflows/ 依 AGENTS.md 規範不進版控；本輪沒有實際手動開發 wor
 
 Current 版本為唯一最新記錄；舊 `v1`／`v4`／`final` 均保留為歷史。正式 server PID 14020 的 `production-segment-current`：39 幀、960×540、60 FPS、0.65 秒、H.264/AAC，decoded samples 31,744，full decode pass，兩物件共 78 masks 且 empty=0，耗時 10.615 秒。`production-compose-current`：39 幀、1024 square、60 FPS、H.264/AAC、31,744 samples、full decode pass，耗時 8.389 秒、technical warning/content candidate。`prop-occlusion-current` 與 `belt-occlusion-current` 分別耗時 8.338 與 7.903 秒，同為 39 幀、1024 square、60 FPS、H.264/AAC、31,744 samples、full decode pass，technical warning/content candidate。
 
-獨立 PNG QA 由 3 個 current zip 各解出並檢查全部 39 張實際 PNG：production compose head/collar matte 每幀 666,624 px、total changed 0；prop fingers matte 每幀 14,785 px、total changed 0；belt jacket matte 每幀 958,351 px、total changed 0，manifest outside-mask changed max 均為 0。這不代表 MP4 無損或畫面合格。20 個 Video Layers tests（含 image track-to-destination mapping regression）和 17 個 portable tests pass；最新 `portable-verification-current.txt` 為 43 passed、0 failed，tools exit 0。`video-capability-rescan-current.json` 記錄原有 video generation default H3、H3/Wan available；和此工具無關。`face-swap-preflight-after.json` 的獨立 ReActor gate pass，pinned commit `a12c5b19dcac9ae8b47e592da39c9711c8f8c756`。四個 current MP4 均完成嚴格 FPS、逐幀 PTS grid、H.264、AAC 48 kHz stereo 及 full-decode gate。測試 server 8189 已關閉。工程 gates 已完成；真實 Kabuto LK frame 1 失敗， armor 位置／mask、手部接觸和 belt 3D 繞身仍不合格，完整影片未完成，content 狀態皆 candidate。本機 Windows/runtime 技術驗證不代表跨平台 verified 或美術 accepted。
+獨立 PNG QA 由 3 個 current zip 各解出並檢查全部 39 張實際 PNG：production compose head/collar matte 每幀 666,624 px、total changed 0；prop fingers matte 每幀 14,785 px、total changed 0；belt jacket matte 每幀 958,351 px、total changed 0，manifest outside-mask changed max 均為 0。這不代表 MP4 無損或畫面合格。20 個 Video Layers tests（含 image track-to-destination mapping regression）和 17 個 portable tests pass；最新 `portable-verification-current.txt` 為 43 passed、0 failed，tools exit 0。`video-capability-rescan-current.json` 記錄原有 video generation default H3、H3/Wan available；和此工具無關。四個 current MP4 均完成嚴格 FPS、逐幀 PTS grid、H.264、AAC 48 kHz stereo 及 full-decode gate。測試 server 8189 已關閉。工程 gates 已完成；真實 Kabuto LK frame 1 失敗， armor 位置／mask、手部接觸和 belt 3D 繞身仍不合格，完整影片未完成，content 狀態皆 candidate。本機 Windows/runtime 技術驗證不代表跨平台 verified 或美術 accepted。
 
-Windows ACL issue：Python 3.13 `tempfile.mkdtemp()` 私有 mode-0700 DACL 在 rename 後仍阻止其他 desktop/tool identity 讀取。新 Video Layers client/server 現用 output parent 下隨機 UUID stage dir 和一般 `mkdir()` 繼承父 ACL，仍拒絕覆寫及 atomic rename。一般與核准程序跨身份讀取測試通過，current artifacts 已可由預設 tools 跨呼叫存取。此變更只在 Video Layers，沒有改 face-swap media 或 generation source。最終使用者 scope、圖像 QA 與未完成目標詳見 completion audit（本機證據：`output/*-kabuto-upper-body/video-layers/completion-audit.md`）。
+Windows ACL issue：Python 3.13 `tempfile.mkdtemp()` 私有 mode-0700 DACL 在 rename 後仍阻止其他 desktop/tool identity 讀取。新 Video Layers client/server 現用 output parent 下隨機 UUID stage dir 和一般 `mkdir()` 繼承父 ACL，仍拒絕覆寫及 atomic rename。一般與核准程序跨身份讀取測試通過，current artifacts 已可由預設 tools 跨呼叫存取。此變更只在 Video Layers。最終使用者 scope、圖像 QA 與未完成目標詳見 completion audit（本機證據：`output/*-kabuto-upper-body/video-layers/completion-audit.md`）。
 
 ## Wan2.2 Animate 原生 workflow 狀態（2026-10-06）
 
-同日追加：兩段延伸 Mix61（含來源音訊）／Move61、直式 384×640 Move17，以及 SCAIL-2 FP8 替換 33／61 幀、動畫 33 幀，皆以固定 API templates 直接 HTTP 實測，完整解碼與 PTS grid 通過；內容仍 candidate。ComfyUI 仍為 `12d5279438bfefc058a269eae805ceab6047777f`（v0.34.0）。細節見[API reference](../skills/comfyui-run/references/comfyui-wan-animate/references/comfyui-api.md)與[SCAIL-2 reference](../skills/comfyui-run/references/comfyui-wan-animate/references/scail2.md)。
+同日追加：兩段延伸 Mix61（含來源音訊）／Move61、直式 384×640 Move17，以及 SCAIL-2 FP8 替換 33／61 幀、動畫 33 幀，皆以固定 API templates 直接 HTTP 實測，完整解碼與 PTS grid 通過；內容仍 candidate。ComfyUI 仍為 `12d5279438bfefc058a269eae805ceab6047777f`（v0.34.0）。細節見[API reference](knowledge/video/wan-animate-choice.md)與[SCAIL-2 reference](knowledge/video/wan-animate-choice.md)。
 
-後續已完成專用技能內 Mix17／Move17 固定 templates 的直接 HTTP API 實测：384×384、17 幀、16 FPS、1.0625 秒、H.264 無音訊，完整解碼與 PTS grid 通過；內容仍有肩膀／手臂／手部變形，未美術接受。本次沒有新增 Python client、CLI 或 `generate.py` task。實際 prompt ID、template hash、graph、上傳回應、history、耗時與限制見[API 操作與實測紀錄](../skills/comfyui-run/references/comfyui-wan-animate/references/comfyui-api.md)。
+後續已完成專用技能內 Mix17／Move17 固定 templates 的直接 HTTP API 實测：384×384、17 幀、16 FPS、1.0625 秒、H.264 無音訊，完整解碼與 PTS grid 通過；內容仍有肩膀／手臂／手部變形，未美術接受。本次沒有新增 Python client、CLI 或 `generate.py` task。實際 prompt ID、template hash、graph、上傳回應、history、耗時與限制見[API 操作與實測紀錄](knowledge/video/wan-animate-choice.md)。
 
 截至 2026-10-06 已完成安裝，正式 8188 的 31 個官方 UI 節點齊備；Mix／Move 的 33 幀 API smoke 技術通過。抽幀發現角色身份漂移，Move 多出吉他，內容仍為 candidate，未獲使用者驗收。 此能力為獨立原生 UI workflow，未接入 `generate.py` task/backend；H3/Wan 5B detector 不涵蓋 Animate。既有預設 h3 保持不變。詳細 pins、操作與實測見[安裝紀錄](knowledge/video/wan-animate-install.md)。（SCAIL-2 已於同日另行安裝實測，見上方追加段。）

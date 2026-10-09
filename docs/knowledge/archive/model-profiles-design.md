@@ -195,7 +195,7 @@ tier 不刪除，降格成「這台最多建議到哪個設定檔」的提示，
 
 ### 4.2 驗證證據綁報告與環境（第 5 階段）
 
-`validation[<platform_key>]` 由手寫 dict 改為**證據項目清單**（舊式 dict 仍可讀）。每個項目：`{report, report_sha256, tasks, profile_sha256, env{comfyui_version, comfyui_commit, models_hash, custom_nodes_hash}, min_memory_mb, approved_by, approved_at}`。項目只能由 `gameart.py validation approve <報告> --by <使用者>` 在檢查「報告已記錄在 `docs/knowledge/validation/`、設定檔內容雜湊一致、至少一個 task pass」後附加；`propose` 唯讀預覽，**agent 不得自行 approve**。流程見 [validation-workflow](knowledge/maintenance/validation-workflow.md)。
+`validation[<platform_key>]` 由手寫 dict 改為**證據項目清單**（舊式 dict 仍可讀）。每個項目：`{report, report_sha256, tasks, profile_sha256, env{comfyui_version, comfyui_commit, models_hash, custom_nodes_hash}, min_memory_mb, approved_by, approved_at}`。項目只能由 `gameart.py validation approve <報告> --by <使用者>` 在檢查「報告已記錄在 `docs/knowledge/validation/`、設定檔內容雜湊一致、至少一個 task pass」後附加；`propose` 唯讀預覽，**agent 不得自行 approve**。流程見 [validation-workflow](../maintenance/validation-workflow.md)。
 
 - task 的狀態由證據推導：有項目涵蓋且記憶體足夠 → `verified`。目前環境（ComfyUI 版本／commit、模型庫、custom_nodes）或設定檔內容與證據不同 → `verified_other_env`（顯示「已在 <日期> 的環境驗證；目前環境不同（…）」，只提醒、不阻擋）。
 - 既有 `windows-cuda` 手寫紀錄遷移成 `legacy: true, report: null` 項目（證據仍是 `docs/tested-versions.md`）：沒有環境紀錄，視同 `verified`（能力快照 `validation_basis: "legacy"`；`doctor` 註明無環境紀錄），沒有失敗證據不降級。

@@ -1,80 +1,30 @@
 ---
-type: command-reference
+type: reference
 status: active
 ---
 
-# 影片 CLI
+# 影片 task 與 template 對照
 
-先由技能 `skills/comfyui-run/references/comfyui-video-gen/README.md` 核對需求與能力；這頁保存既有 task 的 CLI 寫法。生成影片使用本機 capability 支援的 backend；config 有 `default_backend` 才可省 `--backend`。一般 timeout 建議 1800 秒。每個生成 task 明確帶 `--config` 或 `--comfy-url`、可選 `--video-config` 與 `--output-dir`。不要為單次需求改 graph 或臆造旗標。
+旗標與必要輸入**不在文件裡**：生成 task 查 `generate.py <task> --help`，template 查 `gameart.py run show <id>`。這頁只說 task 背後走哪份 template，以及哪些 task 是本機處理。生成 task 都要明確帶 `--config` 或 `--comfy-url`、`--output-dir`；`--backend` 只有能力設定檔有 `default_backend` 才可省略；一般 timeout 建議 1800 秒。不要為單次需求改 graph 或臆造旗標。
 
-## `img2video`
+## 生成 task（`generate.py`，由 runner 填 template）
 
-```text
-<python_exe> <generate_script> img2video --config <local_config.json> [--video-config <video_capabilities.json>] --timeout 1800 --image <path> --prompt "..." [--backend h3|wan] [--duration 2] [--extract-frames] [--overwrite] --output-dir <output_dir>
-```
+| task | template id | 備註 |
+|---|---|---|
+| `img2video`、`fx_loop`、`transition`、`clip_extend`、`camera_move`（Wan） | `video/wan/img2video` | 同一份 graph，task 不同在驗收與輸出包裝；Wan 沒有尾幀能力、無聲 |
+| 同上（H3，沒有尾幀） | `video/h3/img2video` | |
+| 同上（H3，有尾幀） | `video/h3/img2video-last` | `transition` 與 `fx_loop` 鎖首尾；規則見 [R3](../rules/idle-anchoring.md) |
+| `pose_drive` | `video/{h3\|wan}/pose-drive-{canny\|pose\|depth}` | 角色靜幀的姿勢與朝向要貼近動作片首幀 |
+| `character_video` | `video/h3/character-video-{參考圖張數}` | 一到九張角色參考 |
+| `video_inpaint` | `video/wan-vace/inpaint` | 遮罩約定、輸出與限制見 [vfx-tools](vfx-tools.md)；遮罩由 [SAM3 追蹤](sam3-tracking.md) 產生。runner 不寫影片 sidecar，不支援 `--resume`，失敗時看 `run.result.json` 並用新的 `--name` 重跑 |
 
-預設只留 MP4；明確加 `--extract-frames` 才抽 PNG 序列。
+預設 `img2video` 只留 MP4，`fx_loop` 預設抽 PNG 序列；其他 task 要抽幀須明確要求。
 
-## `fx_loop`
+## 本機處理（不連 ComfyUI）
 
-```text
-<python_exe> <generate_script> fx_loop --config <local_config.json> [--video-config <video_capabilities.json>] --timeout 1800 --image <path> --prompt "..." [--backend h3|wan] [--duration 2] [--no-extract-frames] [--overwrite] --output-dir <output_dir>
-```
+- `video_concat`：至少兩支 24 FPS MP4 與順序。尺寸或長寬比不一致、混合有聲與無聲預設都拒絕；要 `fit`／`fill`／`stretch` 或 `drop`／`silence-missing` 須事先向使用者說明差異並取得選擇，不靜默裁切、拉伸或丟音訊。
+- `video_composite`：只適合本產線輸出的乾淨純綠幕前景（chroma key，不是語意分割）；只保留前景音軌。細節與限制見 [README](README.md) 的 task 段。
 
-預設抽幀；不要影格才加 `--no-extract-frames`。
+## 獨立路線
 
-## `transition`
-
-```text
-<python_exe> <generate_script> transition --config <local_config.json> [--video-config <video_capabilities.json>] --timeout 1800 --start <A> --end <B> --prompt "..." [--backend h3|wan] [--duration 2] [--extract-frames] [--overwrite] --output-dir <output_dir>
-```
-
-## `clip_extend`
-
-```text
-<python_exe> <generate_script> clip_extend --config <local_config.json> [--video-config <video_capabilities.json>] --timeout 1800 --video <prev.mp4> --prompt "..." [--backend h3|wan] [--duration 2] [--extract-frames] [--overwrite] --output-dir <output_dir>
-```
-
-也可使用已支援的 `--image` 尾幀輸入；輸入契約與裝置支援先以程式及 capability preflight 確認。
-
-## `character_video`
-
-```text
-<python_exe> <generate_script> character_video --config <local_config.json> [--video-config <video_capabilities.json>] --timeout 1800 --character-ref <path> [--character-ref <path2>] --prompt "..." [--backend h3|wan] [--duration 2] [--extract-frames] [--overwrite] --output-dir <output_dir>
-```
-
-## `camera_move`
-
-```text
-<python_exe> <generate_script> camera_move --config <local_config.json> [--video-config <video_capabilities.json>] --timeout 1800 --image <path> --camera zoom_in|zoom_out|pan_left|pan_right|pan_up|pan_down|orbit_cw|orbit_ccw|static [--prompt "..."] [--backend h3|wan] [--duration 2] [--extract-frames] [--overwrite] --output-dir <output_dir>
-```
-
-## `pose_drive`
-
-```text
-<python_exe> <generate_script> pose_drive --config <local_config.json> [--video-config <video_capabilities.json>] --timeout 1800 --image <char.png> --motion-ref <motion.mp4> --prompt "..." [--control-type pose|canny|depth] [--backend h3|wan] [--duration 2] [--extract-frames] [--overwrite] --output-dir <output_dir>
-```
-
-## `video_inpaint`
-
-```text
-<python_exe> <generate_script> video_inpaint --config <local_config.json> [--video-config <video_capabilities.json>] --backend wan --timeout 1800 --video <src.mp4> --masks <masks_dir|layers.zip> [--mask-object 1] --mode keep|replace --prompt "..." [--seed N] [--grow 8] [--feather 4] [--pad 48] [--crop x0,y0,x1,y1] [--name <name>] --output-dir <output_dir>
-```
-
-遮罩為白色＝重畫的灰階 PNG（L，或 R=G=B 的 RGB）。預設由 SAM3 固定 graph（[sam3-track](../../../skills/comfyui-run/references/comfyui-video-layers/references/sam3-track.md)）產生；SAM3 不可用時，才用 SAM2 備援路線 `gameart.py vfx segment-plan` → `video_layers.py run` → `vfx unpack-masks`（`--masks` 也可直接給 `layers.zip`）。指令與旗標不變（`--resume` 除外，見下）。PR 8.3b 起整個交給 template runner 執行 `video/wan-vace/inpaint`（[R2](../rules/fixed-graphs.md)；先 preflight，平台不是 `technical_pass` 就擋下）。輸出在 `<output-dir>/<名稱>_run/`（`--name`／`--shot-id` 決定名稱）：runner 的 `run.result.json`、`outputs/raw/`（工作區原始 MP4）、`composited/`（無損 PNG 主檔、H.264 預覽，以及和舊版欄位相同的 `result.json`）。不再寫影片 sidecar；`--resume` 不支援（runner 不會重送，失敗時看 `run.result.json`，用新的 `--name` 重跑）。部署端要先用 `gameart.py deploy` 部署 `templates/`。完整流程與限制見 [`vfx-tools.md`](vfx-tools.md)。
-
-## `video_concat`（本機）
-
-```text
-<python_exe> <generate_script> video_concat --video <a.mp4> --video <b.mp4> --name scene_A --output-dir <output_dir> [--resize-mode strict|fit|fill|stretch] [--audio-policy require-consistent|drop|silence-missing] [--resume|--overwrite]
-```
-
-不需 ComfyUI URL、模型或 timeout。混合音軌／不同尺寸的處理選項須先與使用者確認，詳見[video_concat 技術與驗收細節](README.md)。
-
-## `video_composite`（本機）
-
-```text
-<python_exe> <generate_script> video_composite --foreground <greenscreen.mp4> --background <bg.mp4|bg.png> [--chroma-color 00FF00] [--tolerance 60] [--softness 40] [--resize-mode fill|strict|fit|stretch] [--overwrite] --output-dir <output_dir>
-```
-
-不需 ComfyUI URL、模型或 timeout；這是綠幕 chroma key，不是 AI 去背。合成音訊及尺寸行為詳見[video_composite 技術細節](README.md)。
+Wan Animate、SCAIL-2、SAM3 追蹤不是 `generate.py` task，用 `gameart.py run`（見 [取捨](wan-animate-choice.md)、[SAM3 追蹤](sam3-tracking.md)）。Video Layers（SAM2 備援與 2D 圖層合成）見 [layers](layers.md)。

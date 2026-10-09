@@ -21,7 +21,7 @@ status: current
 | #5 | 10-08 10:24 | 2.2：`--preflight`、平台 gate、模型大小與 `--verify-hashes`、DWPose pin |
 | #6 | 10-08 11:16 | 2.3：實際執行（上傳、queue、輪詢、下載、post 步驟）、`run.result.json`；`review` 接受 `template_run_result` |
 | #7 | 10-08 12:46 | 2.4：技能改用 `gameart.py run`；R2 第 1 點改寫；刪舊 `template-manifest.json` |
-| #8 | 10-08 13:20 | 2.5：custom node 改用 `GameArt*` 名稱，舊名稱保留為隱藏別名（見[改名與別名](custom-node-renames.md)） |
+| #8 | 10-08 13:20 | 2.5：custom node 改用 `GameArt*` 名稱，舊名稱保留為隱藏別名（見[改名與別名](../maintenance/custom-node-renames.md)） |
 
 第 2 階段交付的東西：
 - 8 份固定 API graph（Wan Animate 6、SAM3 2），都是 `technical_pass`（windows-cuda）。
@@ -38,7 +38,7 @@ status: current
 
 1. **R2／D8：固定 graph 一律走 runner。** 新的固定 graph 先做成 template，再用 `gameart.py run` 執行（[R2](../rules/fixed-graphs.md)）。手動打 HTTP 只能用來除錯 runner，結果不能當證據。
 2. **技術通過不等於美術接受。** `content_review` 永遠是 `pending`，由使用者用 `review accept|reject` 決定（[R1](../rules/candidate-review.md)）。agent 不 accept、不 reject，也不 approve validation。
-3. **不寫特定人名。** 審核者寫「美術審核者」，使用者的決定寫「使用者確認」。[`test_neutral_wording`](../../../tests/test_neutral_wording.py) 會擋。舊 class 名稱的拼法只留在[改名紀錄](custom-node-renames.md)。PR 8.2 已刪掉 `contracts.py` 的 `LEGACY_*` 常數，其他檔案不要再寫那些拼法。
+3. **不寫特定人名。** 審核者寫「美術審核者」，使用者的決定寫「使用者確認」。[`test_neutral_wording`](../../../tests/test_neutral_wording.py) 會擋。舊 class 名稱的拼法只留在[改名紀錄](../maintenance/custom-node-renames.md)。PR 8.2 已刪掉 `contracts.py` 的 `LEGACY_*` 常數，其他檔案不要再寫那些拼法。
 4. **位元組與 hash：**
    - 有 hash 紀錄的檔案（`templates/**`、validation、smoke suites 等）在 [`.gitattributes`](../../../.gitattributes) 設 `-text`。新增這類檔案時，要同一個 PR 補上規則，並用 `git check-attr text <檔案>` 確認。
    - `graph.api.json` 的位元組 sha256 和 canonical sha256 都要和 `template.json` 一致。
@@ -68,7 +68,7 @@ status: current
 4. **改之後**再跑一次完整測試；文件 PR 至少另外跑 `python tests/test_doc_links.py` 和 `python tests/test_neutral_wording.py`。
 5. **Windows 實機驗證：**
    - 證據放在 `output/verify-<YYYYMMDD>-<PR 編號>/`（ignored，不進版控）。
-   - 文件裡只能寫成純文字標註，例如「（本機證據：`output/verify-...`）」，不能寫成連結（[文件連結規則](doc-links.md)）。
+   - 文件裡只能寫成純文字標註，例如「（本機證據：`output/verify-...`）」，不能寫成連結（[文件連結規則](../maintenance/doc-links.md)）。
    - 要部署 custom node 或工具時：先 `deploy` dry run，確認後 `deploy --yes`，再**另外**跑 `verify-install` 取得通過數。
 6. commit 身分自己選，但同一個 PR 裡要一致。push 分支，開 PR 到 `develop`，描述用繁體中文（格式見第 7 節）。
 7. **不要自己 merge。** 等審核端回覆；要修改就在同一個分支加 commit。已經 push 的 commit，不經使用者同意不 force-push、不 rebase。
@@ -149,8 +149,8 @@ status: current
 | `extra_model_paths.yaml` | 不支援，模型只在 `<comfyui_path>/<path>` 找。要支援必須另外提案 |
 | 上傳到 `input/<run_id>/` 的檔案不會自動清理 | 目前要手動清理（[templates/README](../../../templates/README.md)）；要不要自動清理，**等使用者決定** |
 | macos-mps | 所有 template 都還沒實測，維持 `untested` |
-| 被握住的物件：手部（遮擋物）保護遮罩 | **待開發**（2026-10-09）：局部重繪會把握住物件的手一起重畫。一次性做法與提案方向見[第 3–8 階段總結](restructure-summary-phase3-8.md) |
-| review 只能選原始輸出，選不到 `derived_outputs` | **待開發**（2026-10-09），見[第 3–8 階段總結](restructure-summary-phase3-8.md) |
+| 被握住的物件：手部（遮擋物）保護遮罩 | **待開發**（2026-10-09）：局部重繪會把握住物件的手一起重畫。一次性做法與提案方向見[第 3–8 階段總結](../maintenance/restructure-summary-phase3-8.md) |
+| review 只能選原始輸出，選不到 `derived_outputs` | **待開發**（2026-10-09），見[第 3–8 階段總結](../maintenance/restructure-summary-phase3-8.md) |
 | SD1.5 template | **暫不做**（使用者 2026-10-09 決定）；圖片 builder 保留為 SD1.5 退路 |
 
 ## 6. Windows／PowerShell 5.1 經驗

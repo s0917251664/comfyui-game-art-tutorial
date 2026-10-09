@@ -1,63 +1,31 @@
-# icon_asset 的 --structure-ref:結構/顏色配置已有明確答案時怎麼辦
+# icon_asset 的 --structure-ref：結構與顏色配置已有明確答案時
 
-`skills/comfyui-run/references/comfyui-art-gen/README.md` 的 `icon_asset` 必要輸入第 5 點指向這裡——平常不用讀,只有「結構描述用文字講不清楚」或「AI 一直畫不準確定的數量/配置」時才查。
+平常不用讀，只有「結構用文字講不清楚」或「AI 一直畫不準確定的數量與配置」時才查。
 
 ## 這是什麼
 
-`icon_asset` 平常純靠文字 prompt 決定畫面內容,但有些圖示的結構/顏色配置**在下筆前就已經有確定答案**(不是要 AI 自己想像的),例如「一個放射狀圖示要精準分成 N 塊」——這種**精確計數幾何**任務,SDXL 靠文字描述不可靠。
-
-`--structure-ref <範本圖路徑>` 提供一種引導方式：先準備已畫好目標結構／顏色配置的範本圖，`icon_asset` 以它作為：
-
-1. **img2img 底圖**（denoise 固定 0.85）：讓生成結果較貼近範本的結構與色塊配置；像素不會原樣繼承，不能視為鎖定。
-2. **Canny ControlNet 邊緣來源**（strength 固定 0.85）：再提供輪廓邊緣引導，協助保留大致形狀；不保證邊緣完全不變。
-
-這兩種引導可降低模型自行改變分區數量、顏色配置與外形的機會，但不會像素級鎖住結構或顏色，也不保證材質／光澤命中。2026-08-19 轉盤觀察見下方歷史紀錄；2026-10-03 單件材質需求的結果與限制，見[物件與平面組裝實測紀錄](object-design-workflows.md)。
+有些圖示的結構或顏色配置在下筆前就有確定答案（例如「精準分成 N 塊的放射狀圖示」），這類精確計數幾何，純文字 prompt 給 SDXL 不可靠。`--structure-ref <範本圖>` 讓 `icon_asset` 以範本圖同時當 img2img 底圖與 Canny ControlNet 邊緣來源（強度固定，不開放調整），降低模型自行改變分區數量、顏色配置與外形的機會。它**不是像素級鎖定**，也不保證材質或光澤命中。
 
 ## 範本圖從哪來
 
-範本圖可以是任何來源(使用者提供的草圖、美術自己畫的,或程式產生),不限定畫法。`tools_src/generate.py` 裡的 `build_wheel_segment_template(n_segments, width, height, colors, gold)` 是一個現成的輔助函式,用來畫「圓形外框 + N 條放射狀分隔線 + 交錯色塊」這種放射狀等分圖示的範本,不是獨立的 CLI task,是給呼叫端(agent)自己 import 呼叫、存成檔案後再餵給 `--structure-ref` 用:
+任何來源都可以：使用者的草圖、美術自己畫的，或用 Pillow 等工具程式繪製。規則是把目標結構的線條與色塊直接畫在圖上（圓形外框加 N 條放射分隔線加交錯色塊是常見例子）。範本是字母或文字時，用字形清楚的字型當骨架。
 
-```python
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path("<generate_script 路徑>").resolve().parent))
-import generate as m
-img = m.build_wheel_segment_template(n_segments=8, width=1024, height=1024)
-img.save("<暫存路徑>/template.png")
-```
+- 裝飾字型（花體、書法體）當骨架時，複雜字母（英文大寫 K、J）辨識度大幅下降，一般人幾乎認不出；這是字體家族的設計傾向，不是範本畫錯。要「有連筆動感又要能辨識」，改用圓潤手寫體（例如系統內建的 Segoe Print Bold）折衷。
 
-存好之後正常呼叫:
+放射狀等分有現成的輔助函式：`tools_src/comfyui_pipeline/structure_ref_wheel.py` 的 `build_wheel_segment_template`（畫範本圖，可設分區數、`frame_ratio` 外框環帶、`bead_count` 圓珠）與 `build_wheel_layer_masks`（依同一組半徑比例產生外框、獎區、指針三張遮罩）。它們不是 CLI task，由 agent 在暫存目錄寫一支 `.py` 腳本，從部署的 `tools/comfyui_pipeline/` 匯入，存成檔案後再餵給 `--structure-ref` 或 `layer_split`。
 
-```
-<python_exe> <generate_script> icon_asset --prompt "..." --structure-ref "<暫存路徑>/template.png" --config <local_config.json> --output-dir <output_dir>
-```
+## 完整圖加事後拆圖層
 
-放射狀等分只是其中一種結構類型,遇到其他「結構/配置已經確定、AI 用文字講不清楚」的圖示,自己畫一張對應的範本圖(規則相同:目標結構的線條/色塊直接畫在圖上)一樣可以餵給 `--structure-ref`,不用侷限在轉盤這個案例上。
+要一張完整圖、事後再拆成外框、獎區、中心指針等圖層時：範本圖裡把外框環帶的半徑比例定好，先用 `icon_asset --structure-ref` 生出完整圖，確認滿意後，用**同一組半徑比例**畫出各圖層的遮罩（外框、獎區、指針），對同一張完整圖各跑一次 `layer_split`。圖層邊界來自同一張圖、同一組半徑，所以疊回去像素級吻合，比三個部件各自獨立生成可靠。半徑比例不一致，遮罩邊界就會對不齊。中心鈕遮罩要比視覺大小留大一點，因為指針常有機關造型會從中心往外伸出，切太貼會把伸出的那段切給獎區。
 
-## 完整圖 + 事後拆圖層:frame_ratio / bead_count + build_wheel_layer_masks()
+## 取捨：結構鎖住了，精細裝飾會被壓掉
 
-2026-08-24 實測(仿實體園遊會轉盤:外框環帶+內部獎區+中心指針三個部件):`build_wheel_segment_template()` 額外支援 `frame_ratio`(0~1,給了就切一圈獨立的外框環帶,獎區扇形只填到 `frame_ratio` 對應的內側半徑)跟 `bead_count`(在外框環帶中線畫幾顆等間距圓珠裝飾)。用這個範本先跑一次 `icon_asset --structure-ref` 生出「外框+獎區+中心指針」都在同一張裡的完整圖,確認滿意後,再用 `build_wheel_layer_masks(width, height, frame_ratio, hub_ratio)`(**`frame_ratio` 一定要跟產生範本圖時用的值一致**,不一致的話遮罩邊界會跟合成圖對不齊)產生三張跟 `layer_split` 格式相容的遮罩,對同一張完整圖跑三次 `layer_split`(`--layer-name` 分別取 frame/prize_zone/pointer),拆出來的三個圖層像素級對齊,疊回去完全吻合——這比「三個部件各自獨立生成」可靠,因為圖層邊界是從同一張圖、同一組半徑算出來的,不是三次獨立猜測。
+2026-08-19 轉盤案例（8 等分放射狀）：denoise 從 0.55 測到 0.85，分區數量與顏色配置維持接近範本，質感逐步提升（從平面到有光澤的球面感），但鑲花雕紋這類需要額外邊緣線條的細節，不管怎麼調都沒有明顯出現。推測是 Canny 鎖邊緣的同時也壓抑了多畫細碎線條，屬結構性限制；繼續推高 denoise 更可能先讓結構跑掉。向使用者說明時要講清楚這個取捨，不保證「結構鎖住又有精細雕花」兩者兼得。
 
-`hub_ratio` 預設在範本圖是 0.12(中心鈕本身的視覺大小),但 `build_wheel_layer_masks()` 的 `hub_ratio` 預設用 0.22——刻意留大一點,因為中心指針常常有機關造型(例如彈片/箭頭)會從中心鈕往外伸出一小段到獎區範圍,遮罩切太貼緊中心鈕圓圈,伸出去的那段會被切給獎區圖層而不是指針圖層。
+## 為什麼是現在這個做法
 
-```python
-img = m.build_wheel_segment_template(12, 1024, 1024, colors=(c1, c2), gold=trim, frame_ratio=0.86, bead_count=24)
-img.save("<暫存路徑>/template.png")
-# ...icon_asset --structure-ref 生出完整圖之後...
-frame_mask, prize_mask, pointer_mask = m.build_wheel_layer_masks(1024, 1024, frame_ratio=0.86, hub_ratio=0.22)
-frame_mask.save("<暫存路徑>/mask_frame.png")
-prize_mask.save("<暫存路徑>/mask_prize.png")
-pointer_mask.save("<暫存路徑>/mask_pointer.png")
-# 再對完整圖跑三次 layer_split,--mask 分別帶這三張
-```
+三次失敗迭代的結論：
 
-## 已知取捨:結構鎖住了,精細裝飾細節會被壓掉
-
-2026-08-19 實測(轉盤案例,8 等分放射狀圖示):該轉盤案例中，反覆測試時分區數量與顏色配置維持接近範本；denoise 從 0.55 測到 0.85 時觀察到質感逐步增加(從死板平面到有玻璃寶石光澤球面感),但**鑲花雕紋這類需要額外邊緣線條的裝飾細節,不管怎麼調 denoise 都沒有明顯出現**。推測原因是 Canny ControlNet 鎖邊緣的同時,也會壓抑「多畫細碎額外線條」這件事——這是這個做法的結構性限制,不是 denoise 沒調好,繼續往上推 denoise 更可能先讓結構跑掉,不會先讓雕紋跑出來。跟使用者說明時要講清楚這個取捨,不要保證「結構鎖住又能有精細雕花」兩者都要。
-
-## 已知踩坑:三種失敗模式的演進紀錄
-
-這個功能是從三次失敗迭代出來的,紀錄一下避免以後重踩:
-1. **純文字描述「切成 N 等份」**:SDXL 對精確計數幾何任務不可靠,分區數量對不上,反覆重跑會在「偽資訊圖表(冒出亂碼文字)」「花瓣/寶石裝飾蓋掉分區結構」之間打轉
-2. **只用純線稿 ControlNet 鎖邊緣位置**(不搭配 img2img):線的位置鎖住了,但顏色配置沒被鎖住,SDXL 還是會整張畫成單一漸層蓋過分區邊界——ControlNet canny 只鎖邊緣結構,不會連帶鎖住「這幾塊顏色要交錯」這種區域級語意
-3. **範本圖畫好顏色 + img2img + ControlNet 雙重引導**(目前採用的做法):在當時轉盤案例中，分區數量與顏色配置較接近範本；這項單案例觀察不代表其他素材都能穩定命中
+1. 純文字描述「切成 N 等份」：分區數量對不上，在「偽資訊圖表（冒出亂碼文字）」與「花瓣寶石裝飾蓋掉分區」之間打轉。
+2. 只用線稿 ControlNet（不搭配 img2img）：邊緣位置鎖住了，但顏色配置沒鎖，SDXL 仍會整張畫成單一漸層蓋過分區——ControlNet 只鎖邊緣結構，不鎖「這幾塊顏色要交錯」這種區域語意。
+3. 範本圖畫好顏色加 img2img 加 ControlNet 雙重引導（現行做法）：在該案例中分區與顏色較接近範本；單案例觀察，不代表其他素材都穩定。
