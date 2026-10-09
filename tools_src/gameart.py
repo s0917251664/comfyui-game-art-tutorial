@@ -15,7 +15,6 @@ TOOLS = {
     "gen": ("generate.py", "圖片/影片生成 pipeline(concept、inpaint、video 等任務)"),
     "design": ("comfyui_design.py", "本機 Pillow 物件場景、檢視表與圖樣重複"),
     "edit": ("image_edit_tools.py", "本地圖片編輯工具(遮罩、裁切、合成等)"),
-    "face-swap": ("face_swap.py", "影片換臉 preflight / swap"),
     "video-layers": ("video_layers.py", "影片分層 preflight / run"),
     "film-audio": ("film_audio.py", "影片配音/音訊處理"),
     "film-lipsync": ("film_lipsync.py", "MuseTalk 對嘴"),

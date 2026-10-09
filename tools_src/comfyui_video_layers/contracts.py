@@ -7,7 +7,7 @@ MODEL_ID = 'facebook/sam2.1-hiera-small'
 MODEL_REVISION = 'ee5bba1d82bb8749febdf90f45e84b687142ba03'
 PINS = {'av': '18.1.0', 'opencv-python': '5.0.0.93',
         'torch': '2.13.0+cu130', 'transformers': '5.15.0'}
-PACKAGE_FILES = ('__init__.py', 'contracts.py', 'media.py', 'nodes.py')
+PACKAGE_FILES = ('__init__.py', 'contracts.py', 'media.py', 'nodes.py', 'source_media.py')
 # ComfyUI class name (D9). The old class name was removed in phase 8.2;
 # the only remaining spelling is the migration note.
 NODE_NAME = 'GameArtVideoLayers'

@@ -23,15 +23,14 @@ PROTECTED_NAMES = frozenset({
 })
 
 _TOOL_FILES = (
-    "video_layers.py", "face_swap.py", "film_audio.py", "film_sapi.ps1", "film_qwen.py", "film_lipsync.py",
+    "video_layers.py", "film_audio.py", "film_sapi.ps1", "film_qwen.py", "film_lipsync.py",
     "generate.py", "detect_device.py", "sam_segment.py", "image_edit_tools.py", "comfyui_design.py",
     "mask_refine.py", "mask_session.py", "detect_image_capabilities.py", "detect_video_capabilities.py",
     "gameart.py", "doctor.py", "asset_review.py", "smoke.py", "vfx_alpha_tools.py", "local_pixels.py",
 )
-_NODE_PACKAGE_FILES = ("__init__.py", "contracts.py", "media.py", "nodes.py")
+_NODE_PACKAGE_FILES = ("__init__.py", "contracts.py", "media.py", "nodes.py", "source_media.py")
 # (label 前綴, repo 套件資料夾, 部署位置們)。第二個位置是 custom_nodes,安裝與否由使用者決定。
 _NODE_PACKAGES = (
-    ("face-swap-video", "comfyui_face_swap_video", ("tools/comfyui_face_swap_video", "custom_nodes/comfyui-face-swap-video")),
     ("video-layers", "comfyui_video_layers", ("tools/comfyui_video_layers", "custom_nodes/comfyui-video-layers")),
 )
 SIMPLE_MASK_REPO_DIR = Path("tools_src/simple_mask_tool")

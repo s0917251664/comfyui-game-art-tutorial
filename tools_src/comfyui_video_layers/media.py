@@ -31,7 +31,7 @@ def local_file(value):
 
 
 def decode_clip(plan):
-    from comfyui_face_swap_video.media import inspect_video
+    from .source_media import inspect_video
     path = local_file(plan['video'])
     meta = inspect_video(path)
     start, end = plan['start'], plan['end']
@@ -62,7 +62,7 @@ def decode_clip(plan):
 
 
 def encode(frames, destination, fps, audio_data=None):
-    from comfyui_face_swap_video.media import encode_audio
+    from .source_media import encode_audio
     with av.open(str(destination), 'w') as c:
         stream = c.add_stream('libx264', rate=Fraction(fps))
         stream.width, stream.height = frames[0].shape[1], frames[0].shape[0]
@@ -420,7 +420,7 @@ def execute(plan_path, destination, cancel):
         if plan.get('audio', 'drop') not in ('preserve', 'drop'):
             raise ValueError('Audio policy must be preserve/drop')
         if plan.get('audio') == 'preserve' and meta['audio_streams']:
-            from comfyui_face_swap_video.media import audio_timeline
+            from .source_media import audio_timeline
             audio_data, audio_info = audio_timeline(plan['video'], meta['first_time'], meta['duration'], start, round(len(frames) / float(fps) * 48000))
         actual = encode(rendered, stage / 'candidate.mp4', fps, audio_data)
         indices = sorted(set(np.linspace(0, len(frames) - 1, 6).astype(int).tolist()))
