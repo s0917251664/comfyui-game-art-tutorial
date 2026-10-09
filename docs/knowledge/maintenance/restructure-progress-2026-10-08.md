@@ -25,7 +25,13 @@ status: current
 
 8.3 改了 `profiles/*.json` 的 `notes_ref`（原本指向已刪的轉址檔），profile 內容 hash 因此改變：`sdxl_standard` `6dbd988b…` → `2b130154…`，`sd15_light` `e206db93…` → `38019030…`。profile 裡的驗證證據都是 legacy、沒綁 hash，不受影響；但 2026-10-06 的 smoke 報告記的是舊 hash，之後拿那份報告做 `validation propose` 會顯示「設定檔內容已變動」，要用新的 smoke 報告。
 
-下一手：GPU 批次（8.3 的 smoke 一輪、8.3b、8.4 部署），都需要 ComfyUI；8188 目前停止，要先問使用者。
+**GPU 批次與 8.4（2026-10-09 台北，使用者同意重啟 ComfyUI）：**
+
+- 8.3 實機：repo 程式跑 image-core smoke，10/10 pass（本機證據：`output/verify-20261009-8.3/`）。smoke 報告沒有記 graph hash，基準報告也沒有，所以只比到技術結果。
+- 8.4 `feat/phase8.4-deploy-templates`（`57cf455`，疊在 8.3 上）：`templates/` 的 image／video template 納入部署（`<ComfyUI>/tools/templates`），`gameart.py run`／`recipe` 決定仍只從 repo 執行；`docs/tested-versions.md` 補第三方 custom node commit。完整測試 Ran 613 OK。
+- 8.4 實機：queue 空 → `deploy` dry run（new 215／changed 39／remove 1）→ `deploy --yes`（備份 `tools/.deploy-backups/20261009-170301`）→ 用 ComfyUI-Manager 的 `/manager/reboot` 正常重啟（不是硬砍）→ `/object_info` 有 3 個 `GameArt*` 節點、3 個舊名稱都不在了 → 另外跑 `verify-install`：passed 305、failed 0 → `doctor --refresh` 正常，影片能力列出 template 能力 → 從部署端 `tools/smoke.py` 跑 concept smoke pass（本機證據：`output/verify-20261009-8.4/`）。
+
+還沒做的：8.3b（`VideoPlan.finalize`：`video_inpaint` 改成整個走 runner 會改變輸出位置與 `result.json`，要先由使用者決定；圖片 builder：等 SD1.5 template）、SD1.5 template（要下載 `dreamshaper_8.safetensors`，需使用者同意）、6.4 recipe 的人工確認點、美術接受與驗證升格（使用者決定）。
 
 審查方式改了：使用者在 2026-10-08 要求不再用 grok 審核，改由實作的 agent 自己 review（範圍、正確性、測試、第 2 節規則），結果寫進 commit 或證據資料夾。
 
