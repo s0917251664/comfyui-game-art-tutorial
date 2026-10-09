@@ -103,7 +103,7 @@ class DetectDeviceTests(unittest.TestCase):
     @mock.patch.object(detect_device.platform, "machine", return_value="arm64")
     @mock.patch.object(detect_device, "get_nvidia_gpu", return_value=None)
     @mock.patch.object(detect_device.subprocess, "run", side_effect=FileNotFoundError("sysctl"))
-    def test_unreadable_apple_memory_uses_safe_lowest_tier_with_warning(
+    def test_unreadable_apple_memory_is_unsupported_with_warning(
         self, _run, _get_gpu, _machine, _system
     ):
         stderr = io.StringIO()
@@ -112,7 +112,8 @@ class DetectDeviceTests(unittest.TestCase):
 
         self.assertEqual(config["backend"], "mps")
         self.assertIsNone(config["vram_mb"])
-        self.assertEqual(config["tier"], "sd15")
+        self.assertIsNone(config["tier"])
+        self.assertIsNone(config["checkpoint"])
         self.assertIn("unified memory", stderr.getvalue())
 
     @mock.patch.object(detect_device.shutil, "which", return_value="/usr/bin/nvidia-smi")
@@ -153,6 +154,30 @@ class DetectDeviceTests(unittest.TestCase):
         self.assertIn("fp8", config["precision_support"])
         self.assertEqual("sdxl", config["tier"])
 
+    @mock.patch.object(detect_device.platform, "system", return_value="Windows")
+    @mock.patch.object(detect_device.platform, "machine", return_value="AMD64")
+    @mock.patch.object(detect_device, "get_nvidia_gpu", return_value=("NVIDIA GeForce GTX 1050", 4096))
+    @mock.patch.object(detect_device, "get_nvidia_driver_cuda_hint", return_value="cu126")
+    @mock.patch.object(detect_device, "get_nvidia_compute_capability", return_value="6.1")
+    def test_low_vram_cuda_is_unsupported_not_downgraded(self, *_mocks):
+        config = detect_device.detect()
+        self.assertIsNone(config["tier"])
+        self.assertIsNone(config["checkpoint"])
+        self.assertIsNone(config["default_width"])
+        self.assertEqual(4096, config["usable_memory_mb"])
+        self.assertTrue(config["torch_index_url"].endswith("cu126"))
+
+    @mock.patch.object(detect_device.platform, "system", return_value="Linux")
+    @mock.patch.object(detect_device.platform, "machine", return_value="x86_64")
+    @mock.patch.object(detect_device, "get_nvidia_gpu", return_value=None)
+    def test_main_tells_unsupported_machine_to_use_platform_image_gen(self, *_mocks):
+        import tempfile
+        out = io.StringIO()
+        with tempfile.TemporaryDirectory() as tmp, contextlib.redirect_stdout(out):
+            detect_device.main(["--out", str(pathlib.Path(tmp) / "device_config.json")])
+        self.assertIn("platform-image-gen", out.getvalue())
+        self.assertNotIn("SD1.5", out.getvalue())
+
     @mock.patch.object(detect_device.platform, "system", return_value="Darwin")
     @mock.patch.object(detect_device.platform, "machine", return_value="arm64")
     @mock.patch.object(detect_device, "get_nvidia_gpu", return_value=None)
@@ -173,6 +198,7 @@ class DetectDeviceTests(unittest.TestCase):
     def test_cpu_platform_fields(self, *_mocks):
         config = detect_device.detect()
         self.assertEqual("linux-cpu", config["platform_key"])
+        self.assertIsNone(config["tier"])
         self.assertEqual(0, config["usable_memory_mb"])
         self.assertEqual("system", config["memory_kind"])
         self.assertEqual(["fp32"], config["precision_support"])

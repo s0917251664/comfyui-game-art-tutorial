@@ -6,17 +6,13 @@
 不呼叫 ``runner.run``（那會 queue）。``filename_prefix`` 是一般 string slot，呼叫端填
 builder 的前綴；layer_split 用 ``layer_<layer_name>``。
 
-sd15 的 concept／icon_asset／refine／inpaint／guided_inpaint／upscale
-若選到的 template 目錄不存在，回傳 None，呼叫端繼續用 builder
-（本機沒有 dreamshaper_8，sd15 template 沒落地）。
-sdxl、layer_split、FLUX.2，以及 character_action／pose_only／style_lock
-目錄不存在就停止，不改走 builder。
+templates/ 是圖片 graph 的唯一來源:選到的 template 目錄不存在就停止，沒有 Python builder 可退回。
 """
 from pathlib import Path
 
 from . import image_graphs
 from . import image_runtime
-from .image_graphs import ICON_ASSET_NEGATIVE_SUFFIX, ICON_ASSET_PROMPT_SUFFIX, attach_bg_removal
+from .image_graphs import ICON_ASSET_NEGATIVE_SUFFIX, ICON_ASSET_PROMPT_SUFFIX
 from .image_template_select import variant_id
 from .runner import template as runner_template
 
@@ -37,10 +33,6 @@ FILENAME_PREFIX = {
 }
 _FAMILY_FREE = frozenset({"layer_split", "flux2_concept", "flux2_edit"})
 _TEMPLATE_TASKS = frozenset(FILENAME_PREFIX) | _FAMILY_FREE
-# sd15 目錄缺失時才允許退回 builder。layer_split／FLUX.2 不分家族，不在這張表。
-_SD15_BUILDER_FALLBACK = frozenset({
-    "concept", "icon_asset", "refine", "inpaint", "guided_inpaint", "upscale",
-})
 
 
 def wants_background_removal(args):
@@ -225,35 +217,22 @@ def _variant_flags(args):
 
 
 def graph_from_template(ctx, args, style_checkpoint, upload):
-    """組好就回傳 ``(graph, image_node_id)``。sd15 目錄不存在回傳 None，且尚未 upload。"""
+    """組好就回傳 ``(graph, image_node_id)``。找不到 template 就停止，此時尚未 upload。"""
     if args.task not in _TEMPLATE_TASKS:
         raise ValueError(f"不是 template 轉接的圖片 task: {args.task}")
     image_runtime.sync_image_runtime(ctx)
     flags = _variant_flags(args)
-    family = None
     if args.task in _FAMILY_FREE:
         template_id = variant_id(args.task, **flags)
     else:
-        family = image_graphs._active_profile()["family"]
-        try:
-            template_id = variant_id(args.task, family, **flags)
-        except ValueError:
-            # sd15 不支援的組合（例如 guided 的 ControlNet）沒有 template，維持 builder 的錯誤。
-            if family == "sd15" and args.task in _SD15_BUILDER_FALLBACK:
-                return None
-            raise
+        template_id = variant_id(args.task, image_graphs._active_profile()["family"], **flags)
     path = _template_json(template_id)
     if path is None or not path.is_file():
-        if family == "sd15" and args.task in _SD15_BUILDER_FALLBACK:
-            return None
         where = path if path is not None else template_id
         raise SystemExit(
             f"{args.task} 的 graph 在 {template_id}（固定 template，由 runner 填值），"
             f"但找不到 {where}。"
-            "請從 repo 執行 python tools_src/generate.py。"
-            "SD1.5 的 template 尚未落地時，concept／icon_asset／refine／"
-            "inpaint／guided_inpaint／upscale 會改走 builder。"
-            "SDXL、layer_split 與 FLUX.2 不會改走 builder。"
+            "請從 repo 執行 python tools_src/generate.py，或確認 templates/ 已隨部署複製。"
         )
     root = _repo_root()
     template = runner_template.load_template(
@@ -279,11 +258,12 @@ def transparent_save_id(graph):
 
 
 def background_removal_output(graph, image_node_id):
-    """去背 SaveImage 的節點 id。template 已含去背就不要再接一次，否則 graph sha256 會變。
+    """去背 SaveImage 的節點 id。
 
-    sd15 仍走 builder 時 graph 沒有這顆節點，沿用 ``attach_bg_removal``。
+    要去背的 task 一定選到 ``-transparent`` template（已含去背節點）；找不到代表 template
+    選錯或被改壞，直接停止，不在這裡臨時接節點（那會讓 graph sha256 跟 template 對不上）。
     """
     found = transparent_save_id(graph)
-    if found is not None:
-        return found
-    return attach_bg_removal(graph, image_node_id)
+    if found is None:
+        raise RuntimeError("template graph 沒有去背輸出（filename_prefix=transparent 的 SaveImage），無法取得去背結果")
+    return found

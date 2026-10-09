@@ -23,6 +23,8 @@ from comfyui_pipeline import (  # noqa: E402
     video_catalog, video_config, video_contract, video_graphs, video_media,
 )
 from comfyui_pipeline.context import RunContext  # noqa: E402
+from comfyui_pipeline.tasks import control as task_control, flux2 as task_flux2, image_basic as task_image_basic  # noqa: E402
+from comfyui_pipeline.tasks import inpaint as task_inpaint, upscale as task_upscale  # noqa: E402
 from comfyui_pipeline.tasks import video as task_video, video_local as task_video_local  # noqa: E402
 from comfyui_pipeline.video_config import configure_video_capability  # noqa: E402
 
@@ -109,7 +111,7 @@ class GenerateTests(unittest.TestCase):
             os.unlink(config_path)
 
     def test_parser_accepts_runtime_options_before_or_after_task(self):
-        with mock.patch.object(image_runtime, "build_concept", return_value=({}, "1")), \
+        with mock.patch.object(tasks, "build_image_task_graph", return_value=({}, "1")), \
                 mock.patch.object(tasks, "preflight_image_task", return_value=True), \
                 mock.patch.object(cli, "submit_and_wait", return_value={"outputs": {}}), \
                 mock.patch.object(cli, "download_outputs", return_value=[]) as download:
@@ -176,31 +178,29 @@ class GenerateTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     image_graphs.validate_scale(value)
         with self.assertRaises(ValueError):
-            image_runtime.build_upscale(self.ctx, "x", "image.png", scale=4.1)
+            task_upscale.validate(SimpleNamespace(task="upscale", scale=4.1, denoise=0.4))
         with self.assertRaises(ValueError):
-            image_runtime.build_inpaint(self.ctx, "x", "image.png", "mask.png", denoise=-0.1)
+            task_inpaint.validate(SimpleNamespace(task="inpaint", denoise=-0.1))
 
     def test_generate_entry_reexports_names_used_by_other_tools(self):
-        # face_swap / video_layers 以 generate.<名稱> 讀取這些(唯讀)。
+        # 其他腳本以 generate.<名稱> 讀取這些(唯讀)。
         for name in ("main", "resolve_comfy_url", "validate_timeout", "submit_and_wait", "download_outputs",
                      "upload_image", "_fetch_comfy_object_info", "check_image_graph_against_object_info"):
             self.assertTrue(callable(getattr(self.generate, name)), name)
         self.assertIs(client.submit_and_wait, self.generate.submit_and_wait)
 
     def test_pipeline_modules_expose_moved_symbols(self):
-        self.assertTrue(callable(image_runtime.build_concept))
-        self.assertTrue(callable(image_runtime.build_flux2_concept))
-        self.assertTrue(callable(image_runtime.build_flux2_edit))
-        self.assertTrue(callable(image_graphs.build_control_preprocessor))
-        self.assertTrue(callable(image_runtime.build_layer_split))
-        self.assertEqual("blurry, low quality, extra fingers, deformed, watermark", image_graphs.DEFAULT_NEGATIVE)
+        self.assertTrue(callable(image_runtime.require_sdxl_capability))
+        self.assertTrue(callable(image_graphs.validate_flux2_dimensions))
+        self.assertFalse(hasattr(image_runtime, "build_concept"), "圖片 builder 已移除，graph 只來自 templates/")
+        self.assertFalse(hasattr(image_graphs, "build_concept"))
         self.assertIn("wan", video_catalog.VIDEO_BACKEND_SPECS)
         self.assertIn("static", video_catalog.CAMERA_MOVES)
 
     def test_flux2_concept_is_locked_to_official_distilled_contract(self):
-        graph, output_id = image_runtime.build_flux2_concept(self.ctx,
-            "a game prop with a readable sign", width=1024, height=1024, seed=42,
-        )
+        graph, output_id = task_flux2.build_graph(self.ctx, SimpleNamespace(
+            task="flux2_concept", prompt="a game prop with a readable sign", width=1024, height=1024, seed=42,
+        ), None, lambda path: path)
         self.assertEqual("12", output_id)
         self.assertEqual("flux-2-klein-4b-fp8.safetensors", graph["1"]["inputs"]["unet_name"])
         self.assertEqual("flux2", graph["2"]["inputs"]["type"])
@@ -211,10 +211,12 @@ class GenerateTests(unittest.TestCase):
 
     def test_flux2_concept_rejects_non_aligned_dimensions_before_submit(self):
         with self.assertRaisesRegex(ValueError, "16"):
-            image_runtime.build_flux2_concept(self.ctx, "x", width=1000, height=1024)
+            task_flux2.validate(SimpleNamespace(task="flux2_concept", width=1000, height=1024))
 
     def test_flux2_edit_matches_official_one_reference_contract(self):
-        graph, output_id = image_runtime.build_flux2_edit(self.ctx, "make it silver", "uploaded.png", seed=7)
+        graph, output_id = task_flux2.build_graph(self.ctx, SimpleNamespace(
+            task="flux2_edit", prompt="make it silver", image="uploaded.png", seed=7,
+        ), None, lambda path: path)
         self.assertEqual("18", output_id)
         self.assertEqual("flux-2-klein-base-4b-fp8.safetensors", graph["1"]["inputs"]["unet_name"])
         self.assertEqual(["9", 0], graph["10"]["inputs"]["latent"])
@@ -254,25 +256,33 @@ class GenerateTests(unittest.TestCase):
                 ])
         upload.assert_not_called()
 
-    def test_sd15_controlnet_and_ipadapter_features_fail_fast(self):
-        self.ctx.device["tier"] = "sd15"
-        with self.assertRaisesRegex(RuntimeError, "sd15"):
-            image_runtime.build_pose_only(self.ctx, "x", "pose.png")
-        with self.assertRaisesRegex(RuntimeError, "sd15"):
-            image_runtime.build_style_lock(self.ctx, "x", "character.png")
-        with self.assertRaisesRegex(RuntimeError, "sd15"):
-            image_runtime.build_icon_asset(self.ctx, "x", structure_ref_filename="ref.png")
+    def test_non_sdxl_tier_fails_fast_for_controlnet_and_ipadapter_features(self):
+        self.ctx.device["tier"] = "not_an_sdxl_tier"
+        for module, args in (
+            (task_control, SimpleNamespace(task="pose_only")),
+            (task_control, SimpleNamespace(task="style_lock")),
+            (task_control, SimpleNamespace(task="character_action")),
+            (task_image_basic, SimpleNamespace(task="icon_asset", structure_ref="ref.png", appearance_ref=None)),
+        ):
+            with self.subTest(task=args.task):
+                with self.assertRaisesRegex(RuntimeError, "not_an_sdxl_tier"):
+                    module.check_capabilities(self.ctx, args)
         # A plain icon does not use either SDXL-only add-on and remains available.
-        graph, _ = image_runtime.build_icon_asset(self.ctx, "x")
-        self.assertEqual("CheckpointLoaderSimple", graph["1"]["class_type"])
+        task_image_basic.check_capabilities(
+            self.ctx, SimpleNamespace(task="icon_asset", structure_ref=None, appearance_ref=None))
+
+    def _pose_graph(self, **kwargs):
+        values = dict(task="pose_only", prompt="x", negative=None, width=None, height=None, seed=7,
+                      pose_ref="pose.png", pose_strength=1.0, batch=1, control_type="canny",
+                      lora=None, lora_strength=0.8, control_backend="verified", remove_bg=False)
+        values.update(kwargs)
+        return task_control.build_graph(self.ctx, SimpleNamespace(**values), None, lambda path: path)
 
     def test_pose_only_verified_controlnet_remains_default(self):
-        graph, _ = image_runtime.build_pose_only(self.ctx,
-            "x", "pose.png", control_type="depth", seed=7,
-        )
+        graph, _ = self._pose_graph(control_type="depth")
         self.assertEqual("ControlNetLoader", graph["6"]["class_type"])
         self.assertEqual(
-            image_graphs.CONTROLNET_MODELS["depth"],
+            "controlnet-depth-sdxl-1.0.safetensors",
             graph["6"]["inputs"]["control_net_name"],
         )
         self.assertNotIn("6u", graph)
@@ -286,10 +296,7 @@ class GenerateTests(unittest.TestCase):
         }
         for control_type, union_type in expected.items():
             with self.subTest(control_type=control_type):
-                graph, _ = image_runtime.build_pose_only(self.ctx,
-                    "x", "pose.png", control_type=control_type,
-                    control_backend="union", seed=7,
-                )
+                graph, _ = self._pose_graph(control_type=control_type, control_backend="union")
                 self.assertEqual(
                     "xinsir-controlnet-union-sdxl-1.0-promax.safetensors",
                     graph["6"]["inputs"]["control_net_name"],
@@ -467,12 +474,10 @@ class GenerateTests(unittest.TestCase):
                     options.append(value)
         return payload
 
-    def _full_graph(self, task_args, remove_bg=False):
-        graph, out_id = tasks.build_image_task_graph(
+    def _full_graph(self, task_args):
+        graph, _out_id = tasks.build_image_task_graph(
             self.ctx, task_args, None, lambda _p: image_capabilities.PREFLIGHT_IMAGE_PLACEHOLDER,
         )
-        if remove_bg:
-            image_graphs.attach_bg_removal(graph, out_id)
         return graph
 
     def test_image_preflight_rejects_missing_custom_node_before_upload(self):
@@ -507,7 +512,7 @@ class GenerateTests(unittest.TestCase):
         args = SimpleNamespace(task="concept", prompt="x", negative=None, width=None, height=None, seed=1,
                                batch=1, lora=None, lora_strength=0.8, remove_bg=True)
         payload = self._object_info_for(
-            self._full_graph(args, remove_bg=True), drop_models=(image_graphs.BG_REMOVAL_MODEL,),
+            self._full_graph(args), drop_models=(image_graphs.BG_REMOVAL_MODEL,),
         )
         with patch_all("_fetch_comfy_object_info", (tasks, image_capabilities, video_config,), return_value=payload), \
                 mock.patch.object(cli, "submit_and_wait") as submit:
@@ -554,12 +559,13 @@ class GenerateTests(unittest.TestCase):
         return captured["graph"]
 
     def test_profile_flag_selects_smaller_profile_checkpoint_and_resolution(self):
-        self.ctx.device.update(self.PLATFORM_FIELDS)
+        # 16 GB 驗證過的設定檔,換到 10 GB 的機器:解析度依記憶體降到 768,且驗證狀態降為 unverified。
+        self.ctx.device.update(self.PLATFORM_FIELDS, usable_memory_mb=10240)
         stderr = io.StringIO()
         with contextlib.redirect_stderr(stderr):
-            graph = self._run_concept_capturing_graph(["concept", "--prompt", "x", "--profile", "sd15_light"])
-        self.assertEqual("dreamshaper_8.safetensors", graph["1"]["inputs"]["ckpt_name"])
-        self.assertEqual((512, 512), (graph["4"]["inputs"]["width"], graph["4"]["inputs"]["height"]))
+            graph = self._run_concept_capturing_graph(["concept", "--prompt", "x", "--profile", "sdxl_standard"])
+        self.assertEqual("sd_xl_base_1.0.safetensors", graph["1"]["inputs"]["ckpt_name"])
+        self.assertEqual((768, 768), (graph["4"]["inputs"]["width"], graph["4"]["inputs"]["height"]))
         self.assertIn("unverified", stderr.getvalue())
 
     def test_without_profile_keeps_tier_behaviour(self):
@@ -568,10 +574,10 @@ class GenerateTests(unittest.TestCase):
         self.assertEqual((1024, 1024), (graph["4"]["inputs"]["width"], graph["4"]["inputs"]["height"]))
 
     def test_explicit_dimensions_still_override_profile_default(self):
-        self.ctx.device.update(self.PLATFORM_FIELDS)
+        self.ctx.device.update(self.PLATFORM_FIELDS, usable_memory_mb=10240)
         with contextlib.redirect_stderr(io.StringIO()):
             graph = self._run_concept_capturing_graph(
-                ["concept", "--prompt", "x", "--profile", "sd15_light", "--width", "640", "--height", "768"])
+                ["concept", "--prompt", "x", "--profile", "sdxl_standard", "--width", "640", "--height", "768"])
         self.assertEqual((640, 768), (graph["4"]["inputs"]["width"], graph["4"]["inputs"]["height"]))
 
     def test_invalid_explicit_dimension_is_rejected(self):
@@ -583,10 +589,10 @@ class GenerateTests(unittest.TestCase):
             (dict(self.PLATFORM_FIELDS, usable_memory_mb=4096),
              ["style_lock", "--prompt", "x", "--character-ref", "c.png", "--profile", "sdxl_standard"], "不適用這台機器"),
             (self.PLATFORM_FIELDS,
-             ["style_lock", "--prompt", "x", "--character-ref", "c.png", "--profile", "sd15_light"], "不提供 style_lock"),
-            (self.PLATFORM_FIELDS,
-             ["concept", "--prompt", "x", "--profile", "sd15_light", "--style", "anime"], "風格清單"),
-            ({}, ["concept", "--prompt", "x", "--profile", "sd15_light"], "detect_device.py"),
+             ["concept", "--prompt", "x", "--profile", "sd15_light"], "找不到模型設定檔"),
+            ({}, ["concept", "--prompt", "x", "--profile", "sdxl_standard"], "detect_device.py"),
+            (dict(self.PLATFORM_FIELDS, tier=None, usable_memory_mb=4096),
+             ["concept", "--prompt", "x"], "platform-image-gen"),
             (self.PLATFORM_FIELDS, ["concept", "--prompt", "x", "--profile", "nope"], "找不到模型設定檔"),
         ]
         for device_fields, argv, message in cases:
@@ -604,13 +610,13 @@ class GenerateTests(unittest.TestCase):
         self.ctx.device.update(self.PLATFORM_FIELDS)
         with tempfile.TemporaryDirectory() as tmp:
             path = os.path.join(tmp, "image_capabilities.json")
-            config = {"default_profile": "sd15_light",
+            config = {"default_profile": "sdxl_standard",
                       "device_fingerprint": profiles.device_fingerprint(self.ctx.device)}
             with open(path, "w", encoding="utf-8") as handle:
                 json.dump(config, handle)
             with contextlib.redirect_stderr(io.StringIO()):
                 graph = self._run_concept_capturing_graph(["concept", "--prompt", "x", "--image-config", path])
-            self.assertEqual("dreamshaper_8.safetensors", graph["1"]["inputs"]["ckpt_name"])
+            self.assertEqual("sd_xl_base_1.0.safetensors", graph["1"]["inputs"]["ckpt_name"])
 
             self.ctx.device["usable_memory_mb"] = 8192
             with mock.patch.object(cli, "upload_image") as upload:

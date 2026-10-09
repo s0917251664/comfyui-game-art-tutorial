@@ -150,13 +150,13 @@ class DetectImageCapabilitiesTests(unittest.TestCase):
     def test_ineligible_platform_blocks_tasks_even_when_models_exist(self):
         self._install_sdxl_base()
         self._device(dict(CUDA_DEVICE, backend="cpu", platform_key="linux-cpu", usable_memory_mb=0,
-                          precision_support=["fp32"], tier="sd15"))
+                          precision_support=["fp32"], tier=None))
         config = detector.detect(self._args())
         sdxl = config["profiles"]["sdxl_standard"]
         self.assertFalse(sdxl["eligible"])
         self.assertFalse(sdxl["tasks"]["concept"]["available"])
-        self.assertIsNone(config["default_profile"], "sd15 tier 的底模沒裝時不該有預設設定檔")
-        self.assertTrue(config["profiles"]["sd15_light"]["eligible"])
+        self.assertIsNone(config["default_profile"], "不支援本機生圖的機器不該有預設設定檔")
+        self.assertNotIn("sd15_light", config["profiles"])
 
     def test_legacy_device_config_requires_rerunning_detect_device(self):
         self._device({"backend": "cuda", "tier": "sdxl"})
@@ -175,10 +175,9 @@ class DetectImageCapabilitiesTests(unittest.TestCase):
     def test_explicit_default_profile_allows_smaller_profile_on_big_machine(self):
         self._device(CUDA_DEVICE)
         self._install_sdxl_base()
-        with self.assertRaisesRegex(RuntimeError, "dreamshaper_8"):
+        self.assertEqual("sdxl_standard", detector.detect(self._args(default_profile="sdxl_standard"))["default_profile"])
+        with self.assertRaisesRegex(RuntimeError, "找不到模型設定檔"):
             detector.detect(self._args(default_profile="sd15_light"))
-        self._model("checkpoints", "dreamshaper_8.safetensors")
-        self.assertEqual("sd15_light", detector.detect(self._args(default_profile="sd15_light"))["default_profile"])
         with self.assertRaisesRegex(RuntimeError, "找不到模型設定檔"):
             detector.detect(self._args(default_profile="missing"))
 

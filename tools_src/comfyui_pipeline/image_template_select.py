@@ -3,22 +3,19 @@
 concept、icon_asset、refine、character_action、pose_only、style_lock、
 inpaint、guided_inpaint、upscale、layer_split、flux2_concept、flux2_edit
 用這支選 template，再由 ``image_from_template`` 填 slot。
-sd15 目錄還沒落地時，concept／icon_asset／refine／inpaint／guided_inpaint／upscale
-仍走 builder。layer_split 與 FLUX.2 不分家族，找不到 template 就停止。
+layer_split 與 FLUX.2 不分家族。找不到 template 就停止，沒有 Python builder 可退回。
 
 id 規則（方案 A，每種會增刪或更換節點的組合各一份）:
 ``image/<family>/<task 詞幹>[-union-<type>|-<type>][-structure][-appearance][-lora][-transparent]``。
 layer_split 與 FLUX.2 不分家族：``image/layer-split``、``image/flux2/concept``、``image/flux2/edit``。
-sd15 沒有 ControlNet、IPAdapter、character_action、pose_only、style_lock。
 """
 
 CONTROL_TYPES = ("canny", "pose", "depth")
 CONTROL_BACKENDS = ("verified", "union")
-FAMILIES = ("sdxl", "sd15")
+FAMILIES = ("sdxl",)
 LORA_TASKS = frozenset({"concept", "icon_asset", "character_action", "pose_only", "style_lock"})
 REMOVE_BG_TASKS = frozenset({"concept", "icon_asset", "refine", "character_action", "pose_only", "style_lock"})
-# CLI 一定去背的 task 仍保留「不去背」的 graph：golden builder 沒有接 attach_bg_removal。
-GROUPS = ("sdxl", "sd15", "layer_split", "flux2")
+GROUPS = ("sdxl", "layer_split", "flux2")
 
 _TASK_STEM = {
     "concept": "concept",
@@ -34,7 +31,6 @@ _TASK_STEM = {
     "flux2_concept": "concept",
     "flux2_edit": "edit",
 }
-_SD15_UNSUPPORTED = frozenset({"character_action", "pose_only", "style_lock"})
 
 
 def _reject(message):
@@ -43,7 +39,7 @@ def _reject(message):
 
 def variant_id(task, family=None, *, lora=False, remove_bg=False, control_type=None,
                control_backend="verified", structure_ref=False, appearance_ref=False):
-    """回傳 template id。旗標組合不存在就丟 ValueError（sd15 不支援的功能也是）。"""
+    """回傳 template id。旗標組合不存在就丟 ValueError。"""
     if control_backend not in CONTROL_BACKENDS:
         _reject(f"未知 control_backend: {control_backend}")
     if control_type not in (None,) + CONTROL_TYPES:
@@ -58,10 +54,7 @@ def variant_id(task, family=None, *, lora=False, remove_bg=False, control_type=N
     if task not in _TASK_STEM:
         _reject(f"未知圖片 task: {task}")
     if family not in FAMILIES:
-        _reject(f"{task} 需要 family sdxl 或 sd15，收到 {family!r}")
-    if family == "sd15" and (task in _SD15_UNSUPPORTED or structure_ref or appearance_ref or control_type
-                            or control_backend != "verified"):
-        _reject(f"sd15 沒有 {task} 的這個組合（ControlNet／IPAdapter／character_action／pose_only／style_lock 不做 sd15 版）")
+        _reject(f"{task} 需要 family sdxl，收到 {family!r}")
     if lora and task not in LORA_TASKS:
         _reject(f"{task} 沒有 LoRA 軸")
     if remove_bg and task not in REMOVE_BG_TASKS:
@@ -108,7 +101,7 @@ def _spec(task, family=None, **flags):
 
 
 def iter_variants(*groups):
-    """產生要落地的 variant。``groups`` 可用 sdxl、sd15、layer_split、flux2。"""
+    """產生要落地的 variant。``groups`` 可用 sdxl、layer_split、flux2。"""
     chosen = groups or GROUPS
     unknown = set(chosen) - set(GROUPS)
     if unknown:
@@ -118,10 +111,8 @@ def iter_variants(*groups):
         for lora in (False, True):
             for remove_bg in (False, True):
                 yield _spec("concept", family, lora=lora, remove_bg=remove_bg)
-        structures = (False, True) if family == "sdxl" else (False,)
-        appearances = (False, True) if family == "sdxl" else (False,)
-        for structure_ref in structures:
-            for appearance_ref in appearances:
+        for structure_ref in (False, True):
+            for appearance_ref in (False, True):
                 for lora in (False, True):
                     for remove_bg in (False, True):
                         yield _spec("icon_asset", family, lora=lora, remove_bg=remove_bg,
@@ -129,15 +120,10 @@ def iter_variants(*groups):
         for remove_bg in (False, True):
             yield _spec("refine", family, remove_bg=remove_bg)
         yield _spec("inpaint", family)
-        if family == "sd15":
-            yield _spec("guided_inpaint", family)
-        else:
-            for control_type in (None,) + CONTROL_TYPES:
-                for appearance_ref in (False, True):
-                    yield _spec("guided_inpaint", family, control_type=control_type, appearance_ref=appearance_ref)
+        for control_type in (None,) + CONTROL_TYPES:
+            for appearance_ref in (False, True):
+                yield _spec("guided_inpaint", family, control_type=control_type, appearance_ref=appearance_ref)
         yield _spec("upscale", family)
-        if family != "sdxl":
-            continue
         for control_type in CONTROL_TYPES:
             for lora in (False, True):
                 for remove_bg in (False, True):

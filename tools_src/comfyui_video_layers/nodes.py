@@ -5,7 +5,7 @@ import sys
 import folder_paths
 import comfy.model_management as management
 
-# Reuse the deployed, already tested CFR/audio primitives, not ReActor itself.
+# Reuse the CFR/audio primitives in source_media.py.
 sys.path.insert(0, str(Path(folder_paths.base_path) / 'tools'))
 from . import media
 from .contracts import NODE_NAME, PACKAGE_FILES, record

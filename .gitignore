@@ -2,7 +2,6 @@
 output/*
 !output/.gitkeep
 local_config.json
-/workflows/
 /.github/workflows/
 /.codegraph/
 /.claude/

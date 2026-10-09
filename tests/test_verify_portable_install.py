@@ -74,13 +74,10 @@ class VerifyPortableInstallTests(unittest.TestCase):
         self._copy_source(tools_dir / "sam_segment.py", self.sam_segment_bytes)
         self._copy_source(tools_dir / "image_edit_tools.py", self.image_edit_tools_bytes)
         self._copy_source(tools_dir / "comfyui_design.py", (ROOT / "tools_src/comfyui_design.py").read_bytes())
-        for name in ("film_audio.py", "film_sapi.ps1", "film_qwen.py", "film_lipsync.py", "face_swap.py", "video_layers.py",
+        for name in ("film_audio.py", "film_sapi.ps1", "film_qwen.py", "film_lipsync.py", "video_layers.py",
                      "detect_video_capabilities.py", "gameart.py", "doctor.py", "asset_review.py", "smoke.py",
                      "vfx_alpha_tools.py", "local_pixels.py"):
             self._copy_source(tools_dir / name, (ROOT / "tools_src" / name).read_bytes())
-        for name in ("__init__.py", "contracts.py", "media.py", "nodes.py"):
-            for location in (tools_dir / "comfyui_face_swap_video", comfyui_path / "custom_nodes/comfyui-face-swap-video"):
-                self._copy_source(location / name, (ROOT / "tools_src/comfyui_face_swap_video" / name).read_bytes())
         self._copy_source(tools_dir / "mask_refine.py", self.mask_refine_bytes)
         self._copy_source(tools_dir / "mask_session.py", (ROOT / "tools_src/mask_session.py").read_bytes())
         smt = ROOT / "tools_src/simple_mask_tool"
@@ -97,7 +94,7 @@ class VerifyPortableInstallTests(unittest.TestCase):
                 if src.is_file() and src.name in ("template.json", "graph.api.json") \
                         and not any(part.startswith("_") for part in rel.parts):
                     self._copy_source(tools_dir / "templates" / rel, src.read_bytes())
-        for name in ("__init__.py", "contracts.py", "media.py", "nodes.py"):
+        for name in ("__init__.py", "contracts.py", "media.py", "nodes.py", "source_media.py"):
             for location in (tools_dir / "comfyui_video_layers", comfyui_path / "custom_nodes/comfyui-video-layers"):
                 self._copy_source(location / name, (ROOT / "tools_src/comfyui_video_layers" / name).read_bytes())
         for name, source in self.pipeline_source_bytes.items():
@@ -169,7 +166,7 @@ class VerifyPortableInstallTests(unittest.TestCase):
             "gpu_name": "Test GPU",
             "vram_mb": 24576,
         }
-        stale = dict(live, tier="sd15", checkpoint="dreamshaper_8.safetensors")
+        stale = dict(live, tier="sdxl_light", default_width=768, default_height=768)
 
         with tempfile.TemporaryDirectory() as tmp:
             temp_root = pathlib.Path(tmp)
@@ -358,10 +355,9 @@ class VerifyPortableInstallTests(unittest.TestCase):
         return code, out.getvalue()
 
     def test_missing_deployed_profile_fails_source_sync(self):
-        code, text = self._profile_sync_output(lambda d: (d / "sd15_light.json").unlink())
+        code, text = self._profile_sync_output(lambda d: (d / "sdxl_standard.json").unlink())
         self.assertEqual(1, code)
-        self.assertIn("[FAIL] comfyui_pipeline/profiles/sd15_light.json source sync", text)
-        self.assertIn("[PASS] comfyui_pipeline/profiles/sdxl_standard.json source sync", text)
+        self.assertIn("[FAIL] comfyui_pipeline/profiles/sdxl_standard.json source sync", text)
 
     def test_stale_deployed_profile_fails_source_sync(self):
         code, text = self._profile_sync_output(lambda d: (d / "retired.json").write_text("{}", encoding="utf-8"))

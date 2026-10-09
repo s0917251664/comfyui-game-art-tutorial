@@ -14,14 +14,17 @@ import shutil
 import subprocess
 import sys
 
-# 依 VRAM 分級,對應教學.md 第 0.5 章 B 段的表
+# 依 VRAM 分級。低於最低一級（8000 MB）不支援本機生圖,不自動降級到更小的模型。
 TIERS = [
     # (min_vram_mb, tier_name, checkpoint, default_width, default_height, torch_index)
     (24000, "sdxl_high", "sd_xl_base_1.0.safetensors", 1024, 1024, "cu130"),
     (12000, "sdxl", "sd_xl_base_1.0.safetensors", 1024, 1024, "cu130"),
     (8000, "sdxl_light", "sd_xl_base_1.0.safetensors", 768, 768, "cu126"),
-    (0, "sd15", "dreamshaper_8.safetensors", 512, 512, "cu126"),
 ]
+UNSUPPORTED_MESSAGE = (
+    "這台機器的顯卡記憶體不足（本機生圖至少需要 8000 MB），不支援本機生圖，也不會自動降級到更小的模型。"
+    "請改用平台生圖（platform-image-gen）。"
+)
 
 NVIDIA_SMI = "nvidia-smi"
 APPLE_MEMORY_COMMAND = ("sysctl", "-n", "hw.memsize")
@@ -246,6 +249,9 @@ def detect():
             tier_name, checkpoint, width, height = name, ckpt, w, h
             torch_index = get_nvidia_driver_cuda_hint() if backend == "cuda" else default_idx
             break
+    if tier_name is None and backend == "cuda":
+        # 不支援本機生圖,但 CUDA 版 PyTorch 的 index 仍照 driver 版本給(其他 ComfyUI 功能可能用得到)。
+        torch_index = get_nvidia_driver_cuda_hint()
 
     compute_capability = get_nvidia_compute_capability() if backend == "cuda" else None
 
@@ -287,8 +293,8 @@ def main(argv=None):
 
     if config["backend"] == "cpu":
         print("\n[警告] 沒偵測到可用 GPU,ComfyUI 會退回 CPU 運算,生成速度會非常慢(以分鐘甚至十分鐘計)。")
-    elif config["tier"] == "sd15":
-        print("\n[注意] VRAM 偏低,自動選用 SD1.5 等級的設定,畫質會低於 SDXL。")
+    if config["tier"] is None:
+        print(f"\n[注意] {UNSUPPORTED_MESSAGE}")
 
 
 if __name__ == "__main__":

@@ -23,7 +23,7 @@ import sys
 # 直接以 `python generate.py` 執行時 sys.path[0] 就是本檔所在資料夾;被其他腳本
 # `import generate` 時它們也在同一資料夾,comfyui_pipeline 一律可 import。
 from comfyui_pipeline import cli as _cli
-# 其他腳本(face_swap / video_layers)以 generate.<名稱> 讀取的唯讀 re-export。
+# 其他腳本以 generate.<名稱> 讀取的唯讀 re-export。
 from comfyui_pipeline.client import (
     _fetch_comfy_object_info, download_outputs, resolve_comfy_url, submit_and_wait,
     upload_image, validate_timeout,

@@ -28,13 +28,6 @@ def preflight(config_path, operation):
             if record(target)['sha256'] != local['sha256']:
                 raise ValueError(f'Package deployment mismatch: {target}')
         hashes[n] = local['sha256']
-    dependencies = []
-    for relative in ('comfyui_face_swap_video/media.py', 'comfyui_face_swap_video/contracts.py'):
-        source = Path(__file__).parent / relative
-        target = root / 'tools' / relative
-        if record(source)['sha256'] != record(target)['sha256']:
-            raise ValueError('Shared media dependency deployment mismatch')
-        dependencies.append(record(target))
     models = []
     if operation == 'segment':
         model = model_path()
@@ -44,7 +37,7 @@ def preflight(config_path, operation):
     fields = spec.get('input', {}).get('required', {})
     if set(fields) != {'plan_path', 'package_hashes', 'output_prefix'} or any(fields[k][0] != 'STRING' for k in fields):
         raise ValueError(f'Live {NODE_NAME} node absent or incompatible; deploy/restart before queue')
-    return url, {'runtime': versions, 'package_hashes': hashes, 'shared_media': dependencies,
+    return url, {'runtime': versions, 'package_hashes': hashes,
                  'models': models, 'processing_location': 'ComfyUI server',
                  'schema_fingerprint': hashlib.sha256(json.dumps(spec, sort_keys=True).encode()).hexdigest()}
 

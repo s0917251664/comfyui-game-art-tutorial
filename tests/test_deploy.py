@@ -76,7 +76,7 @@ class DeployTests(unittest.TestCase):
         code, _ = self.run_main("--yes")  # 真的 verify:snapshot 檢查可能 FAIL(與部署無關),但 sync 必須全過
         results, _, _ = verify.verify_install(self.repo, self.config)
         sync_fails = [r for r in results if r[0] == "fail" and r[1].endswith("source sync")
-                      and "face-swap-video/custom_nodes" not in r[1] and "video-layers/custom_nodes" not in r[1]]
+                      and "video-layers/custom_nodes" not in r[1]]
         self.assertEqual([], sync_fails)
 
     def test_dry_run_writes_nothing(self):
@@ -111,7 +111,6 @@ class DeployTests(unittest.TestCase):
         self.assertEqual(0, code)
         self.assertIn("重啟 ComfyUI", out)
         self.assertTrue((self.comfy / "custom_nodes/comfyui-simple-mask-tool/core.py").is_file())
-        self.assertFalse((self.comfy / "custom_nodes/comfyui-face-swap-video").exists())
 
     def test_apply_stale_removal_backup_and_rollback(self):
         self.apply_with(self.passing())
@@ -160,7 +159,7 @@ class DeployTests(unittest.TestCase):
     def test_unrelated_verify_failure_does_not_roll_back(self):
         code, out = self.apply_with([
             ("fail", "device_config 對照 live detect()", "tier mismatch"),
-            ("fail", "face-swap-video/custom_nodes/comfyui-face-swap-video/nodes.py source sync", "部署副本不存在"),
+            ("fail", "video-layers/custom_nodes/comfyui-video-layers/nodes.py source sync", "部署副本不存在"),
         ])
         self.assertEqual(0, code)
         self.assertIn("與部署無關", out)
