@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": "video/wan-animate/scail2-extend",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "title": "SCAIL-2 角色替換／動畫（兩段串接 61 幀）",
   "summary": "用參考圖驅動角色跟著來源影片動，或把來源影片裡的人換成參考角色；SAM3 依文字追蹤人物並以彩色遮罩綁定身份",
   "status": "technical_pass",
@@ -25,11 +25,11 @@
     "tested_source_sha256": "6d2c47aefddfe6248ca14be333507cbac5e9e78c72b30e4ca4f2cdb4815b9795",
     "evidence": [
       {
-        "path": "skills/comfyui-run/references/comfyui-wan-animate/references/scail2.md",
+        "path": "docs/knowledge/video/wan-animate-choice.md",
         "note": "2026-10-06 replace61（1da41c66…）"
       },
       {
-        "path": "docs/knowledge/video/wan-animate-scail2-experiments-2026-10-06.md",
+        "path": "docs/knowledge/archive/video/wan-animate-scail2-experiments-2026-10-06.md",
         "note": "2026-10-06 實驗紀錄"
       }
     ]
@@ -46,7 +46,7 @@
           "placeholder": "__REFERENCE_IMAGE__"
         }
       ],
-      "help": "參考角色圖；構圖會主導輸出比例（見 scail2.md）"
+      "help": "參考角色圖；構圖會主導輸出比例（見 docs/knowledge/video/wan-animate-choice.md）"
     },
     "source_video": {
       "type": "video",

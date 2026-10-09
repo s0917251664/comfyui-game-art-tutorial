@@ -49,7 +49,7 @@ class NeutralWordingTests(unittest.TestCase):
     def test_scan_covers_code_tests_and_docs(self):
         files = tracked_text_files()
         for expected in ("tools_src/video_layers.py", "tests/test_video_layers.py", "AGENTS.md",
-                         "skills/comfyui-run/references/comfyui-video-layers/README.md", "docs/knowledge/video/layers.md"):
+                         "skills/comfyui-run/SKILL.md", "docs/knowledge/video/layers.md"):
             self.assertIn(expected, files)
 
     def test_legacy_names_absent_from_contracts(self):

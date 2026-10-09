@@ -8,4 +8,4 @@
 - 固定參數：detection_threshold 0.5、detect_interval 1、max_objects 1、object_indices 空字串（全部物件）
 - 平台：windows-cuda technical_pass、macos-mps untested
 
-完整欄位用 `python tools_src/gameart.py run show video/sam3/track-mask` 查看。操作說明見 [sam3-track.md](../../../../skills/comfyui-run/references/comfyui-video-layers/references/sam3-track.md)。
+完整欄位用 `python tools_src/gameart.py run show video/sam3/track-mask` 查看。操作說明見 [sam3-tracking.md](../../../../docs/knowledge/video/sam3-tracking.md)。

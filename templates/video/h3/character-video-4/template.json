@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": "video/h3/character-video-4",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "title": "MiniMax H3 角色參考影片（4 張）",
   "summary": "MiniMax H3 Ref2VA，4 張參考圖各一個 LoadImage。上限讀 CHARACTER_REF_MAX（9）。變數是 placeholder，seed 是 -1。status draft，平台未實測。",
   "status": "draft",
@@ -105,7 +105,7 @@
           "placeholder": "__PROMPT__"
         }
       ],
-      "help": "寫進 graph 的 prompt。builder 在沒有 <Picture 時會先補 <Picture i> 前綴；這份 template 不改寫，slot 要填最終進 graph 的文字。"
+      "help": "寫進 graph 的 prompt。generate.py 在沒有 <Picture 時會先補 <Picture i> 前綴；這份 template 不改寫，slot 要填最終進 graph 的文字。"
     },
     "width": {
       "type": "int",
@@ -120,7 +120,7 @@
           "input": "width"
         }
       ],
-      "help": "輸出寬。預設是這份 builder 的代表值"
+      "help": "輸出寬。預設是這份 template 的代表值"
     },
     "height": {
       "type": "int",
@@ -135,7 +135,7 @@
           "input": "height"
         }
       ],
-      "help": "輸出高。預設是這份 builder 的代表值"
+      "help": "輸出高。預設是這份 template 的代表值"
     },
     "length": {
       "type": "int",
@@ -150,7 +150,7 @@
           "input": "length"
         }
       ],
-      "help": "影格數。預設是 duration 2 秒時 builder 算出的長度；案例要改長度時直接設這個 slot"
+      "help": "影格數。預設是 duration 2 秒時的長度；案例要改長度時直接設這個 slot"
     },
     "seed": {
       "type": "seed",
@@ -176,7 +176,7 @@
           "input": "filename_prefix"
         }
       ],
-      "help": "SaveVideo 的 filename_prefix。預設是 builder 的預設值，不是 output_prefix"
+      "help": "SaveVideo 的 filename_prefix。預設是固定前綴，不是 output_prefix"
     }
   },
   "pre": [
@@ -331,5 +331,5 @@
       "role": "candidate"
     }
   ],
-  "fixed_notes": "取樣、FPS 與節點連接以 builder 為準。template 不改寫 prompt 前綴。執行路徑仍在 tasks/video.py，留到第 6.3 階段。"
+  "fixed_notes": "取樣、FPS 與節點連接固定在 graph。template 不改寫 prompt 前綴；generate.py 的影片 task 由 tasks/video.py 選 template 並填值。"
 }

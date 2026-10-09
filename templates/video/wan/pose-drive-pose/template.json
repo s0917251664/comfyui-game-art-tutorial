@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "id": "video/wan/pose-drive-pose",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "title": "Wan Fun Control 動作驅動（pose）",
-  "summary": "Wan Fun Control 5B，動作片前處理是 pose。graph 由 build_pose_drive_wan（video_config=None）產生。變數是 placeholder，seed 是 -1。status draft，平台未實測。",
+  "summary": "Wan Fun Control 5B，動作片前處理是 pose。變數是 placeholder，seed 是 -1。status draft，平台未實測。",
   "status": "draft",
   "status_note": "新 template；windows-cuda 實機執行前維持 draft",
   "min_comfyui_version": "0.34.0",
@@ -99,7 +99,7 @@
           "placeholder": "__NEGATIVE__"
         }
       ],
-      "help": "負向詞。預設與 builder 的 VIDEO_NEG_DEFAULT 相同"
+      "help": "負向詞。預設與 video_catalog.VIDEO_NEG_DEFAULT 相同"
     },
     "width": {
       "type": "int",
@@ -114,7 +114,7 @@
           "input": "width"
         }
       ],
-      "help": "輸出寬。預設是這份 builder 的代表值"
+      "help": "輸出寬。預設是這份 template 的代表值"
     },
     "height": {
       "type": "int",
@@ -129,7 +129,7 @@
           "input": "height"
         }
       ],
-      "help": "輸出高。預設是這份 builder 的代表值"
+      "help": "輸出高。預設是這份 template 的代表值"
     },
     "length": {
       "type": "int",
@@ -144,7 +144,7 @@
           "input": "length"
         }
       ],
-      "help": "影格數。預設是 duration 2 秒時 builder 算出的長度；案例要改長度時直接設這個 slot"
+      "help": "影格數。預設是 duration 2 秒時的長度；案例要改長度時直接設這個 slot"
     },
     "seed": {
       "type": "seed",
@@ -170,7 +170,7 @@
           "input": "filename_prefix"
         }
       ],
-      "help": "SaveVideo 的 filename_prefix。預設是 builder 的預設值，不是 output_prefix"
+      "help": "SaveVideo 的 filename_prefix。預設是固定前綴，不是 output_prefix"
     }
   },
   "pre": [
@@ -301,5 +301,5 @@
       "role": "candidate"
     }
   ],
-  "fixed_notes": "取樣、FPS 與節點連接以 builder 為準。template 不改寫 prompt 前綴。執行路徑仍在 tasks/video.py，留到第 6.3 階段。"
+  "fixed_notes": "取樣、FPS 與節點連接固定在 graph。template 不改寫 prompt 前綴；generate.py 的影片 task 由 tasks/video.py 選 template 並填值。"
 }
