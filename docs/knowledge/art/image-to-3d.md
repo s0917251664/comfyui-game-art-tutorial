@@ -5,7 +5,7 @@ status: current
 
 # 平面圖轉 3D：判斷與限制
 
-把武器、道具的設計圖（三視圖或多視角）轉成粗略 3D 網格，用來決定角度與透視。入口是固定 template [`3d/hunyuan3d-2mv/multiview-cutout`](../../../templates/3d/hunyuan3d-2mv/multiview-cutout/README.md)（自動去背）與 [`3d/hunyuan3d-2mv/multiview`](../../../templates/3d/hunyuan3d-2mv/multiview/README.md)（輸入已去背）。slot 與模型 pin 以 `gameart.py run show <id>` 為準。
+把武器、道具的設計圖（三視圖或多視角）轉成粗略 3D 網格，用來決定角度與透視。**適用範圍：簡單的武器、道具或幾何物體**（剛體、外形由大塊體積組成，例如錘子、劍、箱子）；角色與動態姿勢不適合。入口是固定 template [`3d/hunyuan3d-2mv/multiview-cutout`](../../../templates/3d/hunyuan3d-2mv/multiview-cutout/README.md)（自動去背）與 [`3d/hunyuan3d-2mv/multiview`](../../../templates/3d/hunyuan3d-2mv/multiview/README.md)（輸入已去背）。slot 與模型 pin 以 `gameart.py run show <id>` 為準。
 
 ## 什麼時候用
 
@@ -31,5 +31,5 @@ status: current
 
 - 2026-10-13 兩份 template 用錘子三視圖各跑一次：`multiview-cutout` 約 8.6 萬頂點、外形乾淨；`multiview`（輸入是已去背的同一組圖）約 8.3 萬頂點，有幾條細線雜訊。證據在本機 `output/hy3d-template-evidence/`（不進版控）。
 - 細部浮雕（Z 字紋、寶石）會出現在網格上，但比例與厚度只到「粗模」等級；設計圖若三視圖不一致，模型會取平均。
-- 角色動態姿勢不能靠這條路解：人形需要骨架與 Q 版比例控制，屬於另一個問題（研究見 2026-10-13 的 chibi pose 研究，本機 `output/research-chibi-pose/report.md`）。
+- 角色動態姿勢不能靠這條路解：人形需要骨架與 Q 版比例控制，屬於另一個問題（研究見 2026-10-13 的 chibi pose 研究，本機 `output/research-chibi-pose/report.md`）。2026-10-13 另外手工建了二頭身 3D 人偶當構圖控制，結果身體與武器大致可用，但頭髮、尾巴這類非剛體在灰模裡分不出部位，生成時被畫成多出的手臂、護膝等錯誤，仍要在 ComfyUI 以遮罩局部重畫修正。結論：3D 生成與 3D 控制圖適合簡單的武器或幾何物體；角色的細部仍靠局部修正。
 - 技術檢查（`check_model_3d`）只驗 GLB 格式與頂點數，不判斷造型；美術接受依 [R1](../rules/candidate-review.md)。

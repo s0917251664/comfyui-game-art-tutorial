@@ -2,7 +2,7 @@
 
 **Hunyuan3D-2mv 多視角轉 3D**（v0.1.0，draft）
 
-把物件的前、左、後、右四張視角圖轉成 3D 網格（GLB，只有幾何、沒有貼圖）。graph 照官方範本，**不做去背**：輸入必須已經去背、背景乾淨（白或淺色）。直接用設計稿或有灰底的圖，請用 [`3d/hunyuan3d-2mv/multiview-cutout`](../multiview-cutout/README.md)。
+把物件的前、左、後、右四張視角圖轉成 3D 網格（GLB，只有幾何、沒有貼圖）。適合簡單的武器、道具或幾何物體；角色與動態姿勢不適合。graph 照官方範本，**不做去背**：輸入必須已經去背、背景乾淨（白或淺色）。直接用設計稿或有灰底的圖，請用 [`3d/hunyuan3d-2mv/multiview-cutout`](../multiview-cutout/README.md)。
 
 ## 輸入
 
