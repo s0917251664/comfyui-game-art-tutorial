@@ -36,7 +36,9 @@ def image_template_ids():
     return [template_id for template_id in T.discover(TEMPLATES) if template_id.startswith("image/")]
 
 
-ALL_IDS = sorted(VIDEO_IDS + image_template_ids(), key=_id_key)
+# 2026-10-13：平面圖轉 3D（Hunyuan3D-2mv 多視角）
+MODEL_3D_IDS = ["3d/hunyuan3d-2mv/multiview", "3d/hunyuan3d-2mv/multiview-cutout"]
+ALL_IDS = sorted(VIDEO_IDS + image_template_ids() + MODEL_3D_IDS, key=_id_key)
 # 舊位置 → 新位置與位元組 sha256(PR 2.1 搬移前後必須一致)
 MOVED_GRAPH_SHA256 = {
     "video/wan-animate/mix": "5ba22f287ef8f9cb9cb926c249724ae050a0b3bd3076863cdd25f4b6b64c6d6c",
@@ -554,7 +556,9 @@ class GoldenGraphTests(unittest.TestCase):
         self.assertEqual(18, len(golden.VIDEO_TEMPLATE_IDS))
         self.assertEqual(24 + len(golden.VIDEO_TEMPLATE_IDS), len(video_cases))
         self.assertEqual(len(image_cases), len({case[0] for case in image_cases}))
-        self.assertEqual(len(video_cases) + len(image_cases), len(golden.CASES))
+        model_3d_cases = [case for case in golden.CASES if case[0].startswith("3d/")]
+        self.assertEqual(2 * len(MODEL_3D_IDS), len(model_3d_cases))
+        self.assertEqual(len(video_cases) + len(image_cases) + len(model_3d_cases), len(golden.CASES))
         self.assertEqual(set(ALL_IDS), {case[0] for case in golden.CASES})
         names = sorted(os.listdir(golden.FIXTURE_DIR))
         self.assertEqual(sorted(golden.fixture_name(c[0], c[1]) for c in golden.CASES), names)

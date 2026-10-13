@@ -23,6 +23,8 @@ def _media(template_id, data):
         return "video"
     if template_id.startswith("image/"):
         return "image"
+    if template_id.startswith("3d/"):
+        return "model_3d"
     kinds = set()
     for item in data.get("outputs") or []:
         if isinstance(item, dict) and item.get("kind"):
@@ -31,6 +33,8 @@ def _media(template_id, data):
         return "video"
     if kinds & {"image", "image_sequence"}:
         return "image"
+    if "model_3d" in kinds:
+        return "model_3d"
     return None
 
 

@@ -23,6 +23,7 @@ status: current
 | 圖片：該用哪個 task | [art-generation.md](art-generation.md)；特殊參數才查 [art-parameters.md](art-parameters.md) |
 | 圖片：做不到的事、失敗樣態 | [已知限制](art/known-limitations.md)、[編修情境](art/edit-scenarios.md) |
 | 局部修改的遮罩 | [遮罩](art/masking.md)、[SAM 候選](art/sam-segmentation.md)、[控制來源判斷](art/control-type-selection.md) |
+| 平面設計圖轉 3D、用 3D 決定物件角度 | [平面圖轉 3D](art/image-to-3d.md) |
 | 結構鎖定、複合元件圖層 | [結構範本](art/structure-ref.md)、[圖層拆分判斷](art/layered-assets.md) |
 | 本機像素與物件組裝 | [edit-tools](art/edit-tools.md)、[單一物件換色](art/single-object-color.md)、[物件組裝](art/object-design-workflows.md) |
 | 模型設定檔經驗 | [sdxl-standard](art/profiles/sdxl-standard.md) |

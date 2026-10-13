@@ -395,7 +395,8 @@
             "enum": [
               "video",
               "image",
-              "image_sequence"
+              "image_sequence",
+              "model_3d"
             ]
           },
           "role": {

@@ -1,0 +1,213 @@
+{
+  "schema_version": 1,
+  "id": "3d/hunyuan3d-2mv/multiview",
+  "version": "0.1.0",
+  "title": "Hunyuan3D-2mv 多視角轉 3D",
+  "summary": "前／左／後／右四張視角圖，用 Hunyuan3D-2mv 生成無貼圖 3D 網格，輸出 GLB。",
+  "status": "draft",
+  "status_note": "2026-10-13 windows-cuda 用 gameart.py run 實機跑過一次（錘子三視圖、seed 20261013、prompt_id d6f56631-47a9-4f30-8bb9-6ad27bdaf90f）：ComfyUI 執行 27.9 秒，GLB 82608 頂點，check_model_3d 通過。平台狀態維持 untested，升級待使用者決定；美術審查 pending。",
+  "min_comfyui_version": "0.34.0",
+  "requires_custom_nodes": [],
+  "graph": {
+    "file": "graph.api.json",
+    "format": "comfyui-api",
+    "sha256": "57163bf18e5ea655f4f77ffd1a7671b14a922fc64db4f82d0b2743a4608dd2a3",
+    "canonical_sha256": "c6b1ab029d580928115682600b4aca8866874e58b71aefdf3b76348186761863"
+  },
+  "provenance": {
+    "derived_from": "官方 workflow_templates 3d_hunyuan3d_multiview_to_model（comfyui_workflow_templates_json 0.1.57）",
+    "upstream": {
+      "kind": "workflow_templates",
+      "name": "3d_hunyuan3d_multiview_to_model",
+      "blob": "02b80eb2374a5c36a07ef382296a25ee99f46de7",
+      "comfyui_version": "0.34.0",
+      "note": "UI workflow 展開成 API 節點，沿用官方 node id；模型、取樣（20 步／CFG 7.5／euler／normal）、latent 3072、VAEDecodeHunyuan3D 8000/256、VoxelToMesh surface net 0.6 與官方相同。SaveGLB 前綴改成 3d/...；步數、CFG 開成 slot（預設照官方）。"
+    },
+    "tested_source_sha256": null,
+    "evidence": [
+      {
+        "path": "templates/3d/hunyuan3d-2mv/multiview/source/3d_hunyuan3d_multiview_to_model.json",
+        "note": "官方 UI workflow 原檔（未修改），來自本機 comfyui_workflow_templates_json 0.1.57"
+      },
+      {
+        "path": "templates/3d/hunyuan3d-2mv/multiview/README.md",
+        "note": "輸入規則與 2026-10-13 Steve 授權"
+      }
+    ]
+  },
+  "slots": {
+    "front_image": {
+      "type": "image",
+      "targets": [
+        {
+          "node": "56",
+          "input": "image",
+          "placeholder": "__FRONT_IMAGE__"
+        }
+      ],
+      "upload": true,
+      "required": true,
+      "help": "正面視角圖（必填）。需要已去背、乾淨的淺色背景；灰底等背景會被建成平板。"
+    },
+    "left_image": {
+      "type": "image",
+      "targets": [
+        {
+          "node": "78",
+          "input": "image",
+          "placeholder": "__LEFT_IMAGE__"
+        }
+      ],
+      "upload": true,
+      "required": true,
+      "help": "左側視角圖（物件自己的左側）。沒有就給側面圖。需要已去背、乾淨的淺色背景；灰底等背景會被建成平板。"
+    },
+    "back_image": {
+      "type": "image",
+      "targets": [
+        {
+          "node": "80",
+          "input": "image",
+          "placeholder": "__BACK_IMAGE__"
+        }
+      ],
+      "upload": true,
+      "required": true,
+      "help": "背面視角圖。沒有就給正面圖左右鏡像。需要已去背、乾淨的淺色背景；灰底等背景會被建成平板。"
+    },
+    "right_image": {
+      "type": "image",
+      "targets": [
+        {
+          "node": "87",
+          "input": "image",
+          "placeholder": "__RIGHT_IMAGE__"
+        }
+      ],
+      "upload": true,
+      "required": true,
+      "help": "右側視角圖（物件自己的右側）。沒有就給側面圖。需要已去背、乾淨的淺色背景；灰底等背景會被建成平板。"
+    },
+    "seed": {
+      "type": "seed",
+      "targets": [
+        {
+          "node": "3",
+          "input": "seed"
+        }
+      ],
+      "default": "auto",
+      "help": "亂數種子。auto 由 runner 抽一個非負整數。"
+    },
+    "steps": {
+      "type": "int",
+      "targets": [
+        {
+          "node": "3",
+          "input": "steps"
+        }
+      ],
+      "default": 20,
+      "validate": {
+        "min": 1,
+        "max": 100
+      },
+      "help": "KSampler 步數（官方範本 20）"
+    },
+    "cfg": {
+      "type": "float",
+      "targets": [
+        {
+          "node": "3",
+          "input": "cfg"
+        }
+      ],
+      "default": 7.5,
+      "validate": {
+        "min": 0,
+        "max": 20
+      },
+      "help": "KSampler CFG（官方範本 7.5；2026-10-13 錘子實驗用 5 也可）"
+    },
+    "filename_prefix": {
+      "type": "string",
+      "targets": [
+        {
+          "node": "83",
+          "input": "filename_prefix"
+        }
+      ],
+      "default": "3d/hunyuan3d_multiview",
+      "help": "存檔前綴，預設是固定前綴。不用 output_prefix，避免被改成 gameart/..."
+    }
+  },
+  "options": {},
+  "fixed_notes": "Hunyuan3D-2mv fp16、ModelSamplingAuraFlow shift 1、latent 3072、euler／normal、octree 256、surface net 0.6。輸出只有幾何（沒有貼圖），單位與朝向依模型，前方為 +Z。",
+  "pre": [
+    {
+      "step": "upload",
+      "slots": [
+        "front_image",
+        "left_image",
+        "back_image",
+        "right_image"
+      ]
+    }
+  ],
+  "post": [
+    {
+      "step": "check_model_3d",
+      "output": "mesh",
+      "min_vertices": 100
+    }
+  ],
+  "frame_anchoring": {
+    "first": "none",
+    "last": "none",
+    "reference_role": "none",
+    "time_alignment": null,
+    "continuity": null
+  },
+  "models": [
+    {
+      "role": "checkpoint",
+      "node": "54",
+      "input": "ckpt_name",
+      "filename": "hunyuan3d-dit-v2-mv_fp16.safetensors",
+      "path": "models/checkpoints/hunyuan3d-dit-v2-mv_fp16.safetensors",
+      "directory": "checkpoints",
+      "size_bytes": 4928151562,
+      "sha256": "d36f5881bcdc56726b73e517cd444c13c60732431622da7268145355c8d38e9c",
+      "source": {
+        "repo": "Comfy-Org/hunyuan3D_2.0_repackaged",
+        "revision": "6da110fc4bbaa23cc4fe7d20129c54c2aac28f80",
+        "file": "split_files/hunyuan3d-dit-v2-mv_fp16.safetensors"
+      },
+      "url": "https://huggingface.co/Comfy-Org/hunyuan3D_2.0_repackaged/resolve/6da110fc4bbaa23cc4fe7d20129c54c2aac28f80/split_files/hunyuan3d-dit-v2-mv_fp16.safetensors"
+    }
+  ],
+  "capability_gate": {
+    "nodes": "from_graph",
+    "selectors": "from_models",
+    "files": "from_models",
+    "extra_nodes": [],
+    "platforms": {
+      "windows-cuda": {
+        "status": "untested"
+      },
+      "macos-mps": {
+        "status": "untested"
+      }
+    },
+    "min_memory_mb": null,
+    "capability": "model_3d_generation"
+  },
+  "outputs": [
+    {
+      "id": "mesh",
+      "node": "83",
+      "kind": "model_3d",
+      "role": "candidate"
+    }
+  ]
+}
