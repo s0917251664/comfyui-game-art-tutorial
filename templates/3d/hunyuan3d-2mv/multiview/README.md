@@ -21,4 +21,4 @@
 
 從官方 workflow_templates `3d_hunyuan3d_multiview_to_model` 派生（原檔在 `source/`）。UI workflow 展開成 API 節點、沿用官方 node id，模型與取樣參數相同；只把 SaveGLB 前綴改成 `3d/...`，步數與 CFG 開成 slot。
 
-2026-10-13 Steve 要求把「平面圖轉 3D」做成固定 template，並同意兩份都做。技術通過不等於美術接受（[R1](../../../../docs/knowledge/rules/candidate-review.md)）。
+2026-10-13 使用者要求把「平面圖轉 3D」做成固定 template，並同意兩份都做。技術通過不等於美術接受（[R1](../../../../docs/knowledge/rules/candidate-review.md)）。

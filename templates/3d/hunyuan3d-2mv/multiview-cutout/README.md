@@ -34,4 +34,4 @@ python tools_src/gameart.py run 3d/hunyuan3d-2mv/multiview-cutout --set front_im
 
 從官方 workflow_templates `3d_hunyuan3d_multiview_to_model` 派生（原檔在 `source/`），模型、取樣參數相同。差異：每張視角前加 core 節點 `RemoveBackground`（BiRefNet）→ `InvertMask` → `ImageCompositeMasked` 貼白底。原因：2026-10-13 錘子三視圖實驗不去背時，灰色背景被建成兩片平板；去背後才得到乾淨模型（實驗紀錄 `output/hammer-3d-proxy/hy3d/`，本機、不進版控）。
 
-2026-10-13 Steve 要求把「平面圖轉 3D」做成固定 template，並同意兩份都做。技術通過不等於美術接受（[R1](../../../../docs/knowledge/rules/candidate-review.md)）。
+2026-10-13 使用者要求把「平面圖轉 3D」做成固定 template，並同意兩份都做。技術通過不等於美術接受（[R1](../../../../docs/knowledge/rules/candidate-review.md)）。
