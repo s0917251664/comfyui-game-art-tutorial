@@ -10,6 +10,34 @@ generated: true
 機器可讀的同一份清單是 [templates/catalog.json](../../../templates/catalog.json)。
 這頁不記 graph hash，也不代替 `template.json` 的模型 pin。
 
+## `3d/hunyuan3d-2mv/multiview`
+
+- 用途：Hunyuan3D-2mv 多視角轉 3D
+- 摘要：前／左／後／右四張視角圖，用 Hunyuan3D-2mv 生成無貼圖 3D 網格，輸出 GLB。
+- 媒體：model_3d
+- 能力：model_3d_generation
+- 狀態：draft（v0.1.0）
+- 最低 ComfyUI：0.34.0
+- 第三方節點：（只用 core）
+- 平台：windows-cuda untested、macos-mps untested
+- 首尾幀：first=none、last=none、reference_role=none、time_alignment=null、continuity=null
+- 模型：hunyuan3d-dit-v2-mv_fp16.safetensors（checkpoints，checkpoint）
+- 上游：workflow_templates `3d_hunyuan3d_multiview_to_model`
+
+## `3d/hunyuan3d-2mv/multiview-cutout`
+
+- 用途：Hunyuan3D-2mv 多視角轉 3D（自動去背）
+- 摘要：前／左／後／右四張視角圖，每張先自動去背、補白底，用 Hunyuan3D-2mv 生成無貼圖 3D 網格，輸出 GLB。
+- 媒體：model_3d
+- 能力：model_3d_generation
+- 狀態：draft（v0.1.0）
+- 最低 ComfyUI：0.34.0
+- 第三方節點：（只用 core）
+- 平台：windows-cuda untested、macos-mps untested
+- 首尾幀：first=none、last=none、reference_role=none、time_alignment=null、continuity=null
+- 模型：hunyuan3d-dit-v2-mv_fp16.safetensors（checkpoints，checkpoint）、birefnet.safetensors（background_removal，bg_removal）
+- 上游：workflow_templates `3d_hunyuan3d_multiview_to_model`
+
 ## `image/flux2/concept`
 
 - 用途：FLUX.2 文字概念圖

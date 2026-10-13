@@ -388,7 +388,7 @@ def _safe_output_path(output_dir, filename):
 
 def download_outputs(history_entry, output_dir=None, node_ids=None, comfy_url=None,
                      request_timeout=DEFAULT_HTTP_TIMEOUT, allow_overwrite=True):
-    """Download selected image/video outputs with safe paths and atomic writes."""
+    """Download selected image/video/3D outputs with safe paths and atomic writes."""
     validate_timeout(request_timeout)
     if not isinstance(history_entry, dict) or not isinstance(history_entry.get("outputs"), dict):
         raise RuntimeError("ComfyUI history 沒有有效的 outputs")
@@ -402,7 +402,7 @@ def download_outputs(history_entry, output_dir=None, node_ids=None, comfy_url=No
             continue
         if not isinstance(node_out, dict):
             continue
-        for key in ("images", "videos", "gifs"):
+        for key in ("images", "videos", "gifs", "3d"):
             items = node_out.get(key) or []
             if not isinstance(items, (list, tuple)):
                 continue

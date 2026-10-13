@@ -177,7 +177,7 @@ def _graph_value(response):
 def _history_items(node_out):
     items = []
     if isinstance(node_out, dict):
-        for key in ("images", "videos", "gifs"):
+        for key in ("images", "videos", "gifs", "3d"):
             for item in node_out.get(key) or []:
                 if isinstance(item, dict):
                     items.append((key, item))
@@ -221,7 +221,8 @@ def _output_records(template, downloaded, measured):
                       "path": path, "sha256": sha256_file(path), "size_bytes": os.path.getsize(path),
                       "comfy": {k: entry["item"].get(k) for k in ("filename", "subfolder", "type")}}
             info = measured.get(path) or {}
-            for key in ("width", "height", "frames", "fps", "fps_rational", "pts_uniform", "has_audio", "grayscale"):
+            for key in ("width", "height", "frames", "fps", "fps_rational", "pts_uniform", "has_audio", "grayscale",
+                        "meshes", "vertices"):
                 if key in info:
                     record[key] = info[key]
             records.append(record)

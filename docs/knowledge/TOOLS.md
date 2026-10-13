@@ -23,6 +23,7 @@ status: current
 | 圖片 task（概念、圖示、角色動作、姿勢、風格鎖、局部重繪、精修、放大、分層、FLUX.2） | `generate.py` | SDXL 為既有基線，FLUX.2 為獨立實驗路線；[task 選擇](art-generation.md)、[參數判斷](art-parameters.md)、[已知限制](art/known-limitations.md) |
 | 影片 task（靜幀轉影片、循環特效、轉場、接續、角色參考、運鏡、動作驅動、局部重繪） | `generate.py` | H3／Wan backend 依本機 `video_capabilities.json`；[影片知識](video/README.md)、[CLI 對照](video/cli.md) |
 | 接片、綠幕合成、抽幀 | `generate.py video_concat`／`video_composite` | 本機 PyAV，不連 ComfyUI |
+| 平面圖轉 3D（武器、道具的粗模，用來決定角度與透視） | `gameart.py run 3d/hunyuan3d-2mv/multiview-cutout`（自動去背）、`3d/hunyuan3d-2mv/multiview` | Hunyuan3D-2mv，輸出無貼圖 GLB；draft、windows-cuda 已實機跑過一次但平台仍標 untested；[平面圖轉 3D](art/image-to-3d.md) |
 | 物件追蹤遮罩 | `gameart.py run video/sam3/*` | SAM3 template，內容仍須美術確認；[SAM3 追蹤](video/sam3-tracking.md) |
 | 影片局部重繪 | `gameart.py run video/wan-vace/inpaint`、`generate.py video_inpaint`、recipe `object-mark-inpaint` | 遮罩外逐 byte 不變；[vfx-tools](video/vfx-tools.md) |
 | Wan Animate、SCAIL-2 | `gameart.py run video/wan-animate/*` | 技術通過、內容 candidate；[取捨](video/wan-animate-choice.md)、[安裝紀錄](video/wan-animate-install.md) |

@@ -55,7 +55,7 @@ CONSTRAINT_RULES = ("points_within",)
 ANCHOR_VALUES = ("image", "conditioning", "same_as_first", "none")
 REFERENCE_ROLES = ("identity", "selection", "none")
 TIME_ALIGNMENTS = ("source_from_frame_0", "per_source_frame", None)
-OUTPUT_KINDS = ("video", "image", "image_sequence")
+OUTPUT_KINDS = ("video", "image", "image_sequence", "model_3d")
 OUTPUT_ROLES = ("candidate", "mask", "preview")
 MODEL_KEYS = {"role", "node", "input", "filename", "path", "directory", "url", "size_bytes", "sha256", "source",
               "notes", "pin_status", "auto_download", "platforms"}

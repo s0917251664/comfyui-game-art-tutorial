@@ -1,0 +1,400 @@
+{
+  "template": "3d/hunyuan3d-2mv/multiview-cutout",
+  "case": "steps30_cfg5",
+  "template_version": "0.1.0",
+  "graph_canonical_sha256": "6b53344f7d779ac4c869e98a9de89ce53e74a1e8746c045f10aec514bb3f20c4",
+  "values": {
+    "seed": 20261006,
+    "steps": 30,
+    "cfg": 5.0
+  },
+  "options": {},
+  "uploads": {
+    "front_image": "run/front.png",
+    "left_image": "run/left.png",
+    "back_image": "run/back.png",
+    "right_image": "run/right.png"
+  },
+  "changed": {
+    "3.cfg": 5.0,
+    "3.seed": 20261006,
+    "3.steps": 30,
+    "56.image": "run/front.png",
+    "78.image": "run/left.png",
+    "80.image": "run/back.png",
+    "87.image": "run/right.png"
+  },
+  "patched_graph_sha256": "e22a5e6961ac5cad3a9f62ed11bace3c81d537e5eee0f3eab791609e0eee1fc5",
+  "graph": {
+    "54": {
+      "class_type": "ImageOnlyCheckpointLoader",
+      "inputs": {
+        "ckpt_name": "hunyuan3d-dit-v2-mv_fp16.safetensors"
+      }
+    },
+    "70": {
+      "class_type": "ModelSamplingAuraFlow",
+      "inputs": {
+        "model": [
+          "54",
+          0
+        ],
+        "shift": 1.0000000000000002
+      }
+    },
+    "65": {
+      "class_type": "Hunyuan3Dv2ConditioningMultiView",
+      "inputs": {
+        "front": [
+          "51",
+          0
+        ],
+        "left": [
+          "79",
+          0
+        ],
+        "back": [
+          "81",
+          0
+        ],
+        "right": [
+          "86",
+          0
+        ]
+      }
+    },
+    "66": {
+      "class_type": "EmptyLatentHunyuan3Dv2",
+      "inputs": {
+        "resolution": 3072,
+        "batch_size": 1
+      }
+    },
+    "3": {
+      "class_type": "KSampler",
+      "inputs": {
+        "model": [
+          "70",
+          0
+        ],
+        "positive": [
+          "65",
+          0
+        ],
+        "negative": [
+          "65",
+          1
+        ],
+        "latent_image": [
+          "66",
+          0
+        ],
+        "seed": 20261006,
+        "steps": 30,
+        "cfg": 5.0,
+        "sampler_name": "euler",
+        "scheduler": "normal",
+        "denoise": 1
+      }
+    },
+    "61": {
+      "class_type": "VAEDecodeHunyuan3D",
+      "inputs": {
+        "samples": [
+          "3",
+          0
+        ],
+        "vae": [
+          "54",
+          2
+        ],
+        "num_chunks": 8000,
+        "octree_resolution": 256
+      }
+    },
+    "82": {
+      "class_type": "VoxelToMesh",
+      "inputs": {
+        "voxel": [
+          "61",
+          0
+        ],
+        "algorithm": "surface net",
+        "threshold": 0.6
+      }
+    },
+    "83": {
+      "class_type": "SaveGLB",
+      "inputs": {
+        "mesh": [
+          "82",
+          0
+        ],
+        "filename_prefix": "3d/hunyuan3d_multiview_cutout"
+      }
+    },
+    "56": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "run/front.png"
+      }
+    },
+    "51": {
+      "class_type": "CLIPVisionEncode",
+      "inputs": {
+        "clip_vision": [
+          "54",
+          1
+        ],
+        "image": [
+          "212",
+          0
+        ],
+        "crop": "none"
+      }
+    },
+    "78": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "run/left.png"
+      }
+    },
+    "79": {
+      "class_type": "CLIPVisionEncode",
+      "inputs": {
+        "clip_vision": [
+          "54",
+          1
+        ],
+        "image": [
+          "215",
+          0
+        ],
+        "crop": "none"
+      }
+    },
+    "80": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "run/back.png"
+      }
+    },
+    "81": {
+      "class_type": "CLIPVisionEncode",
+      "inputs": {
+        "clip_vision": [
+          "54",
+          1
+        ],
+        "image": [
+          "218",
+          0
+        ],
+        "crop": "none"
+      }
+    },
+    "87": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "run/right.png"
+      }
+    },
+    "86": {
+      "class_type": "CLIPVisionEncode",
+      "inputs": {
+        "clip_vision": [
+          "54",
+          1
+        ],
+        "image": [
+          "221",
+          0
+        ],
+        "crop": "none"
+      }
+    },
+    "200": {
+      "class_type": "LoadBackgroundRemovalModel",
+      "inputs": {
+        "bg_removal_name": "birefnet.safetensors"
+      }
+    },
+    "201": {
+      "class_type": "EmptyImage",
+      "inputs": {
+        "width": 64,
+        "height": 64,
+        "batch_size": 1,
+        "color": 16777215
+      }
+    },
+    "210": {
+      "class_type": "RemoveBackground",
+      "inputs": {
+        "bg_removal_model": [
+          "200",
+          0
+        ],
+        "image": [
+          "56",
+          0
+        ]
+      }
+    },
+    "211": {
+      "class_type": "InvertMask",
+      "inputs": {
+        "mask": [
+          "210",
+          0
+        ]
+      }
+    },
+    "212": {
+      "class_type": "ImageCompositeMasked",
+      "inputs": {
+        "destination": [
+          "56",
+          0
+        ],
+        "source": [
+          "201",
+          0
+        ],
+        "x": 0,
+        "y": 0,
+        "resize_source": true,
+        "mask": [
+          "211",
+          0
+        ]
+      }
+    },
+    "213": {
+      "class_type": "RemoveBackground",
+      "inputs": {
+        "bg_removal_model": [
+          "200",
+          0
+        ],
+        "image": [
+          "78",
+          0
+        ]
+      }
+    },
+    "214": {
+      "class_type": "InvertMask",
+      "inputs": {
+        "mask": [
+          "213",
+          0
+        ]
+      }
+    },
+    "215": {
+      "class_type": "ImageCompositeMasked",
+      "inputs": {
+        "destination": [
+          "78",
+          0
+        ],
+        "source": [
+          "201",
+          0
+        ],
+        "x": 0,
+        "y": 0,
+        "resize_source": true,
+        "mask": [
+          "214",
+          0
+        ]
+      }
+    },
+    "216": {
+      "class_type": "RemoveBackground",
+      "inputs": {
+        "bg_removal_model": [
+          "200",
+          0
+        ],
+        "image": [
+          "80",
+          0
+        ]
+      }
+    },
+    "217": {
+      "class_type": "InvertMask",
+      "inputs": {
+        "mask": [
+          "216",
+          0
+        ]
+      }
+    },
+    "218": {
+      "class_type": "ImageCompositeMasked",
+      "inputs": {
+        "destination": [
+          "80",
+          0
+        ],
+        "source": [
+          "201",
+          0
+        ],
+        "x": 0,
+        "y": 0,
+        "resize_source": true,
+        "mask": [
+          "217",
+          0
+        ]
+      }
+    },
+    "219": {
+      "class_type": "RemoveBackground",
+      "inputs": {
+        "bg_removal_model": [
+          "200",
+          0
+        ],
+        "image": [
+          "87",
+          0
+        ]
+      }
+    },
+    "220": {
+      "class_type": "InvertMask",
+      "inputs": {
+        "mask": [
+          "219",
+          0
+        ]
+      }
+    },
+    "221": {
+      "class_type": "ImageCompositeMasked",
+      "inputs": {
+        "destination": [
+          "87",
+          0
+        ],
+        "source": [
+          "201",
+          0
+        ],
+        "x": 0,
+        "y": 0,
+        "resize_source": true,
+        "mask": [
+          "220",
+          0
+        ]
+      }
+    }
+  }
+}

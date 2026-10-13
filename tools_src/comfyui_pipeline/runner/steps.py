@@ -18,6 +18,8 @@ STEPS = {
     "upload": ("pre", {"slots"}, set(), {"slots"}, set()),
     "check_video_output": ("post", {"output", "width", "height", "frames", "fps", "audio"}, set(), set(), {"output"}),
     "check_png_sequence": ("post", {"output", "count", "width", "height", "grayscale"}, set(), set(), {"output"}),
+    # 3D 模型（GLB）：檔頭、JSON chunk 與頂點數，只做技術檢查，不判斷造型
+    "check_model_3d": ("post", {"output", "min_vertices"}, set(), set(), {"output"}),
     "extract_keyframes": ("post", {"output", "which"}, set(), set(), {"output"}),
     "mask_preview": ("post", {"output", "video", "optional"}, {"video"}, set(), {"output"}),
     # PR 3.3:VACE 局部重繪的前後處理(實作在 vace_media.py,和 generate.py video_inpaint 共用)
@@ -372,6 +374,34 @@ def _compare(problems, label, measured, wanted):
         problems.append(f"{label}是 {measured},需要 {wanted}")
 
 
+def glb_stats(path):
+    """讀 GLB(binary glTF 2.0)的檔頭與 JSON chunk。回傳 meshes／primitives／vertices／bytes;格式不對就丟 ValueError。"""
+    import json
+    import struct
+    with open(path, "rb") as handle:
+        head = handle.read(20)
+        if len(head) < 20:
+            raise ValueError("GLB 檔太小")
+        magic, version, length, chunk_len, chunk_type = struct.unpack("<4sIIII", head)
+        if magic != b"glTF" or version != 2:
+            raise ValueError(f"不是 glTF 2.0 binary(magic={magic!r}, version={version})")
+        if chunk_type != 0x4E4F534A:
+            raise ValueError("第一個 chunk 不是 JSON")
+        doc = json.loads(handle.read(chunk_len).decode("utf-8"))
+    size = os.path.getsize(path)
+    if length != size:
+        raise ValueError(f"檔頭長度 {length} 和實際大小 {size} 不同")
+    accessors = doc.get("accessors") or []
+    meshes = doc.get("meshes") or []
+    primitives = [prim for mesh in meshes for prim in mesh.get("primitives") or []]
+    vertices = 0
+    for prim in primitives:
+        index = (prim.get("attributes") or {}).get("POSITION")
+        if isinstance(index, int) and 0 <= index < len(accessors):
+            vertices += int(accessors[index].get("count") or 0)
+    return {"meshes": len(meshes), "primitives": len(primitives), "vertices": vertices, "bytes": size}
+
+
 def run_post_checks(template, resolution, pre_results, outputs, dest_dir, media, *, context=None):
     """執行 post 步驟。``outputs``:{output id: [本機檔案路徑]}。回傳 (checks, problems, warnings, artifacts);
     artifacts 是 {output id: 量測值}、keyframes／mask_preview 的檔案,以及 post 步驟產生的檔案(``derived``)。
@@ -409,6 +439,14 @@ def run_post_checks(template, resolution, pre_results, outputs, dest_dir, media,
                     if info["has_audio"] != want_audio:
                         step_problems.append(f"音軌:{'有' if info['has_audio'] else '沒有'},"
                                              f"預期{'有' if want_audio else '沒有'}")
+            elif name == "check_model_3d":
+                if len(paths) != 1:
+                    raise ValueError(f"output {output_id} 應該剛好 1 個檔案,實際 {len(paths)} 個")
+                info = glb_stats(paths[0])
+                artifacts["media"][paths[0]] = info
+                detail = info
+                if info["vertices"] < int(params.get("min_vertices", 1)):
+                    step_problems.append(f"頂點數 {info['vertices']},少於 {params.get('min_vertices', 1)}")
             elif name == "check_png_sequence":
                 if not paths:
                     raise ValueError(f"output {output_id} 沒有任何檔案")

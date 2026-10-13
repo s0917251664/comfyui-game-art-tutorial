@@ -28,7 +28,9 @@ UPLOADS = {"reference_image": "run/reference.png", "source_video": "run/source.m
            "image": "run/image.png", "mask": "run/mask.png", "pose_ref": "run/pose_ref.png",
            "character_ref": "run/character_ref.png", "structure_ref": "run/structure_ref.png",
            "appearance_ref": "run/appearance_ref.png", "control_ref": "run/control_ref.png",
-           "start_image": "run/start.png", "last_image": "run/last.png", "motion_video": "run/motion.mp4"}
+           "start_image": "run/start.png", "last_image": "run/last.png", "motion_video": "run/motion.mp4",
+           "front_image": "run/front.png", "left_image": "run/left.png", "back_image": "run/back.png",
+           "right_image": "run/right.png"}
 UPLOADS.update({f"ref_image_{index}": f"run/ref_{index}.png" for index in range(1, CHARACTER_REF_MAX + 1)})
 PROMPT = "the robot from the reference image dances, same pose as the source video"
 POINTS = [{"x": 192, "y": 192}]
@@ -104,9 +106,19 @@ def _image_cases():
     return cases
 
 
+def _model_3d_cases():
+    """每個 3d/ template 一個預設案例，一個改步數與 CFG 的案例。"""
+    cases = []
+    for template_id in T.discover(TEMPLATES):
+        if template_id.startswith("3d/"):
+            cases.append((template_id, "defaults", {"seed": SEED}, {}))
+            cases.append((template_id, "steps30_cfg5", {"seed": SEED, "steps": 30, "cfg": 5.0}, {}))
+    return cases
+
+
 CASES = VIDEO_CASES + [
     (template_id, "default", {"prompt": VIDEO_PROMPT, "seed": SEED}, {}) for template_id in VIDEO_TEMPLATE_IDS
-] + _image_cases()
+] + _image_cases() + _model_3d_cases()
 PRE_RESULTS = {("video/wan-vace/inpaint", "keep_1024"): VACE_1024, ("video/wan-vace/inpaint", "replace_small"): VACE_SMALL,
                ("video/wan-vace/inpaint", "strength_negative"): VACE_1024,
                ("video/wan-vace/inpaint", "wide81_crop"): VACE_WIDE}
