@@ -25,7 +25,7 @@ description: 遊戲美術需求的共用入口：第一次使用時盤點需求�
 | 本機 ComfyUI（圖片、影片、template、recipe） | [comfyui-run](../comfyui-run/SKILL.md) |
 | 不經 ComfyUI 的本機像素、音訊、影片處理 | [local-media-tools](../local-media-tools/SKILL.md) |
 | 安裝或部署 | [comfyui-install](../comfyui-install/SKILL.md) |
-| 需要的能力目前沒有 | [comfyui-extend](../comfyui-extend/SKILL.md)，不臨場組 graph |
+| 需要的能力目前沒有 | [comfyui-extend](../comfyui-extend/SKILL.md)：可提出節點重新組合的實驗方案，成功後再做成 template |
 
 ## 判斷原則
 

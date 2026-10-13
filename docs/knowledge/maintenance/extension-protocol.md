@@ -4,14 +4,14 @@ status: current
 ---
 # 新增固定 graph 的擴充協議
 
-新的 ComfyUI 固定流程不臨場組 graph，也不再新增 Python graph builder。缺能力時照這份協議做成 `templates/<id>/`，用 `gameart.py run` 執行（[R2](../rules/fixed-graphs.md)）。技術通過不等於美術接受（[R1](../rules/candidate-review.md)）。
+新流程的來源可以是官方範本，也可以是實驗驗證過的新節點組合（[R2](../rules/fixed-graphs.md) 第 3 點）。要進產線時照這份協議做成 `templates/<id>/`，用 `gameart.py run` 執行；不再新增 Python graph builder。技術通過不等於美術接受（[R1](../rules/candidate-review.md)）。
 
 ## 步驟
 
-1. **提案。** 寫清楚現有 task 或 template 為什麼不夠、輸入、輸出、要守住的像素或時間契約。只整理需求，不送 prompt。
+1. **提案。** 寫清楚現有 task 或 template 為什麼不夠、輸入、輸出、要守住的像素或時間契約。有做過實驗就附上紀錄：節點組合、參數、成功與失敗的結果。
 2. **使用者確認**之後才改程式或新增 template。不因「比較快」就換引擎或下載模型。
 3. **固定來源。** 模型檔記錄 size 與 sha256。有 Hugging Face 來源時，`source.revision` 用 40 位 commit，`url` 跟它一致。不追浮動 `main`。
-4. **優先派生。** 官方 [workflow_templates](https://github.com/Comfy-Org/workflow_templates) 或 ComfyUI core `blueprints/` 已有對應流程時，從那一份派生，把 blob 寫進 `provenance.upstream`。對不上才 `kind: none`，並在 note 寫原因。差異（換了哪顆模型、哪一段改在本機做）寫在 note，不另組一套節點。
+4. **優先派生。** 官方 [workflow_templates](https://github.com/Comfy-Org/workflow_templates) 或 ComfyUI core `blueprints/` 已有對應流程時，從那一份派生，把 blob 寫進 `provenance.upstream`。新的節點組合盡量以官方範本為底、在上面加或換節點（例：[`3d/hunyuan3d-2mv/multiview-cutout`](../../../templates/3d/hunyuan3d-2mv/multiview-cutout/README.md) 在官方多視角範本前加去背）；找不到可用的底才 `kind: none`，並在 note 寫原因。差異與理由（加了哪些節點、換了哪顆模型、哪一段改在本機做）寫在 note。
 5. **做成 template。** `graph.api.json` 加 `template.json` 加 `README.md`。`status` 先是 `draft`，平台先是 `untested`。slot 只放會變的值。結構變化用另一份 template，不在 runner 裡插節點。JSON 用 LF。
 6. **測試。** runner 填值後的 graph 與來源逐欄相同；既有 golden 的 hash 不因這次新增而改掉。preflight 在上傳前擋下缺節點、版本太舊、模型 pin 不符。
 7. **實機。** queue 為空時跑一次 `gameart.py run <id>`。`run.result.json` 技術檢查通過才算數。`content_review` 維持 `pending`。

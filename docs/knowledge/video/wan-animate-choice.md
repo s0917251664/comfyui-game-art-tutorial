@@ -13,7 +13,7 @@ status: current
 | 把參考角色放進來源影片（保留來源背景） | Wan Animate **Mix**，或 SCAIL-2 替換模式 |
 | 來源動作驅動參考角色（背景由參考圖決定） | Wan Animate **Move**，或 SCAIL-2 動畫模式 |
 | 片長 ≤ 33 幀 | 單段 template |
-| 約 3.8 秒（61 幀） | 兩段延伸 template（只有兩段；更長沒有 template，停止並告知，不臨場複製節點。真要新的固定 graph 走 [擴充協議](../maintenance/extension-protocol.md)） |
+| 約 3.8 秒（61 幀） | 兩段延伸 template（只有兩段；更長沒有 template，停止並告知；要更長可以提出串接更多段的實驗，成功後照 [擴充協議](../maintenance/extension-protocol.md) 做成 template） |
 | 多角色，或要依顏色綁定身份 | SCAIL-2 |
 | 身份一致性優先 | SCAIL-2 比 Wan Animate 穩 |
 

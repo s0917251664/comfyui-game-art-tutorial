@@ -26,7 +26,7 @@
 - **`gameart.py run <template id>`** 直接執行沒有 `generate.py` task 的固定流程（Wan Animate、SCAIL-2、SAM3 追蹤、VACE 局部重繪）。順序：`run show` → `--dry-run` → `--preflight` → 實際執行（寫 `run.result.json`）。
 - **`gameart.py recipe`**：多步驟、中間要人工確認的流程；停在確認點，使用者確認後才 `resume --confirm`。
 - **本機 Python 工具**（`edit`、`design`、`vfx`、`film-audio`、`film-qwen`、`film-lipsync`、`mask-session`、`mask-refine`、`sam`、`video-layers`）不經 template，不套 template 做法；文件寫清楚它們是本機工具。
-- 不臨場組或改 ComfyUI graph（[R2](docs/knowledge/rules/fixed-graphs.md)）；新的固定 graph 走[擴充協議](docs/knowledge/maintenance/extension-protocol.md)。缺能力不自動換引擎，只整理需求不啟動生成。
+- 交付用的生成不臨場組或改 ComfyUI graph（[R2](docs/knowledge/rules/fixed-graphs.md)）。現有 template 做不好時，主動思考既有節點怎麼重新組合成新做法：標明是實驗、在 ComfyUI 試，成功且使用者確認後照[擴充協議](docs/knowledge/maintenance/extension-protocol.md)做成 template 進產線。缺能力不自動換引擎；下載模型、安裝節點先問。
 
 ## 執行與驗收原則
 

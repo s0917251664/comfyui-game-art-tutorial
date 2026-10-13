@@ -1,6 +1,6 @@
 ---
 name: comfyui-extend
-description: 需要的能力目前沒有、要新增或擴充技能／固定 graph（template）／task／custom node／本機工具時，照擴充協議提案與驗證；或使用者明確要求審視技能庫、執行路線、架構與新技術時盤點並提出建議。不臨場組 graph，不自行下載或替換模型。
+description: 需要的能力目前沒有、要新增或擴充技能／固定 graph（template）／task／custom node／本機工具時，照擴充協議提案與驗證；或使用者明確要求審視技能庫、執行路線、架構與新技術時盤點並提出建議。新的節點組合先標明是實驗、在 ComfyUI 試，成功且使用者確認後才做成 template；不自行下載或替換模型。
 ---
 
 # 擴充與審視

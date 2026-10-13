@@ -26,7 +26,7 @@ FLUX.2（`flux2_concept`／`flux2_edit`）不使用 image profile，改走獨立
 
 1. **有沒有現成 task 覆蓋？** 有就用，不因為「自己組 graph 比較快」就繞過去。真要新的固定 graph 走 [擴充協議](maintenance/extension-protocol.md)，不臨場組（[R2](rules/fixed-graphs.md)）。
 2. **這台機器能不能跑、驗證過沒有？** 依上節。task 不可用就不硬送（`generate.py` 在上傳前就會拒絕），如實告知缺什麼，選項是補裝、換一台已裝好的機器、或先不做。**不要為了避開錯誤自行換設定檔或降級。**
-3. **沒有現成 task、而且是一次性探索**：目前沒有 ComfyUI MCP 入口，如實說「目前沒有對應工具」，不自己臨場組 graph 頂替。
+3. **沒有現成 task、而且是一次性探索**：目前沒有 ComfyUI MCP 入口，如實說「目前沒有對應工具」，不拿相似的 graph 頂替成交付；可以提出節點重新組合的實驗方案（[R2](rules/fixed-graphs.md) 第 3 點），由使用者決定要不要試。
 4. **沒有現成 task、而且會重複用到**：走 [擴充協議](maintenance/extension-protocol.md) 或 [新增能力清單](maintenance/new-capability-checklist.md)。
 
 ## 任務判斷

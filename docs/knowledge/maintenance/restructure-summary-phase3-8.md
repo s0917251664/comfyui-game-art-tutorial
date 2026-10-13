@@ -33,6 +33,7 @@ status: current
 | 被握住的物件：手部（遮擋物）保護遮罩 | 第一次局部重繪把握柄上的手一起重畫、變形。這次用 SAM3 文字追蹤「glove」得到手的遮罩，從物件遮罩扣掉（手外留 5 像素）、局部重繪改用 grow 0 才保住手。扣遮罩是一次性腳本（本機證據：`output/verify-20261009-6.4/subtract_hands.py`），不是正式工具 | 照[擴充協議](extension-protocol.md)提案：在 `object-mark-inpaint` 加「保護遮罩」步驟（追蹤 → 確認 → 從物件遮罩扣掉），由 runner 的固定步驟實作，不臨場組 graph |
 | review 只能選原始輸出 | `run.result.json` 的 `outputs` 只有 VACE 原始輸出；貼回結果在 `derived_outputs`，`gameart.py review` 選不到 | 讓 `asset_review` 也能列出並記錄 `derived_outputs` |
 | recipe 的 local 步驟 | 實際執行器只執行 template 步驟；local 步驟（只有 `_drafts` 的 recipe 用到）會停下 | 草稿 recipe 轉正時一起實作 |
+| ComfyUI-PromptChain 的選用功能（PuLID 角色鎖定、Face Detailer、AI Selection） | 2026-10-13 為測 3D Poser 安裝 PromptChain，只用核心依賴；`requirements.txt` 的選用套件（insightface、onnxruntime、facexlib、ultralytics 等）未安裝，因 onnxruntime 可能與 ComfyUI 環境既有套件衝突 | 先評估這些功能能否取代或簡化既有流程（角色一致性、臉部修補、遮罩選取），確認依賴衝突與實測效果後，照[擴充協議](extension-protocol.md)提案；未決定前不安裝 |
 
 ## 待使用者決定
 
