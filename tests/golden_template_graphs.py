@@ -30,7 +30,7 @@ UPLOADS = {"reference_image": "run/reference.png", "source_video": "run/source.m
            "appearance_ref": "run/appearance_ref.png", "control_ref": "run/control_ref.png",
            "start_image": "run/start.png", "last_image": "run/last.png", "motion_video": "run/motion.mp4",
            "front_image": "run/front.png", "left_image": "run/left.png", "back_image": "run/back.png",
-           "right_image": "run/right.png"}
+           "right_image": "run/right.png", "identity_ref": "run/identity.png", "object_ref": "run/object.png"}
 UPLOADS.update({f"ref_image_{index}": f"run/ref_{index}.png" for index in range(1, CHARACTER_REF_MAX + 1)})
 PROMPT = "the robot from the reference image dances, same pose as the source video"
 POINTS = [{"x": 192, "y": 192}]

@@ -178,6 +178,47 @@
       "upstream_name": null
     },
     {
+      "id": "image/qwen-image-edit/three-reference",
+      "version": "0.1.0",
+      "title": "Qwen-Image-Edit 2511 three-reference edit (experimental, advanced model)",
+      "summary": "Advanced-model experiment: Qwen-Image-Edit 2511 with three ordered reference images; roles assigned by prompt.",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "unet",
+          "filename": "qwen_image_edit_2511_fp8mixed.safetensors",
+          "directory": "diffusion_models"
+        },
+        {
+          "role": "clip",
+          "filename": "qwen_2.5_vl_7b_fp8_scaled.safetensors",
+          "directory": "text_encoders"
+        },
+        {
+          "role": "vae",
+          "filename": "qwen_image_vae.safetensors",
+          "directory": "vae"
+        }
+      ],
+      "upstream_kind": "core_blueprint",
+      "upstream_name": "Image Edit (Qwen 2511).json"
+    },
+    {
       "id": "image/sdxl/character-action-canny",
       "version": "0.1.1",
       "title": "角色動作（SDXL、canny）",

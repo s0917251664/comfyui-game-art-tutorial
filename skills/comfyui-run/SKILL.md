@@ -34,6 +34,7 @@ description: 用本機 ComfyUI 執行已登記的圖片／影片能力：generat
 | 概念圖、圖示、角色動作、姿勢、風格鎖、局部重繪、精修、放大、分層 | `generate.py` 圖片 task | [圖片 task 選擇](../../docs/knowledge/art-generation.md)、[參數判斷](../../docs/knowledge/art-parameters.md) |
 | 靜幀轉短片、循環特效、接片、運鏡、角色參考影片、動作驅動 | `generate.py` 影片 task | [影片知識](../../docs/knowledge/video/README.md) |
 | Wan Animate、SCAIL-2 | `gameart.py run video/wan-animate/<id>` | [取捨與限制](../../docs/knowledge/video/wan-animate-choice.md) |
+| 多參考圖編修，FLUX.2 做不出時（進階模型實驗） | `gameart.py run image/qwen-image-edit/three-reference` | [模板說明](../../templates/image/qwen-image-edit/three-reference/README.md)：Qwen-Image-Edit 2511，一張約 7.5 分鐘；先用 FLUX.2 三參考模板，做不出再試；不保證較好，draft |
 | 物件追蹤遮罩、影片局部重繪 | `run video/sam3/*`、`run video/wan-vace/inpaint` 或 recipe | [SAM3 追蹤](../../docs/knowledge/video/sam3-tracking.md)、[vfx-tools](../../docs/knowledge/video/vfx-tools.md) |
 | 同一張圖比較有限幾組參數 | `gameart.py edit sweep` | [edit-tools](../../docs/knowledge/art/edit-tools.md) |
 | 一組角色動作、劇情多鏡 | 編排既有 task | [動作組](../../docs/knowledge/animation/workflow.md)、[劇情流程](../../docs/knowledge/video/production-flow.md) |

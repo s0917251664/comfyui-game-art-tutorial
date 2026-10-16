@@ -1,0 +1,210 @@
+{
+  "schema_version": 1,
+  "id": "image/qwen-image-edit/three-reference",
+  "version": "0.1.0",
+  "title": "Qwen-Image-Edit 2511 three-reference edit (experimental, advanced model)",
+  "summary": "Advanced-model experiment: Qwen-Image-Edit 2511 with three ordered reference images; roles assigned by prompt.",
+  "status": "draft",
+  "status_note": "Experimental advanced model (20B-class, Apache 2.0). Heavier and slower than FLUX.2 Klein 4B; did not fix two-hand grips in the 2026-10-15 cover experiment. Technical experiment only; artistic review pending.",
+  "min_comfyui_version": "0.34.0",
+  "requires_custom_nodes": [],
+  "graph": {
+    "file": "graph.api.json",
+    "format": "comfyui-api",
+    "sha256": "27c4dcf6a3da2253d25f7e0950b819be359dda446485e37cdb03b987411551f5",
+    "canonical_sha256": "3fcd4ebc841cf3a2340ecc4c6f86f3afcb3ca222e4c7cbcd39f9d682623ab39c"
+  },
+  "provenance": {
+    "derived_from": "Official core blueprint at ComfyUI commit 12d5279438bfefc058a269eae805ceab6047777f, UI subgraph flattened to API nodes.",
+    "upstream": {
+      "kind": "core_blueprint",
+      "name": "Image Edit (Qwen 2511).json",
+      "blob": "1aa7e576587331be9afb2ab61f1bcc9915b94fe7",
+      "comfyui_version": "0.34.0",
+      "note": "Same node structure and sampler as the blueprint (ModelSamplingAuraFlow 3.1, CFGNorm 1, FluxKontextMultiReferenceLatentMethod index_timestep_zero on both branches, TextEncodeQwenImageEditPlus x2 with image1-3, VAEEncode of FluxKontextImageScale(image1) as latent, KSampler 40 steps CFG 4 euler/simple denoise 1). Differences: diffusion model is qwen_image_edit_2511_fp8mixed (blueprint names bf16, too large for 16 GB); the three subgraph image inputs are LoadImage nodes; SaveImage output added. No lightning LoRA."
+    },
+    "tested_source_sha256": "f4a0476d2274087b1b66ed82e0270f3958597ce08c01bf0a39d145174ec6cd83",
+    "evidence": [
+      {
+        "path": "templates/image/qwen-image-edit/three-reference/source/official-blueprint.json",
+        "note": "Unmodified official blueprint at pinned Git blob, normalized to LF; public source https://github.com/Comfy-Org/ComfyUI/blob/12d5279438bfefc058a269eae805ceab6047777f/blueprints/Image%20Edit%20(Qwen%202511).json"
+      },
+      {
+        "path": "templates/image/qwen-image-edit/three-reference/README.md",
+        "note": "Roles, limits and user authorization on 2026-10-17"
+      }
+    ]
+  },
+  "slots": {
+    "prompt": {
+      "type": "text",
+      "targets": [
+        {
+          "node": "13",
+          "input": "prompt",
+          "placeholder": "__PROMPT__"
+        }
+      ],
+      "required": true,
+      "validate": {
+        "min_length": 1
+      },
+      "help": "正向提示詞；用 Picture 1/2/3 說明三張圖各自的用途。"
+    },
+    "seed": {
+      "type": "seed",
+      "targets": [
+        {
+          "node": "15",
+          "input": "seed"
+        }
+      ],
+      "default": "auto",
+      "help": "亂數種子。auto 由 runner 抽一個非負整數。"
+    },
+    "image": {
+      "type": "image",
+      "targets": [
+        {
+          "node": "20",
+          "input": "image",
+          "placeholder": "__IMAGE__"
+        }
+      ],
+      "upload": true,
+      "required": true,
+      "help": "Picture 1：主圖／版面；輸出尺寸跟這張（FluxKontextImageScale）。"
+    },
+    "filename_prefix": {
+      "type": "string",
+      "targets": [
+        {
+          "node": "19",
+          "input": "filename_prefix"
+        }
+      ],
+      "default": "qwen_edit_2511_three_reference",
+      "help": "存檔前綴，預設是固定前綴。"
+    },
+    "identity_ref": {
+      "type": "image",
+      "targets": [
+        {
+          "node": "21",
+          "input": "image",
+          "placeholder": "__IDENTITY_REF__"
+        }
+      ],
+      "upload": true,
+      "required": true,
+      "help": "Picture 2：角色或原圖參考；用途要在提示詞說明。"
+    },
+    "object_ref": {
+      "type": "image",
+      "targets": [
+        {
+          "node": "22",
+          "input": "image",
+          "placeholder": "__OBJECT_REF__"
+        }
+      ],
+      "upload": true,
+      "required": true,
+      "help": "Picture 3：物件或角色設定參考；用途要在提示詞說明。"
+    }
+  },
+  "options": {},
+  "fixed_notes": "Fixed blueprint sampler settings (40 steps, CFG 4, euler/simple, shift 3.1, CFGNorm 1). Full-image regeneration; no pixel preservation guarantee. About 7.5 minutes per 1024px image on an RTX 4080 16 GB (model partly offloaded to RAM).",
+  "pre": [
+    {
+      "step": "upload",
+      "slots": [
+        "image",
+        "identity_ref",
+        "object_ref"
+      ]
+    }
+  ],
+  "post": [],
+  "frame_anchoring": {
+    "first": "none",
+    "last": "none",
+    "reference_role": "none",
+    "time_alignment": null,
+    "continuity": null
+  },
+  "models": [
+    {
+      "role": "unet",
+      "node": "4",
+      "input": "unet_name",
+      "filename": "qwen_image_edit_2511_fp8mixed.safetensors",
+      "path": "models/diffusion_models/qwen_image_edit_2511_fp8mixed.safetensors",
+      "directory": "diffusion_models",
+      "size_bytes": 20533762817,
+      "sha256": "c9fdc158e46d3b61ef75f21ae866ca2fe808bf4a53643120d1c1e87c19280a4e",
+      "source": {
+        "repo": "Comfy-Org/Qwen-Image-Edit_ComfyUI",
+        "revision": "f68ace85e60b4a02a323e394253731947657b7d2",
+        "file": "split_files/diffusion_models/qwen_image_edit_2511_fp8mixed.safetensors"
+      },
+      "url": "https://huggingface.co/Comfy-Org/Qwen-Image-Edit_ComfyUI/resolve/f68ace85e60b4a02a323e394253731947657b7d2/split_files/diffusion_models/qwen_image_edit_2511_fp8mixed.safetensors"
+    },
+    {
+      "role": "clip",
+      "node": "1",
+      "input": "clip_name",
+      "filename": "qwen_2.5_vl_7b_fp8_scaled.safetensors",
+      "path": "models/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors",
+      "directory": "text_encoders",
+      "size_bytes": 9384670680,
+      "sha256": "cb5636d852a0ea6a9075ab1bef496c0db7aef13c02350571e388aea959c5c0b4",
+      "source": {
+        "repo": "Comfy-Org/Qwen-Image_ComfyUI",
+        "revision": "1f12b17be14c89b026c51a91d67c32f84bb047bc",
+        "file": "split_files/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors"
+      },
+      "url": "https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI/resolve/1f12b17be14c89b026c51a91d67c32f84bb047bc/split_files/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors"
+    },
+    {
+      "role": "vae",
+      "node": "3",
+      "input": "vae_name",
+      "filename": "qwen_image_vae.safetensors",
+      "path": "models/vae/qwen_image_vae.safetensors",
+      "directory": "vae",
+      "size_bytes": 253806246,
+      "sha256": "a70580f0213e67967ee9c95f05bb400e8fb08307e017a924bf3441223e023d1f",
+      "source": {
+        "repo": "Comfy-Org/Qwen-Image_ComfyUI",
+        "revision": "1f12b17be14c89b026c51a91d67c32f84bb047bc",
+        "file": "split_files/vae/qwen_image_vae.safetensors"
+      },
+      "url": "https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI/resolve/1f12b17be14c89b026c51a91d67c32f84bb047bc/split_files/vae/qwen_image_vae.safetensors"
+    }
+  ],
+  "capability_gate": {
+    "nodes": "from_graph",
+    "selectors": "from_models",
+    "files": "from_models",
+    "extra_nodes": [],
+    "platforms": {
+      "windows-cuda": {
+        "status": "untested"
+      },
+      "macos-mps": {
+        "status": "untested"
+      }
+    },
+    "min_memory_mb": null,
+    "capability": "image_generation"
+  },
+  "outputs": [
+    {
+      "id": "image",
+      "node": "19",
+      "kind": "image",
+      "role": "candidate"
+    }
+  ]
+}

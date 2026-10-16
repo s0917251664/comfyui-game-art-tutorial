@@ -21,6 +21,7 @@ status: current
 | 需求 brief、驗收、編修情境 | [game-art-brief](../../skills/game-art-brief/SKILL.md) | [brief 與驗收](art/brief-and-acceptance.md)、[編修情境](art/edit-scenarios.md)；不執行生成 |
 | 平台原生圖片工具 | [platform-image-gen](../../skills/platform-image-gen/SKILL.md) | 依本次會話 schema；單張文字生圖與編修曾技術完成，候選待驗收；多參考、其他平台、影片未測 |
 | 圖片 task（概念、圖示、角色動作、姿勢、風格鎖、局部重繪、精修、放大、分層、FLUX.2） | `generate.py` | SDXL 為既有基線，FLUX.2 為獨立實驗路線；[task 選擇](art-generation.md)、[參數判斷](art-parameters.md)、[已知限制](art/known-limitations.md) |
+| 進階模型：Qwen-Image-Edit 2511 三參考圖編修（實驗） | `gameart.py run image/qwen-image-edit/three-reference` | [實驗模板](../../templates/image/qwen-image-edit/three-reference/README.md)；比 FLUX.2 Klein 4B 大的進階模型，一張約 7.5 分鐘（RTX 4080）；FLUX.2 做不出時再試，不保證較好；draft、未實機跑過此模板 |
 | 影片 task（靜幀轉影片、循環特效、轉場、接續、角色參考、運鏡、動作驅動、局部重繪） | `generate.py` | H3／Wan backend 依本機 `video_capabilities.json`；[影片知識](video/README.md)、[CLI 對照](video/cli.md) |
 | 接片、綠幕合成、抽幀 | `generate.py video_concat`／`video_composite` | 本機 PyAV，不連 ComfyUI |
 | 平面圖轉 3D（武器、道具的粗模，用來決定角度與透視） | `gameart.py run 3d/hunyuan3d-2mv/multiview-cutout`（自動去背）、`3d/hunyuan3d-2mv/multiview` | Hunyuan3D-2mv，輸出無貼圖 GLB；draft、windows-cuda 已實機跑過一次但平台仍標 untested；[平面圖轉 3D](art/image-to-3d.md) |

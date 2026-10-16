@@ -22,6 +22,8 @@
 
 ## 執行方式
 
+- 進階模型實驗 [`image/qwen-image-edit/three-reference`](templates/image/qwen-image-edit/three-reference/README.md)（Qwen-Image-Edit 2511）：比 FLUX.2 重、慢，先用 FLUX.2，做不出再試；draft，不推定比 FLUX.2 好。
+
 - **`generate.py <task>`** 是圖片與影片 task 的入口：依 task 與旗標選出 template id，交給 runner 執行。
 - **`gameart.py run <template id>`** 直接執行沒有 `generate.py` task 的固定流程（Wan Animate、SCAIL-2、SAM3 追蹤、VACE 局部重繪）。順序：`run show` → `--dry-run` → `--preflight` → 實際執行（寫 `run.result.json`）。
 - **`gameart.py recipe`**：多步驟、中間要人工確認的流程；停在確認點，使用者確認後才 `resume --confirm`。
