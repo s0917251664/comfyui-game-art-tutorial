@@ -22,6 +22,8 @@ status: current
 | 第一次使用、還沒選路線 | [初始化](installation/initialization.md)；整理需求見 [brief 與驗收](art/brief-and-acceptance.md) |
 | 圖片：該用哪個 task | [art-generation.md](art-generation.md)；特殊參數才查 [art-parameters.md](art-parameters.md) |
 | 圖片：做不到的事、失敗樣態 | [已知限制](art/known-limitations.md)、[編修情境](art/edit-scenarios.md) |
+| 一句修圖需求該走哪條路、停損規則 | [修圖手冊](art/edit-playbook.md)、[失敗診斷](art/edit-failure-diagnosis.md) |
+| 看懂 graph 節點、提實驗方案 | [節點入門](art/comfyui-nodes-primer.md) |
 | 局部修改的遮罩 | [遮罩](art/masking.md)、[SAM 候選](art/sam-segmentation.md)、[控制來源判斷](art/control-type-selection.md) |
 | 平面設計圖轉 3D、用 3D 決定物件角度 | [平面圖轉 3D](art/image-to-3d.md) |
 | 結構鎖定、複合元件圖層 | [結構範本](art/structure-ref.md)、[圖層拆分判斷](art/layered-assets.md) |
