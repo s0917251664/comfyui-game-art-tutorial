@@ -36,6 +36,7 @@ AI 代理依技能文件判斷需求與路線，工具執行實際工作，知�
 
 直接告訴 AI 代理想完成的工作，例如：「用這張角色圖做一段揮手短片，保留服裝和配色」，或「把這批特效去背並打包成素材」。
 
+- [新手上手](docs/getting-started.md)：不同作業系統與 AI 代理的使用方式（先看這份）。
 - [安裝與部署](skills/comfyui-install/SKILL.md)：準備本機 ComfyUI 環境。
 - [工具能力索引](docs/knowledge/TOOLS.md)：查看各項能力與適用路線。
 - [知識庫](docs/knowledge/INDEX.md)：查閱製作方法、限制與經驗。
