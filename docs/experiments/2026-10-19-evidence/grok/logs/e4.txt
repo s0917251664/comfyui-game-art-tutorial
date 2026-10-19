@@ -1,0 +1,7 @@
+我先讀 Imagine 技能，再用 `image_gen` 產生透明背景金幣圖示，並存成 `E4/platform.png`。這是單枚遊戲金幣圖示，我用 `image_gen` 以 1:1 產出，再存到 `E4/platform.png` 並檢查實際格式與透明通道。工具回傳的是 JPEG。我把它原樣存成 `E4/platform.png`，並只檢查檔頭與色彩模式，確認格式和有沒有透明通道。已用 **image_gen** 產生金幣圖示，並把工具回傳的位元組原樣存成 `E4/platform.png`。
+
+- **工具名稱：** `image_gen`
+- **工具回傳路徑：** `images/1.jpg`
+- **存檔位置：** `E4/platform.png`（283,406 bytes，內容未轉檔）
+- **實際檔案格式：** JPEG（JFIF，檔頭 `FF D8 FF E0`；Pillow 辨識為 `JPEG` / `RGB`）
+- **透明通道：** 沒有。色彩模式是 `RGB`，波段只有 R、G、B，沒有 alpha。
