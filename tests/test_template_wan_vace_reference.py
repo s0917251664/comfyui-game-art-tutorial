@@ -57,9 +57,10 @@ class InpaintReferenceTests(unittest.TestCase):
     def test_defaults_and_gates(self):
         _, resolution = self._patched()
         self.assertEqual("replace", resolution["slot_values"]["mode"])
-        self.assertEqual("draft", self.template.data["status"])
-        for platform in self.template.data["capability_gate"]["platforms"].values():
-            self.assertEqual("untested", platform["status"])
+        self.assertEqual("technical_pass", self.template.data["status"])
+        platforms = self.template.data["capability_gate"]["platforms"]
+        self.assertEqual("technical_pass", platforms["windows-cuda"]["status"])
+        self.assertEqual("untested", platforms["macos-mps"]["status"])
         upload = [s for s in self.template.data["pre"] if s["step"] == "upload"][0]
         self.assertIn("reference_image", upload["slots"])
 

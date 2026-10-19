@@ -1,6 +1,6 @@
 # video/wan-vace/inpaint-reference
 
-**Wan2.1 VACE 影片局部重繪＋參考圖（遮罩內畫成指定物件、貼回原片）**（v0.1.0，draft）
+**Wan2.1 VACE 影片局部重繪＋參考圖（遮罩內畫成指定物件、貼回原片）**（v0.1.1，technical_pass）
 
 和 [`video/wan-vace/inpaint`](../inpaint/README.md) 相同的 graph 與前後處理，多一張參考圖接到 `WanVaceToVideo.reference_image`。用途是把遮罩內換成指定設計的道具，例如照道具母版重畫武器。
 
@@ -29,7 +29,7 @@
 
 ## 平台
 
-- windows-cuda：untested
+- windows-cuda：technical_pass（2026-10-19，seed 202／203，遮罩外 56 幀不變；本機證據 output/experiments/wangp-reverse-20261019/e4_template_live）
 - macos-mps：untested
 
 完整欄位用 `python tools_src/gameart.py run show video/wan-vace/inpaint-reference` 查看。

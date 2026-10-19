@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "id": "video/wan-vace/inpaint-reference",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "title": "Wan2.1 VACE 影片局部重繪＋參考圖（遮罩內畫成指定物件、貼回原片）",
   "summary": "同 video/wan-vace/inpaint，多一張參考圖接到 WanVaceToVideo.reference_image：先合成到白底，再等比縮放置中、白邊補滿工作區。用來把遮罩內換成指定設計的道具",
-  "status": "draft",
+  "status": "technical_pass",
   "min_comfyui_version": "0.34.0",
   "requires_custom_nodes": [],
   "graph": {
@@ -378,8 +378,8 @@
     "files": "from_models",
     "platforms": {
       "windows-cuda": {
-        "status": "untested",
-        "notes": "graph 等同 2026-10-19 E4 研究（研究時參考圖在本機先合成白底；本 template 改在 graph 內處理），template 本身尚未實機執行"
+        "status": "technical_pass",
+        "evidence": "2026-10-19：素材同 2026-10-07 錘子案例（skye_hammer_ready_FINAL_1024.mp4、masks_2keys），參考圖 weapon-front-clean.png（透明 PNG 490×813），replace、seed 202／203。raw 544×560、57 幀、24 FPS、h264、無音軌；crop 140,206,684,766；遮罩外 56 幀不變；兩個 seed 的錘子都回到母版設計（第 0 幀偏扁）。本機證據 output/experiments/wangp-reverse-20261019/e4_template_live。"
       },
       "macos-mps": {
         "status": "untested",

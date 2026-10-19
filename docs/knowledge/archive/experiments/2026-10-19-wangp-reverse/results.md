@@ -15,8 +15,8 @@
 | E1 | H3 取樣器 res_multistep vs euler | 看不出差異 | 維持 res_multistep |
 | E2 | Wan 5B：shift 8/20 步 vs shift 5，20/30/50 步 | shift 5 在 seed 3001 壞了兩支；步數加多沒有好處 | 維持 shift 8、20 步 |
 | E3 | VACE 1.3B：CFG 6/20 步 vs CFG 5，20/30 步 | 同 seed 下幾乎相同；30 步多花 32% 時間 | 維持 CFG 6、20 步 |
-| E4 | VACE 參考圖注入 | **replace 模式效果明顯：錘子回到母版設計** | 提案做成 template |
-| E5 | H3「鏡頭靜止」獨立句型 | 基準組本來就沒推近，驗證不了 | 用 3 秒原條件補測 |
+| E4 | VACE 參考圖注入 | **replace 模式效果明顯：錘子回到母版設計** | 已做成 `video/wan-vace/inpaint-reference`（windows-cuda technical_pass） |
+| E5 | H3「鏡頭靜止」獨立句型 | 2 秒驗證不了；3 秒補測：原寫法 2/3 推近，獨立句型 0/3 | 寫進 [idle 錨定規則](../../../rules/idle-anchoring.md) 第 3 點 |
 | E6 | Animate 蒸餾 6 步：euler vs uni_pc | 差不多；seed 43 兩種都不穩 | 維持 euler |
 
 **總結**：WanGP 的預設參數（E1、E2、E3、E6）是針對它自己的解析度和非蒸餾路線調的，搬到我們的設定沒有帶來改善，E2 甚至變差。有價值的是「做法」，也就是 E4 的參考圖注入。
@@ -34,7 +34,7 @@
 
 兩種取樣器的動作幅度、回到原站姿的程度和耗時都差不多。WanGP 的 3 步第二階段精修沒有測，ComfyUI 版沒有對應的節點設定。
 
-**另外發現**：`video/h3/img2video-last` 的技術檢查要求「沒有音軌」，但 H3 會輸出音訊，所以 6 支都被判 `failed`（`check_video_output(video): 音軌:有,預期沒有`）。影片本身完整。這是 draft template 的 bug，另外修。
+**另外發現**：H3 的 6 支都被判 `failed`（`check_video_output(video): 音軌:有,預期沒有`），影片本身完整。原因在 runner 的 `check_video_output`：`audio: true` 一律被當成「保留來源音軌」，來源沒有音軌時就把預期改成「沒有」。已修正（commit 61802d9）：只有 `{keep_audio}` 這類 placeholder 才看來源音軌；寫死 `true`（模型自己生成音訊）一律要求有音軌。E5 補測的 6 支 H3 因此都是 exit 0。
 
 ## E2　Wan 2.2 5B shift／steps
 
@@ -70,7 +70,10 @@ WanGP 的 50 步、shift 5 是為 1280×720、121 幀調的。在我們「小角
 
 - **結論**：「把道具換成指定設計」的 replace 情境裡，參考圖是決定性的。只靠文字，VACE 1.3B 畫不出指定的道具。keep 情境本來就有原片當引導，參考圖的幫助有限。
 - **限制**：replace_ref 的第 0 幀錘子比較扁、少了冰晶窗（`compare.jpg` 第一欄），之後的幀才穩定。紅寶石在小尺寸下不明顯。要逐幀看才能決定能不能交付。
-- **提案**：新增 `video/wan-vace/inpaint-reference`（結構變化，所以是另一份 template），slot 加 `reference_image`，前處理做「白底置中縮放」。照[擴充協議](../../../maintenance/extension-protocol.md)，使用者確認後再做。
+- **已做成 template**：使用者確認後，照[擴充協議](../../../maintenance/extension-protocol.md)新增 `video/wan-vace/inpaint-reference`。
+  - **graph**：在 graph 內處理參考圖：透明處合成白底 → `ResizeAndPadImage` 白邊置中到工作區。研究時是在本機先處理、縮到 90%；template 改成填滿工作區。
+  - **實機**：直接用透明 PNG 母版，seed 202／203（`e4_template_live/`）。技術檢查全部 pass，遮罩外 56 幀不變，錘子設計和研究時一致，第 0 幀一樣偏扁。
+  - **狀態**：windows-cuda 改為 technical_pass（v0.1.1）。
 
 ## E5　H3「鏡頭靜止」句型
 
@@ -78,7 +81,25 @@ WanGP 的 50 步、shift 5 是為 1280×720、121 幀調的。在我們「小角
 
 - 兩支的前景高度最大比都是 1.00、0 幀碰邊、首末幀差 4.7–5.6，跟基準組相同。
 - **基準組本身就沒發生鏡頭推近**：之前的問題出在 3 秒的 `transition`，這次是 2 秒、56 幀。所以這組驗證不了新句型有沒有效。
-- 補測要用原條件：72 幀（3 秒），先確認基準組會重現推近，再比新句型。
+- 補測要用原條件：73 幀（3 秒），先確認基準組會重現推近，再比新句型。
+
+### E5 補測（73 幀）
+
+條件同原 transition：73 幀、768×768，seed 3002／3003／3004。輸出在 `e5b_camera_73f/`。10/07 原片用同一套指標量出前景高度最大比 1.031。
+
+| run | 前景高度最大比 | 最小比 | 相鄰幀差 | 首／末幀 vs 原圖 |
+|---|---|---|---|---|
+| 原寫法 s3002 | **1.041** | 0.866 | 1.97 | 5.46 / 5.35 |
+| 原寫法 s3003 | 1.000 | 0.887 | 1.89 | 5.40 / 5.15 |
+| 原寫法 s3004 | **1.036** | 0.923 | 2.23 | 5.15 / 5.22 |
+| 獨立句型 s3002 | 1.000 | 0.887 | 1.66 | 5.48 / 5.29 |
+| 獨立句型 s3003 | 1.000 | 0.887 | 1.81 | 5.37 / 5.14 |
+| 獨立句型 s3004 | 1.000 | 0.923 | 1.76 | 4.97 / 5.09 |
+
+- 原寫法在 s3002 重現了 10/07 的推近，s3004 也有推近。
+- 獨立句型三個 seed 都沒有推近，相鄰幀差也比較小。
+- 動作（蹲低、出拳、冰花、回到原站姿）兩組都有。
+- 推近幅度只有約 4%，樣本 3 對 3，算是支持「鏡頭獨立寫一句」這條外部規則的第一個實測訊號，不是定論。
 
 ## E6　Wan Animate Move 取樣器
 
@@ -90,7 +111,8 @@ WanGP 的 50 步、shift 5 是為 1280×720、121 幀調的。在我們「小角
 
 ## 下一步
 
-1. **E4**：使用者確認後做成 `video/wan-vace/inpaint-reference` template。前處理照 WanGP 做白底置中，要不要加去背由使用者決定。
-2. **E5**：用 3 秒原條件補測。
-3. **H3 template 音軌檢查 bug**：`video/h3/img2video*` 的技術檢查應該允許或要求音軌。
+1. ~~E4 做成 template~~：已完成（`video/wan-vace/inpaint-reference` v0.1.1）。
+2. ~~E5 補測~~：已完成，結果寫進 idle 錨定規則。
+3. ~~H3 音軌檢查 bug~~：已修正 runner。
 4. **E7（MatAnyone）、E8（N 段滑動視窗）**：等使用者決定節點、權重、授權，以及 runner 迴圈怎麼解釋 R2。
+5. **H3 draft template**：`video/h3/*` 的 template 有了這次的實機證據（img2video-last），可以另外評估是否升 technical_pass。

@@ -80,11 +80,35 @@ gameart.py vfx unpack-masks --segment-dir <dir>/segment --video <src.mp4> --outp
   - 2026-10-07 正式 task smoke：工作區自動算出 544×560，耗時 99.7 秒，原始輸出驗證 pass，貼回後遮罩外 0 變動（另外獨立重算也確認）。
   - 證據在 `output/experiments/vfx-research-20261007/req2_vace/` 和 `output/experiments/vfx-video-inpaint-smoke-20261007/`。
 
+### 2.4 VACE 局部重繪＋參考圖（`video/wan-vace/inpaint-reference`）
+
+要把遮罩內換成**指定設計**的物件（例如照道具母版重畫武器）時，用 template `video/wan-vace/inpaint-reference`（`gameart.py run`，沒有 `generate.py` task）。它和 2.3 是同一個 graph 加一條參考圖分支：
+
+1. 參考圖的透明處先合成到白底。
+2. 等比縮放、置中，白邊補滿工作區。
+3. 接到 `WanVaceToVideo.reference_image`。
+
+參數和輸出同 2.3，多一個必填 `reference_image`；`mode` 預設 `replace`。
+
+```text
+<python_exe> tools_src/gameart.py run video/wan-vace/inpaint-reference   --set source_video=<src.mp4> --set masks=<dir>/masks --set reference_image=<道具母版.png>   --set prompt="...具體寫出道具的形狀、顏色、材質、部件..." [--set seed=N] [--set mode=replace|keep]
+```
+
+- **replace 加參考圖**：2026-10-19 實測，Skye 召槌片、冰錘母版、seed 202／203。
+  - 沒有參考圖時，錘子設計會被模型自己發明（黑框紅寶石、單顆藍晶）。
+  - 有參考圖時，兩個 seed 都回到母版的深藍錘身、兩端青色冰晶窗、冰閃電徽記。
+  - 每支約 141–154 秒；遮罩外 56 幀不變。
+- **keep 加參考圖**：原片已經提供形狀，加參考圖的差異不明顯，用 2.3 即可。
+- **限制**：第 0 幀道具偏扁、缺部件，從第 1 幀起才穩定；小部件（紅寶石）在小尺寸下不明顯。要逐幀看。
+- **prompt**：除了描述畫面，要把參考物件的外觀寫具體。只放圖、不寫外觀的情況沒有測過。
+- **來源與證據**：白底置中的做法參考 WanGP（只借做法），證據見 [WanGP 逆向研究 E4](../archive/experiments/2026-10-19-wangp-reverse/results.md#e4vace-參考圖注入)。
+
 | 需求 | 用什麼 |
 |---|---|
 | 只換顏色，造型完全不能變 | 2.2 `mask-recolor` |
 | 同一物件改光效或材質 | `video_inpaint --mode keep`，跑 2–3 個 seed 讓美術挑 |
-| 換成新物件或新特效 | `video_inpaint --mode replace` |
+| 換成指定設計的物件（有母版或參考圖） | 2.4 `inpaint-reference`（replace） |
+| 換成新物件或新特效（沒有指定設計） | `video_inpaint --mode replace` |
 
 ## 3. Idle 起始幀與首尾呼應
 

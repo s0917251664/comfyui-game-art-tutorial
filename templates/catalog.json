@@ -4615,16 +4615,16 @@
     },
     {
       "id": "video/wan-vace/inpaint-reference",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "title": "Wan2.1 VACE 影片局部重繪＋參考圖（遮罩內畫成指定物件、貼回原片）",
       "summary": "同 video/wan-vace/inpaint，多一張參考圖接到 WanVaceToVideo.reference_image：先合成到白底，再等比縮放置中、白邊補滿工作區。用來把遮罩內換成指定設計的道具",
       "media": "video",
       "capability": "masked_edit",
-      "status": "draft",
+      "status": "technical_pass",
       "min_comfyui_version": "0.34.0",
       "requires_custom_nodes": [],
       "platforms": {
-        "windows-cuda": "untested",
+        "windows-cuda": "technical_pass",
         "macos-mps": "untested"
       },
       "frame_anchoring": {

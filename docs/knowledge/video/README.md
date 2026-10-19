@@ -20,7 +20,7 @@ CLI 對外契約是 task 名與可選 `--backend`，不是模型名。已存在 
 | `character_ref`：圖參考角色，首幀可改場景 | `h3` | `character_video` |
 | `control_video`：角色圖 + 動作影片 | `h3`, `wan` | `pose_drive` |
 | `audio` | `h3` | H3 支援音訊；Wan I2V/Fun Control 輸出無聲 |
-| `masked_edit`：遮罩內局部重繪（VACE） | `wan` | `video_inpaint`；操作與實測見 [`vfx-tools.md`](vfx-tools.md) |
+| `masked_edit`：遮罩內局部重繪（VACE） | `wan` | `video_inpaint`；照參考圖重畫指定物件用 template `video/wan-vace/inpaint-reference`；操作與實測見 [`vfx-tools.md`](vfx-tools.md) |
 
 實際可用性仍以本機 `video_capabilities.json` 的 backend/task 能力及 `default_backend` 為準。config 的預設為 null 時必須明確提供 `--backend`。不能因某 task 缺少 node、模型或 backend 而改 task，也不能假設 H3/Wan 自動替代。
 
