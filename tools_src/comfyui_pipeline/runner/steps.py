@@ -433,7 +433,10 @@ def run_post_checks(template, resolution, pre_results, outputs, dest_dir, media,
                     step_problems.append("pts 間隔不一致(不是固定幀率)")
                 if "audio" in params:
                     want_audio = bool(params["audio"])
-                    if want_audio and not source_has_audio:
+                    # "{keep_audio}" 之類的 placeholder 是把來源音軌帶過去,來源沒音軌就不該有;
+                    # 寫死 true 是模型自己生成音訊(例如 H3),不看來源。
+                    passthrough = isinstance(step["audio"], str)
+                    if want_audio and passthrough and not source_has_audio:
                         step_warnings.append("keep_audio 開啟,但來源影片沒有音軌;輸出沒有音軌是正常的")
                         want_audio = False
                     if info["has_audio"] != want_audio:
