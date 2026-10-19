@@ -1,23 +1,23 @@
 ---
 type: experiment-results
-status: ours-side-complete-platform-side-pending
+status: complete
 date: 2026-10-19
 ---
 # Windows 實測結果（我方側）
 
 主機：Windows 11、RTX 4080 16GB、ComfyUI 0.34.0，預設 SDXL 設定（`--style illustration`）。操作依 `2026-10-18-windows-checklist.md`，驅動腳本 `scripts/run_windows_experiments.py`，證據 `2026-10-19-evidence/`。
-素材為本次自行生成（A.png：持劍騎士，seed 7；M.png／M2.png：多邊形手畫遮罩，未經美術確認）。所有結果只代表本機、當日、單一素材；美術好壞由人判定（R1）。平台側（Grok、Codex）結果見下方各節。
+素材為本次自行生成（A.png：持劍騎士，seed 7；M.png／M2.png：多邊形手畫遮罩，未經美術確認）。所有結果只代表本機、當日、單一素材；美術好壞由人判定（R1）。下表為我方側；平台側（Grok、Codex）結果見下方各節，三方對照見「三方合計」。
 
 | 實驗 | 我方側結果 | 樣本 | 結論 |
 |---|---|---|---|
-| E1 可重現 | 固定 seed：與第 1 張逐像素差異 0%（4 組皆 0）；換 seed：100% 像素不同 | 5＋5，同機 | 可寫（我方）；平台側待測 |
+| E1 可重現 | 固定 seed：與第 1 張逐像素差異 0%（4 組皆 0）；換 seed：100% 像素不同 | 5＋5，同機 | 可寫；平台側無 seed 入口，見下方 |
 | E2 範圍外不變 | `guided_inpaint` 後不合成：範圍外 99.4% 像素被改動；`edit composite` 貼回後 0 像素。換槍需求：只部分達成，畫面有殘留劍身碎片，自評約 2/5（非盲評） | 1 | 可寫（技術面）；品質為單例 |
-| E3 角色一致 | 我方側已跑：`character_action`（pose），以 A.png 為角色參考，姿勢圖取自 `output/cover-redo` 既有骨架圖 5 張。5/5 張髮色由銀灰變金／淡黃、瞳色由黃變紅、服裝與配色都有改動，身份沒保住（我目視，非盲評，未打分）。單張約 11 秒 | 5 | 我方漂移屬實；盲評分數與平台側待測 |
-| E4 透明背景 | `icon_asset` 輸出 RGBA，`has_alpha=true`，findings 為空；白底預覽邊緣乾淨（audit 自己註明不代表去背品質） | 1 | 我方可；平台側待測 |
+| E3 角色一致 | 我方側已跑：`character_action`（pose），以 A.png 為角色參考，姿勢圖取自 `output/cover-redo` 既有骨架圖 5 張。5/5 張髮色由銀灰變金／淡黃、瞳色由黃變紅、服裝與配色都有改動，身份沒保住（我目視，非盲評，未打分）。單張約 11 秒 | 5 | 此流程漂移屬實；其他流程見 E3b；平台側見下方；未做盲評 |
+| E4 透明背景 | `icon_asset` 輸出 RGBA，`has_alpha=true`，findings 為空；白底預覽邊緣乾淨（audit 自己註明不代表去背品質） | 1 | 我方可；平台側見下方 |
 | E5 圖上文字 | POTION 0/5、START 0/5、「開始遊戲」0/5、「藥水」0/5、1234 0/5，合計 0/25（嚴格：整組字完全正確才算；我個人目視，非盲評）。英文常多一個 T 或重複字；中文為假字 | 25 | 可寫：本機 SDXL 路線不能靠它出字，要後製加字 |
 | E6 選區精度 | 小目標（頸部扣飾，1,781 像素）`inpaint` 不合成：範圍外 99.4% 被改動 | 1 | 同 E2，需合成 |
-| E7 影片與 3D | `run list` 有 3D 2、影片 27（含 h3 14、wan-animate 6、wan 4、sam3 2、wan-vace 1）。`video/wan/img2video --preflight`：節點 11/11、模型 3/3 齊全，但因 template 標為 untested 被擋，需加 `--allow-unverified-platform` | — | 有（實驗中） |
-| E8 時間 | 單張 SDXL 概念圖約 7.0 秒（42 次平均，含啟動與取圖）；首次載入模型約 12 秒；`inpaint`／`guided_inpaint` 約 7 秒。成本：本機免費，不含電費與設備 | 42 | 可寫；平台側待測 |
+| E7 影片與 3D | `run list` 有 3D 2、影片 27（含 h3 14、wan-animate 6、wan 4、sam3 2、wan-vace 1）。`video/wan/img2video --preflight`：節點 11/11、模型 3/3 齊全，但因 template 標為 untested 被擋，需加 `--allow-unverified-platform` | — | 有；實際執行見「E7 補測」 |
+| E8 時間 | 單張 SDXL 概念圖約 7.0 秒（42 次平均，含啟動與取圖）；首次載入模型約 12 秒；`inpaint`／`guided_inpaint` 約 7 秒。成本：本機免費，不含電費與設備 | 42 | 可寫；平台側見下方 |
 
 ## 補充發現
 
@@ -35,7 +35,7 @@ date: 2026-10-19
 
 ## 平台側：Grok Imagine（2026-10-19，Grok Build 1.0.46 命令列，帳號方案未記錄）
 
-用 `grok -p`（headless）呼叫其 `image_gen`／`image_edit` 工具，輸入與我方側相同的 A.png（騎士圖）與同樣的需求。回傳圖內嵌模型標示為 xAI Grok Imagine（C2PA）。每次都是新的對話。縮圖與紀錄在 `2026-10-19-evidence/grok/`。Codex 命令列已安裝（0.163.0）但尚未登入，Codex 側仍待測。以下評分皆為我目視，非盲評。
+用 `grok -p`（headless）呼叫其 `image_gen`／`image_edit` 工具，輸入與我方側相同的 A.png（騎士圖）與同樣的需求。回傳圖內嵌模型標示為 xAI Grok Imagine（C2PA）。每次都是新的對話。縮圖與紀錄在 `2026-10-19-evidence/grok/`。Codex 側結果見下一節。以下評分皆為我目視，非盲評。
 
 | 實驗 | Grok 結果 | 與我方側對照 |
 |---|---|---|
@@ -98,7 +98,7 @@ date: 2026-10-19
 
 | 流程 | 髮色 | 眼色 | 盔甲／披風／裙 | 武器 | 姿勢跟隨 | 單張耗時 |
 |---|---|---|---|---|---|---|
-| 原：`character_action`（pose＋SDXL，E3） | 5/5 保住（用騎士圖時全變，見上） | — | 服裝配色改動 | 被姿勢圖錘子帶偏 | 有 | 約 11 秒 |
+| 原：`character_action`（pose＋SDXL，E3） | 5/5 變金／淡黃 | 5/5 變紅 | 服裝配色改動 | 被姿勢圖錘子帶偏 | 有 | 約 11 秒 |
 | `flux2_edit`（FLUX.2 Klein，單圖文字編修） | 5/5 銀灰保住 | 偏橘黃（5/5 略變） | 盔甲、紅披風、白裙大致保住 | 水晶大劍變成普通長劍（5/5 換了） | 5/5 跟上（舉過頭、跳躍） | 約 30 秒 |
 | `style_lock`（外觀鎖定，SDXL） | 5/5 銀灰保住 | 偏橘 | 盔甲保住，但裙與腰包變多 | 變成金色長劍 | 5 張幾乎同一個站姿，**姿勢沒跟上** | 約 8 秒 |
 | `image/qwen-image-edit/three-reference`（Qwen 2511，三參考，實驗性） | 5/5 銀灰保住 | 5/5 黃色保住 | 盔甲、披風、裙、劍鞘都保住 | 水晶大劍 5/5 保住；其中 2 張把姿勢圖的錘子也畫進來 | 5/5 跟上 | 約 7.3 分鐘（439 秒） |
