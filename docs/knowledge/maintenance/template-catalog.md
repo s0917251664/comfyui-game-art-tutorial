@@ -1424,6 +1424,20 @@ generated: true
 - 模型：wan2.1_vace_1.3B_fp16.safetensors（diffusion_models，vace_unet）、umt5_xxl_fp8_e4m3fn_scaled.safetensors（text_encoders，text_encoder）、wan_2.1_vae.safetensors（vae，vae）
 - 上游：workflow_templates `video_wan_vace_inpainting`
 
+## `video/wan-vace/inpaint-reference`
+
+- 用途：Wan2.1 VACE 影片局部重繪＋參考圖（遮罩內畫成指定物件、貼回原片）
+- 摘要：同 video/wan-vace/inpaint，多一張參考圖接到 WanVaceToVideo.reference_image：先合成到白底，再等比縮放置中、白邊補滿工作區。用來把遮罩內換成指定設計的道具
+- 媒體：video
+- 能力：masked_edit
+- 狀態：draft（v0.1.0）
+- 最低 ComfyUI：0.34.0
+- 第三方節點：（只用 core）
+- 平台：windows-cuda untested、macos-mps untested
+- 首尾幀：first=none、last=none、reference_role=none、time_alignment=per_source_frame、continuity=null
+- 模型：wan2.1_vace_1.3B_fp16.safetensors（diffusion_models，vace_unet）、umt5_xxl_fp8_e4m3fn_scaled.safetensors（text_encoders，text_encoder）、wan_2.1_vae.safetensors（vae，vae）
+- 上游：workflow_templates `video_wan_vace_inpainting`
+
 ## `video/wan/img2video`
 
 - 用途：Wan 2.2 5B 圖生影片

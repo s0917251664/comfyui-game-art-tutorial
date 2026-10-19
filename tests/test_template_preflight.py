@@ -596,7 +596,7 @@ class PreflightCliTests(PreflightFixture, unittest.TestCase):
 # video/wan-vace/inpaint 已在 2026-10-08 windows-cuda 通過,不再列在這裡。
 DRAFT_UNTIL_LIVE_RUN = set(golden.VIDEO_TEMPLATE_IDS) | {
     template_id for template_id in T.discover(TEMPLATES) if template_id.startswith(("image/", "3d/"))
-}
+} | {"video/wan-vace/inpaint-reference"}
 
 
 class RealTemplatePinsTests(unittest.TestCase):

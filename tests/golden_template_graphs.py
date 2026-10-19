@@ -71,6 +71,8 @@ VIDEO_CASES = [
     ("video/wan-vace/inpaint", "replace_small", dict(VACE_BASE, mode="replace", grow=4, feather=0), {}),
     ("video/wan-vace/inpaint", "strength_negative", dict(VACE_BASE, strength=0.6, negative="blurry, flicker"), {}),
     ("video/wan-vace/inpaint", "wide81_crop", dict(VACE_BASE, crop="0,0,832,480", pad=0), {}),
+    ("video/wan-vace/inpaint-reference", "replace_1024", dict(VACE_BASE), {}),
+    ("video/wan-vace/inpaint-reference", "keep_small", dict(VACE_BASE, mode="keep", grow=4, feather=0), {}),
 ]
 # 第 6.2 階段：每個影片 template 至少一個案例。上傳檔名來自 UPLOADS，不進 values。
 VIDEO_TEMPLATE_IDS = [
@@ -121,7 +123,9 @@ CASES = VIDEO_CASES + [
 ] + _image_cases() + _model_3d_cases()
 PRE_RESULTS = {("video/wan-vace/inpaint", "keep_1024"): VACE_1024, ("video/wan-vace/inpaint", "replace_small"): VACE_SMALL,
                ("video/wan-vace/inpaint", "strength_negative"): VACE_1024,
-               ("video/wan-vace/inpaint", "wide81_crop"): VACE_WIDE}
+               ("video/wan-vace/inpaint", "wide81_crop"): VACE_WIDE,
+               ("video/wan-vace/inpaint-reference", "replace_1024"): VACE_1024,
+               ("video/wan-vace/inpaint-reference", "keep_small"): VACE_SMALL}
 
 
 def fixture_name(template_id, case):
