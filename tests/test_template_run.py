@@ -589,6 +589,19 @@ class StepLogicTests(unittest.TestCase):
         self.assertEqual([], problems)
         self.assertTrue(any("沒有音軌" in w for w in warnings))
 
+    def test_generated_audio_does_not_depend_on_source(self):
+        # H3 這類模型自己生成音訊:寫死 audio=true,沒有來源影片(或來源無音軌)仍要求有音軌
+        class Tpl:
+            data = {"post": [{"step": "check_video_output", "output": "video", "audio": True}]}
+        resolution = {"slot_values": {}, "options": {}, "inputs": {}}
+        for pre in ({}, {"control_video": {"has_audio": False}}):
+            _, problems, _, _ = S.run_post_checks(
+                Tpl, resolution, pre, {"video": ["out.mp4"]}, "/tmp/x", FakeMedia(video={"has_audio": True}))
+            self.assertEqual([], problems)
+            _, problems, _, _ = S.run_post_checks(
+                Tpl, resolution, pre, {"video": ["out.mp4"]}, "/tmp/x", FakeMedia(video={"has_audio": False}))
+            self.assertTrue(any("音軌" in p for p in problems), problems)
+
     def test_fps_number(self):
         from fractions import Fraction
         from comfyui_pipeline.runner import media

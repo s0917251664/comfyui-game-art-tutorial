@@ -12,6 +12,7 @@ status: current
    - 手動呼叫 ComfyUI HTTP（自己上傳、`POST /prompt`）只用來除錯 runner 本身，不是產線執行方式，結果也不能代替 `run.result.json` 當證據。
    - 新的固定 graph 要先做成 template（見 [templates/README](../../../templates/README.md) 的「修改」），不要在技能文件裡另寫一套送出步驟。
 2. 交付用的生成（要進成品、要當證據的輸出）不臨場組、改接或拼接 graph，也不臨場改用 API、換模型或補不存在的旗標。理由是可重現：同一份 template、同樣的 slot 值，要得到同樣的 graph。
+   - 用 runner 迴圈多次執行**同一份** template、每次只換 slot 值（例如長片逐段接續：前段尾幀、累積幀偏移、逐段 prompt），**不算違反**這一點，因為每次送出的 graph 結構都相同、可以重現（2026-10-19 使用者確認）。改變節點結構的才是另一份 template。
 3. 這不表示節點組合不能變。現有 template 做不好時，要主動想：在什麼狀況下，既有節點重新排列組合可以變成新的做法。例：多視角轉 3D 前面接 BiRefNet 去背（[`3d/hunyuan3d-2mv/multiview-cutout`](../../../templates/3d/hunyuan3d-2mv/multiview-cutout/README.md)）；3D 灰模搭配物件設計圖重新上色。做法：
    - 先說清楚遇到的狀況、要解的問題、打算怎麼組，標明是實驗。
    - 在 ComfyUI 實驗（UI 或一次性 graph 都可以）。輸出放本機 `output/`，記下節點組合、參數、結果與失敗點。實驗輸出是候選，不當交付證據。

@@ -15,6 +15,9 @@ last_updated: 2026-10-07
 | 發光、火花、光暈、亮色霧 | `fx_loop`／`img2video`，起始靜幀與 prompt 都用純黑背景 | `vfx luma-alpha --black-point <背景雜訊>`（本次 16/255 = 0.063） | straight-alpha PNG 序列（主檔）＋保留黑底原片給引擎走 additive |
 | 暗色煙霧、不透明碎片、角色 | 綠幕 | `vfx chroma-alpha --unmix --despill` | 同上；綠幕上不要用綠色或青色特效 |
 | 需要更好邊緣的不透明主體 | 綠幕或任意底 | `vfx birefnet-alpha`（只能在 repo 的 `tools_src/` 執行，需要本機 BiRefNet 權重） | 逐幀模型，沒有時序穩定機制，要檢查閃爍 |
+| 不透明主體要前後幀穩定的軟邊（**實驗中，⚠ 非商業授權**） | 任意底，首幀給遮罩（SAM3） | MatAnyone2（ComfyUI 節點 `MatAnyone2`，尚無 template） | 2026-10-19 評估（[E7](../archive/experiments/2026-10-19-wangp-reverse/results.md#e7matanyone2-影片去背-非商業授權)）：品質和 BiRefNet HR-matting 相當；長處是靠 SAM3 首幀指定物件。綠幕片會殘綠、要另做 despill；不適合半透明特效；不進產線 |
+
+**⚠ 授權：MatAnyone（模型與推論程式碼）是 NTU S-Lab License 1.0，只限非商業用途。** 本機實驗、評估可以；產出要用在販售的遊戲或商業專案前，必須先取得原作者的商業授權（聯絡方式見 [模型與來源](../installation/models-and-sources.md#選用-matanyone2-影片去背實驗中非商業授權)）。ComfyUI 節點包是 MIT，但它內含 MatAnyone 程式碼，不改變這個限制。
 
 - 量測：`vfx metrics --input <RGBA 序列>` 會輸出 alpha 分佈、相鄰幀 |Δα|、閃爍值和殘綠；`vfx board` 會產生原片／alpha／深色背景／淺色背景的對照圖。
 - 打包：`vfx pack --input <RGBA 序列> --output-dir <新資料夾> [--columns N] [--apng] [--webm]`，輸出 sprite sheet＋JSON（straight alpha、fps）、APNG，以及 WebM VP9 alpha（要用 libvpx 解碼才保得住 alpha；有損，不當主檔）。sprite sheet 不會自動縮小，超過引擎貼圖上限（常見 4096）時要先減少幀數或尺寸。
@@ -80,11 +83,35 @@ gameart.py vfx unpack-masks --segment-dir <dir>/segment --video <src.mp4> --outp
   - 2026-10-07 正式 task smoke：工作區自動算出 544×560，耗時 99.7 秒，原始輸出驗證 pass，貼回後遮罩外 0 變動（另外獨立重算也確認）。
   - 證據在 `output/experiments/vfx-research-20261007/req2_vace/` 和 `output/experiments/vfx-video-inpaint-smoke-20261007/`。
 
+### 2.4 VACE 局部重繪＋參考圖（`video/wan-vace/inpaint-reference`）
+
+要把遮罩內換成**指定設計**的物件（例如照道具母版重畫武器）時，用 template `video/wan-vace/inpaint-reference`（`gameart.py run`，沒有 `generate.py` task）。它和 2.3 是同一個 graph 加一條參考圖分支：
+
+1. 參考圖的透明處先合成到白底。
+2. 等比縮放、置中，白邊補滿工作區。
+3. 接到 `WanVaceToVideo.reference_image`。
+
+參數和輸出同 2.3，多一個必填 `reference_image`；`mode` 預設 `replace`。
+
+```text
+<python_exe> tools_src/gameart.py run video/wan-vace/inpaint-reference   --set source_video=<src.mp4> --set masks=<dir>/masks --set reference_image=<道具母版.png>   --set prompt="...具體寫出道具的形狀、顏色、材質、部件..." [--set seed=N] [--set mode=replace|keep]
+```
+
+- **replace 加參考圖**：2026-10-19 實測，Skye 召槌片、冰錘母版、seed 202／203。
+  - 沒有參考圖時，錘子設計會被模型自己發明（黑框紅寶石、單顆藍晶）。
+  - 有參考圖時，兩個 seed 都回到母版的深藍錘身、兩端青色冰晶窗、冰閃電徽記。
+  - 每支約 141–154 秒；遮罩外 56 幀不變。
+- **keep 加參考圖**：原片已經提供形狀，加參考圖的差異不明顯，用 2.3 即可。
+- **限制**：第 0 幀道具偏扁、缺部件，從第 1 幀起才穩定；小部件（紅寶石）在小尺寸下不明顯。要逐幀看。
+- **prompt**：除了描述畫面，要把參考物件的外觀寫具體。只放圖、不寫外觀的情況沒有測過。
+- **來源與證據**：白底置中的做法參考 WanGP（只借做法），證據見 [WanGP 逆向研究 E4](../archive/experiments/2026-10-19-wangp-reverse/results.md#e4vace-參考圖注入)。
+
 | 需求 | 用什麼 |
 |---|---|
 | 只換顏色，造型完全不能變 | 2.2 `mask-recolor` |
 | 同一物件改光效或材質 | `video_inpaint --mode keep`，跑 2–3 個 seed 讓美術挑 |
-| 換成新物件或新特效 | `video_inpaint --mode replace` |
+| 換成指定設計的物件（有母版或參考圖） | 2.4 `inpaint-reference`（replace） |
+| 換成新物件或新特效（沒有指定設計） | `video_inpaint --mode replace` |
 
 ## 3. Idle 起始幀與首尾呼應
 

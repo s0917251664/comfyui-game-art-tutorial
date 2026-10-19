@@ -26,7 +26,7 @@ status: current
 | 接片、綠幕合成、抽幀 | `generate.py video_concat`／`video_composite` | 本機 PyAV，不連 ComfyUI |
 | 平面圖轉 3D（武器、道具的粗模，用來決定角度與透視） | `gameart.py run 3d/hunyuan3d-2mv/multiview-cutout`（自動去背）、`3d/hunyuan3d-2mv/multiview` | Hunyuan3D-2mv，輸出無貼圖 GLB；draft、windows-cuda 已實機跑過一次但平台仍標 untested；[平面圖轉 3D](art/image-to-3d.md) |
 | 物件追蹤遮罩 | `gameart.py run video/sam3/*` | SAM3 template，內容仍須美術確認；[SAM3 追蹤](video/sam3-tracking.md) |
-| 影片局部重繪 | `gameart.py run video/wan-vace/inpaint`、`generate.py video_inpaint`、recipe `object-mark-inpaint` | 遮罩外逐 byte 不變；[vfx-tools](video/vfx-tools.md) |
+| 影片局部重繪 | `gameart.py run video/wan-vace/inpaint`、`video/wan-vace/inpaint-reference`（照參考圖重畫指定物件）、`generate.py video_inpaint`、recipe `object-mark-inpaint` | 遮罩外逐 byte 不變；[vfx-tools](video/vfx-tools.md) |
 | Wan Animate、SCAIL-2 | `gameart.py run video/wan-animate/*` | 技術通過、內容 candidate；[取捨](video/wan-animate-choice.md)、[安裝紀錄](video/wan-animate-install.md) |
 | SAM2 影片遮罩備援與 2D 圖層合成 | `gameart.py video-layers`（server node＋薄 client） | 不是 template；[Video Layers](video/layers.md) |
 | 多步驟含確認點的流程 | `gameart.py recipe` | [templates/README](../../templates/README.md)「recipe」 |

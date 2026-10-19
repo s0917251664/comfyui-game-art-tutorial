@@ -29,7 +29,7 @@ def _id_key(template_id):
     return tuple(template_id.split("/"))
 
 
-VIDEO_IDS = sorted(MOVED_IDS + ["video/wan-vace/inpaint", *golden.VIDEO_TEMPLATE_IDS], key=_id_key)
+VIDEO_IDS = sorted(MOVED_IDS + ["video/wan-vace/inpaint", "video/wan-vace/inpaint-reference", *golden.VIDEO_TEMPLATE_IDS], key=_id_key)
 
 
 def image_template_ids():
@@ -554,7 +554,7 @@ class GoldenGraphTests(unittest.TestCase):
         video_cases = [case for case in golden.CASES if case[0].startswith("video/")]
         image_cases = [case for case in golden.CASES if case[0].startswith("image/")]
         self.assertEqual(18, len(golden.VIDEO_TEMPLATE_IDS))
-        self.assertEqual(24 + len(golden.VIDEO_TEMPLATE_IDS), len(video_cases))
+        self.assertEqual(26 + len(golden.VIDEO_TEMPLATE_IDS), len(video_cases))
         self.assertEqual(len(image_cases), len({case[0] for case in image_cases}))
         model_3d_cases = [case for case in golden.CASES if case[0].startswith("3d/")]
         self.assertEqual(2 * len(MODEL_3D_IDS), len(model_3d_cases))
