@@ -6,7 +6,7 @@ date: 2026-10-19
 # Windows 實測結果（我方側）
 
 主機：Windows 11、RTX 4080 16GB、ComfyUI 0.34.0，預設 SDXL 設定（`--style illustration`）。操作依 `2026-10-18-windows-checklist.md`，驅動腳本 `scripts/run_windows_experiments.py`，證據 `2026-10-19-evidence/`。
-素材為本次自行生成（A.png：持劍騎士，seed 7；M.png／M2.png：多邊形手畫遮罩，未經美術確認）。所有結果只代表本機、當日、單一素材；美術好壞由人判定（R1）。「平台側」需要 Steve 的 Codex／Gemini 帳號，尚未跑。
+素材為本次自行生成（A.png：持劍騎士，seed 7；M.png／M2.png：多邊形手畫遮罩，未經美術確認）。所有結果只代表本機、當日、單一素材；美術好壞由人判定（R1）。平台側（Grok、Codex）結果見下方各節。
 
 | 實驗 | 我方側結果 | 樣本 | 結論 |
 |---|---|---|---|
