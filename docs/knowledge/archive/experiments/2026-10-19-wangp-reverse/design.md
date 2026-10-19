@@ -1,6 +1,6 @@
 # WanGP 逆向研究：參數、長片視窗、VACE、MatAnyone、prompt 規則
 
-日期：2026-10-19｜平台：windows-cuda（RTX 4080 16 GB）｜分支：`research/wangp-reverse`｜狀態：靜態閱讀完成，GPU 實測未開始
+日期：2026-10-19｜平台：windows-cuda（RTX 4080 16 GB）｜分支：`research/wangp-reverse`｜狀態：靜態閱讀完成；E1–E6 已實測
 
 研究對象是 [deepbeepmeep/WanGP](https://github.com/deepbeepmeep/WanGP) commit `fdc63bdf89358fb13c93cf6b38693fd89a859f00`（v18.19，2026-10-19）。原始碼 clone 在 repo 外的 `C:\Users\XU\tools\_research-src\WanGP`，只讀、未執行、不進 git。本頁的行號都指那個 commit。
 
@@ -104,4 +104,4 @@ WanGP 沒有 Wan2.2 Fun Control 5B。我們的 Animate／SCAIL-2 走蒸餾，與
 
 ## 結果
 
-尚未實測。實測數據寫在同目錄的 `results.md`。結果被接受後，照[擴充協議](../../../maintenance/extension-protocol.md)新增 template，並把 prompt 規則整理成正式的規則頁。
+第一輪（E1–E6）已實測，見 [results.md](results.md)。結果被接受後，照[擴充協議](../../../maintenance/extension-protocol.md)新增 template，並把 prompt 規則整理成正式的規則頁。
