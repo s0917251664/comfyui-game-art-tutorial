@@ -82,6 +82,19 @@ Union 是額外的實驗權重，**不會取代**上面三顆正式模型。ProM
 
 四個檔案合計 16,541,318,612 bytes（約 15.4 GiB）。下載前先確認剩餘空間；下載到暫存 `.part`，檔案大小與 SHA-256 驗證後才改成正式檔名。需要 ComfyUI Core 提供 `EmptyFlux2LatentImage`、`Flux2Scheduler` 與 `ReferenceLatent`；不需額外 custom node。精確 ComfyUI commit、模型 SHA-256 與 smoke 證據以 `docs/tested-versions.md` 為準。
 
+## 選用 MatAnyone2 影片去背（實驗中，非商業授權）
+
+**⚠ 只限非商業用途。** MatAnyone 的模型和推論程式碼是 NTU S-Lab License 1.0，條款寫明只允許非商業目的的再散布與使用；商用要聯絡原作者（Peiqing Yang peiqingyang99@outlook.com、Shangchen Zhou shangchenzhou@gmail.com、Chen Change Loy ccloy@ntu.edu.sg）。安裝或使用前要先提醒使用者；產出要進販售的遊戲或商業專案前，必須先取得商業授權，並把授權證明記在專案決策紀錄。授權只能從官方 repo 確認，不要沿用這裡的摘要當定論。
+
+| 項目 | 位置 | 來源 | 大小 | 驗證 | 授權 | 最後確認日期 |
+|---|---|---|---:|---|---|---|
+| 節點包 FuouM/ComfyUI-MatAnyone | `custom_nodes/ComfyUI-MatAnyone` | `https://github.com/FuouM/ComfyUI-MatAnyone`，commit `87cbce38c03bb359471bd23704ebd1720e98a842` | 程式碼 | git commit | 節點包 MIT；內含 MatAnyone 程式碼仍受 S-Lab 限制 | 2026-10-19 |
+| MatAnyone2 權重 | `custom_nodes/ComfyUI-MatAnyone/checkpoint/matanyone2.pth` | `https://github.com/pq-yang/MatAnyone2/releases/download/v1.0.0/matanyone2.pth` | 141,429,115 bytes | sha256 `5e9821e4087231427376b437c85bb6e072b41e582314f06fd524f75bc4af5914`（官方 release 提供） | NTU S-Lab License 1.0（非商業） | 2026-10-19 |
+
+- 依賴只有 `torch`、`omegaconf`（本機已有），沒有 install.py，不會自動下載。
+- 本機修改：節點包的 `src/matanyone2/config/model/base.yaml` 加了 `pretrained_resnet: False`，避免第一次載入時從 download.pytorch.org 下載 ImageNet resnet（約 143 MB）；`matanyone2.pth` 已含完整 encoder 權重，結果不受影響。重新 clone 節點包時要重做這個修改。
+- v1（`matanyone.pth`）沒有安裝。
+
 ## 選用影片模型(`generate.py img2video` / `character_video`,選配)
 
 **不是每台機器的基本配備,只有使用者明確要產短片才裝。** 跟 SDXL 底模/ControlNet/IPAdapter **完全不相容**,是另一組 UNET/VAE/文字編碼器,不要塞進上面的 SDXL 表格、也不要假設 `CKPT` 能拿來產影片。

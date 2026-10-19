@@ -16,6 +16,7 @@ description: 在新機器上依硬體與既有狀態安裝、部署 ComfyUI 遊�
 1. 讀 [安裝知識索引](../../docs/knowledge/installation/README.md)，依本次範圍讀 [安裝指南](../../docs/knowledge/installation/install-guide.md) 與 [模型清單](../../docs/knowledge/installation/models-and-sources.md)。
 2. 版本以 [已驗證版本](../../docs/tested-versions.md) 為準。已存在的安裝若與基準不同，把差異告訴使用者讓他選，不自己 checkout、不自己升級。
 3. 下載任何東西之前，先說明所選能力需要的磁碟空間並確認足夠；模型、套件、custom node 分開列。
+4. 模型或節點有使用限制時（例如 MatAnyone2 是 NTU S-Lab License、只限非商業），安裝前要先告訴使用者並取得確認；限制寫在 [模型與來源](../../docs/knowledge/installation/models-and-sources.md)。
 
 ## 判斷原則
 

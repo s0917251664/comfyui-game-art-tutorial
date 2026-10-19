@@ -22,6 +22,7 @@ description: 不經 ComfyUI graph 的本機工具：Pillow／NumPy 像素處理�
 
 - 需要模型生成或重畫（換造型、重畫遮罩內內容）不是這裡的工作，交給 [comfyui-run](../comfyui-run/SKILL.md) 或 [platform-image-gen](../platform-image-gen/SKILL.md)。有限參數比較（sweep）會送出圖片 task，也屬 comfyui-run。
 - 工具之間的遮罩約定不同（圖片 inpaint 是反向 alpha，影片 SAM 是白選黑不選），不能直接互換；用之前看 [遮罩](../../docs/knowledge/art/masking.md)。
+- **授權提醒**：MatAnyone2 影片去背（實驗中）是 NTU S-Lab License，只限非商業用途。使用者要用 MatAnyone 去背時，先告知這一點；產出要進販售的遊戲或商業專案，必須先有原作者的商業授權（見 [模型與來源](../../docs/knowledge/installation/models-and-sources.md#選用-matanyone2-影片去背實驗中非商業授權)）。BiRefNet、亮度法、綠幕法沒有這個限制。
 - 輸出都是 candidate；像素統計、遮罩外 0 變動這類技術檢查不代表美術接受（[R1](../../docs/knowledge/rules/candidate-review.md)）。
 - 不覆寫來源檔；輸出寫到新資料夾（多數工具會拒絕已存在的資料夾）。
 - TTS、對嘴、Pillow 比較都只是機械處理：台詞要聽過、嘴型要看過，才算過。

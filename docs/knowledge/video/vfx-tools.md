@@ -15,6 +15,9 @@ last_updated: 2026-10-07
 | 發光、火花、光暈、亮色霧 | `fx_loop`／`img2video`，起始靜幀與 prompt 都用純黑背景 | `vfx luma-alpha --black-point <背景雜訊>`（本次 16/255 = 0.063） | straight-alpha PNG 序列（主檔）＋保留黑底原片給引擎走 additive |
 | 暗色煙霧、不透明碎片、角色 | 綠幕 | `vfx chroma-alpha --unmix --despill` | 同上；綠幕上不要用綠色或青色特效 |
 | 需要更好邊緣的不透明主體 | 綠幕或任意底 | `vfx birefnet-alpha`（只能在 repo 的 `tools_src/` 執行，需要本機 BiRefNet 權重） | 逐幀模型，沒有時序穩定機制，要檢查閃爍 |
+| 不透明主體要前後幀穩定的軟邊（**實驗中，⚠ 非商業授權**） | 任意底，首幀給遮罩（SAM3） | MatAnyone2（ComfyUI 節點 `MatAnyone2`，尚無 template） | 2026-10-19 起在 [WanGP 逆向研究](../archive/experiments/2026-10-19-wangp-reverse/design.md) E7 評估；不適合半透明特效 |
+
+**⚠ 授權：MatAnyone（模型與推論程式碼）是 NTU S-Lab License 1.0，只限非商業用途。** 本機實驗、評估可以；產出要用在販售的遊戲或商業專案前，必須先取得原作者的商業授權（聯絡方式見 [模型與來源](../installation/models-and-sources.md#選用-matanyone2-影片去背實驗中非商業授權)）。ComfyUI 節點包是 MIT，但它內含 MatAnyone 程式碼，不改變這個限制。
 
 - 量測：`vfx metrics --input <RGBA 序列>` 會輸出 alpha 分佈、相鄰幀 |Δα|、閃爍值和殘綠；`vfx board` 會產生原片／alpha／深色背景／淺色背景的對照圖。
 - 打包：`vfx pack --input <RGBA 序列> --output-dir <新資料夾> [--columns N] [--apng] [--webm]`，輸出 sprite sheet＋JSON（straight alpha、fps）、APNG，以及 WebM VP9 alpha（要用 libvpx 解碼才保得住 alpha；有損，不當主檔）。sprite sheet 不會自動縮小，超過引擎貼圖上限（常見 4096）時要先減少幀數或尺寸。
