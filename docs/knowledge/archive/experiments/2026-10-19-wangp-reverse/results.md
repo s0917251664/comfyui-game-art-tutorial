@@ -163,5 +163,11 @@ WanGP 的 50 步、shift 5 是為 1280×720、121 幀調的。在我們「小角
 2. ~~E5 補測~~：已完成，結果寫進 idle 錨定規則。
 3. ~~H3 音軌檢查 bug~~：已修正 runner。
 4. ~~E7（MatAnyone）~~：已評估，品質和 BiRefNet 相當，非商業授權，不進產線。要的話補測多主體場景。
-6. **E8（N 段滑動視窗）**：等使用者決定 runner 迴圈怎麼解釋 R2。
+6. **E8（N 段滑動視窗）：暫緩，不做**（2026-10-19 使用者決定）。
+   - **規則面**：runner 迴圈多次跑同一份 template 不算違反 R2，已寫進 [R2](../../../rules/fixed-graphs.md) 第 2 點。
+   - **不做的理由**：
+     - 遊戲動作都是 1–3 秒，現有單段（H3 最長 6 秒）和 Wan Animate 兩段延伸（約 3.8 秒）已經夠用。
+     - 長內容照[製作流程](../../../video/production-flow.md)拆鏡頭、逐鏡生成，再用 `video_concat` 接起來，每鏡可以單獨重跑和驗收。
+     - 逆向結果顯示 WanGP 的滑動視窗和我們兩段延伸是同一套機制（像素尾幀前綴、overlap 硬切），我們沒有缺技術。
+   - **以後真的需要時**：照 design.md R2 的 seg-first／seg-next 草案做，先用 seg-first＋seg-next×1 重現 `mix-extend` 的 61 幀。
 5. **H3 draft template**：`video/h3/*` 的 template 有了這次的實機證據（img2video-last），可以另外評估是否升 technical_pass。
