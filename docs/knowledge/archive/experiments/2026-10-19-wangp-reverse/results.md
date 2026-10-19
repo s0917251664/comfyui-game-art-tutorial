@@ -18,6 +18,7 @@
 | E4 | VACE 參考圖注入 | **replace 模式效果明顯：錘子回到母版設計** | 已做成 `video/wan-vace/inpaint-reference`（windows-cuda technical_pass） |
 | E5 | H3「鏡頭靜止」獨立句型 | 2 秒驗證不了；3 秒補測：原寫法 2/3 推近，獨立句型 0/3 | 寫進 [idle 錨定規則](../../../rules/idle-anchoring.md) 第 3 點 |
 | E6 | Animate 蒸餾 6 步：euler vs uni_pc | 差不多；seed 43 兩種都不穩 | 維持 euler |
+| E7 | MatAnyone2 去背 vs BiRefNet／綠幕／SAM3 | 和 BiRefNet 相當；能修 SAM3 破洞；⚠ 非商業授權 | 不進產線；只在要指定物件的非商業專案考慮 |
 
 **總結**：WanGP 的預設參數（E1、E2、E3、E6）是針對它自己的解析度和非蒸餾路線調的，搬到我們的設定沒有帶來改善，E2 甚至變差。有價值的是「做法」，也就是 E4 的參考圖注入。
 
@@ -109,10 +110,58 @@ WanGP 的 50 步、shift 5 是為 1280×720、121 幀調的。在我們「小角
 - seed 43：兩種都不穩。首幀糊、構圖從全身跳成近景；uni_pc 還在頭上冒出不存在的道具。
 - 耗時一樣（約 15 秒；第一支 62 秒含模型載入）。Move 模式的構圖不穩和幻覺是已知問題，換取樣器解決不了。
 
+## E7　MatAnyone2 影片去背（⚠ 非商業授權）
+
+**授權**：MatAnyone 是 NTU S-Lab License 1.0，只限非商業用途。本節是本機評估。
+
+**安裝**（使用者同意後，只裝 v2）：
+
+- 節點包 FuouM/ComfyUI-MatAnyone，commit `87cbce3`。
+- 權重 `matanyone2.pth`：141,429,115 bytes，sha256 與官方一致。
+- 本機修改：關掉 ImageNet resnet 自動下載。
+
+詳見 [模型與來源](../../../installation/models-and-sources.md#選用-matanyone2-影片去背實驗中非商業授權)。
+
+**流程**：SAM3 `track-text` 取第 0 幀遮罩 → `MatAnyone2`（warmup 10、erode/dilate 0）→ `JoinImageWithAlpha` → RGBA PNG。腳本是 `scripts/run_matanyone.py`，輸出在 `e7_matanyone/`。
+
+### 綠幕片（Skye 召槌 1024²×56 幀，首幀遮罩＝`chibi girl` ∪ `mallet`）
+
+| 方法 | 閃爍值 | 半透明比例 | 邊緣殘綠 >16 | 耗時 |
+|---|---|---|---|---|
+| 綠幕去背 `chroma-alpha --unmix --despill` | 0.042 | 3.7% | 0% | — |
+| BiRefNet HR-matting（逐幀） | **0.0289** | 20.7% | 82% | — |
+| MatAnyone2 | 0.0301 | 8.8% | 95% | 10 秒 |
+
+- **綠幕去背**：完整保留冰晶特效，邊緣乾淨。
+- **BiRefNet**：只留角色和錘子，特效被乾淨去掉。
+- **MatAnyone2**：大致只留角色和錘子，但冰晶位置有淡淡的鬼影，握把和手臂之間殘一塊綠。
+- **邊緣殘綠**：MatAnyone2 和 BiRefNet 都只算 alpha、不處理溢色，用在綠幕片要另外做 despill。
+- **結論**：綠幕生成的素材，MatAnyone2 沒有優勢。
+
+### 實景片（安裝測試 source.mp4，人物＋灰牆，33 幀，首幀遮罩＝SAM3 `woman`）
+
+| 方法 | 閃爍值 | 半透明比例 | 觀察（第 16 幀） |
+|---|---|---|---|
+| SAM3 逐幀二值遮罩 | 0.0668 | 1.2% | 袖子破成碎片 |
+| BiRefNet HR-matting | **0.0197** | 5.0% | 完整、邊緣乾淨 |
+| MatAnyone2 | 0.0201 | 3.5% | 完整，SAM3 的破洞都補回來；辮子左側多一小塊灰影 |
+
+- MatAnyone2 把 SAM3 逐幀遮罩的閃爍值從 0.067 降到 0.020，前後幀傳播確實有用。但單一主體的畫面裡，BiRefNet 一樣穩，而且不需要首幀遮罩。耗時 42 秒（含模型載入）。
+
+### 判斷
+
+- 兩支素材上，MatAnyone2 的品質都和 BiRefNet HR-matting **相當，沒有勝出**。
+- 它真正的獨特價值是「**指定要哪個物件**」：首幀用 SAM3 選定，之後跟著傳播。BiRefNet 是抓畫面最顯著的主體，沒辦法指定。這只有在畫面裡有多個主體、只要其中一個時才派得上用場，這次還沒測。
+- 加上授權只限非商業，**現階段不做成 template、不進產線**：
+  - 單一主體：BiRefNet（`vfx birefnet-alpha`）。
+  - 綠幕：`chroma-alpha`。
+  - 要指定物件、而且是非商業專案時，才考慮 MatAnyone2，並先補測多主體場景。
+
 ## 下一步
 
 1. ~~E4 做成 template~~：已完成（`video/wan-vace/inpaint-reference` v0.1.1）。
 2. ~~E5 補測~~：已完成，結果寫進 idle 錨定規則。
 3. ~~H3 音軌檢查 bug~~：已修正 runner。
-4. **E7（MatAnyone）、E8（N 段滑動視窗）**：等使用者決定節點、權重、授權，以及 runner 迴圈怎麼解釋 R2。
+4. ~~E7（MatAnyone）~~：已評估，品質和 BiRefNet 相當，非商業授權，不進產線。要的話補測多主體場景。
+6. **E8（N 段滑動視窗）**：等使用者決定 runner 迴圈怎麼解釋 R2。
 5. **H3 draft template**：`video/h3/*` 的 template 有了這次的實機證據（img2video-last），可以另外評估是否升 technical_pass。
