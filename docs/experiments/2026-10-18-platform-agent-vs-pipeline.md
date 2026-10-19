@@ -7,32 +7,27 @@ date: 2026-10-18
 
 操作版清單（逐步指令與填表位置）見 `docs/experiments/2026-10-18-windows-checklist.md`。
 
-給已安裝本專案的 Windows 主機照著實測。目的是把推廣簡報裡標為「推論」或「未查到」的說法，換成有數據的結論。所有輸出都是 candidate，美術好不好由審核者決定（規則 R1，見 `docs/knowledge/rules/candidate-review.md`）。
+給已安裝本專案的 Windows 主機照著實測。目的是把推廣簡報裡標為「推論」或「未查到」的說法，換成有數據的結論。平台側為 Codex 與 Grok。所有輸出都是 candidate，美術好不好由審核者決定（規則 R1，見 `docs/knowledge/rules/candidate-review.md`）。
 
-## 先讀：官方文件已查證的事實（2026-10-18）
+## 先讀：平台側已知的事實
 
-只列官方頁面確實寫到的。官方頁沒有日期，之後可能改版，實測前請再看一眼。
+本計畫的平台側以 Codex（OpenAI）與 Grok（xAI）為準。Codex 的官方文件事實（2026-10-18 閱讀，頁面無日期，部分取自頁面摘要，實測前請對照原頁）：
 
-| 項目 | OpenAI／Codex | Google Gemini |
-|---|---|---|
-| 改既有圖片 | 可。Edits 端點「可部分或整張修改」，Responses 支援多輪編修 | 可。用文字指示增減或修改元素、改風格、調色，支援多輪 |
-| 遮罩或選區編修 | API 指南沒寫遮罩參數；ChatGPT 桌面版說明可「選取圖上某區域再描述修改」 | 官方頁只描述文字指示，沒有遮罩 |
-| 透明背景 | 官方頁未說明 | 官方頁未說明 |
-| 參考圖 | 可加參考圖；多參考的數量未寫 | 最多 14 張參考圖；依模型限制角色圖 4～5 張 |
-| 圖上文字 | 官方頁未評價 | 官方稱可產出清楚的風格化文字 |
-| 最大解析度 | 官方頁未寫 | 1K、2K、4K（部分模型僅 1K） |
-| 浮水印 | 官方頁未寫 | 所有圖片含 SynthID 浮水印 |
-| 一次張數 | API 的 `n` 可一次多張，上限未寫 | 官方頁未寫 |
-| 費用 | Codex 內含於方案額度，約比文字回合快耗 3～5 倍；超過後用點數；用 API 金鑰則依 API 計價；免費方案不能用 | API 依張計價，約每張 0.03～0.24 美元（依模型與解析度） |
-| 模型名 | 官方 API 指南列 `gpt-image-2.5-*`；Codex 說明寫內建用 `gpt-image-2`。兩處名稱不同，實測時以實際回報為準 | Nano Banana 2.1、2、Pro 等 |
+| 項目 | OpenAI／Codex（官方文件） |
+|---|---|
+| 改既有圖片 | 可。Edits 端點「可部分或整張修改」，Responses 支援多輪編修 |
+| 遮罩或選區編修 | API 指南沒寫遮罩參數；ChatGPT 桌面版說明可「選取圖上某區域再描述修改」 |
+| 透明背景 | 官方頁未說明（2026-10-19 實測：輸出為原生 RGBA） |
+| 參考圖 | 可加參考圖；多參考的數量未寫 |
+| 圖上文字 | 官方頁未評價（實測 15/15 正確） |
+| 費用 | 內含於方案額度，約比文字回合快耗 3～5 倍；超過後用點數；用 API 金鑰則依 API 計價；免費方案不能用 |
+| 模型名 | 官方 API 指南列 `gpt-image-2.5-*`；Codex 說明寫內建用 `gpt-image-2`，兩處名稱不同，實測時以實際回報為準 |
 
 來源：
 - https://developers.openai.com/api/docs/guides/image-generation
 - https://learn.chatgpt.com/docs/image-generation 與 https://learn.chatgpt.com/docs/pricing
-- https://ai.google.dev/gemini-api/docs/image-generation 與 https://ai.google.dev/gemini-api/docs/pricing
-- 輔助（非官方）：https://blog.google/products/gemini/gemini-nano-banana-examples/（2025-09）
 
-注意：上面部分欄位來自頁面後半段的自動摘要，不是逐字引文，所以實測前仍要對照原頁。
+Grok（xAI）沒有查官方文件，只有實測：2026-10-19 以 `grok -p` 呼叫 `image_gen`／`image_edit`，結果見 `docs/experiments/2026-10-19-windows-results.md` 的「平台側：Grok Imagine」。Gemini 不在本計畫範圍內。
 
 ## 環境與規則
 
@@ -60,7 +55,7 @@ date: 2026-10-18
 - 量測：以同一張遮罩，算範圍外被改動的像素比例；範圍內是否達成需求（人工 1～5 分，盲評）。
 - 判定：範圍外比例為 0 才算「不變」。已知我方未合成前範圍外約有九成像素會動（見 `docs/knowledge/art/edit-scenarios.md`），要分開記「合成前」與「合成後」。
 
-### E3 角色一致性（簡報：「Google 稱可保持一致」，查證；「我方仍會漂移」，專案實測）
+### E3 角色一致性（簡報：「平台稱可保持一致」，實測；「我方仍會漂移」，專案實測）
 
 - 做法：同一角色圖，要求 5 個不同姿勢或動作。我方用 `character_action`，平台側用參考圖加文字。
 - 量測：臉、髮型、服裝、配色四項各 1～5 分，由不知道來源的人盲評；另記是否被姿勢參考污染。
@@ -72,7 +67,7 @@ date: 2026-10-18
 - 量測：檔案有無 alpha 通道；用 `gameart.py edit asset-audit` 看白、黑、棋盤底預覽有無光暈、破洞、裁切。
 - 判定：沒有 alpha 通道就記「需另外去背」，並把補救步驟與耗時一起記下。
 
-### E5 圖上文字（簡報：「文字渲染強」，官方只對 Google 有說法）
+### E5 圖上文字（簡報：「文字渲染強」，官方頁未評價）
 
 - 做法：5 組字樣（例：POTION、START、中文兩個詞、一組數字），每組在兩邊各產 5 張。
 - 量測：逐字比對，整組字完全正確才算對，算正確率。
