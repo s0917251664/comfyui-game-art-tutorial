@@ -2,6 +2,10 @@
 
 這是遊戲美術 AI 產線專案。先按需求選技能，再依技能與能力 gate 操作；不要把不同執行路線合併推定。
 
+## 第一次進來
+
+不論哪個代理、哪個作業系統：先讀本檔，再問使用者要做什麼並選路線；新手說明在 [`docs/getting-started.md`](docs/getting-started.md)。文件中的 `python` 在 macOS／Linux 讀成 `python3`；本機路線用 `local_config.json` 指定的 Python。對使用者一律用繁體中文，不要求其懂程式。
+
 ## 文件分工（每種資訊只放一個地方）
 
 - **技能**（`skills/*/SKILL.md`，共 6 個）只寫思路：怎麼判斷、選哪條路、什麼時候停下來問使用者。
