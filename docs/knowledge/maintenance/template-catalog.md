@@ -80,6 +80,20 @@ generated: true
 - 模型：（無）
 - 上游：none
 
+## `image/qwen-image-edit/three-reference`
+
+- 用途：Qwen-Image-Edit 2511 three-reference edit (experimental, advanced model)
+- 摘要：Advanced-model experiment: Qwen-Image-Edit 2511 with three ordered reference images; roles assigned by prompt.
+- 媒體：image
+- 能力：image_generation
+- 狀態：draft（v0.1.0）
+- 最低 ComfyUI：0.34.0
+- 第三方節點：（只用 core）
+- 平台：windows-cuda untested、macos-mps untested
+- 首尾幀：first=none、last=none、reference_role=none、time_alignment=null、continuity=null
+- 模型：qwen_image_edit_2511_fp8mixed.safetensors（diffusion_models，unet）、qwen_2.5_vl_7b_fp8_scaled.safetensors（text_encoders，clip）、qwen_image_vae.safetensors（vae，vae）
+- 上游：core_blueprint `Image Edit (Qwen 2511).json`
+
 ## `image/sdxl/character-action-canny`
 
 - 用途：角色動作（SDXL、canny）

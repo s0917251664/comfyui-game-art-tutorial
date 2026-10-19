@@ -2,6 +2,10 @@
 
 這是遊戲美術 AI 產線專案。先按需求選技能，再依技能與能力 gate 操作；不要把不同執行路線合併推定。
 
+## 第一次進來
+
+不論哪個代理、哪個作業系統：先讀本檔，再問使用者要做什麼並選路線；新手說明在 [`docs/getting-started.md`](docs/getting-started.md)。文件中的 `python` 在 macOS／Linux 讀成 `python3`；本機路線用 `local_config.json` 指定的 Python。對使用者一律用繁體中文，不要求其懂程式。
+
 ## 文件分工（每種資訊只放一個地方）
 
 - **技能**（`skills/*/SKILL.md`，共 6 個）只寫思路：怎麼判斷、選哪條路、什麼時候停下來問使用者。
@@ -21,6 +25,8 @@
 | 安裝 ComfyUI 與模型、部署 repo 工具 | [`comfyui-install`](skills/comfyui-install/SKILL.md) |
 
 ## 執行方式
+
+- 進階模型實驗 [`image/qwen-image-edit/three-reference`](templates/image/qwen-image-edit/three-reference/README.md)（Qwen-Image-Edit 2511）：比 FLUX.2 重、慢，先用 FLUX.2，做不出再試；draft，不推定比 FLUX.2 好。
 
 - **`generate.py <task>`** 是圖片與影片 task 的入口：依 task 與旗標選出 template id，交給 runner 執行。
 - **`gameart.py run <template id>`** 直接執行沒有 `generate.py` task 的固定流程（Wan Animate、SCAIL-2、SAM3 追蹤、VACE 局部重繪）。順序：`run show` → `--dry-run` → `--preflight` → 實際執行（寫 `run.result.json`）。

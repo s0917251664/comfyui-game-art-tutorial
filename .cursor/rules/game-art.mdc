@@ -1,0 +1,6 @@
+---
+description: 遊戲美術 AI 產線專案的共用規則入口
+alwaysApply: true
+---
+
+本專案規則統一寫在 `AGENTS.md`，請先閱讀並遵守；回覆使用繁體中文。新手說明見 `docs/getting-started.md`。

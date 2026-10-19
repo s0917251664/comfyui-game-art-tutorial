@@ -13,6 +13,8 @@
 | [`comfyui-extend`](comfyui-extend/SKILL.md) | 缺能力時照擴充協議提案；技能庫與架構審視 |
 | [`comfyui-install`](comfyui-install/SKILL.md) | 安裝、部署與依賴補齊 |
 
+FLUX.2 做不出、值得多等幾分鐘時，可試**進階模型實驗**[Qwen-Image-Edit 2511 三參考圖模板](../templates/image/qwen-image-edit/three-reference/README.md)，同樣走 `comfyui-run`；它不是 FLUX.2 的升級保證，封面握錘實驗也沒有解決雙手握持。
+
 ## Obsidian 上游技能（不在本資料夾）
 
 `claude-obsidian` 上游技能的專案副本放在 [`third_party/claude-obsidian-skills/`](../third_party/claude-obsidian-skills/README.md)，只有使用者明確要處理另外初始化的 Obsidian vault 時才用，範圍與限制見 [Obsidian 整合說明](../docs/knowledge/maintenance/obsidian-integration.md)。產線工作和專案知識庫（`docs/knowledge/`）的讀寫都不需要它們，用一般 Markdown 檔案工具即可。
