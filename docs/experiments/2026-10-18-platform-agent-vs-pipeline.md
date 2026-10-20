@@ -1,0 +1,129 @@
+---
+type: experiment-plan
+status: draft
+date: 2026-10-18
+---
+# 實驗計畫：平台 agent 內建生圖 vs 本專案固定流程
+
+操作版清單（逐步指令與填表位置）見 `docs/experiments/2026-10-18-windows-checklist.md`。
+
+給已安裝本專案的 Windows 主機照著實測。目的是把推廣簡報裡標為「推論」或「未查到」的說法，換成有數據的結論。平台側為 Codex 與 Grok。所有輸出都是 candidate，美術好不好由審核者決定（規則 R1，見 `docs/knowledge/rules/candidate-review.md`）。
+
+## 先讀：平台側已知的事實
+
+本計畫的平台側以 Codex（OpenAI）與 Grok（xAI）為準。Codex 的官方文件事實（2026-10-18 閱讀，頁面無日期，部分取自頁面摘要，實測前請對照原頁）：
+
+| 項目 | OpenAI／Codex（官方文件） |
+|---|---|
+| 改既有圖片 | 可。Edits 端點「可部分或整張修改」，Responses 支援多輪編修 |
+| 遮罩或選區編修 | API 指南沒寫遮罩參數；ChatGPT 桌面版說明可「選取圖上某區域再描述修改」 |
+| 透明背景 | 官方頁未說明（2026-10-19 實測：輸出為原生 RGBA） |
+| 參考圖 | 可加參考圖；多參考的數量未寫 |
+| 圖上文字 | 官方頁未評價（實測 15/15 正確） |
+| 費用 | 內含於方案額度，約比文字回合快耗 3～5 倍；超過後用點數；用 API 金鑰則依 API 計價；免費方案不能用 |
+| 模型名 | 官方 API 指南列 `gpt-image-2.5-*`；Codex 說明寫內建用 `gpt-image-2`，兩處名稱不同，實測時以實際回報為準 |
+
+來源：
+- https://developers.openai.com/api/docs/guides/image-generation
+- https://learn.chatgpt.com/docs/image-generation 與 https://learn.chatgpt.com/docs/pricing
+
+Grok（xAI）沒有查官方文件，只有實測：2026-10-19 以 `grok -p` 呼叫 `image_gen`／`image_edit`，結果見 `docs/experiments/2026-10-19-windows-results.md` 的「平台側：Grok Imagine」。Gemini 不在本計畫範圍內。
+
+## 環境與規則
+
+1. 在 Windows 主機執行 `python tools_src/gameart.py doctor`，確認三份機器快照沒有過期；過期才跑 `doctor --refresh`（只掃描，不下載）。
+2. 我方側一律用既有 task 或 template，不臨場改 graph（規則 R2）。旗標以 `python tools_src/generate.py <task> --help` 與 `python tools_src/gameart.py <tool> --help` 為準，本文件不抄參數。
+3. 每次輸出都帶 `--output-dir`，且必須是新資料夾，建議 `output/experiments/platform-vs-pipeline-20261018/<實驗編號>/`。
+4. 平台側要記錄：平台與模型名、帳號方案、日期、完整提示詞、輸入圖、每次回傳的圖與張數。有網頁介面時存截圖。
+5. 同一組輸入圖與同一段需求，兩邊都用。提示詞照各平台的使用習慣寫，但意思要一樣，並兩邊都貼進紀錄。
+6. 每個實驗至少做 5 次重複（E1 規定的另算）。次數太少不下結論，寫「樣本不足」。
+
+## 實驗清單
+
+每項標明對應簡報上的哪句話。判定欄是預先寫好的，避免看完結果再改標準。
+
+### E1 重現性（簡報：「每次對話重做，較難重現」，推論）
+
+- 做法：同一輸入圖加同一段需求，平台側連續跑 5 次；我方側用同一 template、固定 seed 跑 5 次，再換 seed 跑 5 次。
+- 量測：5 張圖兩兩比較的像素差異（可用 `gameart.py edit compare`）；平台側是否有辦法指定 seed 或取回設定；隔天能否用紀錄重做出同一張。
+- 判定：我方固定 seed 的 5 次幾乎相同、平台側明顯不同，才可寫「我方較可重現」。若平台提供 seed 或設定回放，就改寫結論。
+- 備註：不同 GPU 之間不保證逐位元相同（見 `docs/tested-versions.md`），這項只比同一台主機。
+
+### E2 局部改圖，範圍外是否不變（簡報：「是否逐像素不變未說明」，未查到）
+
+- 做法：選一張已驗收的角色圖，需求是「只把手上的武器換成長槍」。平台側用文字指示，若有選區功能也各做一輪；我方側用 `guided_inpaint`（或 `inpaint`），再用 `gameart.py edit composite` 貼回。
+- 量測：以同一張遮罩，算範圍外被改動的像素比例；範圍內是否達成需求（人工 1～5 分，盲評）。
+- 判定：範圍外比例為 0 才算「不變」。已知我方未合成前範圍外約有九成像素會動（見 `docs/knowledge/art/edit-scenarios.md`），要分開記「合成前」與「合成後」。
+
+### E3 角色一致性（簡報：「平台稱可保持一致」，實測；「我方仍會漂移」，專案實測）
+
+- 做法：同一角色圖，要求 5 個不同姿勢或動作。我方用 `character_action`，平台側用參考圖加文字。
+- 量測：臉、髮型、服裝、配色四項各 1～5 分，由不知道來源的人盲評；另記是否被姿勢參考污染。
+- 判定：兩邊平均分差小於 0.5 視為持平。
+
+### E4 透明背景與邊緣（簡報：「Codex 無原生透明」，第三方說法；官方未說明）
+
+- 做法：要求「透明背景的圖示」。平台側直接要求，並記錄回傳檔案格式；我方用 `icon_asset`（永遠去背）或 `--remove-bg`。
+- 量測：檔案有無 alpha 通道；用 `gameart.py edit asset-audit` 看白、黑、棋盤底預覽有無光暈、破洞、裁切。
+- 判定：沒有 alpha 通道就記「需另外去背」，並把補救步驟與耗時一起記下。
+
+### E5 圖上文字（簡報：「文字渲染強」，官方頁未評價）
+
+- 做法：5 組字樣（例：POTION、START、中文兩個詞、一組數字），每組在兩邊各產 5 張。
+- 量測：逐字比對，整組字完全正確才算對，算正確率。
+- 判定：以正確率比較。我方已知 POTION 曾被拼成 PENTION（見 `docs/knowledge/experiences/flux2-and-structure-lock-observations.md`）。
+
+### E6 選區精度（簡報：「選取範圍」）
+
+- 做法：同一個小目標（例如肩章），平台側用選區或文字指定，我方用 `mask-session` 手繪或 `sam` 候選。
+- 量測：範圍外被改的比例（`gameart.py edit compare` 的 `preserved.changed_fraction`），加上目視 `detail.png` 記鄰近區域有沒有被牽動（有或無）。
+- 判定：範圍外比例較低、鄰近無牽動者較準。
+
+### E7 影片與 3D（簡報：「未查到說明」）
+
+- 做法：先只查能力，不跑長任務：目前使用的平台是否提供靜圖轉影片、動作驅動、平面圖轉 3D 的入口。我方各跑一個最短的現成 template 當對照（先 `--preflight`）。
+- 量測：有或沒有；有的話記長度、解析度、耗時。
+- 判定：只回答「有／沒有／實驗中」，不比品質。
+
+### E8 時間與成本
+
+- 做法：E2、E3 的每次生成都記牆鐘時間。平台側記耗用的額度或點數或 API 費用；我方側記耗時，費用寫「本機免費，不含電費與設備」。
+- 判定：不要把「本機免費」寫成「沒有成本」，設備與準備時間要列在備註。
+
+## 簡報數據欄位對照與現有基準
+
+簡報有一頁「待補的數據」，欄位代號 D1 至 D8 對應 E1 至 E8。實測後把結果填進下面登錄表，簡報同代號欄位的「待填」就改成實測值。
+
+「我們」欄在專案裡已有的數據如下，都是單一機器、單一案例的技術檢查，不代表美術品質；若本次實驗重測，以新數據取代並註明日期。
+
+| 欄位 | 現有數據 | 出處 |
+|---|---|---|
+| D2 範圍外不變 | 不合成時範圍外 926,576 像素中 870,763 被改動（約 94%），貼回合成後為 0 | `docs/knowledge/art/edit-scenarios.md`（2026-10-02） |
+| D2 影片版 | 影片局部換色，PNG 範圍外 0 像素；VACE 局部重繪貼回後範圍外 0 | `docs/knowledge/archive/experiments/2026-10-07-vfx-research/results.md` |
+| D3 角色一致 | 動作跟上，但帽子、衣服被姿勢參考帶偏，身份沒保住（單例） | `docs/knowledge/art/edit-scenarios.md` |
+| D5 圖上文字 | POTION 被拼成 PENTION（單例，FLUX.2） | `docs/knowledge/experiences/flux2-and-structure-lock-observations.md` |
+| D8 時間 | Windows RTX 4080：單張概念圖 4.7 秒、10 項圖片任務共約 63 秒；Apple 晶片機約 383 秒 | `docs/knowledge/validation/windows-cuda/`、`docs/knowledge/validation/macos-mps/`（2026-10-06） |
+
+D1、D4、D6 目前沒有現成數據，一律等實測。D7 只有能力有無，沒有品質數據。
+
+## 結果登錄表
+
+每個實驗跑完，把這張表貼在 `output/experiments/platform-vs-pipeline-20261018/RESULTS.md`，再回頭改簡報的對照頁。
+
+| 實驗（簡報欄位） | 平台側結果 | 我方側結果 | 樣本數 | 結論（可寫／樣本不足／無差異） | 證據資料夾 |
+|---|---|---|---|---|---|
+| E1（D1） | | | | | |
+| E2（D2） | | | | | |
+| E3（D3） | | | | | |
+| E4（D4） | | | | | |
+| E5（D5） | | | | | |
+| E6（D6） | | | | | |
+| E7（D7） | | | | | |
+| E8（D8） | | | | | |
+
+## 對照簡報的修改規則
+
+- 實驗支持原說法：把標籤由【推論】或【未查到】改成【實測】，並寫日期與樣本數。
+- 實驗不支持：直接改寫簡報的句子，並在這份文件的登錄表寫明原因。
+- 樣本不足：維持原標籤，不下結論。
+- 結果只代表該日期、該主機、該模型版本；平台模型更新後要重測。
