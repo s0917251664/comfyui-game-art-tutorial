@@ -11,5 +11,7 @@ status: current
 | R1 | [候選與美術驗收](candidate-review.md) | 所有輸出從 `candidate` 開始；技術通過不等於美術接受；只有美術審核者能決定 `accepted`／`rejected`。 |
 | R2 | [交付走固定流程，新組合先實驗](fixed-graphs.md) | 交付用的生成不臨場組或改 ComfyUI graph；現有流程做不好時，主動想節點怎麼重新組合，先實驗，成功且使用者確認後照[擴充協議](../maintenance/extension-protocol.md)做成 template。其他新能力走[新增能力清單](../maintenance/new-capability-checklist.md)。 |
 | R3 | [角色動作的 Idle 錨定](idle-anchoring.md) | 角色動作第一幀用已驗收的 Idle 圖，只選會鎖首（尾）幀的 task。 |
+| R4 | [動畫一致性 gate](animation-consistency.md) | 新動畫進遊戲前，配色與比例要對指定的基準動畫量測通過，切換動作時角色不能變色或變大變小。 |
+| R5 | [生成方法停損](method-stop-loss.md) | 同一個瑕疵連續兩輪沒解，就換方法層級；同一區域局部重繪最多一次。 |
 
 各路線自己的操作契約（旗標、輸入、輸出格式）仍留在對應技能與 reference；這裡只放跨路線、需要一致遵守的原則。

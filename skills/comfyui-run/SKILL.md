@@ -44,4 +44,6 @@ description: 用本機 ComfyUI 執行已登記的圖片／影片能力：generat
 - 每次執行留技術紀錄（圖片 `*.result.json`、template `run.result.json`、影片 sidecar），`content_review` 一律 pending。
 - 技術通過不等於美術接受（[R1](../../docs/knowledge/rules/candidate-review.md)）；accept／reject 只由使用者決定後用 `gameart.py review` 記錄。
 - 首尾相接的動作依 [R3](../../docs/knowledge/rules/idle-anchoring.md) 與 template 的 `frame_anchoring` 選。
+- 動畫進遊戲前，配色與比例對基準動畫量測（[R4](../../docs/knowledge/rules/animation-consistency.md)）。
+- 同一瑕疵兩輪沒解就換方法層級（[R5](../../docs/knowledge/rules/method-stop-loss.md)）。
 - 不自動用系統播放器開成品；不硬砍 ComfyUI、不呼叫 `/interrupt`、不清 queue；逾時不重送。

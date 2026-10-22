@@ -14,7 +14,7 @@ status: current
 
 ## 從哪裡開始
 
-跨路線的執行規則只寫在 [rules/](rules/README.md)：R1 候選與美術驗收、R2 固定流程、R3 Idle 錨定。
+跨路線的執行規則只寫在 [rules/](rules/README.md)：R1 候選與美術驗收、R2 固定流程、R3 Idle 錨定、R4 動畫一致性 gate、R5 生成方法停損。
 
 | 要做什麼 | 讀這頁 |
 |---|---|
@@ -36,7 +36,7 @@ status: current
 | 安裝與模型來源 | [installation/](installation/README.md) |
 | 素材紀錄與驗收 | [result-records](result-records.md)、[assets/](assets/smoke-potion.md) |
 | 維護：新增能力、審視、驗證 | [maintenance/](maintenance/README.md) |
-| 決策與經驗 | [DECISIONS.md](DECISIONS.md)、[decisions/](decisions/)、[experiences/](experiences/asset-records-2026-10-01.md)、[封面握錘失敗紀錄](experiences/cover-hammer-grip-2026-10.md)、[橫向動作角色動畫經驗](experiences/side-scroller-character-anim-2026-10.md) |
+| 決策與經驗 | [DECISIONS.md](DECISIONS.md)、[decisions/](decisions/)、[experiences/](experiences/asset-records-2026-10-01.md)、[封面握錘失敗紀錄](experiences/cover-hammer-grip-2026-10.md)、[橫向動作角色動畫經驗](experiences/side-scroller-character-anim-2026-10.md)、[持槌拖錘跑返工檢討與決策流程](experiences/armed-drag-run-rework-retro-2026-10.md) |
 | 第 3–8 階段重構結案 | [結案摘要](maintenance/restructure-summary-phase3-8.md) |
 
 能力能不能跑，以當前機器的能力快照、preflight 與適用平台實測為準，經驗頁不能代替這些 gate。
