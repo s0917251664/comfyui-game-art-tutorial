@@ -26,6 +26,7 @@ status: current
 | 看懂 graph 節點、提實驗方案 | [節點入門](art/comfyui-nodes-primer.md) |
 | 局部修改的遮罩 | [遮罩](art/masking.md)、[SAM 候選](art/sam-segmentation.md)、[控制來源判斷](art/control-type-selection.md) |
 | 平面設計圖轉 3D、用 3D 決定物件角度 | [平面圖轉 3D](art/image-to-3d.md) |
+| 外部免費素材庫（臉、服裝、姿勢）與授權 | [外部素材庫](art/external-asset-libraries.md) |
 | 結構鎖定、複合元件圖層 | [結構範本](art/structure-ref.md)、[圖層拆分判斷](art/layered-assets.md) |
 | 本機像素與物件組裝 | [edit-tools](art/edit-tools.md)、[單一物件換色](art/single-object-color.md)、[物件組裝](art/object-design-workflows.md) |
 | 模型設定檔經驗 | [sdxl-standard](art/profiles/sdxl-standard.md) |
