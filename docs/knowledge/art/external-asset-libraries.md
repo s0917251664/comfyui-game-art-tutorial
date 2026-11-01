@@ -33,6 +33,7 @@ status: draft
 - 結果對照圖：`output/pose-face-test/sheet0.png`、`sheet1.png`、`sheet2.png`；各組輸出在 `output/pose-face-test/out/`（A=depth、B=depth 換姿勢、C/D=canny 線稿、E/G=pose 線稿、F=pose 深度圖、H=canny 深度圖、I=pose_only depth、J=ip-weight 0.4）。
 - 限制：只測 1 張臉、2 個姿勢、1 張／組、單 seed，沒有做行走／揮擊類，也沒測服裝庫；臉部一致性只做目視判斷。**技術結果，非美術接受**，未 accept／reject。
 - 補測（同日）：`pose_only --control-backend union`（本機已有 xinsir union promax，experimental），同 seed 42、prompt 改寫為白 T 恤牛仔褲、無臉參考，2 姿勢 × depth／canny／pose，證據 `output/pose-face-test/sheet3.png`、`out/K_union_*`。union depth：姿勢遵守且穿得上衣服（比標準 depth controlnet 乾淨，不再退成內衣），但人偶體型與褲管破洞偏卡通；union canny：仍把人偶線條畫進成品；union pose：骨架一樣抽不到，姿勢被忽略（雙手插口袋的通用站姿）。→ 問題在 OpenPose 抽取器認不得無臉人偶，換 controlnet 模型不能解。每組單張，僅此範圍。
+- 手掌方向（同日補看，目視放大 `output/pose-face-test/hands.png`）：depth 路線（標準與 union）會跟著深度圖的手形，張開手掌的朝向與五指張開大致遵守、扠腰的手貼腰也正確；但手指細節與數量不保證，姿勢庫自己也自述手指較弱。pose 路線沒有骨架所以手方向無從談起。僅 2 個姿勢各 1 張，手部細節要逐張驗收。
 - 暫時結論：姿勢庫深度圖可當姿勢來源；要「換姿勢不換臉」不能靠人臉庫特寫配 `character_action`，須另找一致性方法（先實驗，標明實驗，再依擴充協議）。
 
 ## 使用規則
