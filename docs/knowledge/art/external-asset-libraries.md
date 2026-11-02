@@ -34,6 +34,11 @@ status: draft
 - 限制：只測 1 張臉、2 個姿勢、1 張／組、單 seed，沒有做行走／揮擊類，也沒測服裝庫；臉部一致性只做目視判斷。**技術結果，非美術接受**，未 accept／reject。
 - 補測（同日）：`pose_only --control-backend union`（本機已有 xinsir union promax，experimental），同 seed 42、prompt 改寫為白 T 恤牛仔褲、無臉參考，2 姿勢 × depth／canny／pose，證據 `output/pose-face-test/sheet3.png`、`out/K_union_*`。union depth：姿勢遵守且穿得上衣服（比標準 depth controlnet 乾淨，不再退成內衣），但人偶體型與褲管破洞偏卡通；union canny：仍把人偶線條畫進成品；union pose：骨架一樣抽不到，姿勢被忽略（雙手插口袋的通用站姿）。→ 問題在 OpenPose 抽取器認不得無臉人偶，換 controlnet 模型不能解。每組單張，僅此範圍。
 - 手掌方向（同日補看，目視放大 `output/pose-face-test/hands.png`）：depth 路線（標準與 union）會跟著深度圖的手形，張開手掌的朝向與五指張開大致遵守、扠腰的手貼腰也正確；但手指細節與數量不保證，姿勢庫自己也自述手指較弱。pose 路線沒有骨架所以手方向無從談起。僅 2 個姿勢各 1 張，手部細節要逐張驗收。
+- 第二輪實驗（2026-11-02，只用本機已裝的節點與模型，**沒有下載或安裝任何東西**）：
+  - DWPose（`DWPreprocessor`，`dw-ll_ucoco_384.onnx` + `yolox_l.onnx`，本機原本就有）：對 4 張人偶（深度圖、線稿各 2）只有 1 張（線稿 P077 側身展臂）抽出骨架與手指點，其餘 3 張全黑＝抽不到；對一張真人照片可抽出。證據 `output/pose-face-test/dwpose/`、`sheet4.png`。結論：DWPose 比 OpenPose 稍好但對無臉人偶不穩，不能當穩定做法。
+  - Qwen-Image-Edit 2511 三參考（`image/qwen-image-edit/three-reference`，加 `--allow-unverified-platform`，442 秒／張）：圖1放深度圖 P077、圖2/3放兩張臉。姿勢與張開手掌朝向遵守，但輸出照抄人偶的肌肉與體型、衣服只剩白色連身，臉糊成無五官，臉庫的身分沒帶過來。證據 `output/pose-face-test/qwen_P077/`、`sheet5.png`。單張，僅此範圍。
+  - 未做：MeshGraphormer 手部深度（節點已裝，但權重檔本機沒有，需下載，先等你決定）；FLUX.2 編修；Yedp-Action-Director 骨架輸出。
+  - 這輪結論：姿勢遵守靠 depth 類控制（union depth 最乾淨）；「保臉」在這些方法都沒解決，不能靠臉庫特寫。
 - 暫時結論：姿勢庫深度圖可當姿勢來源；要「換姿勢不換臉」不能靠人臉庫特寫配 `character_action`，須另找一致性方法（先實驗，標明實驗，再依擴充協議）。
 
 ## 使用規則
