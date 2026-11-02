@@ -38,6 +38,8 @@ status: draft
   - DWPose（`DWPreprocessor`，`dw-ll_ucoco_384.onnx` + `yolox_l.onnx`，本機原本就有）：對 4 張人偶（深度圖、線稿各 2）只有 1 張（線稿 P077 側身展臂）抽出骨架與手指點，其餘 3 張全黑＝抽不到；對一張真人照片可抽出。證據 `output/pose-face-test/dwpose/`、`sheet4.png`。結論：DWPose 比 OpenPose 稍好但對無臉人偶不穩，不能當穩定做法。
   - Qwen-Image-Edit 2511 三參考（`image/qwen-image-edit/three-reference`，加 `--allow-unverified-platform`，442 秒／張）：圖1放深度圖 P077、圖2/3放兩張臉。姿勢與張開手掌朝向遵守，但輸出照抄人偶的肌肉與體型、衣服只剩白色連身，臉糊成無五官，臉庫的身分沒帶過來。證據 `output/pose-face-test/qwen_P077/`、`sheet5.png`。單張，僅此範圍。
   - 未做：MeshGraphormer 手部深度（節點已裝，但權重檔本機沒有，需下載，先等你決定）；FLUX.2 編修；Yedp-Action-Director 骨架輸出。
+  - MeshGraphormer 手部深度（2026-11-02，Steve 同意後下載）：節點首次執行自動下載 2 個權重，來源 Hugging Face `hr16/ControlNet-HandRefiner-pruned`，合計約 1.3GB：`graphormer_hand_state_dict.bin` 855,658,184 bytes、`hrnetv2_w64_imagenet_pretrained.pth` 513,111,608 bytes，位置 `C:\Users\XU\ComfyUI\custom_nodes\comfyui_controlnet_aux\ckpts\hr16\`（要移除就刪這個資料夾）。對 3 張 SDXL 生成圖（含兩張 union depth 站姿）執行：3 張只有 1 張抓到一隻手（側身展臂的右手，深度圖與遮罩可用），另 1 張只有碎片，其餘全黑＝偵測不到手。證據 `output/pose-face-test/mesh/`、`sheet6.png`。結論：偵測率低，單靠它不能保證補到手；後續「深度圖＋depth ControlNet 局部重繪」未做，因為多數圖沒有可用的手部深度。
+  - 未做：FLUX.2 編修改姿態／手掌方向、Yedp-Action-Director 骨架輸出。
   - 這輪結論：姿勢遵守靠 depth 類控制（union depth 最乾淨）；「保臉」在這些方法都沒解決，不能靠臉庫特寫。
 - 暫時結論：姿勢庫深度圖可當姿勢來源；要「換姿勢不換臉」不能靠人臉庫特寫配 `character_action`，須另找一致性方法（先實驗，標明實驗，再依擴充協議）。
 
