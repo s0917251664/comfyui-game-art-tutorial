@@ -1,0 +1,83 @@
+{
+ "揮手": {
+  "picked_seed": 10,
+  "source": "e1_10_12_13_14_15_16",
+  "pasted_region_px": 125747,
+  "outside_px": 885965,
+  "outside_changed_px": 0,
+  "image_px": 1011712,
+  "tried_seeds": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10,
+   11,
+   12,
+   13,
+   14,
+   15,
+   16,
+   21,
+   42,
+   55,
+   77,
+   88,
+   99,
+   123,
+   300
+  ],
+  "tried_count": 24
+ },
+ "指向前方": {
+  "picked_seed": 11,
+  "source": "point",
+  "pasted_region_px": 114050,
+  "outside_px": 897662,
+  "outside_changed_px": 0,
+  "image_px": 1011712,
+  "tried_seeds": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10,
+   11,
+   12
+  ],
+  "tried_count": 12
+ },
+ "敬禮": {
+  "picked_seed": 6,
+  "source": "salute",
+  "pasted_region_px": 146378,
+  "outside_px": 865334,
+  "outside_changed_px": 0,
+  "image_px": 1011712,
+  "tried_seeds": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10,
+   11,
+   12
+  ],
+  "tried_count": 12
+ }
+}
