@@ -36,7 +36,14 @@ class ImageTemplateVariantTests(unittest.TestCase):
         for template_id in iter_variant_ids("sdxl", "layer_split", "flux2"):
             template = T.load_template(TEMPLATES, template_id, repo_root=ROOT)
             self.assertIsNone(template.data["frame_anchoring"]["time_alignment"], template_id)
-            self.assertEqual("draft", template.data["status"], template_id)
+            # image/flux2/edit 已有實機證據(windows-cuda technical_pass);其餘圖片 template 仍是 draft
+            if template_id == "image/flux2/edit":
+                self.assertEqual("technical_pass", template.data["status"], template_id)
+                platforms = template.data["capability_gate"]["platforms"]
+                self.assertEqual("technical_pass", platforms["windows-cuda"]["status"])
+                self.assertEqual("untested", platforms["macos-mps"]["status"])
+            else:
+                self.assertEqual("draft", template.data["status"], template_id)
             for name, slot in template.slots.items():
                 self.assertNotEqual("output_prefix", slot["type"], f"{template_id}.{name}")
             prefix = template.slots["filename_prefix"]

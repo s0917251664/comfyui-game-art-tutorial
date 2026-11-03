@@ -113,16 +113,16 @@
     },
     {
       "id": "image/flux2/edit",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "title": "FLUX.2 參考圖編修",
       "summary": "FLUX.2 參考圖編修。固定 API graph，runner 只填 slot。",
       "media": "image",
       "capability": "image_generation",
-      "status": "draft",
+      "status": "technical_pass",
       "min_comfyui_version": "0.34.0",
       "requires_custom_nodes": [],
       "platforms": {
-        "windows-cuda": "untested",
+        "windows-cuda": "technical_pass",
         "macos-mps": "untested"
       },
       "frame_anchoring": {

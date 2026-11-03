@@ -14,7 +14,7 @@ status: current
 
 ## 從哪裡開始
 
-跨路線的執行規則只寫在 [rules/](rules/README.md)：R1 候選與美術驗收、R2 固定流程、R3 Idle 錨定。
+跨路線的執行規則只寫在 [rules/](rules/README.md)：R1 候選與美術驗收、R2 固定流程、R3 Idle 錨定、R4 動畫一致性 gate、R5 生成方法停損。
 
 | 要做什麼 | 讀這頁 |
 |---|---|
@@ -26,6 +26,7 @@ status: current
 | 看懂 graph 節點、提實驗方案 | [節點入門](art/comfyui-nodes-primer.md) |
 | 局部修改的遮罩 | [遮罩](art/masking.md)、[SAM 候選](art/sam-segmentation.md)、[控制來源判斷](art/control-type-selection.md) |
 | 平面設計圖轉 3D、用 3D 決定物件角度 | [平面圖轉 3D](art/image-to-3d.md) |
+| 改姿勢／手掌方向的實測結論、外部免費素材庫（臉、服裝、姿勢）與授權 | [外部素材庫](art/external-asset-libraries.md) |
 | 結構鎖定、複合元件圖層 | [結構範本](art/structure-ref.md)、[圖層拆分判斷](art/layered-assets.md) |
 | 本機像素與物件組裝 | [edit-tools](art/edit-tools.md)、[單一物件換色](art/single-object-color.md)、[物件組裝](art/object-design-workflows.md) |
 | 模型設定檔經驗 | [sdxl-standard](art/profiles/sdxl-standard.md) |
@@ -36,7 +37,7 @@ status: current
 | 安裝與模型來源 | [installation/](installation/README.md) |
 | 素材紀錄與驗收 | [result-records](result-records.md)、[assets/](assets/smoke-potion.md) |
 | 維護：新增能力、審視、驗證 | [maintenance/](maintenance/README.md) |
-| 決策與經驗 | [DECISIONS.md](DECISIONS.md)、[decisions/](decisions/)、[experiences/](experiences/asset-records-2026-10-01.md)、[封面握錘失敗紀錄](experiences/cover-hammer-grip-2026-10.md)、[橫向動作角色動畫經驗](experiences/side-scroller-character-anim-2026-10.md) |
+| 決策與經驗 | [DECISIONS.md](DECISIONS.md)、[decisions/](decisions/)、[experiences/](experiences/asset-records-2026-10-01.md)、[封面握錘失敗紀錄](experiences/cover-hammer-grip-2026-10.md)、[橫向動作角色動畫經驗](experiences/side-scroller-character-anim-2026-10.md)、[持槌拖錘跑返工檢討與決策流程](experiences/armed-drag-run-rework-retro-2026-10.md) |
 | 第 3–8 階段重構結案 | [結案摘要](maintenance/restructure-summary-phase3-8.md) |
 
 能力能不能跑，以當前機器的能力快照、preflight 與適用平台實測為準，經驗頁不能代替這些 gate。

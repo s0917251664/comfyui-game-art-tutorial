@@ -1,11 +1,10 @@
 {
   "schema_version": 1,
   "id": "image/flux2/edit",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "title": "FLUX.2 參考圖編修",
   "summary": "FLUX.2 參考圖編修。固定 API graph，runner 只填 slot。",
-  "status": "draft",
-  "status_note": "尚未實機執行。windows-cuda 與 macos-mps 都是 untested。",
+  "status": "technical_pass",
   "min_comfyui_version": "0.34.0",
   "requires_custom_nodes": [],
   "graph": {
@@ -154,7 +153,8 @@
     "extra_nodes": [],
     "platforms": {
       "windows-cuda": {
-        "status": "untested"
+        "status": "technical_pass",
+        "evidence": "2026-11-02～03：windows-cuda、ComfyUI 0.34.0、PyTorch 2.13.0+cu130、RTX 4080；image/flux2/edit 實機執行 171 次 run.result.json 皆 status=completed、技術檢查通過；單張執行約 26～70 秒（平均約 27 秒）；來源圖含寫實、動漫、扁平遊戲風；模型檔 preflight --verify-hashes：存在 3/3、大小相符 3/3、sha256 相符 3/3。本機證據 output/pose-face-test/（flux_stab*、anime_flux、pose_edit_live 各資料夾的 run.result.json）。不代表美術接受。"
       },
       "macos-mps": {
         "status": "untested"

@@ -34,6 +34,8 @@ description: 用本機 ComfyUI 執行已登記的圖片／影片能力：generat
 | 概念圖、圖示、角色動作、姿勢、風格鎖、局部重繪、精修、放大、分層 | `generate.py` 圖片 task | [圖片 task 選擇](../../docs/knowledge/art-generation.md)、[參數判斷](../../docs/knowledge/art-parameters.md) |
 | 靜幀轉短片、循環特效、接片、運鏡、角色參考影片、動作驅動 | `generate.py` 影片 task | [影片知識](../../docs/knowledge/video/README.md) |
 | Wan Animate、SCAIL-2 | `gameart.py run video/wan-animate/<id>` | [取捨與限制](../../docs/knowledge/video/wan-animate-choice.md) |
+| 已有角色圖要改姿勢或手勢（舉手、走路、抱胸、回頭揮手、指向、低頭、持物、掌心朝鏡頭） | `gameart.py pose-edit run --action <id> --image <圖>`（`pose-edit list` 看選單；底層 `image/flux2/edit`，預設 3 個 seed＋對照圖；也能 `--custom` 自訂一句、`--part` 組零件、`--action a,b` 連續編修） | [外部素材庫頁](../../docs/knowledge/art/external-asset-libraries.md) 的「可用結論」與動作選單 |
+| agent 幫使用者組裝改姿勢動作 | 先問使用者想改哪個部位、什麼動作；選單有就用 `--action`，沒有就用 `--custom` 或 `--part` 組；**一定先 `--dry-run` 把組好的完整英文提示翻成白話給使用者看，確認或微調後再執行**；提醒一次只改一個大動作、預設多出 seed、左右手可能反（模型常把「左手」畫在畫面左側）、逐張看手與持物；複雜動作拆成連續編修（每步用 `--pick` 讓使用者挑）；常用的存成 `pose-edit save` | [外部素材庫頁](../../docs/knowledge/art/external-asset-libraries.md)「自訂與組裝」 |
 | 多參考圖編修，FLUX.2 做不出時（進階模型實驗） | `gameart.py run image/qwen-image-edit/three-reference` | [模板說明](../../templates/image/qwen-image-edit/three-reference/README.md)：Qwen-Image-Edit 2511，一張約 7.5 分鐘；先用 FLUX.2 三參考模板，做不出再試；不保證較好，draft |
 | 物件追蹤遮罩、影片局部重繪 | `run video/sam3/*`、`run video/wan-vace/inpaint` 或 recipe | [SAM3 追蹤](../../docs/knowledge/video/sam3-tracking.md)、[vfx-tools](../../docs/knowledge/video/vfx-tools.md) |
 | 同一張圖比較有限幾組參數 | `gameart.py edit sweep` | [edit-tools](../../docs/knowledge/art/edit-tools.md) |
@@ -44,4 +46,6 @@ description: 用本機 ComfyUI 執行已登記的圖片／影片能力：generat
 - 每次執行留技術紀錄（圖片 `*.result.json`、template `run.result.json`、影片 sidecar），`content_review` 一律 pending。
 - 技術通過不等於美術接受（[R1](../../docs/knowledge/rules/candidate-review.md)）；accept／reject 只由使用者決定後用 `gameart.py review` 記錄。
 - 首尾相接的動作依 [R3](../../docs/knowledge/rules/idle-anchoring.md) 與 template 的 `frame_anchoring` 選。
+- 動畫進遊戲前，配色與比例對基準動畫量測（[R4](../../docs/knowledge/rules/animation-consistency.md)）。
+- 同一瑕疵兩輪沒解就換方法層級（[R5](../../docs/knowledge/rules/method-stop-loss.md)）。
 - 不自動用系統播放器開成品；不硬砍 ComfyUI、不呼叫 `/interrupt`、不清 queue；逾時不重送。

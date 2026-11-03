@@ -58,10 +58,10 @@ generated: true
 - 摘要：FLUX.2 參考圖編修。固定 API graph，runner 只填 slot。
 - 媒體：image
 - 能力：image_generation
-- 狀態：draft（v0.1.1）
+- 狀態：technical_pass（v0.1.2）
 - 最低 ComfyUI：0.34.0
 - 第三方節點：（只用 core）
-- 平台：windows-cuda untested、macos-mps untested
+- 平台：windows-cuda technical_pass、macos-mps untested
 - 首尾幀：first=none、last=none、reference_role=none、time_alignment=null、continuity=null
 - 模型：flux-2-klein-base-4b-fp8.safetensors（diffusion_models，unet）、qwen_3_4b.safetensors（text_encoders，clip）、flux2-vae.safetensors（vae，vae）
 - 上游：none

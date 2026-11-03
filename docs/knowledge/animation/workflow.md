@@ -24,7 +24,7 @@ status: active
 | Idle | 等待狀態 | 是 | 使用者指定 | 已驗收 Idle 圖 | `fx_loop`（H3，首＝尾＝Idle） | `h3` | MP4；需要時 PNG frames |
 | Attack／Win／Fail 等回到 Idle 的動作 | 依用途 | 否 | 使用者指定 | 已驗收 Idle 圖（首尾） | `transition --start <Idle> --end <Idle>` | `h3` | MP4；需要時 PNG frames |
 
-所有動作第一幀用已驗收 Idle 圖；哪些 task 會鎖首／尾幀、補邊與驗收量測依 [R3 Idle 錨定](../rules/idle-anchoring.md)。`img2video` 適用原構圖 idle/展示與只出不回的動作，`fx_loop` 用於明確需要無縫循環的元素，`character_video` 適用換場景/新表演且首幀可變，`pose_drive` 使用動作參考片，`camera_move` 主體不動只運鏡。不要為整組一致而把所有動作塞進同一 task。需要更貼近動作影片的表情與手勢、或把影片中人物換成角色時，可改走獨立的 [Wan Animate／SCAIL-2 技能](../video/wan-animate-choice.md)（固定 template，用 `gameart.py run` 執行，另有自己的 preflight，不在 video_capabilities.json）。
+所有動作第一幀用已驗收 Idle 圖；哪些 task 會鎖首／尾幀、補邊與驗收量測依 [R3 Idle 錨定](../rules/idle-anchoring.md)；進遊戲前的配色與比例一致性依 [R4](../rules/animation-consistency.md)。`img2video` 適用原構圖 idle/展示與只出不回的動作，`fx_loop` 用於明確需要無縫循環的元素，`character_video` 適用換場景/新表演且首幀可變，`pose_drive` 使用動作參考片，`camera_move` 主體不動只運鏡。不要為整組一致而把所有動作塞進同一 task。需要更貼近動作影片的表情與手勢、或把影片中人物換成角色時，可改走獨立的 [Wan Animate／SCAIL-2 技能](../video/wan-animate-choice.md)（固定 template，用 `gameart.py run` 執行，另有自己的 preflight，不在 video_capabilities.json）。
 
 ## 製作與驗收
 
@@ -59,7 +59,7 @@ status: active
 
 ## 角色＋大型道具的動作
 
-角色手持大型武器或道具的動作組（橫向動作遊戲、攻擊連段），先讀[橫向動作角色動畫經驗](../experiences/side-scroller-character-anim-2026-10.md)：動作設計怎麼拆（Idle 錨點、連段、張力、影格資料）、道具貼設計原圖、用代用棍定姿勢、起點／終點補動作、SAM3 清特效與逐幀驗收的做法與限制都在那頁。
+角色手持大型武器或道具的動作組（橫向動作遊戲、攻擊連段），先讀[橫向動作角色動畫經驗](../experiences/side-scroller-character-anim-2026-10.md)：動作設計怎麼拆（Idle 錨點、連段、張力、影格資料）、道具貼設計原圖、用代用棍定姿勢、起點／終點補動作、SAM3 清特效與逐幀驗收的做法與限制都在那頁。開工前的規格卡、方法停損、配色與比例一致性檢查、早進遊戲驗切換，見[持槌拖錘跑返工檢討與決策流程](../experiences/armed-drag-run-rework-retro-2026-10.md)。
 
 ## 付費與第三方輸出
 
