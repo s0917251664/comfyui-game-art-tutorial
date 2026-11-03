@@ -15,6 +15,33 @@ status: experimental
 - **已有角色圖，只想改姿勢或手掌方向 → `generate.py flux2_edit`（`image/flux2/edit`）**，約 30 秒／張，臉、髮、衣服最能保住，也最符合「改圖不重算」。遊戲風 34／36（94%）、動漫 4 風格 79／96（82%）、寫實 17／23（74%，要挑圖）。條件：來源圖全身、單人、背景單純；一次只改一個動作；提示寫具體肢體（肘彎曲、掌心朝向；掌心朝鏡頭沿用「stop gesture」說法）；每個動作至少出 3 個 seed 挑；逐張看手、持物、髮型、服裝有無被重畫。提示格式：`Change only the pose: …  Keep the face, hairstyle, clothes, art style and the plain background unchanged.`
 - **要用姿勢庫的姿勢（不在乎臉）→ `pose_only --control-backend union --control-type depth`**，搭明確服裝 prompt、負面詞排除裸色、`--pose-strength 0.6`；姿勢遵守 16／16。姿勢庫的深度圖可直接當 `--pose-ref`。
 
+**動作選單（`gameart.py pose-edit`）**
+
+不會寫提示的人用這個：`python gameart.py pose-edit list` 看選單，`python gameart.py pose-edit run --action <id> --image <角色圖>` 執行（先加 `--preflight` 或 `--dry-run` 檢查）。內建 8 個動作與已實測的提示句型、固定尾句「Keep the face, hairstyle, accessories, clothes, art style and the plain background unchanged.」，預設 seed 7／21／99 各跑一次，輸出 `contact_sheet.png`（原圖＋各 seed）與 `pose_edit.result.json`（提示、seed、每張檢查提醒：手、持物數量、髮型與服裝是否被重畫），內容審查一律 `pending`，不自動 accept。
+
+| 動作 id | 動作 | 已知失敗（見實測紀錄） |
+|---|---|---|
+| `raise_hand` | 舉手 | 另一隻手也跟著舉 |
+| `walk` | 走路 | 厚塗風服裝被重畫 |
+| `cross_arms` | 抱胸 | 少見 |
+| `look_back_wave` | 回頭揮手 | 臉被擋，身分無法判斷 |
+| `hold_staff` | 雙手持杖（持物） | 原道具留著造成兩根、只一手握 |
+| `point` | 單手指向 | 少見 |
+| `look_down` | 低頭 | 少見 |
+| `palm_to_camera` | 掌心朝鏡頭 | 變成雙手合十或橫伸（沿用 stop gesture 句型） |
+
+2026-11-03 在 windows-cuda 實機跑 `raise_hand`、`cross_arms`、`palm_to_camera` 各 3 seed（動漫風來源圖），9／9 完成且姿勢目視達成，單張約 29 秒；證據 `output/pose-face-test/pose_edit_live/`、對照圖 `show/k_pose_edit_live.png`。底層 template `image/flux2/edit` 平台狀態仍是 `untested`（要不要升 `technical_pass` 由使用者決定），所以實跑要加 `--allow-unverified-platform`，結果只當技術試驗。
+
+**自訂與組裝（不限這 8 個動作）**
+
+- **自訂一句**：`pose-edit run --image <圖> --custom "the character waves with the left hand and looks to the right."`。工具自動加固定前綴與保留尾句；描述寫一句英文、一次一個大動作。
+- **零件組裝**：`--part 右手=舉高 --part 頭=朝左 --part 視線=往左看`（零件：left_hand、right_hand、palm、head、gaze、feet、legs、body，也可寫中文 左手、右手、手掌、頭、視線、腳步、腿、身體）；內容寫英文，或常見中文（舉高、放下、叉腰、朝鏡頭、朝下、朝左、朝右、往下看、向前跨步…會換成英文句型）。
+- **連續編修**：`--action raise_hand --part 頭=朝左`（也可 `--action a,b`，用 `--then` 分步）：上一步挑出的圖當下一步來源；每步各出 seed 與對照圖，`--pick 21` 指定上一步用哪個 seed，沒給就自動用第一張成功的（只是接續用，不是接受）。最多 4 步，建議不超過 2～3 步，偏移會累積。
+- **微調**：`--seeds 7,21` 或 `--count 4`（seed 池前 N 個）；`--keep-extra "the blue scarf"` 額外保留；`--avoid "a second staff"` 不要出現。
+- **看提示再執行**：先加 `--dry-run`，會印出每一步組好的完整英文提示，可以微調再跑。
+- **存成自己的選單**：`pose-edit save --id wave_left --label 左手揮手 --custom "..."`，寫進 repo 根目錄的 `pose_edit_actions.local.json`（不進版控），之後 `pose-edit list` 會列出，也能 `--action wave_left` 使用。
+- 2026-11-03 實機：自訂「左手揮手並看右邊」3 seed、`舉手` 後接 `頭=朝左、視線=往左看` 兩步連續編修（`--pick 21`），都 completed；證據 `output/pose-face-test/pe_custom/`、`pe_chain/`，對照圖 `show/l_pose_edit_custom_chain.png`。目視：揮手與頭部轉向多數達成；**左右手要小心**——模型多半把「左手」畫成畫面左側那隻手（角色自己的右手），要指定左右時看一眼結果，必要時改寫成 "the hand on the left side of the image"；自訂「看右邊」3 張都沒有真的轉向（臉仍朝前）。技術結果，沒有驗收。
+
 **不建議**
 
 - `pose`（OpenPose）抓無臉人偶（抽不到骨架；DWPose 只 1／4）、線稿人偶配 `canny`（線條畫進成品）、人臉庫特寫當 `--character-ref`（臉與髮型不穩）、Qwen-Image-Edit 2511 做姿態（442 秒、臉糊、複製人偶體型）。
