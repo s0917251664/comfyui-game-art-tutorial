@@ -29,7 +29,7 @@ status: current
 | 影片局部重繪 | `gameart.py run video/wan-vace/inpaint`、`video/wan-vace/inpaint-reference`（照參考圖重畫指定物件）、`generate.py video_inpaint`、recipe `object-mark-inpaint` | 遮罩外逐 byte 不變；[vfx-tools](video/vfx-tools.md) |
 | Wan Animate、SCAIL-2 | `gameart.py run video/wan-animate/*` | 技術通過、內容 candidate；[取捨](video/wan-animate-choice.md)、[安裝紀錄](video/wan-animate-install.md) |
 | SAM2 影片遮罩備援與 2D 圖層合成 | `gameart.py video-layers`（server node＋薄 client） | 不是 template；[Video Layers](video/layers.md) |
-| 外部免費臉／服裝／姿勢素材庫 | 使用者自行下載後當參考圖 | draft、未實測、有授權限制；不進 repo；[外部素材庫](art/external-asset-libraries.md) |
+| 改現有角色圖的姿勢／手掌方向；外部免費臉／服裝／姿勢素材庫 | `generate.py flux2_edit`（改姿勢）；素材庫由使用者自行下載後當參考圖 | experimental、小樣本實測（遊戲風 94%、動漫 82%、寫實 74%）；素材庫有授權限制、不進 repo；[可用結論](art/external-asset-libraries.md) |
 | 多步驟含確認點的流程 | `gameart.py recipe` | [templates/README](../../templates/README.md)「recipe」 |
 | 參數比較 sweep | `gameart.py edit sweep` | 包裝四個既有圖片 task，最多 16 個候選；[edit-tools](art/edit-tools.md) |
 | 本機像素處理 | `gameart.py edit`（composite、recolor、compare、reference-board、asset-audit） | Pillow／NumPy；[edit-tools](art/edit-tools.md)、[單一物件換色](art/single-object-color.md) |

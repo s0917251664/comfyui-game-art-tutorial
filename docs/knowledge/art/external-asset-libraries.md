@@ -1,10 +1,30 @@
 ---
 type: reference
-status: draft
+status: experimental
 ---
 # 外部免費素材庫（臉、服裝、姿勢）
 
 來源：Block 客（blocktempo）2026-11-01 報導〈佛心 AI 素材庫〉，日本創作者あぎ（Agi）公開的三個素材庫。這是新聞轉述，**條款細節以三個站的原始頁面為準**；「在本專案怎麼用」一節已於 2026-11-02 做過一輪小規模實測（見「實測紀錄」），結論只在該範圍內成立。
+
+## 可用結論（先讀這裡）
+
+2026-11-02 在本機 Windows 實測五輪（下方「實測紀錄」有細節與證據路徑）。全是小樣本的目視技術結果，不是美術接受；輸出仍走 [R1](../rules/candidate-review.md) 逐張驗收。
+
+**可以用**
+
+- **已有角色圖，只想改姿勢或手掌方向 → `generate.py flux2_edit`（`image/flux2/edit`）**，約 30 秒／張，臉、髮、衣服最能保住，也最符合「改圖不重算」。遊戲風 34／36（94%）、動漫 4 風格 79／96（82%）、寫實 17／23（74%，要挑圖）。條件：來源圖全身、單人、背景單純；一次只改一個動作；提示寫具體肢體（肘彎曲、掌心朝向；掌心朝鏡頭沿用「stop gesture」說法）；每個動作至少出 3 個 seed 挑；逐張看手、持物、髮型、服裝有無被重畫。提示格式：`Change only the pose: …  Keep the face, hairstyle, clothes, art style and the plain background unchanged.`
+- **要用姿勢庫的姿勢（不在乎臉）→ `pose_only --control-backend union --control-type depth`**，搭明確服裝 prompt、負面詞排除裸色、`--pose-strength 0.6`；姿勢遵守 16／16。姿勢庫的深度圖可直接當 `--pose-ref`。
+
+**不建議**
+
+- `pose`（OpenPose）抓無臉人偶（抽不到骨架；DWPose 只 1／4）、線稿人偶配 `canny`（線條畫進成品）、人臉庫特寫當 `--character-ref`（臉與髮型不穩）、Qwen-Image-Edit 2511 做姿態（442 秒、臉糊、複製人偶體型）。
+- 兩段式重畫臉（先生圖再 `guided_inpaint` 重畫頭部）只有正面頭勉強成立，側臉失敗。
+
+**還沒解決或沒驗證**
+
+- 保臉：轉側面或背面時身分無法判斷，沒有量化比對。
+- 手指數量與細節：沒有逐指檢查；MeshGraphormer 手部深度偵測 11／16，但局部重繪沒做。
+- 姿勢庫沒有走、跑、揮擊類動作；服裝庫沒測；連續多格動畫一致性沒測。
 
 ## 三個素材庫
 
@@ -21,7 +41,7 @@ status: draft
 - **姿勢深度圖 → `--control-type depth`**：深度圖可直接當 `--pose-ref`，不必另外抽取；兩個姿勢（雙手扠腰、側身展臂）都被遵守，不論帶不帶角色參考。限制：深度圖是無衣裸色人偶，輸出容易照人偶體型生出內衣／緊身衣，且 prompt 寫了衣服也會被壓過，要自己控制 prompt 與負面詞並逐張看。
 - **線稿版 → `canny`**：姿勢被遵守，但人偶線條與關節球會被當成真實邊緣畫進成品（成品像畫了線的假人），不能直接當乾淨姿勢控制；深度圖餵 `canny` 同樣不乾淨（頭髮亂散）。
 - **`pose`（OpenPose）**：線稿人偶與深度圖人偶都**抽不到有效骨架**——成品退回 prompt／角色參考本身，變成與姿勢無關的臉部特寫。無臉人偶不能用 `pose`。
-- **人臉 → 角色一致性參考**：人臉庫圖是脖子以上的特寫，當 `character_action` 的 `--character-ref` 時，該路線偏向照參考構圖與髮型，臉不穩定：同 seed 換姿勢，臉部相似度與髮型（短髮／過長髮／髮片失真）都不一致，不能說「換姿勢不換臉」成立。降低 `--ip-weight` 到 0.4 也沒有改善（出現髮簾狀失真）。
+- **人臉 → 角色一致性參考**：人臉庫圖是脖子以上的特寫，當 `character_action` 的 `--character-ref` 時，該路線偏向照參考構圖與髮型，臉不穩定：同 seed 換姿勢，臉部相似度與髮型（短髮／過長髮／髮片失真）都不一致，不能說「換姿勢但臉不變」成立。降低 `--ip-weight` 到 0.4 也沒有改善（出現髮簾狀失真）。
 - **服裝 → 外觀參考**：未測。
 - 這些庫的臉、衣服、姿勢風格偏寫實 AI 美女與成人市場（報導稱姿勢庫約三分之二偏成人向）；實際看到的 `全身1人・標準系` 分類也以坐、跪、躺的擺拍為主，找不到行走／揮擊類動作。遊戲動作用途能用的很少，使用前要先挑。
 
@@ -37,14 +57,12 @@ status: draft
 - 第二輪實驗（2026-11-02，只用本機已裝的節點與模型，**沒有下載或安裝任何東西**）：
   - DWPose（`DWPreprocessor`，`dw-ll_ucoco_384.onnx` + `yolox_l.onnx`，本機原本就有）：對 4 張人偶（深度圖、線稿各 2）只有 1 張（線稿 P077 側身展臂）抽出骨架與手指點，其餘 3 張全黑＝抽不到；對一張真人照片可抽出。證據 `output/pose-face-test/dwpose/`、`sheet4.png`。結論：DWPose 比 OpenPose 稍好但對無臉人偶不穩，不能當穩定做法。
   - Qwen-Image-Edit 2511 三參考（`image/qwen-image-edit/three-reference`，加 `--allow-unverified-platform`，442 秒／張）：圖1放深度圖 P077、圖2/3放兩張臉。姿勢與張開手掌朝向遵守，但輸出照抄人偶的肌肉與體型、衣服只剩白色連身，臉糊成無五官，臉庫的身分沒帶過來。證據 `output/pose-face-test/qwen_P077/`、`sheet5.png`。單張，僅此範圍。
-  - 未做：MeshGraphormer 手部深度（節點已裝，但權重檔本機沒有，需下載，先等你決定）；FLUX.2 編修；Yedp-Action-Director 骨架輸出。
   - MeshGraphormer 手部深度（2026-11-02，Steve 同意後下載）：節點首次執行自動下載 2 個權重，來源 Hugging Face `hr16/ControlNet-HandRefiner-pruned`，合計約 1.3GB：`graphormer_hand_state_dict.bin` 855,658,184 bytes、`hrnetv2_w64_imagenet_pretrained.pth` 513,111,608 bytes，位置 `C:\Users\XU\ComfyUI\custom_nodes\comfyui_controlnet_aux\ckpts\hr16\`（要移除就刪這個資料夾）。對 3 張 SDXL 生成圖（含兩張 union depth 站姿）執行：3 張只有 1 張抓到一隻手（側身展臂的右手，深度圖與遮罩可用），另 1 張只有碎片，其餘全黑＝偵測不到手。證據 `output/pose-face-test/mesh/`、`sheet6.png`。結論：偵測率低，單靠它不能保證補到手；後續「深度圖＋depth ControlNet 局部重繪」未做，因為多數圖沒有可用的手部深度。
-  - 未做：FLUX.2 編修改姿態／手掌方向、Yedp-Action-Director 骨架輸出。
   - **第三輪（2026-11-02，皆為實驗，沒改固定 template）**
     - 穩定性＋服裝：`pose_only --control-backend union --control-type depth`，prompt 明寫白 T 恤、牛仔褲、白球鞋，負面詞排除裸色與緊身衣；2 姿勢（P018 扠腰、P077 側身展臂）× seed 1–4 × `--pose-strength` 1.0／0.6，共 16 張，每張約 8–17 秒。目視：16／16 姿勢遵守（含手臂方向與張開手掌）；強度 0.6 的 8 張全部穿成牛仔褲與上衣，強度 1.0 有 3 張腿或上衣變半透明／發亮的人偶質感。**服裝要靠 prompt 加負面詞加 `--pose-strength 0.6`**，手指細節仍需逐張看。證據 `output/pose-face-test/s2/`、`sheet7_0.png`、`sheet7_1.png`。
     - 手部偵測統計：上述 16 張丟 MeshGraphormer，11／16 抓到手（強度 0.6 為 7／8，強度 1.0 為 4／8）；P077 展臂 7／8，P018 扠腰 4／8。證據 `output/pose-face-test/mesh2/`。比第二輪的 1／3 高，但後續「深度圖＋depth ControlNet 局部重繪手」仍沒做。
-    - 兩段式換臉（先 depth 生全身圖，再 `guided_inpaint` 只重畫頭部橢圓，`--appearance-ref` 臉庫特寫，denoise 0.85，seed 7）：正面頭的 P018，權重 0.6 得到有劉海短髮與微笑、與臉參考大致像，權重 1.0 臉被頭髮蓋住；側轉頭的 P077 權重 0.6 變灰色圓盤、1.0 臉被頭髮擋住。→ 只對正面頭有機會，側臉不行，身分相似度只做目視且單張。證據 `output/pose-face-test/s3/`、`sheet8.png`。
-    - **FLUX.2 單圖編修（`image/flux2/edit`，加 `--allow-unverified-platform`，32 秒）：以 P018 成品為來源，prompt 要求「雙臂向兩側伸直、掌心朝前，臉髮衣服不變」，結果姿勢改對、掌心朝前，臉、髮型、上衣、牛仔褲幾乎不變。證據 `output/pose-face-test/flux2_edit/`、`sheet9.png`。單張單 seed，是目前「換姿勢不換臉」最有希望的路。**
+    - 兩段式重畫臉（先 depth 生全身圖，再 `guided_inpaint` 只重畫頭部橢圓，`--appearance-ref` 臉庫特寫，denoise 0.85，seed 7）：正面頭的 P018，權重 0.6 得到有劉海短髮與微笑、與臉參考大致像，權重 1.0 臉被頭髮蓋住；側轉頭的 P077 權重 0.6 變灰色圓盤、1.0 臉被頭髮擋住。→ 只對正面頭有機會，側臉不行，身分相似度只做目視且單張。證據 `output/pose-face-test/s3/`、`sheet8.png`。
+    - **FLUX.2 單圖編修（`image/flux2/edit`，加 `--allow-unverified-platform`，32 秒）：以 P018 成品為來源，prompt 要求「雙臂向兩側伸直、掌心朝前，臉髮衣服不變」，結果姿勢改對、掌心朝前，臉、髮型、上衣、牛仔褲幾乎不變。證據 `output/pose-face-test/flux2_edit/`、`sheet9.png`。單張單 seed，是目前「換姿勢但臉不變」最有希望的路。**
     - 姿勢多樣性：姿勢庫 `ポーズ名` 找不到走、跑、揮擊類（只有「振り向く」回頭類），列為限制。
     - 未做：Yedp-Action-Director 骨架輸出（需在 ComfyUI 介面擺 3D 人偶，無法 API 自動化）。
   - **第四輪：FLUX.2 單圖編修改姿勢穩定性（2026-11-02，`image/flux2/edit`，`--allow-unverified-platform`，單張約 28–32 秒，全為目視判斷、不是量測）**
@@ -68,12 +86,12 @@ status: draft
     |---|---|---|
     | 要姿勢庫的姿勢、不在乎臉 | union depth ＋ 明確服裝 prompt ＋ `--pose-strength 0.6` | 姿勢遵守 16／16；手需驗收 |
     | 已有一張角色圖，只想改姿勢或手掌方向 | FLUX.2 `image/flux2/edit` | 保臉保衣最好，一次一個動作，逐張驗收 |
-    | 想用臉庫換臉 | 先生圖，再 `guided_inpaint` 重畫頭部（正面頭、權重 0.6） | 側臉失敗；相似度未量化 |
+    | 想用臉庫重畫臉 | 先生圖，再 `guided_inpaint` 重畫頭部（正面頭、權重 0.6） | 側臉失敗；相似度未量化 |
     | 用 pose／OpenPose 抓無臉人偶 | 不建議 | 抽不到骨架；DWPose 也只 1／4 |
     | 線稿人偶 canny | 不建議 | 線條畫進成品 |
     | 手部修補 | MeshGraphormer 偵測 11／16，可當手部深度來源 | 局部重繪未測 |
   - 這輪結論：姿勢遵守靠 depth 類控制（union depth 最乾淨）；「保臉」在這些方法都沒解決，不能靠臉庫特寫。
-- 暫時結論：姿勢庫深度圖可當姿勢來源；要「換姿勢不換臉」不能靠人臉庫特寫配 `character_action`，須另找一致性方法（先實驗，標明實驗，再依擴充協議）。
+- 結論見頁首「可用結論」：姿勢庫深度圖可當姿勢來源；「換姿勢但臉不變」改走 `flux2_edit`，不靠人臉庫特寫。
 
 ## 使用規則
 
