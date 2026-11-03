@@ -594,9 +594,11 @@ class PreflightCliTests(PreflightFixture, unittest.TestCase):
 
 # 新增後還沒有實機證據的 template 放這裡,狀態維持 draft。有實機技術通過後移出。
 # video/wan-vace/inpaint 已在 2026-10-08 windows-cuda 通過,不再列在這裡。
-DRAFT_UNTIL_LIVE_RUN = set(golden.VIDEO_TEMPLATE_IDS) | {
+# image/flux2/edit 已在 2026-11-03 windows-cuda 實機通過(171 次 run、sha256 核對),移出。
+LIVE_PASSED = {"image/flux2/edit"}
+DRAFT_UNTIL_LIVE_RUN = (set(golden.VIDEO_TEMPLATE_IDS) | {
     template_id for template_id in T.discover(TEMPLATES) if template_id.startswith(("image/", "3d/"))
-}
+}) - LIVE_PASSED
 
 
 class RealTemplatePinsTests(unittest.TestCase):
