@@ -1,0 +1,443 @@
+[
+ {
+  "frame": 0,
+  "mask_px": 10881,
+  "outside_px": 315707,
+  "outside_changed_gt0": 268759,
+  "outside_changed_gt8": 8963,
+  "outside_mean_abs": 1.4346181744465596,
+  "inside_changed_gt8": 10870
+ },
+ {
+  "frame": 1,
+  "mask_px": 10979,
+  "outside_px": 316466,
+  "outside_changed_gt0": 261178,
+  "outside_changed_gt8": 11217,
+  "outside_mean_abs": 1.525478250428166,
+  "inside_changed_gt8": 10978
+ },
+ {
+  "frame": 2,
+  "mask_px": 16262,
+  "outside_px": 299349,
+  "outside_changed_gt0": 242594,
+  "outside_changed_gt8": 8923,
+  "outside_mean_abs": 1.4204156352618516,
+  "inside_changed_gt8": 16137
+ },
+ {
+  "frame": 3,
+  "mask_px": 11922,
+  "outside_px": 315232,
+  "outside_changed_gt0": 240937,
+  "outside_changed_gt8": 8904,
+  "outside_mean_abs": 1.3363237234798497,
+  "inside_changed_gt8": 11912
+ },
+ {
+  "frame": 4,
+  "mask_px": 19951,
+  "outside_px": 294060,
+  "outside_changed_gt0": 221497,
+  "outside_changed_gt8": 9567,
+  "outside_mean_abs": 1.4267700469291982,
+  "inside_changed_gt8": 19431
+ },
+ {
+  "frame": 5,
+  "mask_px": 17081,
+  "outside_px": 296985,
+  "outside_changed_gt0": 226753,
+  "outside_changed_gt8": 10066,
+  "outside_mean_abs": 1.6562216946983854,
+  "inside_changed_gt8": 16531
+ },
+ {
+  "frame": 6,
+  "mask_px": 17175,
+  "outside_px": 297952,
+  "outside_changed_gt0": 223525,
+  "outside_changed_gt8": 11146,
+  "outside_mean_abs": 1.6595256954140265,
+  "inside_changed_gt8": 16619
+ },
+ {
+  "frame": 7,
+  "mask_px": 17700,
+  "outside_px": 297127,
+  "outside_changed_gt0": 217205,
+  "outside_changed_gt8": 10810,
+  "outside_mean_abs": 1.4594230749814052,
+  "inside_changed_gt8": 16398
+ },
+ {
+  "frame": 8,
+  "mask_px": 15605,
+  "outside_px": 299312,
+  "outside_changed_gt0": 209622,
+  "outside_changed_gt8": 10440,
+  "outside_mean_abs": 1.381912519377773,
+  "inside_changed_gt8": 13973
+ },
+ {
+  "frame": 9,
+  "mask_px": 16100,
+  "outside_px": 298872,
+  "outside_changed_gt0": 197518,
+  "outside_changed_gt8": 11166,
+  "outside_mean_abs": 1.3954502261837844,
+  "inside_changed_gt8": 15453
+ },
+ {
+  "frame": 10,
+  "mask_px": 17008,
+  "outside_px": 297789,
+  "outside_changed_gt0": 197000,
+  "outside_changed_gt8": 11465,
+  "outside_mean_abs": 1.4332799398231635,
+  "inside_changed_gt8": 16370
+ },
+ {
+  "frame": 11,
+  "mask_px": 16045,
+  "outside_px": 298607,
+  "outside_changed_gt0": 216969,
+  "outside_changed_gt8": 10542,
+  "outside_mean_abs": 1.501649325032568,
+  "inside_changed_gt8": 15588
+ },
+ {
+  "frame": 12,
+  "mask_px": 16403,
+  "outside_px": 298651,
+  "outside_changed_gt0": 205375,
+  "outside_changed_gt8": 10728,
+  "outside_mean_abs": 1.4688750414363254,
+  "inside_changed_gt8": 16050
+ },
+ {
+  "frame": 13,
+  "mask_px": 16340,
+  "outside_px": 298654,
+  "outside_changed_gt0": 200142,
+  "outside_changed_gt8": 10861,
+  "outside_mean_abs": 1.4837002015710488,
+  "inside_changed_gt8": 16007
+ },
+ {
+  "frame": 14,
+  "mask_px": 16104,
+  "outside_px": 298632,
+  "outside_changed_gt0": 200259,
+  "outside_changed_gt8": 9169,
+  "outside_mean_abs": 1.3619739344745372,
+  "inside_changed_gt8": 15373
+ },
+ {
+  "frame": 15,
+  "mask_px": 14474,
+  "outside_px": 301065,
+  "outside_changed_gt0": 204087,
+  "outside_changed_gt8": 10082,
+  "outside_mean_abs": 1.3222925281915865,
+  "inside_changed_gt8": 12978
+ },
+ {
+  "frame": 16,
+  "mask_px": 14495,
+  "outside_px": 301082,
+  "outside_changed_gt0": 194584,
+  "outside_changed_gt8": 10122,
+  "outside_mean_abs": 1.2974604924904178,
+  "inside_changed_gt8": 12961
+ },
+ {
+  "frame": 17,
+  "mask_px": 9385,
+  "outside_px": 317403,
+  "outside_changed_gt0": 197279,
+  "outside_changed_gt8": 10084,
+  "outside_mean_abs": 1.2321685680349588,
+  "inside_changed_gt8": 9383
+ },
+ {
+  "frame": 18,
+  "mask_px": 10006,
+  "outside_px": 314471,
+  "outside_changed_gt0": 194112,
+  "outside_changed_gt8": 9354,
+  "outside_mean_abs": 1.2250732181981805,
+  "inside_changed_gt8": 9998
+ },
+ {
+  "frame": 19,
+  "mask_px": 10555,
+  "outside_px": 316300,
+  "outside_changed_gt0": 210652,
+  "outside_changed_gt8": 10247,
+  "outside_mean_abs": 1.3436642428074612,
+  "inside_changed_gt8": 10553
+ },
+ {
+  "frame": 20,
+  "mask_px": 10522,
+  "outside_px": 316318,
+  "outside_changed_gt0": 199893,
+  "outside_changed_gt8": 10286,
+  "outside_mean_abs": 1.311635758951435,
+  "inside_changed_gt8": 10520
+ },
+ {
+  "frame": 21,
+  "mask_px": 10470,
+  "outside_px": 316273,
+  "outside_changed_gt0": 193483,
+  "outside_changed_gt8": 10666,
+  "outside_mean_abs": 1.2603099221242409,
+  "inside_changed_gt8": 10468
+ },
+ {
+  "frame": 22,
+  "mask_px": 10941,
+  "outside_px": 316230,
+  "outside_changed_gt0": 192483,
+  "outside_changed_gt8": 10613,
+  "outside_mean_abs": 1.2577491066628719,
+  "inside_changed_gt8": 10941
+ },
+ {
+  "frame": 23,
+  "mask_px": 11756,
+  "outside_px": 311673,
+  "outside_changed_gt0": 199274,
+  "outside_changed_gt8": 11185,
+  "outside_mean_abs": 1.3143647348342653,
+  "inside_changed_gt8": 11602
+ },
+ {
+  "frame": 24,
+  "mask_px": 12650,
+  "outside_px": 314549,
+  "outside_changed_gt0": 197157,
+  "outside_changed_gt8": 8260,
+  "outside_mean_abs": 1.1851221908192364,
+  "inside_changed_gt8": 12650
+ },
+ {
+  "frame": 25,
+  "mask_px": 12010,
+  "outside_px": 309724,
+  "outside_changed_gt0": 201580,
+  "outside_changed_gt8": 11834,
+  "outside_mean_abs": 1.4835853856982346,
+  "inside_changed_gt8": 11982
+ },
+ {
+  "frame": 26,
+  "mask_px": 12995,
+  "outside_px": 313725,
+  "outside_changed_gt0": 203312,
+  "outside_changed_gt8": 9134,
+  "outside_mean_abs": 1.2663319786437166,
+  "inside_changed_gt8": 12975
+ },
+ {
+  "frame": 27,
+  "mask_px": 12791,
+  "outside_px": 313151,
+  "outside_changed_gt0": 202477,
+  "outside_changed_gt8": 8544,
+  "outside_mean_abs": 1.2436683900099312,
+  "inside_changed_gt8": 12782
+ },
+ {
+  "frame": 28,
+  "mask_px": 12428,
+  "outside_px": 313476,
+  "outside_changed_gt0": 198870,
+  "outside_changed_gt8": 8419,
+  "outside_mean_abs": 1.2275453304240198,
+  "inside_changed_gt8": 12424
+ },
+ {
+  "frame": 29,
+  "mask_px": 10406,
+  "outside_px": 316473,
+  "outside_changed_gt0": 204790,
+  "outside_changed_gt8": 10328,
+  "outside_mean_abs": 1.2983445665191027,
+  "inside_changed_gt8": 10406
+ },
+ {
+  "frame": 30,
+  "mask_px": 9892,
+  "outside_px": 316996,
+  "outside_changed_gt0": 203313,
+  "outside_changed_gt8": 9138,
+  "outside_mean_abs": 1.217299271915103,
+  "inside_changed_gt8": 9891
+ },
+ {
+  "frame": 31,
+  "mask_px": 9831,
+  "outside_px": 317069,
+  "outside_changed_gt0": 203563,
+  "outside_changed_gt8": 9240,
+  "outside_mean_abs": 1.2162431521214625,
+  "inside_changed_gt8": 9831
+ },
+ {
+  "frame": 32,
+  "mask_px": 12697,
+  "outside_px": 314074,
+  "outside_changed_gt0": 202078,
+  "outside_changed_gt8": 7996,
+  "outside_mean_abs": 1.2407649152747442,
+  "inside_changed_gt8": 12689
+ },
+ {
+  "frame": 33,
+  "mask_px": 11190,
+  "outside_px": 315823,
+  "outside_changed_gt0": 199898,
+  "outside_changed_gt8": 9439,
+  "outside_mean_abs": 1.2988952672857899,
+  "inside_changed_gt8": 11189
+ },
+ {
+  "frame": 34,
+  "mask_px": 11114,
+  "outside_px": 316061,
+  "outside_changed_gt0": 198046,
+  "outside_changed_gt8": 10666,
+  "outside_mean_abs": 1.3005084461543817,
+  "inside_changed_gt8": 11113
+ },
+ {
+  "frame": 35,
+  "mask_px": 11168,
+  "outside_px": 315981,
+  "outside_changed_gt0": 200155,
+  "outside_changed_gt8": 9504,
+  "outside_mean_abs": 1.2301056076156478,
+  "inside_changed_gt8": 11167
+ },
+ {
+  "frame": 36,
+  "mask_px": 11795,
+  "outside_px": 315344,
+  "outside_changed_gt0": 195394,
+  "outside_changed_gt8": 9505,
+  "outside_mean_abs": 1.2159451265919123,
+  "inside_changed_gt8": 11790
+ },
+ {
+  "frame": 37,
+  "mask_px": 15606,
+  "outside_px": 310881,
+  "outside_changed_gt0": 193839,
+  "outside_changed_gt8": 10533,
+  "outside_mean_abs": 1.380222657544205,
+  "inside_changed_gt8": 15602
+ },
+ {
+  "frame": 38,
+  "mask_px": 13061,
+  "outside_px": 311824,
+  "outside_changed_gt0": 209267,
+  "outside_changed_gt8": 9556,
+  "outside_mean_abs": 1.3899154651341783,
+  "inside_changed_gt8": 13005
+ },
+ {
+  "frame": 39,
+  "mask_px": 12659,
+  "outside_px": 313345,
+  "outside_changed_gt0": 216659,
+  "outside_changed_gt8": 8667,
+  "outside_mean_abs": 1.3801624407601845,
+  "inside_changed_gt8": 12653
+ },
+ {
+  "frame": 40,
+  "mask_px": 11319,
+  "outside_px": 315365,
+  "outside_changed_gt0": 228093,
+  "outside_changed_gt8": 8792,
+  "outside_mean_abs": 1.3273730439332203,
+  "inside_changed_gt8": 11317
+ },
+ {
+  "frame": 41,
+  "mask_px": 11163,
+  "outside_px": 315326,
+  "outside_changed_gt0": 255593,
+  "outside_changed_gt8": 8557,
+  "outside_mean_abs": 1.4029004902862434,
+  "inside_changed_gt8": 11162
+ },
+ {
+  "frame": 42,
+  "mask_px": 11177,
+  "outside_px": 315338,
+  "outside_changed_gt0": 260919,
+  "outside_changed_gt8": 8583,
+  "outside_mean_abs": 1.4133279211512726,
+  "inside_changed_gt8": 11177
+ },
+ {
+  "frame": 43,
+  "mask_px": 11553,
+  "outside_px": 315355,
+  "outside_changed_gt0": 266382,
+  "outside_changed_gt8": 8227,
+  "outside_mean_abs": 1.4383567725262005,
+  "inside_changed_gt8": 11539
+ },
+ {
+  "frame": 44,
+  "mask_px": 11548,
+  "outside_px": 315321,
+  "outside_changed_gt0": 265675,
+  "outside_changed_gt8": 8236,
+  "outside_mean_abs": 1.4405795998363573,
+  "inside_changed_gt8": 11535
+ },
+ {
+  "frame": 45,
+  "mask_px": 9460,
+  "outside_px": 317845,
+  "outside_changed_gt0": 269207,
+  "outside_changed_gt8": 9150,
+  "outside_mean_abs": 1.466894240903585,
+  "inside_changed_gt8": 9460
+ },
+ {
+  "frame": 46,
+  "mask_px": 9567,
+  "outside_px": 317664,
+  "outside_changed_gt0": 264393,
+  "outside_changed_gt8": 9137,
+  "outside_mean_abs": 1.4551696131761862,
+  "inside_changed_gt8": 9566
+ },
+ {
+  "frame": 47,
+  "mask_px": 10173,
+  "outside_px": 316991,
+  "outside_changed_gt0": 268965,
+  "outside_changed_gt8": 9744,
+  "outside_mean_abs": 1.5232798407525765,
+  "inside_changed_gt8": 10173
+ },
+ {
+  "frame": 48,
+  "mask_px": 13709,
+  "outside_px": 312833,
+  "outside_changed_gt0": 265948,
+  "outside_changed_gt8": 7817,
+  "outside_mean_abs": 1.5528860446308415,
+  "inside_changed_gt8": 13702
+ }
+]
