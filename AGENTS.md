@@ -30,7 +30,7 @@
 
 - **`generate.py <task>`** 是圖片與影片 task 的入口：依 task 與旗標選出 template id，交給 runner 執行。
 - **`gameart.py run <template id>`** 直接執行沒有 `generate.py` task 的固定流程（Wan Animate、SCAIL-2、SAM3 追蹤、VACE 局部重繪）。順序：`run show` → `--dry-run` → `--preflight` → 實際執行（寫 `run.result.json`）。
-- **`gameart.py pose-edit`**：角色圖改姿勢的動作選單。本機包裝工具，每個 seed 用固定 template `image/flux2/edit` 跑一次（走 runner，不另組 graph），再拼對照圖與寫檢查提醒；不自動 accept。
+- **`gameart.py pose-edit`**：角色圖改姿勢的動作選單，也可自訂一句（`--custom`）、零件組裝（`--part`）、連續編修（`--action a,b`）、存成個人選單（`save`）。本機包裝工具，每個 seed 用固定 template `image/flux2/edit` 跑一次（走 runner，不另組 graph），再拼對照圖與寫檢查提醒；不自動 accept。
 - **`gameart.py recipe`**：多步驟、中間要人工確認的流程；停在確認點，使用者確認後才 `resume --confirm`。
 - **本機 Python 工具**（`edit`、`design`、`vfx`、`film-audio`、`film-qwen`、`film-lipsync`、`mask-session`、`mask-refine`、`sam`、`video-layers`）不經 template，不套 template 做法；文件寫清楚它們是本機工具。
 - 交付用的生成不臨場組或改 ComfyUI graph（[R2](docs/knowledge/rules/fixed-graphs.md)）。現有 template 做不好時，主動思考既有節點怎麼重新組合成新做法：標明是實驗、在 ComfyUI 試，成功且使用者確認後照[擴充協議](docs/knowledge/maintenance/extension-protocol.md)做成 template 進產線。缺能力不自動換引擎；下載模型、安裝節點先問。

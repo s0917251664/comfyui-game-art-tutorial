@@ -29,3 +29,6 @@ docs/knowledge/Untitled*.canvas
 # macOS metadata (AppleDouble resource forks, Finder state)
 ._*
 .DS_Store
+
+# pose-edit 使用者自訂動作選單（個人資料，不進版控）
+pose_edit_actions.local.json

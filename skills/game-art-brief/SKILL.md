@@ -14,7 +14,7 @@ description: 遊戲美術需求的共用入口：第一次使用時盤點需求�
 | 第一次使用、還沒選路線 | 先整理需求、盤點能力，不預設安裝。可以只用需求整理與平台圖片工具，不必裝 ComfyUI 或 Python。已有 ComfyUI 專案就沿用已選路線，用 `gameart.py doctor`（唯讀）看三份機器快照是否缺少或過期。見 [初始化](../../docs/knowledge/installation/initialization.md) |
 | 整理產圖、編修、特效需求 | 照 [brief 與驗收](../../docs/knowledge/art/brief-and-acceptance.md)：來源與參考圖各自的用途、要改與要保留的、分階段、版本、驗收條件 |
 | 多張參考圖、指定部位編修、要保留角色或結構 | 對照 [編修情境](../../docs/knowledge/art/edit-scenarios.md) 找到對應的 task 與界線；task 有沒有這個輸入以 `generate.py <task> --help` 為準 |
-| 改現有角色圖的姿勢或手掌方向；使用者想用外部免費臉／服裝／姿勢素材庫當參考 | 讀 [外部素材庫](../../docs/knowledge/art/external-asset-libraries.md) 的「可用結論」：改姿勢優先 `gameart.py pose-edit`（動作選單；底層是 `image/flux2/edit`，一次一個動作、預設 3 個 seed、逐張驗收），選單沒有的動作才自己寫 `flux2_edit` 提示；用素材庫先講授權限制（不進 repo、不批次下載、不用於真人／未成年）；都是小樣本實驗結果，如實告知 |
+| 改現有角色圖的姿勢或手掌方向；使用者想用外部免費臉／服裝／姿勢素材庫當參考 | 讀 [外部素材庫](../../docs/knowledge/art/external-asset-libraries.md) 的「可用結論」：改姿勢優先 `gameart.py pose-edit`（動作選單；底層是 `image/flux2/edit`，一次一個動作、預設 3 個 seed、逐張驗收），選單沒有的動作由 agent 主動幫使用者組裝：先問想改哪個部位與動作，用 `--custom`／`--part` 組，`--dry-run` 把提示翻成白話給使用者確認，提醒一次一個大動作與多 seed；用素材庫先講授權限制（不進 repo、不批次下載、不用於真人／未成年）；都是小樣本實驗結果，如實告知 |
 | 物件系列、特效、角色動作的製作方法 | 看 brief 頁的製作方法段，再交給執行技能 |
 | 讀寫專案知識庫 | 先看 [TOOLS.md](../../docs/knowledge/TOOLS.md) 找主題，只讀需要的頁面，不載入整庫 |
 

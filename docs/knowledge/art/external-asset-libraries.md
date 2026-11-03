@@ -32,6 +32,16 @@ status: experimental
 
 2026-11-03 在 windows-cuda 實機跑 `raise_hand`、`cross_arms`、`palm_to_camera` 各 3 seed（動漫風來源圖），9／9 完成且姿勢目視達成，單張約 29 秒；證據 `output/pose-face-test/pose_edit_live/`、對照圖 `show/k_pose_edit_live.png`。底層 template `image/flux2/edit` 平台狀態仍是 `untested`（要不要升 `technical_pass` 由使用者決定），所以實跑要加 `--allow-unverified-platform`，結果只當技術試驗。
 
+**自訂與組裝（不限這 8 個動作）**
+
+- **自訂一句**：`pose-edit run --image <圖> --custom "the character waves with the left hand and looks to the right."`。工具自動加固定前綴與保留尾句；描述寫一句英文、一次一個大動作。
+- **零件組裝**：`--part 右手=舉高 --part 頭=朝左 --part 視線=往左看`（零件：left_hand、right_hand、palm、head、gaze、feet、legs、body，也可寫中文 左手、右手、手掌、頭、視線、腳步、腿、身體）；內容寫英文，或常見中文（舉高、放下、叉腰、朝鏡頭、朝下、朝左、朝右、往下看、向前跨步…會換成英文句型）。
+- **連續編修**：`--action raise_hand --part 頭=朝左`（也可 `--action a,b`，用 `--then` 分步）：上一步挑出的圖當下一步來源；每步各出 seed 與對照圖，`--pick 21` 指定上一步用哪個 seed，沒給就自動用第一張成功的（只是接續用，不是接受）。最多 4 步，建議不超過 2～3 步，偏移會累積。
+- **微調**：`--seeds 7,21` 或 `--count 4`（seed 池前 N 個）；`--keep-extra "the blue scarf"` 額外保留；`--avoid "a second staff"` 不要出現。
+- **看提示再執行**：先加 `--dry-run`，會印出每一步組好的完整英文提示，可以微調再跑。
+- **存成自己的選單**：`pose-edit save --id wave_left --label 左手揮手 --custom "..."`，寫進 repo 根目錄的 `pose_edit_actions.local.json`（不進版控），之後 `pose-edit list` 會列出，也能 `--action wave_left` 使用。
+- 2026-11-03 實機：自訂「左手揮手並看右邊」3 seed、`舉手` 後接 `頭=朝左、視線=往左看` 兩步連續編修（`--pick 21`），都 completed；證據 `output/pose-face-test/pe_custom/`、`pe_chain/`，對照圖 `show/l_pose_edit_custom_chain.png`。目視：揮手與頭部轉向多數達成；**左右手要小心**——模型多半把「左手」畫成畫面左側那隻手（角色自己的右手），要指定左右時看一眼結果，必要時改寫成 "the hand on the left side of the image"；自訂「看右邊」3 張都沒有真的轉向（臉仍朝前）。技術結果，沒有驗收。
+
 **不建議**
 
 - `pose`（OpenPose）抓無臉人偶（抽不到骨架；DWPose 只 1／4）、線稿人偶配 `canny`（線條畫進成品）、人臉庫特寫當 `--character-ref`（臉與髮型不穩）、Qwen-Image-Edit 2511 做姿態（442 秒、臉糊、複製人偶體型）。
