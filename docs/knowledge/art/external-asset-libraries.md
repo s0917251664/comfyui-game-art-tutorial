@@ -30,7 +30,7 @@ status: experimental
 | `look_down` | 低頭 | 少見 |
 | `palm_to_camera` | 掌心朝鏡頭 | 變成雙手合十或橫伸（沿用 stop gesture 句型） |
 
-2026-11-03 在 windows-cuda 實機跑 `raise_hand`、`cross_arms`、`palm_to_camera` 各 3 seed（動漫風來源圖），9／9 完成且姿勢目視達成，單張約 29 秒；證據 `output/pose-face-test/pose_edit_live/`、對照圖 `show/k_pose_edit_live.png`。底層 template `image/flux2/edit` 平台狀態仍是 `untested`（要不要升 `technical_pass` 由使用者決定），所以實跑要加 `--allow-unverified-platform`，結果只當技術試驗。
+2026-11-03 在 windows-cuda 實機跑 `raise_hand`、`cross_arms`、`palm_to_camera` 各 3 seed（動漫風來源圖），9／9 完成且姿勢目視達成，單張約 29 秒；證據 `output/pose-face-test/pose_edit_live/`、對照圖 `show/k_pose_edit_live.png`。底層 template `image/flux2/edit` 在 windows-cuda 已是 `technical_pass`，不必加 `--allow-unverified-platform`；macos-mps 仍 `untested`，在 macOS 上才需要該旗標。技術通過不等於美術接受。
 
 **自訂與組裝（不限這 8 個動作）**
 
