@@ -47,6 +47,8 @@ status: experimental
 
 ## 實測紀錄
 
+- 2026-11-03 起 `image/flux2/edit` 在 windows-cuda 已是 `technical_pass`（171 次實機 run、模型 sha256 相符；證據寫在 template.json），**不必再加 `--allow-unverified-platform`**。下方第二到五輪的指令因為是升級前跑的，仍帶該旗標，屬當時紀錄。macos-mps 仍 `untested`，在 macOS 上才需要該旗標。技術通過不等於美術接受，內容審查仍 pending。
+
 - 日期：2026-11-02；環境：本機 Windows、ComfyUI 0.34.0、profile `sdxl_standard`（`image_capabilities.json` 顯示 `controlnet.canny/pose/depth`、`ipadapter` 皆可用；`character_action` 與 `pose_only` 為 legacy 已驗證）。`generate.py` 圖片 task 沒有 `--preflight`，用能力快照與 profile 檢查代替；快照為 11 天前，指紋一致。
 - 參考圖（本機、不進 repo）：人臉 1 張 `f71f980dde3`；姿勢深度圖與線稿各 `full_single_P018_front`（雙手扠腰）、`full_single_P077_front`（側身展臂），共 6 張，放 `output/pose-face-test/refs/`。
 - 指令骨架：`python tools_src/generate.py character_action --character-ref <face> --pose-ref <pose> --control-type <depth|canny|pose> --seed 42 --width 768 --height 1024 --prompt "a young woman, full body standing, ..."`；另跑 `pose_only --control-type depth`。固定 seed 42，每組 1 張；單張約 8–16 秒（第一張含載入 32 秒）。
