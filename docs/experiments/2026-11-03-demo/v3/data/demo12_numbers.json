@@ -1,0 +1,38 @@
+{
+ "demo1_pose_edit_wave_1": {
+  "source": "d1b_21",
+  "outside_px": 898949,
+  "outside_changed": 0,
+  "pasted_region_px": 112763
+ },
+ "demo1_pose_edit_wave_2": {
+  "source": "e1_10_12_13_14_15_16_10",
+  "outside_px": 885965,
+  "outside_changed": 0,
+  "pasted_region_px": 125747
+ },
+ "demo1_pose_edit_wave_3": {
+  "source": "e1_10_12_13_14_15_16_16",
+  "outside_px": 889872,
+  "outside_changed": 0,
+  "pasted_region_px": 121840
+ },
+ "demo2_palm_to_camera_1": {
+  "source": "d2_77",
+  "outside_px": 901168,
+  "outside_changed": 0,
+  "pasted_region_px": 110544
+ },
+ "demo2_palm_to_camera_2": {
+  "source": "d2_300",
+  "outside_px": 900847,
+  "outside_changed": 0,
+  "pasted_region_px": 110865
+ },
+ "demo2_palm_to_camera_3": {
+  "source": "e2_10_12_13_14_15_16_10",
+  "outside_px": 889796,
+  "outside_changed": 0,
+  "pasted_region_px": 121916
+ }
+}
