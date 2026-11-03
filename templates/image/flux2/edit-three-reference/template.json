@@ -1,0 +1,198 @@
+{
+  "schema_version": 1,
+  "id": "image/flux2/edit-three-reference",
+  "version": "0.1.0",
+  "title": "FLUX.2 three-reference edit",
+  "summary": "Target, identity and object images encoded separately; roles assigned by prompt.",
+  "status": "draft",
+  "status_note": "Authorized technical experiment; artistic review pending. No automatic platform promotion.",
+  "min_comfyui_version": "0.34.0",
+  "requires_custom_nodes": [],
+  "graph": {
+    "file": "graph.api.json",
+    "format": "comfyui-api",
+    "sha256": "513a23b6592901d72a7a5e0861cc9cee9a38cc0bdb6f59cdfdc0d13e35b0af6e",
+    "canonical_sha256": "a205c3a548b4fc95a6042980b78e6cc8975de12a4a1802a58f5f2550be365365"
+  },
+  "provenance": {
+    "derived_from": "Official core blueprint at ComfyUI commit 12d5279438bfefc058a269eae805ceab6047777f; target branch expanded with two ReferenceLatent append branches.",
+    "upstream": {
+      "kind": "core_blueprint",
+      "name": "Image Edit (Flux.2 Klein 4B).json",
+      "blob": "7f6fa7a4bcd0a6b7986a137d121ec62105fc64bf",
+      "comfyui_version": "0.34.0",
+      "note": "UI subgraphs flattened to API nodes. Same base4b fp8, qwen3 4b, VAE, scale1MP/nearest-exact/step1, euler20/CFG5. Added identity and object Load/Scale/VAE branches; append target then identity then object on positive and negative. ReferenceLatent append=True and Flux2 default_ref_method=index in core. No mask, no reference montage, no pixel repair."
+    },
+    "tested_source_sha256": "b658fc1f67114c0306c4bea8958699767bd76ba9c728dfb36e79928af20cb597",
+    "evidence": [
+      {
+        "path": "templates/image/flux2/edit-three-reference/source/official-blueprint.json",
+        "note": "Unmodified official blueprint at pinned Git blob; public source https://github.com/Comfy-Org/ComfyUI/blob/12d5279438bfefc058a269eae805ceab6047777f/blueprints/Image%20Edit%20(Flux.2%20Klein%204B).json; normalized to Git LF bytes (Windows checkout was CRLF)"
+      },
+      {
+        "path": "templates/image/flux2/edit-three-reference/README.md",
+        "note": "Input roles and user authorization on 2026-10-12"
+      }
+    ]
+  },
+  "slots": {
+    "prompt": {
+      "type": "text",
+      "targets": [
+        {
+          "node": "7",
+          "input": "text",
+          "placeholder": "__PROMPT__"
+        }
+      ],
+      "required": true,
+      "validate": {
+        "min_length": 1
+      },
+      "help": "正向提示詞"
+    },
+    "seed": {
+      "type": "seed",
+      "targets": [
+        {
+          "node": "13",
+          "input": "noise_seed"
+        }
+      ],
+      "default": "auto",
+      "help": "亂數種子。auto 由 runner 抽一個非負整數。"
+    },
+    "image": {
+      "type": "image",
+      "targets": [
+        {
+          "node": "4",
+          "input": "image",
+          "placeholder": "__IMAGE__"
+        }
+      ],
+      "upload": true,
+      "required": true,
+      "help": "Image 1: target cover; output dimensions follow this image."
+    },
+    "filename_prefix": {
+      "type": "string",
+      "targets": [
+        {
+          "node": "19",
+          "input": "filename_prefix"
+        }
+      ],
+      "default": "flux2_edit_three_reference",
+      "help": "存檔前綴，預設是固定前綴。不用 output_prefix，避免被改成 gameart/..."
+    },
+    "identity_ref": {
+      "type": "image",
+      "targets": [
+        {
+          "node": "20",
+          "input": "image",
+          "placeholder": "__IDENTITY_REF__"
+        }
+      ],
+      "upload": true,
+      "required": true,
+      "help": "Image 2: identity reference; purpose must be explained in prompt."
+    },
+    "object_ref": {
+      "type": "image",
+      "targets": [
+        {
+          "node": "23",
+          "input": "image",
+          "placeholder": "__OBJECT_REF__"
+        }
+      ],
+      "upload": true,
+      "required": true,
+      "help": "Image 3: object reference; purpose must be explained in prompt."
+    }
+  },
+  "options": {},
+  "fixed_notes": "Fixed official base sampler settings; target-first ordered reference latents on both branches. Full-image candidate, no pixel preservation guarantee.",
+  "pre": [
+    {
+      "step": "upload",
+      "slots": [
+        "image",
+        "identity_ref",
+        "object_ref"
+      ]
+    }
+  ],
+  "post": [],
+  "frame_anchoring": {
+    "first": "none",
+    "last": "none",
+    "reference_role": "none",
+    "time_alignment": null,
+    "continuity": null
+  },
+  "models": [
+    {
+      "role": "unet",
+      "node": "1",
+      "input": "unet_name",
+      "filename": "flux-2-klein-base-4b-fp8.safetensors",
+      "path": "models/diffusion_models/flux-2-klein-base-4b-fp8.safetensors",
+      "directory": "diffusion_models",
+      "size_bytes": 4089498488,
+      "sha256": "44bab3a86fe98b85d21dd2a4729ebdc3ae51fb8a39f76e457e18c724219e6840",
+      "source": null,
+      "url": null
+    },
+    {
+      "role": "clip",
+      "node": "2",
+      "input": "clip_name",
+      "filename": "qwen_3_4b.safetensors",
+      "path": "models/text_encoders/qwen_3_4b.safetensors",
+      "directory": "text_encoders",
+      "size_bytes": 8044982048,
+      "sha256": "6c671498573ac2f7a5501502ccce8d2b08ea6ca2f661c458e708f36b36edfc5a",
+      "source": null,
+      "url": null
+    },
+    {
+      "role": "vae",
+      "node": "3",
+      "input": "vae_name",
+      "filename": "flux2-vae.safetensors",
+      "path": "models/vae/flux2-vae.safetensors",
+      "directory": "vae",
+      "size_bytes": 336213556,
+      "sha256": "d64f3a68e1cc4f9f4e29b6e0da38a0204fe9a49f2d4053f0ec1fa1ca02f9c4b5",
+      "source": null,
+      "url": null
+    }
+  ],
+  "capability_gate": {
+    "nodes": "from_graph",
+    "selectors": "from_models",
+    "files": "from_models",
+    "extra_nodes": [],
+    "platforms": {
+      "windows-cuda": {
+        "status": "untested"
+      },
+      "macos-mps": {
+        "status": "untested"
+      }
+    },
+    "min_memory_mb": null,
+    "capability": "image_generation"
+  },
+  "outputs": [
+    {
+      "id": "image",
+      "node": "19",
+      "kind": "image",
+      "role": "candidate"
+    }
+  ]
+}

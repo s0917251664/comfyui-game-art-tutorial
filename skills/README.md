@@ -13,6 +13,10 @@
 | [`comfyui-extend`](comfyui-extend/SKILL.md) | 缺能力時照擴充協議提案；技能庫與架構審視 |
 | [`comfyui-install`](comfyui-install/SKILL.md) | 安裝、部署與依賴補齊 |
 
+三參考圖編修的實驗入口見 [FLUX.2 模板](../templates/image/flux2/edit-three-reference/README.md)，仍由 `comfyui-run` 路由；先依模板 gate 檢查，不從其他 FLUX.2 路線推定驗證狀態。這些多參考模板不是改姿勢的首選，[選路](../docs/knowledge/art/local-object-repair-decisions.md)先看。
+
+雙圖編修另有[實驗模板](../templates/image/flux2/edit-object-reference/README.md)，第二張參考的用途由提示詞說明，同樣走 `comfyui-run` 的實驗 gate。
+已有確認遮罩時，可用[遮罩物件圖生圖模板](../templates/image/flux2/edit-object-reference-masked/README.md)，仍走 `comfyui-run`，不保證遮罩外 RGB 完全相同。
 FLUX.2 做不出、值得多等幾分鐘時，可試**進階模型實驗**[Qwen-Image-Edit 2511 三參考圖模板](../templates/image/qwen-image-edit/three-reference/README.md)，同樣走 `comfyui-run`；它不是 FLUX.2 的升級保證，封面握錘實驗也沒有解決雙手握持。
 
 ## Obsidian 上游技能（不在本資料夾）

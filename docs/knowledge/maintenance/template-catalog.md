@@ -66,6 +66,48 @@ generated: true
 - 模型：flux-2-klein-base-4b-fp8.safetensors（diffusion_models，unet）、qwen_3_4b.safetensors（text_encoders，clip）、flux2-vae.safetensors（vae，vae）
 - 上游：none
 
+## `image/flux2/edit-object-reference`
+
+- 用途：FLUX.2 target and object-reference edit
+- 摘要：Target and object images encoded separately; no identity reference branch.
+- 媒體：image
+- 能力：image_generation
+- 狀態：draft（v0.1.0）
+- 最低 ComfyUI：0.34.0
+- 第三方節點：（只用 core）
+- 平台：windows-cuda untested、macos-mps untested
+- 首尾幀：first=none、last=none、reference_role=none、time_alignment=null、continuity=null
+- 模型：flux-2-klein-base-4b-fp8.safetensors（diffusion_models，unet）、qwen_3_4b.safetensors（text_encoders，clip）、flux2-vae.safetensors（vae，vae）
+- 上游：core_blueprint `Image Edit (Flux.2 Klein 4B).json`
+
+## `image/flux2/edit-object-reference-masked`
+
+- 用途：FLUX.2 masked target and object-reference img2img
+- 摘要：Target VAE latent with noise mask and partial sigma schedule; target and object references encoded separately.
+- 媒體：image
+- 能力：image_generation
+- 狀態：draft（v0.1.0）
+- 最低 ComfyUI：0.34.0
+- 第三方節點：（只用 core）
+- 平台：windows-cuda untested、macos-mps untested
+- 首尾幀：first=none、last=none、reference_role=none、time_alignment=null、continuity=null
+- 模型：flux-2-klein-base-4b-fp8.safetensors（diffusion_models，unet）、qwen_3_4b.safetensors（text_encoders，clip）、flux2-vae.safetensors（vae，vae）
+- 上游：core_blueprint `Image Edit (Flux.2 Klein 4B).json`
+
+## `image/flux2/edit-three-reference`
+
+- 用途：FLUX.2 three-reference edit
+- 摘要：Target, identity and object images encoded separately; roles assigned by prompt.
+- 媒體：image
+- 能力：image_generation
+- 狀態：draft（v0.1.0）
+- 最低 ComfyUI：0.34.0
+- 第三方節點：（只用 core）
+- 平台：windows-cuda untested、macos-mps untested
+- 首尾幀：first=none、last=none、reference_role=none、time_alignment=null、continuity=null
+- 模型：flux-2-klein-base-4b-fp8.safetensors（diffusion_models，unet）、qwen_3_4b.safetensors（text_encoders，clip）、flux2-vae.safetensors（vae，vae）
+- 上游：core_blueprint `Image Edit (Flux.2 Klein 4B).json`
+
 ## `image/layer-split`
 
 - 用途：遮罩拆層

@@ -153,6 +153,129 @@
       "upstream_name": null
     },
     {
+      "id": "image/flux2/edit-object-reference",
+      "version": "0.1.0",
+      "title": "FLUX.2 target and object-reference edit",
+      "summary": "Target and object images encoded separately; no identity reference branch.",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "unet",
+          "filename": "flux-2-klein-base-4b-fp8.safetensors",
+          "directory": "diffusion_models"
+        },
+        {
+          "role": "clip",
+          "filename": "qwen_3_4b.safetensors",
+          "directory": "text_encoders"
+        },
+        {
+          "role": "vae",
+          "filename": "flux2-vae.safetensors",
+          "directory": "vae"
+        }
+      ],
+      "upstream_kind": "core_blueprint",
+      "upstream_name": "Image Edit (Flux.2 Klein 4B).json"
+    },
+    {
+      "id": "image/flux2/edit-object-reference-masked",
+      "version": "0.1.0",
+      "title": "FLUX.2 masked target and object-reference img2img",
+      "summary": "Target VAE latent with noise mask and partial sigma schedule; target and object references encoded separately.",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "unet",
+          "filename": "flux-2-klein-base-4b-fp8.safetensors",
+          "directory": "diffusion_models"
+        },
+        {
+          "role": "clip",
+          "filename": "qwen_3_4b.safetensors",
+          "directory": "text_encoders"
+        },
+        {
+          "role": "vae",
+          "filename": "flux2-vae.safetensors",
+          "directory": "vae"
+        }
+      ],
+      "upstream_kind": "core_blueprint",
+      "upstream_name": "Image Edit (Flux.2 Klein 4B).json"
+    },
+    {
+      "id": "image/flux2/edit-three-reference",
+      "version": "0.1.0",
+      "title": "FLUX.2 three-reference edit",
+      "summary": "Target, identity and object images encoded separately; roles assigned by prompt.",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [
+        {
+          "role": "unet",
+          "filename": "flux-2-klein-base-4b-fp8.safetensors",
+          "directory": "diffusion_models"
+        },
+        {
+          "role": "clip",
+          "filename": "qwen_3_4b.safetensors",
+          "directory": "text_encoders"
+        },
+        {
+          "role": "vae",
+          "filename": "flux2-vae.safetensors",
+          "directory": "vae"
+        }
+      ],
+      "upstream_kind": "core_blueprint",
+      "upstream_name": "Image Edit (Flux.2 Klein 4B).json"
+    },
+    {
       "id": "image/layer-split",
       "version": "0.1.1",
       "title": "遮罩拆層",

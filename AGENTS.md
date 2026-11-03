@@ -26,6 +26,10 @@
 
 ## 執行方式
 
+- FLUX.2 多參考實驗模板不是改姿勢的首選，改單張姿勢先用 `pose-edit`；雙手握短柄目前沒有可靠路線。選路見[物件局部修正的取捨](docs/knowledge/art/local-object-repair-decisions.md)。
+- 三參考圖編修有獨立實驗模板 [`image/flux2/edit-three-reference`](templates/image/flux2/edit-three-reference/README.md)，走 `comfyui-run`；狀態與輸入以 `run show` 為準，不套用單圖模板的驗證結論。
+- 雙圖物件編修的比較模板是 [`image/flux2/edit-object-reference`](templates/image/flux2/edit-object-reference/README.md)，第二張參考的用途由提示詞說明，仍按自身 gate 執行。
+- 已確認遮罩的物件圖生圖可走 [`image/flux2/edit-object-reference-masked`](templates/image/flux2/edit-object-reference-masked/README.md)，依原圖 latent 與 noise mask 取樣，仍是待驗收實驗。
 - 進階模型實驗 [`image/qwen-image-edit/three-reference`](templates/image/qwen-image-edit/three-reference/README.md)（Qwen-Image-Edit 2511）：比 FLUX.2 重、慢，先用 FLUX.2，做不出再試；draft，不推定比 FLUX.2 好。
 
 - **`generate.py <task>`** 是圖片與影片 task 的入口：依 task 與旗標選出 template id，交給 runner 執行。
