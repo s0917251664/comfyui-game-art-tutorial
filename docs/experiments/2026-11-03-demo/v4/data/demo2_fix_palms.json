@@ -1,6 +1,7 @@
 {
  "指向前方": {
   "picked_seed": 2,
+  "tried_count": 12,
   "tried_seeds": [
    1,
    2,
@@ -15,15 +16,19 @@
    11,
    12
   ],
-  "tried_count": 12,
-  "hand_region_px": 44262,
-  "outside_hand_px": 967450,
-  "changed_outside_hand_vs_page10": 0,
-  "outside_edited_region_px": 889996,
-  "changed_outside_edited_region_vs_A": 0
+  "new_hand_pixels": 29666,
+  "erased_old_hand_pixels": 8507,
+  "changed_region_px": 37293,
+  "outside_changed_region_px": 974419,
+  "changed_outside_region_vs_page10": 0,
+  "outside_edited_region_px": 894456,
+  "changed_outside_edited_region_vs_A": 0,
+  "halo_ring_px_3_to_8px_from_hand_edge": 5879,
+  "halo_ring_changed_vs_page10": 1210
  },
  "敬禮": {
   "picked_seed": 6,
+  "tried_count": 12,
   "tried_seeds": [
    1,
    2,
@@ -38,15 +43,19 @@
    11,
    12
   ],
-  "tried_count": 12,
-  "hand_region_px": 28097,
-  "outside_hand_px": 983615,
-  "changed_outside_hand_vs_page10": 0,
-  "outside_edited_region_px": 869186,
-  "changed_outside_edited_region_vs_A": 0
+  "new_hand_pixels": 23336,
+  "erased_old_hand_pixels": 1333,
+  "changed_region_px": 24204,
+  "outside_changed_region_px": 987508,
+  "changed_outside_region_vs_page10": 0,
+  "outside_edited_region_px": 869676,
+  "changed_outside_edited_region_vs_A": 0,
+  "halo_ring_px_3_to_8px_from_hand_edge": 3447,
+  "halo_ring_changed_vs_page10": 450
  },
  "揮手": {
   "picked_seed": 8,
+  "tried_count": 12,
   "tried_seeds": [
    1,
    2,
@@ -61,11 +70,14 @@
    11,
    12
   ],
-  "tried_count": 12,
-  "hand_region_px": 25807,
-  "outside_hand_px": 985905,
-  "changed_outside_hand_vs_page10": 0,
-  "outside_edited_region_px": 887389,
-  "changed_outside_edited_region_vs_A": 0
+  "new_hand_pixels": 30038,
+  "erased_old_hand_pixels": 10937,
+  "changed_region_px": 38646,
+  "outside_changed_region_px": 973066,
+  "changed_outside_region_vs_page10": 0,
+  "outside_edited_region_px": 889619,
+  "changed_outside_edited_region_vs_A": 0,
+  "halo_ring_px_3_to_8px_from_hand_edge": 6429,
+  "halo_ring_changed_vs_page10": 3014
  }
 }
