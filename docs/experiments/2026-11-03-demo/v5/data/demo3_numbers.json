@@ -1,0 +1,18 @@
+{
+ "fringe_px": 20116,
+ "blade_px": 38567,
+ "hair_fg_px": 19440,
+ "gap_px": 114,
+ "bbox": [
+  290,
+  26,
+  831,
+  351
+ ],
+ "cyan_in_bbox_before": 20044,
+ "cyan_in_bbox_after": 84,
+ "outside_region_px": 971757,
+ "changed_outside_region_vs_A": 0,
+ "hair_px_changed": 0,
+ "cyan_after_check": 593
+}
