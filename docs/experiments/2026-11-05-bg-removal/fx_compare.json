@@ -1,0 +1,26 @@
+{
+ "ComfyUI AI 去背 BiRefNet": {
+  "MAE": 0.0877,
+  "p99": 0.68,
+  "max": 0.8,
+  "soft_alpha_px_pct": 0.4
+ },
+ "ComfyUI 亮度轉透明（核心節點）": {
+  "MAE": 0.0739,
+  "p99": 0.358,
+  "max": 0.378,
+  "soft_alpha_px_pct": 52.5
+ },
+ "ComfyUI 亮度轉透明，用預乘合成": {
+  "MAE": 0.0455,
+  "p99": 0.258,
+  "max": 0.323,
+  "soft_alpha_px_pct": 52.5
+ },
+ "現有腳本 luma-alpha": {
+  "MAE": 0.0293,
+  "p99": 0.216,
+  "max": 0.323,
+  "soft_alpha_px_pct": 46.4
+ }
+}
