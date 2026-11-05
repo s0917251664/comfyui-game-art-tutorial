@@ -1,0 +1,14 @@
+{
+ "frames": 49,
+ "fit_failures": [],
+ "changed_px_outside_region_vs_v6_max": 0,
+ "region_px_mean": 3322.408163265306,
+ "axis_angle_deg_raw_std": 4.826392706543276,
+ "axis_angle_deg_smoothed_std": 3.8509627885357016,
+ "axis_angle_frame_to_frame_mean_abs_raw": 3.286400353248625,
+ "axis_angle_frame_to_frame_mean_abs_smoothed": 1.2756634052738096,
+ "width_px_raw_mean": 59.46083022416645,
+ "width_px_smoothed_mean": 58.75378649470225,
+ "width_frame_to_frame_mean_abs_raw": 5.876078246551173,
+ "width_frame_to_frame_mean_abs_smoothed": 3.8803823910930775
+}
