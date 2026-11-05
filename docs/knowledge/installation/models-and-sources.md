@@ -19,7 +19,7 @@
 | ControlNet Union SDXL ProMax（實驗） | `controlnet` | `xinsir-controlnet-union-sdxl-1.0-promax.safetensors` | `https://huggingface.co/xinsir/controlnet-union-sdxl-1.0/resolve/main/diffusion_pytorch_model_promax.safetensors` | 2,513,342,408 bytes | 只供 `pose_only --control-backend union` A/B；需 ComfyUI Core `SetUnionControlNetType` | 2026-09-01 |
 | IPAdapter Plus (SDXL) | `ipadapter` | `ip-adapter-plus_sdxl_vit-h.safetensors` | `https://huggingface.co/h94/IP-Adapter/resolve/main/sdxl_models/ip-adapter-plus_sdxl_vit-h.safetensors` | ~0.85GB | 第 8 章 | 2026-07-29 |
 | CLIP Vision (ViT-H) | `clip_vision` | `CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors` | `https://huggingface.co/h94/IP-Adapter/resolve/main/models/image_encoder/model.safetensors` | ~2.5GB | 第 8 章。**注意路徑是 `models/image_encoder`,不是 `sdxl_models/image_encoder`——後者是 bigG 版,維度不同,裝錯會在 `IPAdapterAdvanced` 執行期噴 shape mismatch** | 2026-07-29 |
-| BiRefNet 去背 | `background_removal` | `birefnet.safetensors` | `https://huggingface.co/Comfy-Org/BiRefNet/resolve/main/background_removal/birefnet.safetensors` | ~0.9GB | `generate.py --remove-bg` 用,跟底模架構無關,任何 tier 都用這個 | 2026-07-29 |
+| BiRefNet 去背 | `background_removal` | `birefnet.safetensors` | `https://huggingface.co/Comfy-Org/BiRefNet/resolve/main/background_removal/birefnet.safetensors` | ~0.9GB | `generate.py --remove-bg` 用,跟底模架構無關,任何 tier 都用這個。只適合實體輪廓；半透明特效會被切掉(2026-11-05 實測,見[去背選方法](../art/background-removal.md)) | 2026-07-29 |
 | 4x-UltraSharp 放大模型 | `upscale_models` | `4x-UltraSharp.pth` | `https://huggingface.co/lokCX/4x-Ultrasharp/resolve/main/4x-UltraSharp.pth` | ~67MB | `generate.py upscale` 用,跟底模架構無關,任何 tier 都用這個 | 2026-08-17 |
 
 VRAM 較緊張時(`sdxl_light` tier),Depth/OpenPose 這兩個 ControlNet 檔案較大(共約 7GB),可以先跳過,等使用者真的需要姿勢/深度控制再補裝。

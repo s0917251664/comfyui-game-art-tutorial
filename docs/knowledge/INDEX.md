@@ -28,6 +28,7 @@ status: current
 | 平面設計圖轉 3D、用 3D 決定物件角度 | [平面圖轉 3D](art/image-to-3d.md) |
 | 改姿勢／手掌方向的實測結論、外部免費素材庫（臉、服裝、姿勢）與授權 | [外部素材庫](art/external-asset-libraries.md) |
 | 結構鎖定、複合元件圖層 | [結構範本](art/structure-ref.md)、[圖層拆分判斷](art/layered-assets.md) |
+| 去背：靜圖、半透明特效、綠幕該用哪一種 | [去背選方法](art/background-removal.md) |
 | 本機像素與物件組裝 | [edit-tools](art/edit-tools.md)、[單一物件換色](art/single-object-color.md)、[物件組裝](art/object-design-workflows.md) |
 | 模型設定檔經驗 | [sdxl-standard](art/profiles/sdxl-standard.md) |
 | 影片 | [影片知識](video/README.md)、[CLI 對照](video/cli.md)、[設計判斷](video/design.md) |

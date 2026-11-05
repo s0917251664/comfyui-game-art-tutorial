@@ -71,6 +71,31 @@
       "upstream_name": "3d_hunyuan3d_multiview_to_model"
     },
     {
+      "id": "image/core/luma-alpha",
+      "version": "0.1.0",
+      "title": "Black-background effect luminance to alpha (core nodes, draft)",
+      "summary": "Black-background glow/spark/smoke still -> RGBA PNG; alpha = 1-(1-R)(1-G)(1-B). Core nodes only, no model.",
+      "media": "image",
+      "capability": "image_generation",
+      "status": "draft",
+      "min_comfyui_version": "0.34.0",
+      "requires_custom_nodes": [],
+      "platforms": {
+        "windows-cuda": "untested",
+        "macos-mps": "untested"
+      },
+      "frame_anchoring": {
+        "first": "none",
+        "last": "none",
+        "reference_role": "none",
+        "time_alignment": null,
+        "continuity": null
+      },
+      "models": [],
+      "upstream_kind": "none",
+      "upstream_name": null
+    },
+    {
       "id": "image/flux2/concept",
       "version": "0.1.1",
       "title": "FLUX.2 文字概念圖",

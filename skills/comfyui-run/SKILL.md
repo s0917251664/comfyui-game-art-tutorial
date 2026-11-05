@@ -9,7 +9,7 @@ description: 用本機 ComfyUI 執行已登記的圖片／影片能力：generat
 
 ## 三個入口，同一個 runner
 
-- **`generate.py <task>`**：入口。它依 task 與旗標選出 template id（例如 `concept` 加 `--remove-bg` 選到 `image/sdxl/concept-transparent`），交給 runner 填值、送出、檢查。你只選 task，不選 graph。
+- **`generate.py <task>`**：入口。它依 task 與旗標選出 template id（例如 `concept` 加 `--remove-bg` 選到 `image/sdxl/concept-transparent`），交給 runner 填值、送出、檢查。你只選 task，不選 graph。`--remove-bg` 只適合有實體輪廓的素材；半透明特效的去背先看 [去背選方法](../../docs/knowledge/art/background-removal.md)。
 - **`gameart.py run <template id>`**：直接指定 template。沒有對應 `generate.py` task 的固定流程（Wan Animate、SCAIL-2、SAM3 物件追蹤、VACE 影片局部重繪）走這裡。
 - **`gameart.py recipe`**：多步驟、中間要人工確認的流程（例如 `object-mark-inpaint`）。停在確認點時等使用者確認才 `resume --confirm`。
 
