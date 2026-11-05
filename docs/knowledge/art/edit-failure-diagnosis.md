@@ -27,6 +27,7 @@ status: current
 | 去背後有光暈、洞、裁切 | Alpha 存在不代表去背品質；半透明材質、髮絲難處理 | `edit asset-audit` 看白／黑／棋盤預覽，問題區域人工處理 | 實測 |
 | 整張圖被塞滿電路／紋理（prompt 有 circuit） | 關鍵字觸發滿版紋理 | 換成 armor plating、wire tufts、mechanical parts 等詞 | 實測 |
 | 結構鎖定（structure-ref）後精細雕紋出不來 | Canny 鎖邊緣同時壓抑額外線條 | 不跟使用者保證兩者兼得；細節事後疊加或另補 | 實測，見 [結構範本](structure-ref.md) |
+| 重跑一次只花約 1 秒、檔名和結果完全一樣 | ComfyUI 收到完全相同的請求直接回傳快取，沒有重算 | 要比較或測重現性時，中間穿插別的請求或改一個參數；不要把它當成「模型很穩定」 | 實測，見[平台對照](../../experiments/2026-10-19-platform-comparison.md) |
 | 同一位置每次都出現相同缺陷（換 seed 沒用） | 底模對該題材的傾向 | 不換 seed；只蓋缺陷處用 `inpaint` 補 | 實測 |
 | 重跑一次耗很久、中途失敗 | 大圖或 Mac MPS 限制；逾時 | 先查狀態，不重送；大尺寸 `upscale` 在 Mac 上先告知風險 | 實測 |
 

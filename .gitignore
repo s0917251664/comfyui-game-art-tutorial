@@ -32,3 +32,13 @@ docs/knowledge/Untitled*.canvas
 
 # pose-edit 使用者自訂動作選單（個人資料，不進版控）
 pose_edit_actions.local.json
+
+# 實驗紀錄只收文字：圖片、影片、GIF 留在本機 output/（見 docs/experiments/README.md）
+docs/experiments/**/*.png
+docs/experiments/**/*.jpg
+docs/experiments/**/*.jpeg
+docs/experiments/**/*.webp
+docs/experiments/**/*.gif
+docs/experiments/**/*.mp4
+docs/experiments/**/*.webm
+docs/experiments/**/*.mov
