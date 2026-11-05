@@ -42,6 +42,8 @@ status: experimental
 - **存成自己的選單**：`pose-edit save --id wave_left --label 左手揮手 --custom "..."`，寫進 repo 根目錄的 `pose_edit_actions.local.json`（不進版控），之後 `pose-edit list` 會列出，也能 `--action wave_left` 使用。
 - 2026-11-03 實機：自訂「左手揮手並看右邊」3 seed、`舉手` 後接 `頭=朝左、視線=往左看` 兩步連續編修（`--pick 21`），都 completed；證據 `output/pose-face-test/pe_custom/`、`pe_chain/`，對照圖 `show/l_pose_edit_custom_chain.png`。目視：揮手與頭部轉向多數達成；**左右手要小心**——模型多半把「左手」畫成畫面左側那隻手（角色自己的右手），要指定左右時看一眼結果，必要時改寫成 "the hand on the left side of the image"；自訂「看右邊」3 張都沒有真的轉向（臉仍朝前）。技術結果，沒有驗收。
 
+- 2026-11-03 騎士圖 Demo（改一隻手的姿勢）：**要保留的材質要寫進提示**，例如「被移動的手臂保持銀色板甲、手與另一隻手同大小」，並 `--avoid` 布袖、過大的手，不然多數候選會把前臂畫成長袖；指向、敬禮命中率低，24 個 seed 挑 1 張是常態。交付前只把被移動的手臂區貼回原圖，其餘維持原圖（[編修一律貼回](../decisions/2026-11-05-edits-paste-back-and-text-only-records.md)、[Demo 紀錄](../../experiments/2026-11-03-edit-demos.md)）。
+
 **不建議**
 
 - `pose`（OpenPose）抓無臉人偶（抽不到骨架；DWPose 只 1／4）、線稿人偶配 `canny`（線條畫進成品）、人臉庫特寫當 `--character-ref`（臉與髮型不穩）、Qwen-Image-Edit 2511 做姿態（442 秒、臉糊、複製人偶體型）。

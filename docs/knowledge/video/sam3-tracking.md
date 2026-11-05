@@ -20,6 +20,7 @@ status: current
 - **遮罩範圍每次都要美術看預覽確認**（runner 會產生 `keyframes/mask_preview.png`；需要其他取樣幀用 `vfx mask-preview`）。技術檢查只核對張數、尺寸、灰階，不代表遮罩畫對。
 - **塗多少就追多少**：手繪遮罩不會自己修正。只塗槌頭槌柄就只追到那兩塊；包到尾巴就一路追著尾巴。
 - **文字要具體**：2026-10-07 實測 `hammer` 在槌子橫放的前兩幀只抓到握柄，`mallet` 或 `big hammer with gold frame` 整把都抓到。有人形怪人的鏡頭，`man` 會同時追蹤主角與怪人，改 `man with black hair` 才只追主角。送進 SCAIL-2 之前，可先用 `track-text` 以同一個詞追蹤，看遮罩是否只框到目標。
+- 2026-11-03 騎士劍：`sword` 會連劍鞘一起選、第 12 幀丟失；`giant blade`、`blue crystal`（照材質外觀講）才穩定追到整把劍。`golden crossguard` 在下劈中段 39 幀追丟；高速動態模糊幀的遮罩會吃進整條揮砍光帶。逐段看預覽，不要只看第 0 幀（[Demo 紀錄](../../experiments/2026-11-03-edit-demos.md)）。
 - **隨手框的方塊不可用**：前段會把背景和角色一起選進去。
 - 遮罩給下一步（`video_inpaint`、`vfx`）時用 R=G=B 的灰階 PNG；帶 alpha 的 RGBA 會被拒絕，避免和圖片 inpaint 的反向 alpha 遮罩混淆。
 - 被握住的物件，手會被一起重畫變形：局部重繪前要從物件遮罩扣掉手（見 [第 3–8 階段總結](../maintenance/restructure-summary-phase3-8.md) 的待開發）。

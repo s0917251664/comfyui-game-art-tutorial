@@ -8,6 +8,7 @@ status: current
 
 | 日期 | 決策 | ADR |
 |---|---|---|
+| 2026-11-05 | 編修只准改指定的地方，交付前把改動區以外貼回原圖並量到 0；原圖畫壞的部位不用演算法硬補。repo 只放決策紀錄與新工具，實驗圖片影片不進版控。 | [編修一律貼回；實驗紀錄只收文字](decisions/2026-11-05-edits-paste-back-and-text-only-records.md) |
 | 2026-10-08 | scene、sheet、pattern 改為本機 Pillow 合成，不再組 ComfyUI graph、不 upload、不 queue。`vfx birefnet-alpha` 維持 repo 內 `benchmark_birefnet`，不部署、不改成 graph。 | [物件組裝改本機 Pillow，BiRefNet 留在 repo](decisions/2026-10-08-local-design-and-birefnet.md) |
 | 2026-10-08 | 影片 template 一份 graph，凍結成 `video_config=None` 時 builder 寫入的檔名。模型可記 `platforms.windows-cuda`（必須與頂層 pin 相同）。不為每個平台複製一份 graph，也不編造 macos-mps 的另一組檔名。預檢仍檢查頂層 pin。 | [影片模型 pin 不按平台分 graph](decisions/2026-10-08-video-model-pins.md) |
 | 2026-10-08 | 圖片 D13 採方案 A：每種會增刪或更換節點的組合各一份固定 template，runner 只填值。`image/sdxl/*` 對應 `sdxl_standard`；tier 只改呼叫端寬高。checkpoint 是 slot，LoRA 不 pin。圖片 `time_alignment` 允許 null。 | [圖片 template 的結構組合](decisions/2026-10-08-image-template-variants.md) |
