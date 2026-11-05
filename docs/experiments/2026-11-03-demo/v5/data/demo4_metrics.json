@@ -1,0 +1,13 @@
+{
+ "frames": 49,
+ "changed_px_outside_30px_of_blade_max": 0,
+ "changed_px_in_hair_matte_max": 0,
+ "cyan_in_blade_box_before_mean": 7517.591836734694,
+ "cyan_in_blade_box_after_mean": 22.081632653061224,
+ "cyan_after_max": 116,
+ "adjacent_frame_diff_blade_region_source": 23.98158042889297,
+ "adjacent_frame_diff_blade_region_result": 33.18463040149606,
+ "blade_area_min": 11825,
+ "blade_area_max": 23908,
+ "blade_area_jitter_mean_abs_change": 1523.4791666666667
+}

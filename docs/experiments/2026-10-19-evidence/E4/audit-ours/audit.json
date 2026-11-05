@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "kind": "asset_alpha_audit",
+  "status": "observed",
+  "input": {
+    "path": "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\.claude\\worktrees\\lucid-lovelace-e772f4\\output\\experiments\\platform-vs-pipeline-20261019\\E4\\ours\\transparent_00171_.png",
+    "sha256": "568be049f79a91a95dda3551c587a3662c3a459b1ce82901404cf17277690017"
+  },
+  "original_mode": "RGBA",
+  "has_alpha": true,
+  "dimensions": [
+    1024,
+    1024
+  ],
+  "visible_bbox": [
+    111,
+    117,
+    914,
+    911
+  ],
+  "transparent_pixels": 550763,
+  "partial_alpha_pixels": 400404,
+  "opaque_pixels": 97409,
+  "findings": [],
+  "acceptance": "pending human review; alpha statistics cannot judge cutout quality"
+}

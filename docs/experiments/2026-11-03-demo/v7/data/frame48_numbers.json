@@ -1,0 +1,10 @@
+{
+ "frame": "video frame 48 (upscaled 2x, 960x1408)",
+ "his_painted_px": 6047,
+ "added_by_completion_px": 1079,
+ "completed_mask_px": 7126,
+ "redrawn_region_px": 6659,
+ "pixels_outside_redrawn_region": 1345021,
+ "changed_px_outside_redrawn_region_vs_v6": 0,
+ "his_painted_px_not_in_redrawn_region": 479
+}

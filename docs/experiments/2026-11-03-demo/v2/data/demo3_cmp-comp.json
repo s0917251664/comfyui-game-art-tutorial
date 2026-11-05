@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "kind": "image_edit_comparison",
+  "dimensions": [
+    832,
+    1216
+  ],
+  "inputs": {
+    "source": {
+      "path": "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\.claude\\worktrees\\lucid-lovelace-e772f4\\output\\experiments\\platform-vs-pipeline-20261019\\inputs\\A.png",
+      "sha256": "c0305a8b14ced5d3414b98039ee414564f5214c4b1a33ba799ea9956fc40d203"
+    },
+    "edited": {
+      "path": "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\.claude\\worktrees\\lucid-lovelace-e772f4\\output\\demo-v2\\d3\\comp-7\\composited.png",
+      "sha256": "4238ed9fabb4db781d844270ab33a5306a830ba4210078e1df1cca8a68dc49fe"
+    },
+    "mask": {
+      "path": "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\.claude\\worktrees\\lucid-lovelace-e772f4\\output\\demo-2026-11-03\\d3-mask-grown.png",
+      "sha256": "71e63d100d334a861e2b1bbda28bc9166d99049d6caecc31f3cabd9dce5f7a94"
+    }
+  },
+  "measurement": "Exact decoded RGBA bytes, including RGB of transparent pixels; no alignment/resize",
+  "regions": {
+    "whole": {
+      "pixels": 1011712,
+      "changed_pixels": 58123,
+      "changed_fraction": 0.057450143914473686,
+      "mean_absolute_rgba_byte_difference": 3.2257893056522016,
+      "max_byte_difference": 255
+    },
+    "edited": {
+      "pixels": 58124,
+      "changed_pixels": 58123,
+      "changed_fraction": 0.9999827954029317,
+      "mean_absolute_rgba_byte_difference": 56.14840255316221,
+      "max_byte_difference": 255
+    },
+    "transition": {
+      "pixels": 0,
+      "changed_pixels": 0,
+      "changed_fraction": null,
+      "mean_absolute_rgba_byte_difference": null,
+      "max_byte_difference": null
+    },
+    "preserved": {
+      "pixels": 953588,
+      "changed_pixels": 0,
+      "changed_fraction": 0.0,
+      "mean_absolute_rgba_byte_difference": 0.0,
+      "max_byte_difference": 0
+    }
+  },
+  "art_acceptance": "not assessed",
+  "outputs": [
+    {
+      "path": "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\.claude\\worktrees\\lucid-lovelace-e772f4\\output\\demo-v2\\d3\\cmp-comp\\comparison.png",
+      "sha256": "52f8688def25d8b7cf2bd2c85d52721b0fdaea08adc96a4a4a6556d00edca0a3"
+    },
+    {
+      "path": "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\.claude\\worktrees\\lucid-lovelace-e772f4\\output\\demo-v2\\d3\\cmp-comp\\detail.png",
+      "sha256": "2c583e190980e511f560490b3c1a4c0f695276261aa1f7a454cec0d9f4f57942"
+    },
+    {
+      "path": "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\.claude\\worktrees\\lucid-lovelace-e772f4\\output\\demo-v2\\d3\\cmp-comp\\difference.png",
+      "sha256": "f5ab995144487fe040125de1f29c3a39c45b958417e362a7f7d82a13b2755622"
+    }
+  ]
+}

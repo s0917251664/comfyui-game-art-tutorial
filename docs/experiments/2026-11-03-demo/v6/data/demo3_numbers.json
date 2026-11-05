@@ -1,0 +1,13 @@
+{
+ "blue_in_bbox_before_A": 32791,
+ "blue_in_bbox_after_v5": 21058,
+ "blue_in_bbox_after_v6": 238,
+ "blue_in_bbox_after_v6_strict_sat30": 86,
+ "hair_blue_px_neutralised": 1266,
+ "edge_blue_px_recoloured": 35045,
+ "px_beyond_30px_of_blade": 933016,
+ "changed_px_12_to_30px_band": 354,
+ "changed_px_12_to_30px_band_not_hair": 0,
+ "changed_px_beyond_30px_vs_A": 0,
+ "hair_px_changed_vs_A_outside_blue_tips": 0
+}

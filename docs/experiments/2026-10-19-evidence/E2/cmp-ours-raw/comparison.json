@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "kind": "image_edit_comparison",
+  "dimensions": [
+    832,
+    1216
+  ],
+  "inputs": {
+    "source": {
+      "path": "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\.claude\\worktrees\\lucid-lovelace-e772f4\\output\\experiments\\platform-vs-pipeline-20261019\\inputs\\A.png",
+      "sha256": "c0305a8b14ced5d3414b98039ee414564f5214c4b1a33ba799ea9956fc40d203"
+    },
+    "edited": {
+      "path": "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\.claude\\worktrees\\lucid-lovelace-e772f4\\output\\experiments\\platform-vs-pipeline-20261019\\E2\\ours-raw\\guided_inpaint_00035_.png",
+      "sha256": "a371af84ebdde96894d5a2a1214ce24d225b9cc141442fa016e4692fa961ae4e"
+    },
+    "mask": {
+      "path": "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\.claude\\worktrees\\lucid-lovelace-e772f4\\output\\experiments\\platform-vs-pipeline-20261019\\inputs\\M.png",
+      "sha256": "ca629508d06c32dc475f1afb4776cc8fba64ff8016856132a36bafbbd5606184"
+    }
+  },
+  "measurement": "Exact decoded RGBA bytes, including RGB of transparent pixels; no alignment/resize",
+  "regions": {
+    "whole": {
+      "pixels": 1011712,
+      "changed_pixels": 1005447,
+      "changed_fraction": 0.9938075262525303,
+      "mean_absolute_rgba_byte_difference": 3.572343710463057,
+      "max_byte_difference": 254
+    },
+    "edited": {
+      "pixels": 72415,
+      "changed_pixels": 71966,
+      "changed_fraction": 0.9937996271490713,
+      "mean_absolute_rgba_byte_difference": 26.7164054408617,
+      "max_byte_difference": 254
+    },
+    "transition": {
+      "pixels": 0,
+      "changed_pixels": 0,
+      "changed_fraction": null,
+      "mean_absolute_rgba_byte_difference": null,
+      "max_byte_difference": null
+    },
+    "preserved": {
+      "pixels": 939297,
+      "changed_pixels": 933481,
+      "changed_fraction": 0.993808135233052,
+      "mean_absolute_rgba_byte_difference": 1.78805478991203,
+      "max_byte_difference": 237
+    }
+  },
+  "art_acceptance": "not assessed",
+  "outputs": [
+    {
+      "path": "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\.claude\\worktrees\\lucid-lovelace-e772f4\\output\\experiments\\platform-vs-pipeline-20261019\\E2\\cmp-ours-raw\\comparison.png",
+      "sha256": "2a3efe46c91a7efaacf1909d54ed584183cfe30ff1f6d21435579ea393e309a3"
+    },
+    {
+      "path": "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\.claude\\worktrees\\lucid-lovelace-e772f4\\output\\experiments\\platform-vs-pipeline-20261019\\E2\\cmp-ours-raw\\detail.png",
+      "sha256": "249a139e322644d8254a6d8e2b9a3cb369b7c2c58d6837741d40796e252fd969"
+    },
+    {
+      "path": "C:\\Users\\XU\\tools\\comfyui-game-art-tutorial\\.claude\\worktrees\\lucid-lovelace-e772f4\\output\\experiments\\platform-vs-pipeline-20261019\\E2\\cmp-ours-raw\\difference.png",
+      "sha256": "bb7f4b38bffb9a999fb902828c3255eb8b39ad7572f2613c1166c4c22e9446f4"
+    }
+  ]
+}

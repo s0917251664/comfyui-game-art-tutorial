@@ -1,0 +1,9 @@
+{
+ "frames": 107,
+ "trail_frames": "44-60",
+ "tinted_before_mean": 10225.093457943925,
+ "tinted_after_mean": 210.00934579439252,
+ "tinted_after_max": 1656,
+ "tinted_after_max_frame": 49,
+ "changed_px_outside_zone_max": 0
+}
