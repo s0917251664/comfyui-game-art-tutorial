@@ -38,6 +38,20 @@ generated: true
 - 模型：hunyuan3d-dit-v2-mv_fp16.safetensors（checkpoints，checkpoint）、birefnet.safetensors（background_removal，bg_removal）
 - 上游：workflow_templates `3d_hunyuan3d_multiview_to_model`
 
+## `image/core/luma-alpha`
+
+- 用途：Black-background effect luminance to alpha (core nodes, draft)
+- 摘要：Black-background glow/spark/smoke still -> RGBA PNG; alpha = 1-(1-R)(1-G)(1-B). Core nodes only, no model.
+- 媒體：image
+- 能力：image_generation
+- 狀態：draft（v0.1.0）
+- 最低 ComfyUI：0.34.0
+- 第三方節點：（只用 core）
+- 平台：windows-cuda untested、macos-mps untested
+- 首尾幀：first=none、last=none、reference_role=none、time_alignment=null、continuity=null
+- 模型：（無）
+- 上游：none
+
 ## `image/flux2/concept`
 
 - 用途：FLUX.2 文字概念圖

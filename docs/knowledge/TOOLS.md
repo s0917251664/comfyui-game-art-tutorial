@@ -34,6 +34,7 @@ status: current
 | 參數比較 sweep | `gameart.py edit sweep` | 包裝四個既有圖片 task，最多 16 個候選；[edit-tools](art/edit-tools.md) |
 | 本機像素處理 | `gameart.py edit`（composite、recolor、compare、reference-board、asset-audit） | Pillow／NumPy；[edit-tools](art/edit-tools.md)、[單一物件換色](art/single-object-color.md) |
 | 物件展示組裝 | `gameart.py design`（scene、sheet、pattern） | 純 Pillow，輸出不透明 RGB；[物件組裝](art/object-design-workflows.md) |
+| 去背（先選方法） | 靜圖 `generate.py <task> --remove-bg`（ComfyUI，BiRefNet）；黑底特效 `gameart.py vfx luma-alpha`（本機，建議）或 `gameart.py run image/core/luma-alpha`（ComfyUI 核心節點，draft、untested）；綠幕 `gameart.py vfx chroma-alpha` | 半透明特效不要用 AI 去背（光暈會被切掉）；[去背選方法](art/background-removal.md) |
 | 特效去背、打包、Idle 量測、道具貼回 | `gameart.py vfx` | [vfx-tools](video/vfx-tools.md) |
 | 配音、Animatic、對嘴 | `gameart.py film-audio`、`film-qwen`、`film-lipsync` | 本機 Python 工具；技術 smoke 通過，內容待聽驗；[劇情流程](video/production-flow.md) |
 | 遮罩：手繪、邊界貼合、SAM 候選 | `gameart.py mask-session`、`mask-refine`、`sam` | 手繪服務需 ComfyUI 網頁服務；[遮罩](art/masking.md)、[SAM](art/sam-segmentation.md) |

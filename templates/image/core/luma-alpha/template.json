@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "id": "image/core/luma-alpha",
+  "version": "0.1.0",
+  "title": "Black-background effect luminance to alpha (core nodes, draft)",
+  "summary": "Black-background glow/spark/smoke still -> RGBA PNG; alpha = 1-(1-R)(1-G)(1-B). Core nodes only, no model.",
+  "status": "draft",
+  "status_note": "Draft. The same graph ran once by direct HTTP on windows-cuda (2026-11-05, one synthetic effect, about 0.5 s); not yet run through this runner. Colour is not un-premultiplied and there is no black point / gamma, so straight-alpha compositing looks darker than the local vfx luma-alpha script. Single image only; video untested.",
+  "min_comfyui_version": "0.34.0",
+  "requires_custom_nodes": [],
+  "graph": {
+    "file": "graph.api.json",
+    "format": "comfyui-api",
+    "sha256": "550c6b806c80c519c2b4a903ea0e503cf735eb8651d9f108a9bc833db3eea86d",
+    "canonical_sha256": "ba7aa54d38b9cb89f6f34da06d679d53c8a927f7080252ab7764843b436fc391"
+  },
+  "provenance": {
+    "derived_from": "docs/experiments/2026-11-05-bg-removal/luma_alpha_core.api.json; only LoadImage.image replaced by the __IMAGE__ placeholder.",
+    "upstream": {
+      "kind": "none",
+      "name": null,
+      "blob": null,
+      "comfyui_version": null,
+      "note": "Built for this repo from core nodes (ImageToMask, InvertMask, MaskComposite multiply, JoinImageWithAlpha). No official workflow template or blueprint does luminance-to-alpha."
+    },
+    "tested_source_sha256": null,
+    "evidence": [
+      {
+        "path": "docs/experiments/2026-11-05-bg-removal/README.md",
+        "note": "2026-11-05 Windows RTX 4080: MAE 0.074 straight / 0.046 premultiplied vs BiRefNet 0.088 and vfx luma-alpha 0.029"
+      },
+      {
+        "path": "docs/knowledge/art/background-removal.md",
+        "note": "When to use which background-removal method"
+      }
+    ]
+  },
+  "slots": {
+    "image": {
+      "type": "image",
+      "targets": [
+        {
+          "node": "1",
+          "input": "image",
+          "placeholder": "__IMAGE__"
+        }
+      ],
+      "upload": true,
+      "required": true,
+      "help": "純黑底的特效靜圖（發光、火花、亮色煙）。不是黑底的圖不要用。"
+    },
+    "filename_prefix": {
+      "type": "string",
+      "targets": [
+        {
+          "node": "12",
+          "input": "filename_prefix"
+        }
+      ],
+      "default": "luma_alpha",
+      "help": "存檔前綴。"
+    }
+  },
+  "options": {},
+  "fixed_notes": "alpha = 1-(1-R)(1-G)(1-B); RGB kept as is (premultiplied-looking). Black pixels become fully transparent, so dark or opaque smoke loses body. No model download.",
+  "pre": [
+    {
+      "step": "upload",
+      "slots": [
+        "image"
+      ]
+    }
+  ],
+  "post": [],
+  "frame_anchoring": {
+    "first": "none",
+    "last": "none",
+    "reference_role": "none",
+    "time_alignment": null,
+    "continuity": null
+  },
+  "models": [],
+  "capability_gate": {
+    "nodes": "from_graph",
+    "selectors": "from_models",
+    "files": "from_models",
+    "extra_nodes": [],
+    "platforms": {
+      "windows-cuda": {
+        "status": "untested"
+      },
+      "macos-mps": {
+        "status": "untested"
+      }
+    },
+    "min_memory_mb": null,
+    "capability": "image_generation"
+  },
+  "outputs": [
+    {
+      "id": "image",
+      "node": "12",
+      "kind": "image",
+      "role": "candidate"
+    }
+  ]
+}

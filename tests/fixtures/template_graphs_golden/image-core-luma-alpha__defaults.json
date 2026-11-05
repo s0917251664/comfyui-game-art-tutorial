@@ -1,0 +1,135 @@
+{
+  "template": "image/core/luma-alpha",
+  "case": "defaults",
+  "template_version": "0.1.0",
+  "graph_canonical_sha256": "ba7aa54d38b9cb89f6f34da06d679d53c8a927f7080252ab7764843b436fc391",
+  "values": {},
+  "options": {},
+  "uploads": {
+    "image": "run/image.png"
+  },
+  "changed": {
+    "1.image": "run/image.png"
+  },
+  "patched_graph_sha256": "caeef4f726cc633382ae3ace7c319b3964ae410e94cad335778e05483ec75a8d",
+  "graph": {
+    "1": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "run/image.png"
+      }
+    },
+    "2": {
+      "class_type": "ImageToMask",
+      "inputs": {
+        "image": [
+          "1",
+          0
+        ],
+        "channel": "red"
+      }
+    },
+    "3": {
+      "class_type": "ImageToMask",
+      "inputs": {
+        "image": [
+          "1",
+          0
+        ],
+        "channel": "green"
+      }
+    },
+    "4": {
+      "class_type": "ImageToMask",
+      "inputs": {
+        "image": [
+          "1",
+          0
+        ],
+        "channel": "blue"
+      }
+    },
+    "5": {
+      "class_type": "InvertMask",
+      "inputs": {
+        "mask": [
+          "2",
+          0
+        ]
+      }
+    },
+    "6": {
+      "class_type": "InvertMask",
+      "inputs": {
+        "mask": [
+          "3",
+          0
+        ]
+      }
+    },
+    "7": {
+      "class_type": "InvertMask",
+      "inputs": {
+        "mask": [
+          "4",
+          0
+        ]
+      }
+    },
+    "8": {
+      "class_type": "MaskComposite",
+      "inputs": {
+        "destination": [
+          "5",
+          0
+        ],
+        "source": [
+          "6",
+          0
+        ],
+        "x": 0,
+        "y": 0,
+        "operation": "multiply"
+      }
+    },
+    "9": {
+      "class_type": "MaskComposite",
+      "inputs": {
+        "destination": [
+          "8",
+          0
+        ],
+        "source": [
+          "7",
+          0
+        ],
+        "x": 0,
+        "y": 0,
+        "operation": "multiply"
+      }
+    },
+    "11": {
+      "class_type": "JoinImageWithAlpha",
+      "inputs": {
+        "image": [
+          "1",
+          0
+        ],
+        "alpha": [
+          "9",
+          0
+        ]
+      }
+    },
+    "12": {
+      "class_type": "SaveImage",
+      "inputs": {
+        "images": [
+          "11",
+          0
+        ],
+        "filename_prefix": "luma_alpha"
+      }
+    }
+  }
+}

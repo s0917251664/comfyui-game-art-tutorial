@@ -13,7 +13,7 @@ description: 不經 ComfyUI graph 的本機工具：Pillow／NumPy 像素處理�
 |---|---|---|
 | 遮罩內合成、純換色、像素比較、參考圖板、Alpha／素材檢查 | `edit`（composite、recolor、compare、reference-board、asset-audit） | [edit-tools](../../docs/knowledge/art/edit-tools.md)、[單一物件換色](../../docs/knowledge/art/single-object-color.md) |
 | 物件展示背景、檢視表、圖樣重複 | `design`（scene、sheet、pattern，純 Pillow） | [物件組裝](../../docs/knowledge/art/object-design-workflows.md) |
-| 特效去背、sprite sheet／WebM 打包、Idle 首尾量測、道具貼回、遮罩拆包 | `vfx` | [vfx-tools](../../docs/knowledge/video/vfx-tools.md)、[R3](../../docs/knowledge/rules/idle-anchoring.md) |
+| 特效去背、sprite sheet／WebM 打包、Idle 首尾量測、道具貼回、遮罩拆包 | `vfx` | 先看 [去背選方法](../../docs/knowledge/art/background-removal.md)；[vfx-tools](../../docs/knowledge/video/vfx-tools.md)、[R3](../../docs/knowledge/rules/idle-anchoring.md) |
 | 接片、綠幕合成、抽幀 | `generate.py video_concat`／`video_composite`（本機 PyAV，不連 ComfyUI） | [影片知識](../../docs/knowledge/video/README.md) |
 | 台詞試聽、混音、Animatic、配音、對嘴 | `film-audio`、`film-qwen`、`film-lipsync` | [劇情流程](../../docs/knowledge/video/production-flow.md) |
 | 手繪遮罩、邊界貼合、SAM 候選遮罩 | `mask-session`（需 ComfyUI 網頁服務）、`mask-refine`、`sam` | [遮罩](../../docs/knowledge/art/masking.md)、[SAM](../../docs/knowledge/art/sam-segmentation.md) |

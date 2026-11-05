@@ -45,7 +45,7 @@ FLUX.2（`flux2_concept`／`flux2_edit`）不使用 image profile，改走獨立
 | 換武器或道具但握姿要對、換材質但造型不能變 | `guided_inpaint` | 遮罩內「結構鎖住、外觀自由」的衝突需求；純 `inpaint` 對這類需求失敗率高 |
 | 放大、解析度不夠、交件或印刷 | `upscale` | 已定稿的成品，不是重新構圖 |
 | 定稿合成圖拆出外框、中心鈕等圖層 | `layer_split` | 已有定稿圖，事後切大塊區域；不吃 prompt |
-| 去背、透明背景 | `--remove-bg`（`icon_asset` 永遠去背） | 可疊加在 `concept`、`pose_only`、`style_lock`、`character_action`、`refine` |
+| 去背、透明背景 | `--remove-bg`（`icon_asset` 永遠去背） | 可疊加在 `concept`、`pose_only`、`style_lock`、`character_action`、`refine`；適合有實體輪廓的角色、道具、圖示。發光、火花、煙這類半透明特效不要用，見 [去背選方法](art/background-removal.md) |
 | 多出幾個版本比較 | `--batch N` | 只有探索型 task 支援；沒概念就建議 3 |
 | 手動畫遮罩、自動找物件邊界 | `mask-session`、`sam` | 只產生遮罩，不產圖；完成的遮罩再交給 `inpaint`／`guided_inpaint`／`layer_split` |
 | 比較有限幾組參數 | `edit sweep`（comfyui-run） | 見 [edit-tools](art/edit-tools.md) |
